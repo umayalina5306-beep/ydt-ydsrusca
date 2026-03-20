@@ -646,4 +646,473 @@ nav {
 .video-locked .video-play { background: rgba(100,100,100,0.6); }
 .video-info { padding: 18px; }
 .video-level { font-size: 0.7rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
-.video-title { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; font
+.video-title { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.video-desc { font-size: 0.78rem; color: var(--gray); }
+.video-lock-icon { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.5); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+
+/* ===== FOOTER ===== */
+footer {
+  background: var(--dark);
+  color: #6b7280;
+  text-align: center;
+  padding: 28px;
+  font-size: 0.78rem;
+  border-top: 1px solid rgba(212,175,55,0.2);
+}
+footer span { color: var(--gold); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+  nav { padding: 0 16px; }
+  .nav-links { display: none; }
+  .hero { padding: 50px 20px; min-height: auto; padding-top: 80px; padding-bottom: 60px; }
+  .hero-stats { gap: 24px; }
+  #page-words, #page-quiz, #page-video, #page-pricing { padding: 30px 16px; }
+  .quiz-opts { grid-template-columns: 1fr; }
+  .quiz-q { font-size: 2.2rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo" onclick="showPage('home')">YDT-YDS <span>Rusça</span></div>
+  <ul class="nav-links">
+    <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
+    <li><button onclick="showPage('words')" id="nav-words">Kelimeler</button></li>
+    <li><button onclick="showPage('quiz')" id="nav-quiz">Testler</button></li>
+    <li><button onclick="showPage('video')" id="nav-video">Video Dersler</button></li>
+    <li><button onclick="showPage('pricing')" id="nav-pricing">Fiyatlar</button></li>
+  </ul>
+  <div class="nav-auth">
+    <button class="btn-login" onclick="openAuth('login')">Giriş Yap</button>
+    <button class="btn-signup" onclick="openAuth('register')">Üye Ol</button>
+  </div>
+</nav>
+
+<!-- ===== HOME ===== -->
+<div id="page-home" class="page active">
+  <section class="hero">
+    <div class="hero-flag-stripe"></div>
+    <div class="hero-bg-text">РУССКИЙ</div>
+    <div class="hero-content">
+      <div class="hero-badge">🇷🇺 YDT · YDS · HAZIRLIK</div>
+      <h1>YDT-YDS Rusça<br><em>Platformu</em></h1>
+      <p class="hero-sub">Türkiye'nin ilk YDT/YDS odaklı Rusça öğrenme platformu. Kelimeler, testler ve video derslerle sınavda fark yarat.</p>
+      <div class="hero-buttons">
+        <button class="btn-primary" onclick="showPage('pricing')">Hemen Başla →</button>
+        <button class="btn-secondary" onclick="showPage('words')">Ücretsiz Dene</button>
+      </div>
+      <div class="hero-stats">
+        <div><div class="hero-stat-num">10K+</div><div class="hero-stat-label">Kelime</div></div>
+        <div><div class="hero-stat-num">50+</div><div class="hero-stat-label">Video Ders</div></div>
+        <div><div class="hero-stat-num">500+</div><div class="hero-stat-label">Test Sorusu</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="section-header">
+      <div class="section-label">Neler Sunuyoruz</div>
+      <div class="section-title">Her şey <span>tek platformda</span></div>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card" onclick="showPage('words')">
+        <div class="feature-icon">📚</div>
+        <div class="feature-title">Kelime Bankası</div>
+        <div class="feature-desc">YDT/YDS sınavına özel 10.000+ kelime. Seviyeye ve konuya göre filtrele, sesli telaffuzla öğren.</div>
+      </div>
+      <div class="feature-card" onclick="showPage('quiz')">
+        <div class="feature-icon">🎯</div>
+        <div class="feature-title">Akıllı Testler</div>
+        <div class="feature-desc">Gerçek sınav formatında sorular. Her testten sonra detaylı analiz ve eksik noktalarını gör.</div>
+      </div>
+      <div class="feature-card" onclick="showPage('video')">
+        <div class="feature-icon">🎬</div>
+        <div class="feature-title">Video Dersler</div>
+        <div class="feature-desc">A1'den C1'e kapsamlı video dersler. Gramer, okuma, dinleme ve konuşma becerilerini geliştir.</div>
+      </div>
+      <div class="feature-card" onclick="showPage('pricing')">
+        <div class="feature-icon">💎</div>
+        <div class="feature-title">6 Aylık Erişim</div>
+        <div class="feature-desc">₺24.000 ile 6 ay boyunca tüm içeriklere tam erişim. Önce ücretsiz dene, beğenirsen satın al.</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ===== WORDS ===== -->
+<div id="page-words" class="page">
+  <div class="words-header">
+    <h2>Kelime <span>Bankası</span></h2>
+    <p>Kategoriye tıkla, kelimeleri incele. 🔊 ile sesi dinle.</p>
+  </div>
+  <div class="cat-tabs" id="cat-tabs">
+    <button class="cat-btn active" onclick="filterWords('hepsi',this)">Hepsi</button>
+    <button class="cat-btn" onclick="filterWords('temel',this)">Temel</button>
+    <button class="cat-btn" onclick="filterWords('rakam',this)">Rakamlar</button>
+    <button class="cat-btn" onclick="filterWords('renkler',this)">Renkler</button>
+    <button class="cat-btn" onclick="filterWords('aile',this)">Aile</button>
+    <button class="cat-btn" onclick="filterWords('yiyecek',this)">Yiyecek</button>
+    <button class="cat-btn" onclick="filterWords('fiiller',this)">Fiiller</button>
+    <button class="cat-btn" onclick="filterWords('sifatlar',this)">Sıfatlar</button>
+  </div>
+  <div class="words-grid" id="words-grid"></div>
+</div>
+
+<!-- ===== QUIZ ===== -->
+<div id="page-quiz" class="page">
+  <div class="quiz-wrap">
+    <div class="quiz-header">
+      <h2>Test <span>Çöz</span></h2>
+      <p>Rusça kelimeyi gör, doğru Türkçe karşılığını seç.</p>
+    </div>
+    <div class="quiz-progress-bar"><div class="quiz-progress-fill" id="quiz-fill"></div></div>
+    <div class="quiz-card" id="quiz-card">
+      <div class="quiz-num" id="quiz-num"></div>
+      <div class="quiz-q" id="quiz-q"></div>
+      <div class="quiz-pron" id="quiz-pron"></div>
+      <div class="quiz-opts" id="quiz-opts"></div>
+      <div class="quiz-feedback" id="quiz-fb"></div>
+      <button class="quiz-next" id="quiz-next" onclick="nextQ()">Sonraki →</button>
+    </div>
+    <div class="quiz-result" id="quiz-result">
+      <div class="result-score" id="res-score"></div>
+      <div class="result-label" id="res-label"></div>
+      <div class="result-sub" id="res-sub"></div>
+      <button class="btn-restart" onclick="startQuiz()">Tekrar Başla</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== VIDEO ===== -->
+<div id="page-video" class="page">
+  <div class="video-header">
+    <h2>Video <span>Dersler</span></h2>
+    <p>Adım adım Rusça öğrenin. A1'den başlayıp YDT/YDS seviyesine ulaşın.</p>
+  </div>
+  <div class="video-lock-banner">
+    <div class="video-lock-text">
+      <strong>🔒 Premium İçerik</strong>
+      <span>Video derslere erişmek için satın alma yapmanız gerekiyor.</span>
+    </div>
+    <button class="btn-unlock" onclick="showPage('pricing')">Şimdi Satın Al →</button>
+  </div>
+  <div class="video-grid" id="video-grid"></div>
+</div>
+
+<!-- ===== PRICING ===== -->
+<div id="page-pricing" class="page">
+  <div class="pricing-header">
+    <div class="section-label">Fiyatlandırma</div>
+    <div class="section-title" style="margin-bottom:12px;">Sana uygun <span>planı seç</span></div>
+    <p style="color:var(--gray); font-size:0.88rem;">Ücretsiz önizlemeyle başla, istediğin zaman yükselt.</p>
+  </div>
+  <div class="pricing-grid" style="max-width:1100px; grid-template-columns: repeat(auto-fit, minmax(260px,1fr));">
+
+    <!-- ÖN İZLEME -->
+    <div class="pricing-card">
+      <div class="pricing-plan">Ücretsiz</div>
+      <div class="pricing-name">Ön İzleme</div>
+      <div class="pricing-price">₺0 <span>ücretsiz</span></div>
+      <div class="pricing-desc">Platformu tanımak için ücretsiz başla</div>
+      <ul class="pricing-features">
+        <li>100 kelime bankası</li>
+        <li>10 test sorusu</li>
+        <li>2 ücretsiz video ders</li>
+        <li>Temel telaffuz rehberi</li>
+        <li>Kayıt gerekmez</li>
+      </ul>
+      <button class="btn-buy btn-buy-outline" onclick="showPage('words')">Ücretsiz Dene →</button>
+    </div>
+
+    <!-- 6 AYLIK ABONELİK -->
+    <div class="pricing-card featured">
+      <div class="pricing-plan">En Çok Tercih</div>
+      <div class="pricing-name">6 Aylık Abonelik</div>
+      <div class="pricing-price">₺24.000 <span style="color:#9ca3af;">/ 6 ay</span></div>
+      <div class="pricing-desc" style="color:#9ca3af;">YDT/YDS sınavına kadar tam erişim</div>
+      <ul class="pricing-features">
+        <li>10.000+ kelime bankası</li>
+        <li>500+ test sorusu</li>
+        <li>50+ video ders (A1→C1)</li>
+        <li>Gramer dersleri</li>
+        <li>Deneme sınavları</li>
+        <li>Sesli telaffuz sistemi</li>
+        <li>6 ay tam erişim</li>
+      </ul>
+      <button class="btn-buy btn-buy-gold" onclick="openAuth('register')">Abone Ol →</button>
+    </div>
+
+
+
+  </div>
+
+  <!-- KARŞILAŞTIRMA NOTU -->
+  <div style="max-width:1100px; margin:32px auto 0; background:var(--dark); border-radius:14px; padding:24px 32px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; border:1px solid rgba(201,168,76,0.2);">
+    <div>
+      <div style="color:var(--gold); font-weight:700; font-size:0.9rem; margin-bottom:4px;">💡 Nasıl çalışır?</div>
+      <div style="color:#9ca3af; font-size:0.82rem;">Önce ücretsiz ön izlemeyle platformu tanı. Beğenirsen 6 aylık erişim satın al.</div>
+    </div>
+    <button class="btn-signup" onclick="showPage('words')" style="white-space:nowrap;">Ücretsiz Dene</button>
+  </div>
+</div>
+
+<!-- ===== AUTH MODAL ===== -->
+<div class="modal-overlay" id="auth-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAuth()">✕</button>
+    <div class="modal-logo">YDT-YDS <span>Rusça</span></div>
+    <div class="modal-subtitle">Hesabınıza giriş yapın veya yeni hesap oluşturun</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Giriş Yap</button>
+      <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Üye Ol</button>
+    </div>
+    <div id="auth-form-login">
+      <div class="form-group">
+        <label class="form-label">E-posta</label>
+        <input class="form-input" type="email" placeholder="ornek@mail.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Şifre</label>
+        <input class="form-input" type="password" placeholder="••••••••">
+      </div>
+      <button class="btn-auth" onclick="closeAuth()">Giriş Yap</button>
+      <div class="auth-divider">veya</div>
+      <p style="text-align:center; font-size:0.82rem; color:var(--gray);">Hesabın yok mu? <a href="#" onclick="switchTab('register')" style="color:var(--red); font-weight:600;">Üye ol</a></p>
+    </div>
+    <div id="auth-form-register" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">Ad Soyad</label>
+        <input class="form-input" type="text" placeholder="Adınız Soyadınız">
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-posta</label>
+        <input class="form-input" type="email" placeholder="ornek@mail.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Şifre</label>
+        <input class="form-input" type="password" placeholder="En az 8 karakter">
+      </div>
+      <button class="btn-auth" onclick="closeAuth()">Hesap Oluştur</button>
+      <div class="auth-divider">veya</div>
+      <p style="text-align:center; font-size:0.82rem; color:var(--gray);">Hesabın var mı? <a href="#" onclick="switchTab('login')" style="color:var(--red); font-weight:600;">Giriş yap</a></p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>© 2026 <span>YDT-YDS Rusça Platformu</span> — Tüm hakları saklıdır.</p>
+</footer>
+
+<script>
+// DATA
+const words = [
+  {ru:'Привет',tr:'Merhaba',p:'Priyet',cat:'temel'},
+  {ru:'Спасибо',tr:'Teşekkürler',p:'Spasibo',cat:'temel'},
+  {ru:'Пожалуйста',tr:'Rica ederim',p:'Pojalusta',cat:'temel'},
+  {ru:'Да',tr:'Evet',p:'Da',cat:'temel'},
+  {ru:'Нет',tr:'Hayır',p:'Nyet',cat:'temel'},
+  {ru:'Извините',tr:'Özür dilerim',p:'İzvinite',cat:'temel'},
+  {ru:'Как дела?',tr:'Nasılsın?',p:'Kak dela?',cat:'temel'},
+  {ru:'Хорошо',tr:'İyi',p:'Horoşo',cat:'temel'},
+  {ru:'До свидания',tr:'Hoşça kal',p:'Da svidaniya',cat:'temel'},
+  {ru:'Один',tr:'Bir',p:'Odin',cat:'rakam'},
+  {ru:'Два',tr:'İki',p:'Dva',cat:'rakam'},
+  {ru:'Три',tr:'Üç',p:'Tri',cat:'rakam'},
+  {ru:'Четыре',tr:'Dört',p:'Çetıre',cat:'rakam'},
+  {ru:'Пять',tr:'Beş',p:'Pyat',cat:'rakam'},
+  {ru:'Шесть',tr:'Altı',p:'Şest',cat:'rakam'},
+  {ru:'Семь',tr:'Yedi',p:'Syem',cat:'rakam'},
+  {ru:'Восемь',tr:'Sekiz',p:'Vosem',cat:'rakam'},
+  {ru:'Девять',tr:'Dokuz',p:'Devyat',cat:'rakam'},
+  {ru:'Десять',tr:'On',p:'Desyat',cat:'rakam'},
+  {ru:'Красный',tr:'Kırmızı',p:'Krasnıy',cat:'renkler'},
+  {ru:'Синий',tr:'Mavi',p:'Siniy',cat:'renkler'},
+  {ru:'Зелёный',tr:'Yeşil',p:'Zelyonıy',cat:'renkler'},
+  {ru:'Жёлтый',tr:'Sarı',p:'Jolıy',cat:'renkler'},
+  {ru:'Белый',tr:'Beyaz',p:'Belıy',cat:'renkler'},
+  {ru:'Чёрный',tr:'Siyah',p:'Çornıy',cat:'renkler'},
+  {ru:'Мама',tr:'Anne',p:'Mama',cat:'aile'},
+  {ru:'Папа',tr:'Baba',p:'Papa',cat:'aile'},
+  {ru:'Брат',tr:'Erkek kardeş',p:'Brat',cat:'aile'},
+  {ru:'Сестра',tr:'Kız kardeş',p:'Sestra',cat:'aile'},
+  {ru:'Дедушка',tr:'Dede',p:'Deduşka',cat:'aile'},
+  {ru:'Бабушка',tr:'Büyükanne',p:'Babuşka',cat:'aile'},
+  {ru:'Хлеб',tr:'Ekmek',p:'Hleb',cat:'yiyecek'},
+  {ru:'Вода',tr:'Su',p:'Voda',cat:'yiyecek'},
+  {ru:'Молоко',tr:'Süt',p:'Moloko',cat:'yiyecek'},
+  {ru:'Чай',tr:'Çay',p:'Çay',cat:'yiyecek'},
+  {ru:'Яблоко',tr:'Elma',p:'Yabloko',cat:'yiyecek'},
+  {ru:'Мясо',tr:'Et',p:'Myaso',cat:'yiyecek'},
+  {ru:'Читать',tr:'Okumak',p:'Çitat',cat:'fiiller'},
+  {ru:'Писать',tr:'Yazmak',p:'Pisat',cat:'fiiller'},
+  {ru:'Говорить',tr:'Konuşmak',p:'Gavarit',cat:'fiiller'},
+  {ru:'Слушать',tr:'Dinlemek',p:'Sluşat',cat:'fiiller'},
+  {ru:'Понимать',tr:'Anlamak',p:'Panimat',cat:'fiiller'},
+  {ru:'Учиться',tr:'Öğrenmek',p:'Uçitsya',cat:'fiiller'},
+  {ru:'Большой',tr:'Büyük',p:'Bolşoy',cat:'sifatlar'},
+  {ru:'Маленький',tr:'Küçük',p:'Malenki',cat:'sifatlar'},
+  {ru:'Красивый',tr:'Güzel',p:'Krasivıy',cat:'sifatlar'},
+  {ru:'Умный',tr:'Zeki',p:'Umnıy',cat:'sifatlar'},
+  {ru:'Новый',tr:'Yeni',p:'Novıy',cat:'sifatlar'},
+  {ru:'Старый',tr:'Eski/Yaşlı',p:'Starıy',cat:'sifatlar'},
+];
+
+const videos = [
+  {level:'A1',title:'Rus Alfabesi',desc:'33 harfin okunuşunu öğren',locked:false,num:1},
+  {level:'A1',title:'Temel Selamlaşmalar',desc:'Merhaba, günaydın, hoşça kal...',locked:false,num:2},
+  {level:'A1',title:'Sayılar 1-100',desc:'Rusça sayıları öğren',locked:true,num:3},
+  {level:'A1',title:'Renkler ve Şekiller',desc:'Renk adları ve kullanımı',locked:true,num:4},
+  {level:'A2',title:'İsim Çekimleri',desc:'Rus dilinde 6 hal sistemi',locked:true,num:5},
+  {level:'A2',title:'Fiil Çekimleri',desc:'Şimdiki zaman fiil kullanımı',locked:true,num:6},
+  {level:'B1',title:'YDT Soru Tipleri',desc:'Sınavda çıkan soru formatları',locked:true,num:7},
+  {level:'B1',title:'Okuma Teknikleri',desc:'Hızlı okuma ve anlama stratejileri',locked:true,num:8},
+  {level:'B2',title:'İleri Gramer',desc:'Karmaşık cümle yapıları',locked:true,num:9},
+  {level:'C1',title:'YDS Hazırlık',desc:'Üst düzey sınav stratejileri',locked:true,num:10},
+];
+
+// WORDS
+function renderWords(cat) {
+  const grid = document.getElementById('words-grid');
+  const filtered = cat === 'hepsi' ? words : words.filter(w => w.cat === cat);
+  grid.innerHTML = filtered.map(w => `
+    <div class="word-card">
+      <button class="word-speak" onclick="speak('${w.ru}')">🔊</button>
+      <div class="word-ru">${w.ru}</div>
+      <div class="word-tr">${w.tr}</div>
+      <div class="word-pron">[${w.p}]</div>
+    </div>
+  `).join('');
+}
+function filterWords(cat, btn) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderWords(cat);
+}
+renderWords('hepsi');
+
+// SPEECH
+function speak(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ru-RU'; u.rate = 0.85;
+  window.speechSynthesis.speak(u);
+}
+
+// QUIZ
+let qList=[], qIdx=0, qScore=0, qAnswered=false;
+function shuffle(a){return[...a].sort(()=>Math.random()-0.5);}
+function startQuiz(){
+  qList=shuffle(words).slice(0,10);
+  qIdx=0; qScore=0;
+  document.getElementById('quiz-card').style.display='block';
+  document.getElementById('quiz-result').style.display='none';
+  loadQ();
+}
+function loadQ(){
+  qAnswered=false;
+  const q=qList[qIdx];
+  document.getElementById('quiz-fill').style.width=(qIdx/qList.length*100)+'%';
+  document.getElementById('quiz-num').textContent=`Soru ${qIdx+1} / ${qList.length}`;
+  document.getElementById('quiz-q').textContent=q.ru;
+  document.getElementById('quiz-pron').textContent=`[${q.p}]`;
+  document.getElementById('quiz-fb').textContent='';
+  document.getElementById('quiz-fb').className='quiz-feedback';
+  document.getElementById('quiz-next').style.display='none';
+  const wrong=shuffle(words.filter(w=>w.ru!==q.ru)).slice(0,3).map(w=>w.tr);
+  const opts=shuffle([q.tr,...wrong]);
+  document.getElementById('quiz-opts').innerHTML=opts.map(o=>`
+    <button class="quiz-opt" onclick="checkA(this,'${o.replace(/'/g,"\\'")}','${q.tr.replace(/'/g,"\\'")}','${q.ru}')">${o}</button>
+  `).join('');
+}
+function checkA(btn,chosen,correct,ru){
+  if(qAnswered)return;
+  qAnswered=true;
+  document.querySelectorAll('.quiz-opt').forEach(b=>b.disabled=true);
+  const fb=document.getElementById('quiz-fb');
+  if(chosen===correct){
+    btn.classList.add('correct');
+    fb.textContent='✓ Doğru!';
+    fb.className='quiz-feedback feedback-correct';
+    qScore++;
+  } else {
+    btn.classList.add('wrong');
+    document.querySelectorAll('.quiz-opt').forEach(b=>{if(b.textContent===correct)b.classList.add('correct');});
+    fb.textContent=`✗ Yanlış. Doğru: ${correct}`;
+    fb.className='quiz-feedback feedback-wrong';
+  }
+  speak(ru);
+  document.getElementById('quiz-next').style.display='inline-block';
+}
+function nextQ(){
+  qIdx++;
+  if(qIdx>=qList.length) showResult();
+  else loadQ();
+}
+function showResult(){
+  document.getElementById('quiz-fill').style.width='100%';
+  document.getElementById('quiz-card').style.display='none';
+  document.getElementById('quiz-result').style.display='block';
+  const pct=Math.round(qScore/qList.length*100);
+  document.getElementById('res-score').textContent=`${qScore}/${qList.length}`;
+  const msgs=[[0,40,'Daha çok çalış 💪','Pes etme, tekrar dene!'],[40,70,'Fena değil! 🙂','Biraz daha pratik yap.'],[70,90,'Çok iyi! 👏','Başarın artıyor!'],[90,101,'Mükemmel! 🏆','Harika bir sınav performansı!']];
+  const [,,l,s]=msgs.find(([mn,mx])=>pct>=mn&&pct<mx);
+  document.getElementById('res-label').textContent=l;
+  document.getElementById('res-sub').textContent=s;
+}
+
+// VIDEO
+function renderVideos(){
+  document.getElementById('video-grid').innerHTML=videos.map(v=>`
+    <div class="video-card ${v.locked?'video-locked':''}">
+      <div class="video-thumb" style="background:${v.locked?'#1a2744':'#003580'}">
+        <div class="video-thumb-num">${v.num}</div>
+        ${v.locked?'<div class="video-lock-icon">🔒</div>':''}
+        <div class="video-play" onclick="${v.locked?'showPage(\'pricing\')':'alert(\'Video yakında eklenecek!\')'}">
+          ${v.locked?'🔒':'▶'}
+        </div>
+      </div>
+      <div class="video-info">
+        <div class="video-level">${v.level} Seviye</div>
+        <div class="video-title">${v.title}</div>
+        <div class="video-desc">${v.desc}</div>
+      </div>
+    </div>
+  `).join('');
+}
+renderVideos();
+
+// NAV
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-links button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const nb=document.getElementById('nav-'+id);
+  if(nb) nb.classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='quiz') startQuiz();
+}
+
+// AUTH
+function openAuth(tab){
+  document.getElementById('auth-modal').classList.add('active');
+  switchTab(tab);
+}
+function closeAuth(){
+  document.getElementById('auth-modal').classList.remove('active');
+}
+function switchTab(tab){
+  document.getElementById('auth-form-login').style.display=tab==='login'?'block':'none';
+  document.getElementById('auth-form-register').style.display=tab==='register'?'block':'none';
+  document.getElementById('tab-login').classList.toggle('active',tab==='login');
+  document.getElementById('tab-register').classList.toggle('active',tab==='register');
+}
+document.getElementById('auth-modal').addEventListener('click',function(e){
+  if(e.target===this) closeAuth();
+});
+</script>
+</body>
+</html>
