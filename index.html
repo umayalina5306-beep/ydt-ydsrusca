@@ -993,13 +993,18 @@ function filterWords(cat, btn) {
 }
 renderWords('hepsi');
 
-// SPEECH
+// SPEECH - Google TTS
 function speak(text) {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'ru-RU'; u.rate = 0.85;
-  window.speechSynthesis.speak(u);
+  const audio = new Audio();
+  const encoded = encodeURIComponent(text);
+  audio.src = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encoded}&tl=ru&client=tw-ob`;
+  audio.play().catch(() => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ru-RU'; u.rate = 0.85;
+    window.speechSynthesis.speak(u);
+  });
 }
 
 // QUIZ
