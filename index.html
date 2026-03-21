@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -482,7 +483,22 @@ nav {
 .word-card:hover { border-color: var(--gold); box-shadow: 0 6px 20px rgba(0,0,0,0.07); transform: translateY(-2px); }
 .word-ru { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 700; color: var(--blue); margin-bottom: 4px; }
 .word-tr { font-size: 0.82rem; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-.word-pron { font-size: 0.72rem; color: var(--gold); font-style: italic; }
+.word-pron { font-size: 0.72rem; color: var(--gold); font-style: italic; margin-bottom: 6px; }
+.word-tip {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+.word-tip-cv { background: #dbeafe; color: #1e40af; }
+.word-tip-ncv { background: #fef3c7; color: #92400e; }
+.word-extra { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--light-gray); }
+.word-syn { font-size: 0.68rem; color: #10b981; margin-bottom: 2px; }
+.word-ant { font-size: 0.68rem; color: #ef4444; }
+.word-cv-pair { font-size: 0.68rem; color: #6366f1; margin-bottom: 2px; }
 .word-speak {
   position: absolute;
   top: 10px; right: 10px;
@@ -1878,14 +1894,23 @@ const videos = [
 function renderWords(cat) {
   const grid = document.getElementById('words-grid');
   const filtered = cat === 'hepsi' ? words : words.filter(w => w.cat === cat);
-  grid.innerHTML = filtered.map(w => `
+  grid.innerHTML = filtered.map(w => {
+    const tipHTML = w.tip ? `<span class="word-tip ${w.tip==='CV'?'word-tip-cv':'word-tip-ncv'}">${w.tip}</span>` : '';
+    const cvHTML = w.cv ? `<div class="word-cv-pair">⇄ CV: <b>${w.cv}</b></div>` : '';
+    const ncvHTML = w.ncv ? `<div class="word-cv-pair">⇄ NCV: <b>${w.ncv}</b></div>` : '';
+    const synHTML = w.esAnl && w.esAnl.length ? `<div class="word-syn">≈ ${w.esAnl.join(', ')}</div>` : '';
+    const antHTML = w.zitAnl && w.zitAnl.length ? `<div class="word-ant">↔ ${w.zitAnl.join(', ')}</div>` : '';
+    const extraHTML = (cvHTML||ncvHTML||synHTML||antHTML) ? `<div class="word-extra">${cvHTML}${ncvHTML}${synHTML}${antHTML}</div>` : '';
+    return `
     <div class="word-card">
-      <button class="word-speak" onclick="speak('${w.ru}')">🔊</button>
+      <button class="word-speak" onclick="speak('${w.ru.replace(/'/g,"\\'")}')">🔊</button>
       <div class="word-ru">${w.ru}</div>
+      ${tipHTML}
       <div class="word-tr">${w.tr}</div>
       <div class="word-pron">[${w.p}]</div>
-    </div>
-  `).join('');
+      ${extraHTML}
+    </div>`;
+  }).join('');
 }
 function filterWords(cat, btn) {
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
@@ -1894,18 +1919,31 @@ function filterWords(cat, btn) {
 }
 renderWords('hepsi');
 
-// SPEECH - Google TTS
+// SPEECH - Mobil uyumlu
 function speak(text) {
-  const audio = new Audio();
-  const encoded = encodeURIComponent(text);
-  audio.src = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encoded}&tl=ru&client=tw-ob`;
-  audio.play().catch(() => {
-    if (!window.speechSynthesis) return;
+  // Önce Web Speech API dene (mobilde daha iyi çalışır)
+  if (window.speechSynthesis) {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ru-RU'; u.rate = 0.85;
+    u.lang = 'ru-RU';
+    u.rate = 0.85;
+    u.pitch = 1;
+    // Rus sesi bul
+    const voices = window.speechSynthesis.getVoices();
+    const ruVoice = voices.find(v => v.lang.startsWith('ru'));
+    if (ruVoice) u.voice = ruVoice;
     window.speechSynthesis.speak(u);
-  });
+    return;
+  }
+  // Fallback: Google TTS
+  const audio = new Audio();
+  audio.src = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=ru&client=tw-ob`;
+  audio.play().catch(e => console.log('Ses çalınamadı:', e));
+}
+// Sesleri önceden yükle
+if (window.speechSynthesis) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 }
 
 // QUIZ
