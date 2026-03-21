@@ -1092,15 +1092,15 @@ footer span { color: var(--gold); }
         <div class="level-flag">🟡</div>
         <div class="level-name">B1</div>
         <div class="level-count">3.000 kelime</div>
-        <div class="level-desc">Orta altı seviye. YDT hazırlık için temel kelimeler.</div>
-        <div class="level-badge">Orta Altı</div>
+        <div class="level-desc">Orta seviye. YDT hazırlık için temel kelimeler.</div>
+        <div class="level-badge">Orta</div>
       </div>
       <div class="level-card" onclick="selectLevel('b2')">
         <div class="level-flag">🟠</div>
         <div class="level-name">B2</div>
         <div class="level-count">3.000 kelime</div>
-        <div class="level-desc">Orta seviye. YDT/YDS için kritik kelimeler.</div>
-        <div class="level-badge">Orta</div>
+        <div class="level-desc">Orta üstü seviye. YDT/YDS için kritik kelimeler.</div>
+        <div class="level-badge">Orta Üstü</div>
       </div>
       <div class="level-card" onclick="selectLevel('c1')">
         <div class="level-flag">🔴</div>
@@ -2630,11 +2630,17 @@ function renderWords(cat) {
     const cvHTML = w.cv ? `<div class="word-cv-pair">⇄ СВ: <b>${w.cv}</b></div>` : '';
     const ncvHTML = w.ncv ? `<div class="word-cv-pair">⇄ НСВ: <b>${w.ncv}</b></div>` : '';
     const extraHTML = (cvHTML||ncvHTML) ? `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--light-gray);">${cvHTML}${ncvHTML}</div>` : '';
+    const genderClass = w.cinsiyet === 'м' ? 'gender-m' : w.cinsiyet === 'ж' ? 'gender-f' : 'gender-n';
+    const genderLabel = w.cinsiyet === 'м' ? 'м (erkil)' : w.cinsiyet === 'ж' ? 'ж (dişil)' : w.cinsiyet === 'с' ? 'с (nötr)' : '';
+    const genderHTML = w.cinsiyet ? `<span class="word-gender ${genderClass}">${genderLabel}</span>` : '';
+    const padejHTML = w.padej ? `<span class="word-padej">${w.padej}</span><br>` : '';
+    const ruSafe = w.ru.replace(/'/g, "\\'");
     return `
     <div class="word-card">
-      <button class="word-speak" onclick="speak('${w.ru.replace(/'/g,"\\'")}')">🔊</button>
-      <div class="word-ru">${w.ru}</div>
+      <button class="word-speak" onclick="speak('${ruSafe}')">🔊</button>
+      <div class="word-ru">${w.ru} ${genderHTML}</div>
       ${tipHTML}
+      ${padejHTML}
       <div class="word-tr">${w.tr}</div>
       <div class="word-pron">[${w.p}]</div>
       ${extraHTML}
