@@ -633,7 +633,7 @@ nav {
 .cat-btn.active, .cat-btn:hover { background: var(--blue); color: var(--white); border-color: var(--blue); }
 .words-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 14px;
   max-width: 1100px;
   margin: 0 auto;
@@ -756,19 +756,21 @@ nav {
 .ant-word {
   background: #fef2f2;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   flex: 1;
   min-width: 0;
 }
 .ant-word-ru {
   font-family: 'Noto Sans', 'PT Serif', sans-serif;
-  font-size: 1.15rem;
+  font-size: 1.0rem;
   font-weight: 700;
   color: #991b1b;
   word-break: break-word;
-  line-height: 1.2;
+  overflow-wrap: break-word;
+  white-space: normal;
+  line-height: 1.3;
 }
-.ant-word-tr { font-size: 0.72rem; color: #6b7280; margin-top: 3px; }
+.ant-word-tr { font-size: 0.72rem; color: #6b7280; margin-top: 3px; word-break: break-word; overflow-wrap: break-word; }
 .ant-word-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
 .ant-speak { background: none; border: none; cursor: pointer; font-size: 0.82rem; padding: 0; }
 .ant-divider {
@@ -1209,6 +1211,34 @@ footer span { color: var(--gold); }
         <div class="level-count" style="color:var(--gray);">2.272 kelime</div>
         <div class="level-desc">Rusça veya Türkçe kelime yazarak listede ara.</div>
         <div class="level-badge" style="background:var(--gold);color:var(--dark);border-color:var(--gold);">Arama</div>
+      </div>
+      <div class="level-card" onclick="selectLevel('esanlamli')" style="border-color:#a7f3d0; background: linear-gradient(135deg, #f0fdf4, #fff);">
+        <div class="level-flag">≈</div>
+        <div class="level-name" style="color:#10b981;">Eş Anlamlılar</div>
+        <div class="level-count" style="color:var(--gray);">Synonyms</div>
+        <div class="level-desc">Aynı anlama gelen Rusça kelime grupları.</div>
+        <div class="level-badge" style="background:#10b981;color:white;border-color:#10b981;">Sinonimler</div>
+      </div>
+      <div class="level-card" onclick="selectLevel('zitanlamli')" style="border-color:#fca5a5; background: linear-gradient(135deg, #fff5f5, #fff);">
+        <div class="level-flag">↔</div>
+        <div class="level-name" style="color:#ef4444;">Zıt Anlamlılar</div>
+        <div class="level-count" style="color:var(--gray);">438 çift</div>
+        <div class="level-desc">Zıt anlamlı Rusça kelime çiftleri.</div>
+        <div class="level-badge" style="background:#ef4444;color:white;border-color:#ef4444;">Antonimler</div>
+      </div>
+      <div class="level-card" onclick="selectLevel('akraba')" style="border-color:#c4b5fd; background: linear-gradient(135deg, #f5f3ff, #fff);">
+        <div class="level-flag">🌿</div>
+        <div class="level-name" style="color:#8b5cf6;">Akraba Kelimeler</div>
+        <div class="level-count" style="color:var(--gray);">Kelime aileleri</div>
+        <div class="level-desc">Aynı kökten türeyen Rusça kelimeler.</div>
+        <div class="level-badge" style="background:#8b5cf6;color:white;border-color:#8b5cf6;">Aileler</div>
+      </div>
+      <div class="level-card" onclick="selectLevel('deyimler')" style="border-color:#fbbf24; background: linear-gradient(135deg, #fffbeb, #fff);">
+        <div class="level-flag">💬</div>
+        <div class="level-name" style="color:#d97706;">Deyimler</div>
+        <div class="level-count" style="color:var(--gray);">Фразеологизмы</div>
+        <div class="level-desc">YDT/YDS sınavında çıkan Rusça deyimler.</div>
+        <div class="level-badge" style="background:#d97706;color:white;border-color:#d97706;">Deyimler</div>
       </div>
     </div>
   </div>
@@ -5481,6 +5511,254 @@ const synonymGroups = [
 {grup:'ясновидящий — kahin',kelimeler:[{ru:'ясновидящий',tr:'kahin',p:'yasnovidyaşçiy'},{ru:'предсказатель',tr:'medyum',p:'pryedskazatyel'}]}
 ];
 
+
+// ===== DEYİMLER =====
+const deyimlerData = [
+  {ru:'Бить баклуши', tr:'İşsiz güçsüz dolaşmak', anlam:'Hiçbir şey yapmamak, avare gezmek', ornek:'Весь день бьёшь баклуши вместо того, чтобы учиться.'},
+  {ru:'Брать себя в руки', tr:'Kendine hakim olmak', anlam:'Duygularını kontrol etmek, sakinleşmek', ornek:'Нужно взять себя в руки и продолжать работу.'},
+  {ru:'Вешать лапшу на уши', tr:'Kulağına küpe takmak / kandırmak', anlam:'Yalan söylemek, yanıltmak', ornek:'Не вешай мне лапшу на уши, я знаю правду.'},
+  {ru:'Водить за нос', tr:'Burnundan çekmek / aldatmak', anlam:'Kandırmak, yanıltmak', ornek:'Он водил нас за нос несколько месяцев.'},
+  {ru:'Выйти сухим из воды', tr:'İşin içinden sıyrılmak', anlam:'Hiç zarar görmeden çıkmak, cezasız kalmak', ornek:'Он снова вышел сухим из воды.'},
+  {ru:'Делать из мухи слона', tr:'Pireyi deve yapmak', anlam:'Küçük bir şeyi abartmak', ornek:'Не делай из мухи слона, это мелкая проблема.'},
+  {ru:'Держать язык за зубами', tr:'Dilini tutmak', anlam:'Susmak, sır saklamak', ornek:'Держи язык за зубами и никому не рассказывай.'},
+  {ru:'Ждать у моря погоды', tr:'Denizin kenarında hava beklemek / boşuna beklemek', anlam:'Olmayacak bir şeyi beklemek', ornek:'Не жди у моря погоды, действуй сам.'},
+  {ru:'Зарубить на носу', tr:'Burnuna çentmek / aklında tutmak', anlam:'İyi aklında tut, unutma', ornek:'Заруби на носу: опаздывать нельзя.'},
+  {ru:'Знать как свои пять пальцев', tr:'Beş parmağı gibi bilmek', anlam:'Çok iyi bilmek', ornek:'Я знаю этот город как свои пять пальцев.'},
+  {ru:'Играть в кошки-мышки', tr:'Kedi-fare oynamak', anlam:'Birisini oyalamak, kandırmak', ornek:'Хватит играть в кошки-мышки, скажи правду.'},
+  {ru:'Как гром среди ясного неба', tr:'Mavi gökten düşen yıldırım gibi', anlam:'Tamamen beklenmedik bir şey', ornek:'Эта новость была как гром среди ясного неба.'},
+  {ru:'Кот наплакал', tr:'Kedi ağlaması kadar / çok az', anlam:'Çok az miktarda', ornek:'Денег кот наплакал, нужно экономить.'},
+  {ru:'Лезть не в своё дело', tr:'İşe burnunu sokmak', anlam:'Başkasının işine karışmak', ornek:'Не лезь не в своё дело.'},
+  {ru:'Ломать голову', tr:'Kafa yormak', anlam:'Bir şey hakkında çok düşünmek', ornek:'Я ломал голову над этой задачей весь вечер.'},
+  {ru:'Махнуть рукой', tr:'El sallamak / vazgeçmek', anlam:'Vazgeçmek, umursamazlık göstermek', ornek:'Он махнул рукой на учёбу.'},
+  {ru:'Медведь на ухо наступил', tr:'Ayı kulağına basmış', anlam:'Müzikal kulağı olmamak', ornek:'Не пой, тебе медведь на ухо наступил.'},
+  {ru:'Мотать на ус', tr:'Bıyığına sarmak / aklında tutmak', anlam:'Dikkat etmek, aklında tutmak', ornek:'Мотай на ус, что я говорю.'},
+  {ru:'На всякий пожарный', tr:'Her ihtimale karşı', anlam:'Her ihtimale karşı, önlem olarak', ornek:'Возьми зонт на всякий пожарный.'},
+  {ru:'Не в своей тарелке', tr:'Kendi tabağında olmamak / huzursuz hissetmek', anlam:'Rahatsız, yersiz hissetmek', ornek:'Он чувствовал себя не в своей тарелке.'},
+  {ru:'Не покладая рук', tr:'Ellerini bırakmadan / durmaksızın', anlam:'Durmaksızın, aralıksız çalışmak', ornek:'Она работала не покладая рук целый день.'},
+  {ru:'Ни рыба ни мясо', tr:'Ne balık ne et', anlam:'Belirsiz, kararsız, renksiz biri', ornek:'Он ни рыба ни мясо — никакого характера.'},
+  {ru:'Нить Ариадны', tr:'Ariadne’nin ipliği', anlam:'Çözüme giden yol, ipucu', ornek:'Эта деталь стала нитью Ариадны в расследовании.'},
+  {ru:'Носить воду в решете', tr:'Kalbura su taşımak', anlam:'Boşuna uğraşmak, sonuçsuz iş yapmak', ornek:'Объяснять ему бесполезно — носить воду в решете.'},
+  {ru:'Обжёгшись на молоке, дуешь на воду', tr:'Süte yanmış, yoğurdu üfleyerek yer', anlam:'Kötü deneyimden ders alarak aşırı temkinli olmak', ornek:'После той ошибки он стал очень осторожным.'},
+  {ru:'Овчинка выделки не стоит', tr:'Mumu yakmaya değmez', anlam:'Çabası sonuca değmez', ornek:'Не стоит тратить время — овчинка выделки не стоит.'},
+  {ru:'Открыть Америку', tr:'Amerika’yı keşfetmek', anlam:'Herkesçe bilinen bir şeyi söylemek', ornek:'Ты не открыл Америку, это все знают.'},
+  {ru:'Палец о палец не ударить', tr:'Parmağını kıpırdatmamak', anlam:'Hiçbir şey yapmamak', ornek:'Он палец о палец не ударил, чтобы помочь.'},
+  {ru:'Попасть в точку', tr:'Tam isabet etmek', anlam:'Tam doğruya ulaşmak', ornek:'Ты попал в точку своим замечанием.'},
+  {ru:'Попасть как кур во щи', tr:'Yanlış yere girmek / zor duruma düşmek', anlam:'Zor, kötü bir duruma düşmek', ornek:'Я попал как кур во щи на этой встрече.'},
+  {ru:'Поставить крест', tr:'Üstüne haç koymak / silip süpürmek', anlam:'Tamamen vazgeçmek, bitirmek', ornek:'Он поставил крест на своей карьере.'},
+  {ru:'Прийти к общему знаменателю', tr:'Ortak paydaya gelmek', anlam:'Uzlaşmak, ortak nokta bulmak', ornek:'Наконец мы пришли к общему знаменателю.'},
+  {ru:'Принять близко к сердцу', tr:'Kalbe yakın almak / ciddiye almak', anlam:'Çok etkilenmek, üzülmek', ornek:'Не принимай это так близко к сердцу.'},
+  {ru:'Рубить сплеча', tr:'Omuzdan kesmek / düşünmeden hareket etmek', anlam:'Aceleyle, düşünmeden karar vermek', ornek:'Не руби сплеча, подумай сначала.'},
+  {ru:'С гулькин нос', tr:'Güvercin burnu kadar / çok az', anlam:'Çok az, yetersiz miktarda', ornek:'Зарплаты с гулькин нос, едва хватает.'},
+  {ru:'Сесть в лужу', tr:'Birikintiye oturmak / rezil olmak', anlam:'Utanç verici duruma düşmek', ornek:'Он сел в лужу на экзамене.'},
+  {ru:'Семь пятниц на неделе', tr:'Haftada yedi cuma / kararsız', anlam:'Çok kararsız olmak, sürekli fikir değiştirmek', ornek:'У него семь пятниц на неделе.'},
+  {ru:'Слово не воробей, вылетит — не поймаешь', tr:'Söz serçe değil, çıkınca yakalanmaz', anlam:'Söylenen söz geri alınamaz', ornek:'Думай, прежде чем говорить.'},
+  {ru:'Смотреть сквозь пальцы', tr:'Parmaklarının arasından bakmak / göz yummak', anlam:'Görmezden gelmek, hoşgörmek', ornek:'Учитель смотрит сквозь пальцы на их поведение.'},
+  {ru:'Тянуть кота за хвост', tr:'Kediyi kuyruğundan çekmek / oyalanmak', anlam:'Zaman kaybetmek, geciktirmek', ornek:'Хватит тянуть кота за хвост, решай уже.'},
+  {ru:'Убить двух зайцев', tr:'İki tavşanı birden vurmak', anlam:'Bir hamlede iki işi bitirmek', ornek:'Этой поездкой я убью двух зайцев.'},
+  {ru:'Хоть пруд пруди', tr:'Havuz dolusu / bol bol', anlam:'Çok fazla, pek çok', ornek:'Желающих хоть пруд пруди.'},
+  {ru:'Через пень-колоду', tr:'Kütük üzerinden / beceriksizce', anlam:'Beceriksizce, kötü bir şekilde', ornek:'Он сделал работу через пень-колоду.'},
+  {ru:'Чесать языком', tr:'Dilini kaşımak / boşboğazlık', anlam:'Boşuna konuşmak, gevezelik etmek', ornek:'Хватит чесать языком, займись делом.'},
+  {ru:'Шито белыми нитками', tr:'Beyaz iplikle dikilmiş / aşikar', anlam:'Açıkça belli olan, gizlenemeyen', ornek:'Его ложь шита белыми нитками.'},
+  {ru:'Яблоко от яблони недалеко падает', tr:'Elma ağaçtan uzağa düşmez', anlam:'Çocuk ebeveynine benzer', ornek:'Яблоко от яблони недалеко падает — он такой же упрямый, как отец.'},
+,
+  {ru:'к досаде', tr:'maalesef, ne yazık ki', anlam:'Hayal kırıklığı ifade eder', ornek:'К досаде, я потерял билеты на концерт.'},
+  {ru:'к изумлению', tr:'şaşkınlıkla, hayretle', anlam:'Şaşkınlık ifade eder', ornek:'К изумлению, он согласился на моё предложение.'},
+  {ru:'к несчастью', tr:'maalesef, ne yazık ki', anlam:'Talihsizlik ifade eder', ornek:'К несчастью, поезд уже ушел.'},
+  {ru:'к огорчению', tr:'üzüntüyle, üzücü ki', anlam:'Üzüntü ifade eder', ornek:'К огорчению, я не смогу прийти на вечеринку.'},
+  {ru:'к прискорбию', tr:'üzüntüyle, üzücü ki', anlam:'Keder ifade eder', ornek:'К прискорбию, мы должны сообщить вам печальную новость.'},
+  {ru:'к радости', tr:'neyse ki, Allahtan', anlam:'Sevinç ifade eder', ornek:'К радости, все закончилось благополучно.'},
+  {ru:'к сожалению', tr:'maalesef, ne yazık ki', anlam:'Pişmanlık ifade eden en yaygın deyim', ornek:'К сожалению, я не могу вам помочь.'},
+  {ru:'к стыду', tr:'utançla, utanç verici ki', anlam:'Utanç ifade eder', ornek:'К стыду, я забыл его имя.'},
+  {ru:'к счастью', tr:'neyse ki, şükürler olsun ki', anlam:'Şans/mutluluk ifade eder', ornek:'К счастью, он не пострадал в аварии.'},
+  {ru:'к удивлению', tr:'şaşkınlıkla, hayretle', anlam:'Şaşkınlık ifade eder', ornek:'К удивлению, она отказалась от предложения.'},
+  {ru:'к ужасу', tr:'dehşetle, korkunç bir şekilde', anlam:'Dehşet ifade eder', ornek:'К ужасу, я увидел змею в саду.'},
+  {ru:'на беду', tr:'maalesef, ne yazık ki', anlam:'Talihsizlik ifade eder', ornek:'На беду, пошел дождь, и мы промокли.'},
+  {ru:'на радость', tr:'sevinçle, neyse ki', anlam:'Sevinç ifade eder', ornek:'На радость детям, выпал снег.'},
+  {ru:'на счастье', tr:'neyse ki, şükürler olsun ki', anlam:'Şans ifade eder', ornek:'На счастье, я успел на последний автобус.'},
+  {ru:'не ровен час', tr:'Allah korusun, ya olursa', anlam:'Olumsuz ihtimal için uyarı', ornek:'Не ровен час, он может заболеть.'},
+  {ru:'нечего греха таить', tr:'açıkçası, dürüst olmak gerekirse', anlam:'Dürüstlük ifade eder', ornek:'Нечего греха таить, мне не нравится эта идея.'},
+  {ru:'по несчастью', tr:'maalesef, ne yazık ki', anlam:'Talihsizlik ifade eder', ornek:'По несчастью, я забыл ключи дома.'},
+  {ru:'по счастью', tr:'neyse ki, şükürler olsun ki', anlam:'Şans ifade eder', ornek:'По счастью, погода была хорошая.'},
+  {ru:'странное дело', tr:'garip bir şekilde, ilginçtir ki', anlam:'Gariplik ifade eder', ornek:'Странное дело, но я его где-то видел.'},
+  {ru:'удивительное дело', tr:'şaşırtıcı bir şekilde, inanılmaz ama gerçek', anlam:'Şaşkınlık ifade eder', ornek:'Удивительное дело, но он всё сделал правильно.'},
+  {ru:'чего доброго', tr:'Allah korusun, ya olursa', anlam:'Olumsuz ihtimal için endişe', ornek:'Чего доброго, он еще обидится.'},
+  {ru:'без всякого сомнения', tr:'şüphesiz, kesinlikle', anlam:'Kesinlik ifade eder', ornek:'Без всякого сомнения, он талантливый художник.'},
+  {ru:'безусловно', tr:'kesinlikle, elbette', anlam:'Kesinlik ifade eder', ornek:'Безусловно, это важный вопрос.'},
+  {ru:'бесспорно', tr:'tartışmasız, şüphesiz', anlam:'Kesinlik ifade eder', ornek:'Бесспорно, он лучший в своем деле.'},
+  {ru:'быть может', tr:'belki, olabilir', anlam:'Olasılık ifade eder', ornek:'Быть может, он придет позже.'},
+  {ru:'в самом деле', tr:'gerçekten, hakikaten', anlam:'Gerçeklik ifade eder', ornek:'В самом деле, это очень вкусно.'},
+  {ru:'в сущности', tr:'aslında, özünde', anlam:'Öz/asıl anlamı ifade eder', ornek:'В сущности, он добрый человек.'},
+  {ru:'вероятно', tr:'muhtemelen, olasılıkla', anlam:'Olasılık ifade eder', ornek:'Вероятно, он уже приехал.'},
+  {ru:'видимо', tr:'görünüşe göre, anlaşılan', anlam:'Çıkarım ifade eder', ornek:'Видимо, он не сможет прийти.'},
+  {ru:'возможно', tr:'muhtemelen, olası', anlam:'Olasılık ifade eder', ornek:'Возможно, завтра пойдет дождь.'},
+  {ru:'должно быть', tr:'muhtemelen, olmalı', anlam:'Tahmin ifade eder', ornek:'Должно быть, он уже дома.'},
+  {ru:'думаю', tr:'sanırım, düşünüyorum da', anlam:'Kişisel görüş ifade eder', ornek:'Думаю, это хорошая идея.'},
+  {ru:'кажется', tr:'sanırım, galiba', anlam:'Belirsiz tahmin ifade eder', ornek:'Кажется, он меня узнал.'},
+  {ru:'казалось бы', tr:'görünüşe göre, öyle görünüyor ki', anlam:'Görünüş ifade eder', ornek:'Казалось бы, все идет хорошо.'},
+  {ru:'конечно', tr:'elbette, tabii ki', anlam:'Kesinlik ve onay ifade eder', ornek:'Конечно, я тебе помогу.'},
+  {ru:'может быть', tr:'olabilir, belki', anlam:'Olasılık ifade eder', ornek:'Может быть, это и к лучшему.'},
+  {ru:'наверное', tr:'muhtemelen, herhalde', anlam:'Tahmin ifade eder', ornek:'Наверное, он уже спит.'},
+  {ru:'надеюсь', tr:'umarım, ümit ederim ki', anlam:'Umut ifade eder', ornek:'Надеюсь, у тебя всё получится.'},
+  {ru:'надо полагать', tr:'tahminime göre, sanırım', anlam:'Kişisel tahmin ifade eder', ornek:'Надо полагать, он скоро вернется.'},
+  {ru:'не правда ли', tr:'öyle değil mi, değil mi?', anlam:'Onay arama ifade eder', ornek:'Хороший фильм, не правда ли?'},
+  {ru:'несомненно', tr:'şüphesiz, kesinlikle', anlam:'Kesinlik ifade eder', ornek:'Несомненно, это его лучшая работа.'},
+  {ru:'очевидно', tr:'açıkça, belli ki', anlam:'Açıklık ifade eder', ornek:'Очевидно, он ошибается.'},
+  {ru:'по всей вероятности', tr:'büyük olasılıkla, herhalde', anlam:'Güçlü olasılık ifade eder', ornek:'По всей вероятности, он приедет завтра.'},
+  {ru:'по сути', tr:'aslında, özünde', anlam:'Öz/asıl ifade eder', ornek:'По сути, он хороший специалист.'},
+  {ru:'по существу', tr:'aslında, esasında', anlam:'Öz/asıl ifade eder', ornek:'По существу, он прав.'},
+  {ru:'по-видимому', tr:'görünüşe göre, anlaşılan', anlam:'Çıkarım ifade eder', ornek:'По-видимому, он не хочет нас слушать.'},
+  {ru:'пожалуй', tr:'sanırım, galiba', anlam:'Belirsiz onay ifade eder', ornek:'Пожалуй, я пойду домой.'},
+  {ru:'полагаю', tr:'sanırım, tahminimce', anlam:'Kişisel tahmin ifade eder', ornek:'Полагаю, он не будет возражать.'},
+  {ru:'правда', tr:'doğru, haklısın', anlam:'Gerçeği teyit eder', ornek:'Правда, я давно тебя не видел.'},
+  {ru:'само собой разумеется', tr:'elbette, doğal olarak', anlam:'Açıklık ifade eder', ornek:'Само собой разумеется, я помогу тебе с переездом.'},
+  {ru:'говорят', tr:'diyorlar ki, söylentilere göre', anlam:'Söylenti kaynağı belirtir', ornek:'Говорят, он собирается жениться.'},
+  {ru:'дескать', tr:'sözde, güya', anlam:'Aktarılan söz ifade eder', ornek:'Он дескать болен, но я ему не верю.'},
+  {ru:'мол', tr:'sözde, -mış', anlam:'Aktarılan söz ifade eder', ornek:'Он мол уехал в другой город.'},
+  {ru:'по мнению...', tr:'...düşüncesine göre', anlam:'Görüş kaynağı belirtir', ornek:'По мнению экспертов, ситуация скоро стабилизируется.'},
+  {ru:'по преданию', tr:'efsanelere göre, rivayete göre', anlam:'Efsane kaynağı belirtir', ornek:'По преданию, этот город был основан много веков назад.'},
+  {ru:'по словам...', tr:'...sözlerine göre', anlam:'Söz kaynağı belirtir', ornek:'По словам врача, пациент идет на поправку.'},
+  {ru:'по слухам', tr:'söylentilere göre, duyduğuma göre', anlam:'Söylenti kaynağı belirtir', ornek:'По слухам, он выиграл в лотерею.'},
+  {ru:'по-вашему', tr:'sizce', anlam:'Muhatap görüşü sorar', ornek:'По-вашему, мне стоит извиниться?'},
+  {ru:'по-моему', tr:'bence, bana göre', anlam:'Kişisel görüş belirtir', ornek:'По-моему, это не очень хорошая идея.'},
+  {ru:'по-твоему', tr:'sence', anlam:'Muhatap görüşü sorar', ornek:'По-твоему, это платье мне идет?'},
+  {ru:'помнится', tr:'hatırlıyorum da, aklımda kaldığına göre', anlam:'Hatırlama ifade eder', ornek:'Помнится, ты говорил совсем другое.'},
+  {ru:'слышно', tr:'duyduğuma göre, söylentilere göre', anlam:'Duyum kaynağı belirtir', ornek:'Слышно, он вернулся из командировки.'},
+  {ru:'сообщают', tr:'bildiriyorlar, haber veriyorlar', anlam:'Haber kaynağı belirtir', ornek:'Сообщают, что матч отменили из-за плохой погоды.'},
+  {ru:'в общем', tr:'genel olarak, kısacası', anlam:'Genelleme/özet ifade eder', ornek:'В общем, всё прошло хорошо.'},
+  {ru:'в частности', tr:'özellikle, bilhassa', anlam:'Özelleştirme ifade eder', ornek:'Я люблю фрукты, в частности, яблоки.'},
+  {ru:'во-вторых', tr:'ikinci olarak', anlam:'Sıralama ifade eder', ornek:'Во-вторых, у меня нет времени.'},
+  {ru:'во-первых', tr:'ilk olarak, öncelikle', anlam:'Sıralama ifade eder', ornek:'Во-первых, я хочу поблагодарить вас за приглашение.'},
+  {ru:'впрочем', tr:'ancak, bununla birlikte', anlam:'Karşıt düşünce ekler', ornek:'Впрочем, это не так уж важно.'},
+  {ru:'главное', tr:'önemli olan, asıl mesele', anlam:'Önem sırası belirtir', ornek:'Главное - не паниковать.'},
+  {ru:'далее', tr:'daha sonra, devamında', anlam:'Sıralama ifade eder', ornek:'Далее мы рассмотрим этот вопрос подробно.'},
+  {ru:'значит', tr:'demek ki, öyleyse', anlam:'Sonuç ifade eder', ornek:'Значит, ты согласен?'},
+  {ru:'итак', tr:'böylece, sonuç olarak', anlam:'Sonuç/özet ifade eder', ornek:'Итак, мы пришли к общему мнению.'},
+  {ru:'к примеру', tr:'örneğin, mesela', anlam:'Örnek verir', ornek:'Многие любят животных, к примеру, собак или кошек.'},
+  {ru:'к слову сказать', tr:'bu arada, yeri gelmişken', anlam:'Konu dışı not ekler', ornek:'К слову сказать, я видел его вчера в магазине.'},
+  {ru:'как бы там ни было', tr:'her ne olursa olsun', anlam:'Kayıtsız şart ifade eder', ornek:'Как бы там ни было, я должен ему помочь.'},
+  {ru:'кроме того', tr:'ayrıca, bunun yanı sıra', anlam:'Ek bilgi ekler', ornek:'Кроме того, он отличный спортсмен.'},
+  {ru:'кстати', tr:'bu arada, aklıma gelmişken', anlam:'Konu dışı ekleme yapar', ornek:'Кстати, ты получил моё сообщение?'},
+  {ru:'между прочим', tr:'bu arada, yeri gelmişken', anlam:'Konu dışı not ekler', ornek:'Между прочим, я хотел тебя спросить...'},
+  {ru:'наконец', tr:'son olarak, nihayet', anlam:'Sıralamayı sonlandırır', ornek:'Наконец, я закончил работу.'},
+  {ru:'наоборот', tr:'aksine, tam tersine', anlam:'Karşıtlık ifade eder', ornek:'Я думал, он расстроится, но он наоборот обрадовался.'},
+  {ru:'например', tr:'örneğin, mesela', anlam:'Örnek verir', ornek:'Возьмите, например, этот случай.'},
+  {ru:'напротив', tr:'aksine, tersine', anlam:'Karşıtlık ifade eder', ornek:'Он не испугался, напротив, он рассмеялся.'},
+  {ru:'повторяю', tr:'tekrar ediyorum, vurguluyorum', anlam:'Vurgu/tekrar ifade eder', ornek:'Повторяю, это очень важно!'},
+  {ru:'подчёркиваю', tr:'vurguluyorum, altını çiziyorum', anlam:'Vurgu ifade eder', ornek:'Подчёркиваю, это всего лишь моё мнение.'},
+  {ru:'с другой стороны', tr:'diğer taraftan, öte yandan', anlam:'Karşıt bakış açısı sunar', ornek:'С другой стороны, я его понимаю.'},
+  {ru:'с одной стороны', tr:'bir taraftan, bir yandan', anlam:'Bir bakış açısı sunar', ornek:'С одной стороны, я хочу поехать, но у меня нет денег.'},
+  {ru:'сверх того', tr:'bunun da ötesinde, dahası', anlam:'Ek bilgi ekler', ornek:'Сверх того, он пообещал помочь мне.'},
+  {ru:'стало быть', tr:'demek ki, öyleyse', anlam:'Sonuç ifade eder', ornek:'Стало быть, мы едем?'},
+  {ru:'таким образом', tr:'böylece, bu şekilde', anlam:'Sonuç/özet ifade eder', ornek:'Таким образом, мы решили эту проблему.'},
+  {ru:'вернее сказать', tr:'daha doğrusu', anlam:'Düzeltme/açıklama ifade eder', ornek:'Вернее сказать, я не уверен.'},
+  {ru:'вообще говоря', tr:'genel olarak, genel anlamda', anlam:'Genelleme ifade eder', ornek:'Вообще говоря, я не люблю ужастики.'},
+  {ru:'другими словами', tr:'başka bir deyişle', anlam:'Açıklama/yeniden ifade eder', ornek:'Другими словами, он отказался.'},
+  {ru:'иначе говоря', tr:'başka bir deyişle', anlam:'Açıklama/yeniden ifade eder', ornek:'Иначе говоря, он не придет.'},
+  {ru:'иными словами', tr:'başka bir deyişle', anlam:'Açıklama/yeniden ifade eder', ornek:'Иными словами, ты согласен?'},
+  {ru:'коротко говоря', tr:'kısacası, özetle', anlam:'Özet ifade eder', ornek:'Коротко говоря, всё кончено.'},
+  {ru:'лучше сказать', tr:'daha doğrusu', anlam:'Düzeltme ifade eder', ornek:'Лучше сказать, я не хочу туда идти.'},
+  {ru:'мягко выражаясь', tr:'kibarca söylemek gerekirse', anlam:'Kibar ifade eder', ornek:'Мягко выражаясь, он был не в настроении.'},
+  {ru:'одним словом', tr:'kısacası, özetle', anlam:'Özet ifade eder', ornek:'Одним словом, я очень рад.'},
+  {ru:'попросту говоря', tr:'açıkçası, sade bir dille', anlam:'Sade ifade eder', ornek:'Попросту говоря, он меня обманул.'},
+  {ru:'словом', tr:'kısacası, özetle', anlam:'Özet ifade eder', ornek:'Словом, я согласен.'},
+  {ru:'собственно говоря', tr:'aslında, esasında', anlam:'Öz/asıl ifade eder', ornek:'Собственно говоря, я пришел поговорить об этом.'},
+  {ru:'так сказать', tr:'şöyle söyleyeyim ki', anlam:'Yaklaşık ifade eder', ornek:'Так сказать, он был душой компании.'},
+  {ru:'точнее сказать', tr:'daha doğrusu, daha açık bir ifadeyle', anlam:'Düzeltme/hassaslaştırma ifade eder', ornek:'Точнее сказать, он не сможет прийти сегодня.'},
+  {ru:'что называется', tr:'deyim yerindeyse, tabiri caizse', anlam:'Deyim kullanımı ifade eder', ornek:'Он, что называется, \"мастер на все руки\".'},
+  {ru:'вообрази(те)', tr:'hayal edin, düşünün bir', anlam:'Dinleyiciyi düşünmeye davet eder', ornek:'Вообразите, каково это - жить на необитаемом острове.'},
+  {ru:'допустим', tr:'farz edelim, varsayalım', anlam:'Varsayım ifade eder', ornek:'Допустим, ты прав. Что дальше?'},
+  {ru:'знаете (ли)', tr:'biliyor musunuz', anlam:'Muhataba soru yöneltir', ornek:'Знаете ли вы, сколько времени?'},
+  {ru:'знаешь (ли)', tr:'biliyor musun', anlam:'Muhataba soru yöneltir', ornek:'Знаешь ли, я тебе очень благодарен!'},
+  {ru:'извини(те)', tr:'özür dilerim, affedersiniz', anlam:'Nezaket ifade eder', ornek:'Извините, вы не подскажете, как пройти к библиотеке?'},
+  {ru:'поверь(те)', tr:'inanın, lütfen inanın', anlam:'İnandırma ifade eder', ornek:'Поверьте, я не хотел вас обидеть.'},
+  {ru:'пойми(те)', tr:'anlayın, lütfen anlayın', anlam:'Anlamaya davet eder', ornek:'Поймите, я не могу поступить иначе.'},
+  {ru:'понимаете (ли)', tr:'anlıyor musunuz', anlam:'Anlama kontrolü yapar', ornek:'Понимаете ли вы, о чём я говорю?'},
+  {ru:'послушай(те)', tr:'dinleyin, lütfen dinleyin', anlam:'Dikkat çekme ifade eder', ornek:'Послушайте, я хочу вам кое-что рассказать.'},
+  {ru:'предположим', tr:'farz edelim, varsayalım', anlam:'Varsayım ifade eder', ornek:'Предположим, что это правда.'},
+  {ru:'прости(те)', tr:'affet, özür dilerim', anlam:'Özür dileme ifade eder', ornek:'Прости, я не хотел тебя обидеть.'},
+  {ru:'скажем', tr:'diyelim ki, örneğin', anlam:'Varsayım/örnek ifade eder', ornek:'Скажем, у тебя есть миллион долларов. Что бы ты сделал?'},
+  {ru:'согласись', tr:'katıl, kabul et', anlam:'Onay isteme ifade eder', ornek:'Согласись, это хорошая идея.'},
+  {ru:'согласитесь', tr:'katılın, kabul edin', anlam:'Onay isteme ifade eder', ornek:'Согласитесь, это несправедливо.'},
+  {ru:'бывает', tr:'olur, bazen olur', anlam:'Zaman zaman olma ifade eder', ornek:'Бывает, что я забываю ключи от дома.'},
+  {ru:'бывало', tr:'olurdu, eskiden olurdu', anlam:'Geçmişteki alışkanlık ifade eder', ornek:'Бывало, мы с ним часами разговаривали по телефону.'},
+  {ru:'по обыкновению', tr:'genellikle, her zaman olduğu gibi', anlam:'Alışkanlık ifade eder', ornek:'Он, по обыкновению, опоздал на встречу.'},
+  {ru:'случается', tr:'olur, bazen olur', anlam:'Zaman zaman olma ifade eder', ornek:'Случается, что люди ошибаются.'},
+  {ru:'кроме шуток', tr:'şaka bir yana, ciddi söylüyorum', anlam:'Ciddiyeti vurgular', ornek:'Кроме шуток, это очень серьёзная проблема.'},
+  {ru:'между нами будет сказано', tr:'aramızda kalsın', anlam:'Gizlilik ifade eder', ornek:'Между нами будет сказано, он мне не нравится.'},
+  {ru:'между нами говоря', tr:'aramızda kalsın', anlam:'Gizlilik ifade eder', ornek:'Между нами говоря, он не самый умный человек.'},
+  {ru:'по правде', tr:'doğrusu, dürüst olmak gerekirse', anlam:'Dürüstlük ifade eder', ornek:'По правде, я очень устал.'},
+  {ru:'по совести', tr:'dürüstçe söylemek gerekirse', anlam:'Dürüstlük/vicdan ifade eder', ornek:'По совести, я не знаю, как тебе помочь.'},
+  {ru:'смешно сказать', tr:'komik ama, inanmayacaksınız ama', anlam:'Komik gerçek ifade eder', ornek:'Смешно сказать, но я боюсь мышей.'},
+  {ru:'честно говоря', tr:'dürüst olmak gerekirse, açıkçası', anlam:'Dürüstlük ifade eder - sınavda sık çıkar', ornek:'Честно говоря, я не верю ему.'},
+  {ru:'в свою очередь', tr:'sırayla, karşılığında', anlam:'Sıralama/karşılık ifade eder', ornek:'Маша рассказала, а Сергей в свою очередь выслушал её.'},
+  {ru:'благодаря этому', tr:'bu sayede, bunun sayesinde', anlam:'Sebep/sonuç ifade eder', ornek:'Благодаря помощи родителей, он смог купить квартиру.'},
+  {ru:'в конце концов', tr:'sonunda, nihayetinde', anlam:'Nihai sonuç ifade eder', ornek:'В конце концов, он признался во всём.'},
+  {ru:'в общем-то', tr:'aslında, genel olarak', anlam:'Genel değerlendirme ifade eder', ornek:'В общем-то, я не против этой идеи.'},
+  {ru:'во всяком случае', tr:'her halükarda, ne olursa olsun', anlam:'Koşulsuz ifade eder', ornek:'Во всяком случае, я постараюсь сделать всё возможное.'},
+  {ru:'действительно', tr:'gerçekten, hakikaten', anlam:'Gerçeklik vurgular', ornek:'Действительно, этот город очень красив.'},
+  {ru:'из-за того что', tr:'çünkü, ...dığı için', anlam:'Sebep ifade eder', ornek:'Из-за того что он опоздал, ему пришлось покупать новый билет.'},
+  {ru:'исходя из этого', tr:'buna dayanarak, buradan yola çıkarak', anlam:'Mantıksal sonuç ifade eder', ornek:'Исходя из этого, можно сделать вывод, что проект будет успешным.'},
+  {ru:'конечно же', tr:'elbette, şüphesiz', anlam:'Güçlü kesinlik ifade eder', ornek:'Конечно же, я приду на твой день рождения!'},
+  {ru:'как минимум', tr:'en azından, en az', anlam:'Asgari sınır belirtir', ornek:'Как минимум, нам нужно купить продукты на неделю.'},
+  {ru:'наряду с чем-л', tr:'... ile birlikte, ... yanı sıra', anlam:'Eş zamanlılık ifade eder', ornek:'Он изучает английский язык наряду с французским.'},
+  {ru:'однако', tr:'ancak, fakat, lakin', anlam:'Karşıtlık/sınırlama ifade eder', ornek:'Было рано, однако же она ушла спать.'},
+  {ru:'помимо того', tr:'bunun dışında, bunun yanı sıra', anlam:'Ek bilgi ekler', ornek:'Помимо того, он ещё и прекрасно готовит.'},
+  {ru:'по крайней мере', tr:'en azından, en az', anlam:'Asgari sınır belirtir', ornek:'Я был в Париже трижды, по крайней мере.'},
+  {ru:'по меньшей мере', tr:'en azından, en az', anlam:'Asgari sınır belirtir', ornek:'Я видел этот фильм дважды, по меньшей мере.'},
+  {ru:'прежде всего', tr:'her şeyden önce, öncelikle', anlam:'Öncelik ifade eder', ornek:'Прежде всего нужно закончить работу.'},
+  {ru:'причём', tr:'üstelik, hem de, ayrıca', anlam:'Ek vurgu yapar', ornek:'Она умна, причём очень красива.'},
+  {ru:'следовательно', tr:'bu nedenle, dolayısıyla', anlam:'Mantıksal sonuç ifade eder', ornek:'Ты сердишься, следовательно ты не прав.'},
+  {ru:'тем более', tr:'özellikle, hele, daha da', anlam:'Pekiştirme ifade eder', ornek:'Он не пойдёт на вечеринку, тем более что он болен.'},
+  {ru:'тем не менее', tr:'yine de, buna rağmen', anlam:'Karşıtlık ifade eder', ornek:'Задача сложная, тем не менее я постараюсь её решить.'},
+  {ru:'так или иначе', tr:'öyle ya da böyle, ne olursa olsun', anlam:'Koşulsuz ifade eder', ornek:'Мне кажется, что так или иначе ты сделаешь это.'},
+  {ru:'то есть', tr:'yani, bir başka deyişle', anlam:'Açıklama/yeniden ifade eder', ornek:'Он уехал, то есть мы его больше не увидим.'},
+  {ru:'аналогично', tr:'benzer şekilde', anlam:'Benzetme ifade eder', ornek:'Он поступил аналогично своему брату.'},
+  {ru:'более или менее', tr:'aşağı yukarı, yaklaşık olarak', anlam:'Yaklaşıklık ifade eder', ornek:'Я более или менее понял, о чём ты говоришь.'},
+  {ru:'буквально', tr:'tam anlamıyla', anlam:'Kesinlik/vurgu ifade eder', ornek:'Она восприняла мои слова буквально.'},
+  {ru:'в конечном итоге', tr:'sonuç olarak, nihayetinde', anlam:'Nihai sonuç ifade eder', ornek:'В конечном итоге, они всё же договорились.'},
+  {ru:'в крайнем случае', tr:'son çare olarak, en kötü ihtimalle', anlam:'Asgari/son çare ifade eder', ornek:'В крайнем случае, мы можем позвонить родителям.'},
+  {ru:'в лучшем случае', tr:'en iyi ihtimalle', anlam:'İyimser sınır belirtir', ornek:'В лучшем случае, мы успеем к началу фильма.'},
+  {ru:'в любом случае', tr:'her halükarda, ne olursa olsun', anlam:'Koşulsuz ifade eder', ornek:'В любом случае, я тебе позвоню.'},
+  {ru:'в основном', tr:'çoğunlukla, genellikle', anlam:'Sıklık/genelleme ifade eder', ornek:'В основном, я провожу свободное время дома.'},
+  {ru:'в особенности', tr:'özellikle, bilhassa', anlam:'Vurgu/özelleştirme ifade eder', ornek:'Мне нравится читать книги, в особенности классику.'},
+  {ru:'в первую очередь', tr:'her şeyden önce, öncelikle', anlam:'Öncelik ifade eder', ornek:'В первую очередь, нужно подумать о здоровье.'},
+  {ru:'в противном случае', tr:'aksi takdirde, yoksa', anlam:'Koşul/uyarı ifade eder', ornek:'Поторопись, в противном случае опоздаем.'},
+  {ru:'в результате', tr:'sonuç olarak', anlam:'Sonuç ifade eder', ornek:'В результате аварии, он получил травмы.'},
+  {ru:'в связи с этим', tr:'bununla bağlantılı olarak', anlam:'Bağlantı ifade eder', ornek:'В связи с этим, мы вынуждены отменить встречу.'},
+  {ru:'в таком случае', tr:'o zaman, bu durumda', anlam:'Koşullu sonuç ifade eder', ornek:'В таком случае, я пойду с вами.'},
+  {ru:'в то же время', tr:'aynı zamanda', anlam:'Eş zamanlılık ifade eder', ornek:'Он талантливый музыкант, в то же время отличный спортсмен.'},
+  {ru:'в целом', tr:'genel olarak, toplamda', anlam:'Genelleme ifade eder', ornek:'В целом, поездка прошла удачно.'},
+  {ru:'вдобавок', tr:'ayrıca, üstelik', anlam:'Ek bilgi ekler', ornek:'Он опоздал, вдобавок, забыл документы.'},
+  {ru:'вместе с тем', tr:'aynı zamanda, bununla birlikte', anlam:'Eş zamanlılık ifade eder', ornek:'Он был строгим, но вместе с тем справедливым.'},
+  {ru:'во что бы то ни стало', tr:'ne pahasına olursa olsun', anlam:'Güçlü kararlılık ifade eder', ornek:'Он решил во что бы то ни стало достичь своей цели.'},
+  {ru:'впоследствии', tr:'daha sonra, sonradan', anlam:'Zaman sırası ifade eder', ornek:'Впоследствии он пожалел о своих словах.'},
+  {ru:'всё-таки', tr:'yine de, buna rağmen', anlam:'Karşıtlık ifade eder', ornek:'Я всё-таки решил пойти на вечеринку.'},
+  {ru:'главным образом', tr:'başlıca olarak, özellikle', anlam:'Öncelik ifade eder', ornek:'Он добился успеха главным образом благодаря трудолюбию.'},
+  {ru:'зачастую', tr:'sık sık, çoğunlukla', anlam:'Sıklık ifade eder', ornek:'Зачастую он опаздывает на работу.'},
+  {ru:'исключительно', tr:'sadece, yalnızca', anlam:'Kısıtlama ifade eder', ornek:'Этот фильм предназначен исключительно для взрослых.'},
+  {ru:'между тем', tr:'bu arada, bununla birlikte', anlam:'Eş zamanlılık ifade eder', ornek:'Между тем, на улице стемнело.'},
+  {ru:'на всякий случай', tr:'her ihtimale karşı', anlam:'Önlem ifade eder', ornek:'Возьми зонт, на всякий случай.'},
+  {ru:'на первый взгляд', tr:'ilk bakışta', anlam:'İlk izlenim ifade eder', ornek:'На первый взгляд, он показался мне приятным.'},
+  {ru:'наверняка', tr:'kesinlikle, şüphesiz', anlam:'Kesinlik ifade eder', ornek:'Он наверняка уже всё знает.'},
+  {ru:'по возможности', tr:'mümkünse, mümkün olduğunca', anlam:'İstek/olasılık ifade eder', ornek:'Приезжай ко мне в гости, по возможности.'},
+  {ru:'по-прежнему', tr:'hala, eskisi gibi', anlam:'Süreklilik ifade eder', ornek:'Он по-прежнему живёт в том же доме.'},
+  {ru:'практически', tr:'neredeyse, hemen hemen', anlam:'Yaklaşıklık ifade eder', ornek:'Я практически закончил работу.'},
+  {ru:'при всём том', tr:'buna rağmen, yine de', anlam:'Karşıtlık ifade eder', ornek:'Он был очень занят, при всём том нашёл время для меня.'},
+  {ru:'при этом', tr:'bununla birlikte, aynı zamanda', anlam:'Eş zamanlılık ifade eder', ornek:'Он был молод, при этом очень опытен.'},
+  {ru:'равным образом', tr:'aynı şekilde', anlam:'Eşitlik ifade eder', ornek:'Это правило распространяется на всех равным образом.'},
+  {ru:'словно', tr:'sanki, gibi', anlam:'Benzetme ifade eder', ornek:'Она пела, словно ангел.'},
+  {ru:'фактически', tr:'aslında, pratikte', anlam:'Gerçek/pratik ifade eder', ornek:'Фактически, он был главой компании.'},
+  {ru:'якобы', tr:'sözde, güya', anlam:'Şüphe/aktarılan söz ifade eder', ornek:'Он якобы уехал в командировку.'},
+  {ru:'скорее всего', tr:'büyük olasılıkla, muhtemelen', anlam:'Güçlü olasılık ifade eder - sınavda çok çıkar', ornek:'Скорее всего, он опоздает.'},
+  {ru:'особенно если', tr:'özellikle eğer, hele ki', anlam:'Koşullu vurgu ifade eder', ornek:'Нужно быть осторожным, особенно если ты один дома.'},
+  {ru:'тем более что', tr:'özellikle çünkü, hele ki', anlam:'Pekiştirme gerekçesi ifade eder', ornek:'Я не буду покупать эту машину, тем более что она очень дорогая.'},
+  {ru:'самое большее', tr:'en fazla, maksimum', anlam:'Üst sınır belirtir', ornek:'Я могу дать тебе самое большее сто рублей.'},
+  {ru:'самое меньшее', tr:'en az, minimum', anlam:'Alt sınır belirtir', ornek:'Мне нужно самое меньшее три дня.'},
+  {ru:'как максимум', tr:'en fazla, maksimum', anlam:'Üst sınır belirtir', ornek:'Я могу дать тебе как максимум сто рублей.'},
+  {ru:'вроде бы', tr:'sanki, güya', anlam:'Belirsiz benzetme ifade eder', ornek:'Вроде бы он говорил об этом.'},
+  {ru:'небось', tr:'muhtemelen, herhalde', anlam:'Tahmin ifade eder (günlük konuşma)', ornek:'Небось он опять забыл ключи.'}
+];
+
 const antonymPairs = [
   {ru1:'большой', tr1:'büyük', p1:'balşoy', ru2:'маленький', tr2:'küçük', p2:'malenkiy'},
   {ru1:'хороший', tr1:'iyi', p1:'haroşiy', ru2:'плохой', tr2:'kötü', p2:'plahoy'},
@@ -6280,7 +6558,17 @@ function selectLevel(level) {
     return;
   }
 
+  if (level === 'esanlamli' || level === 'zitanlamli' || level === 'akraba' || level === 'deyimler') {
+    document.getElementById('words-category-select').style.display = 'block';
+    document.getElementById('cat-tabs').style.display = 'none';
+    const titles = {esanlamli:'Eş Anlamlılar', zitanlamli:'Zıt Anlamlılar', akraba:'Akraba Kelimeler', deyimler:'Deyimler'};
+    document.getElementById('words-level-title').innerHTML = `<span>${titles[level]}</span>`;
+    renderWords(level);
+    return;
+  }
+
   document.getElementById('words-category-select').style.display = 'block';
+  document.getElementById('cat-tabs').style.display = 'flex';
   document.getElementById('words-level-title').innerHTML = `${levelTitles[level]} <span>Kelimeleri</span>`;
   updateCatCounts();
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
@@ -6292,6 +6580,9 @@ function backToLevels() {
   document.getElementById('words-level-select').style.display = 'block';
   document.getElementById('words-category-select').style.display = 'none';
   document.getElementById('words-sozluk').style.display = 'none';
+  document.getElementById('cat-tabs').style.display = 'flex';
+  const grid = document.getElementById('words-grid');
+  if (grid) grid.style.gridTemplateColumns = '';
 }
 
 function sozlukAra(query) {
@@ -6389,6 +6680,7 @@ function updateCatCounts() {
 
 function renderWords(cat) {
   const grid = document.getElementById('words-grid');
+  grid.style.gridTemplateColumns = '';
   const levelWords = getLevelWords();
 
   if (cat === 'esanlamli') {
@@ -6413,6 +6705,7 @@ function renderWords(cat) {
   }
 
   if (cat === 'zitanlamli') {
+    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(320px, 1fr))';
     grid.innerHTML = antonymPairs.map(p => `
       <div class="ant-card">
         <div class="ant-label">↔ Zıt Anlamlı Çift</div>
@@ -6459,6 +6752,22 @@ function renderWords(cat) {
             </div>
           `).join('')}
         </div>
+      </div>
+    `).join('');
+    return;
+  }
+
+  if (cat === 'deyimler') {
+    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(320px, 1fr))';
+    grid.innerHTML = deyimlerData.map(d => `
+      <div style="background:var(--white);border:1.5px solid #fbbf24;border-radius:14px;padding:20px;transition:all 0.2s;">
+        <div style="font-size:0.65rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#d97706;margin-bottom:10px;">💬 Deyim</div>
+        <div style="font-family:'Noto Sans','PT Serif',sans-serif;font-size:1.05rem;font-weight:700;color:#92400e;margin-bottom:6px;word-break:break-word;">${d.ru}</div>
+        <div style="font-size:0.78rem;color:#6b7280;font-style:italic;margin-bottom:8px;">${d.tr}</div>
+        <div style="font-size:0.8rem;color:var(--text);background:#fffbeb;border-radius:8px;padding:8px 10px;">
+          <span style="color:#d97706;font-weight:700;">Anlam:</span> ${d.anlam}
+        </div>
+        ${d.ornek ? `<div style="margin-top:8px;font-size:0.78rem;color:#6b7280;font-style:italic;">"${d.ornek}"</div>` : ''}
       </div>
     `).join('');
     return;
