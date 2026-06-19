@@ -1,0 +1,72 @@
+[
+ {
+  "level": "A1",
+  "title": "Rus Alfabesi",
+  "desc": "33 harfin okunuşunu öğren",
+  "locked": false,
+  "num": 1
+ },
+ {
+  "level": "A1",
+  "title": "Temel Selamlaşmalar",
+  "desc": "Merhaba, günaydın, hoşça kal...",
+  "locked": false,
+  "num": 2
+ },
+ {
+  "level": "A1",
+  "title": "Sayılar 1-100",
+  "desc": "Rusça sayıları öğren",
+  "locked": true,
+  "num": 3
+ },
+ {
+  "level": "A1",
+  "title": "Renkler ve Şekiller",
+  "desc": "Renk adları ve kullanımı",
+  "locked": true,
+  "num": 4
+ },
+ {
+  "level": "A2",
+  "title": "İsim Çekimleri",
+  "desc": "Rus dilinde 6 hal sistemi",
+  "locked": true,
+  "num": 5
+ },
+ {
+  "level": "A2",
+  "title": "Fiil Çekimleri",
+  "desc": "Şimdiki zaman fiil kullanımı",
+  "locked": true,
+  "num": 6
+ },
+ {
+  "level": "B1",
+  "title": "YDT Soru Tipleri",
+  "desc": "Sınavda çıkan soru formatları",
+  "locked": true,
+  "num": 7
+ },
+ {
+  "level": "B1",
+  "title": "Okuma Teknikleri",
+  "desc": "Hızlı okuma ve anlama stratejileri",
+  "locked": true,
+  "num": 8
+ },
+ {
+  "level": "B2",
+  "title": "İleri Gramer",
+  "desc": "Karmaşık cümle yapıları",
+  "locked": true,
+  "num": 9
+ },
+ {
+  "level": "C1",
+  "title": "YDS Hazırlık",
+  "desc": "Üst düzey sınav stratejileri",
+  "locked": true,
+  "num": 10
+ }
+]

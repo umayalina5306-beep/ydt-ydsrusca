@@ -1,0 +1,563 @@
+// DATA
+let words = [];
+
+
+let videos = [];
+
+// EŞ ANLAMLILAR
+let synonymGroups = [];
+
+let antonymPairs = [];
+
+// AKRABA KELİMELER
+let wordFamilies = [];
+
+// SEVİYE SEÇİMİ
+let currentLevel = 'a1a2';
+const levelTitles = {
+  'a1a2': 'A1-A2',
+  'b1': 'B1',
+  'b2': 'B2',
+  'c1': 'C1'
+};
+
+function selectLevel(level) {
+  currentLevel = level;
+  document.getElementById('words-level-select').style.display = 'none';
+  document.getElementById('words-category-select').style.display = 'none';
+  document.getElementById('words-sozluk').style.display = 'none';
+
+  if (level === 'sozluk') {
+    document.getElementById('words-sozluk').style.display = 'block';
+    setTimeout(() => document.getElementById('sozluk-input').focus(), 100);
+    return;
+  }
+
+  document.getElementById('words-category-select').style.display = 'block';
+  document.getElementById('words-level-title').innerHTML = `${levelTitles[level]} <span>Kelimeleri</span>`;
+  updateCatCounts();
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.cat-btn').classList.add('active');
+  renderWords('hepsi');
+}
+
+function backToLevels() {
+  document.getElementById('words-level-select').style.display = 'block';
+  document.getElementById('words-category-select').style.display = 'none';
+  document.getElementById('words-sozluk').style.display = 'none';
+}
+
+function sozlukAra(query) {
+  const clearBtn = document.getElementById('sozluk-clear-btn');
+  const grid = document.getElementById('sozluk-grid');
+  const info = document.getElementById('sozluk-info');
+  const q = query.trim().toLowerCase();
+
+  clearBtn.style.display = q ? 'block' : 'none';
+
+  if (!q) {
+    grid.innerHTML = '';
+    info.textContent = 'Aramak istediğiniz kelimeyi yukarıya yazın.';
+    return;
+  }
+
+  const results = words.filter(w =>
+    w.ru.toLowerCase().includes(q) ||
+    w.tr.toLowerCase().includes(q) ||
+    (w.p && w.p.toLowerCase().includes(q))
+  );
+
+  if (results.length === 0) {
+    grid.innerHTML = `
+      <div class="sozluk-not-found">
+        <div class="not-found-icon">📭</div>
+        <div class="not-found-title">"${query}" bulunamadı</div>
+        <div class="not-found-sub">Bu kelime henüz listemizde yok. Yakında eklenecek!</div>
+      </div>`;
+    info.textContent = '';
+    return;
+  }
+
+  info.textContent = `${results.length} kelime bulundu`;
+
+  const highlight = (text, q) => {
+    const idx = text.toLowerCase().indexOf(q);
+    if (idx === -1) return text;
+    return text.slice(0,idx) + `<mark style="background:#fef08a;border-radius:2px;">${text.slice(idx,idx+q.length)}</mark>` + text.slice(idx+q.length);
+  };
+
+  const levelColor = {'A1':'#10b981','A2':'#3b82f6','B1':'#f59e0b','B2':'#ef4444','C1':'#8b5cf6'};
+
+  grid.innerHTML = results.map(w => {
+    const tipHTML = w.tip ? `<span class="word-tip ${w.tip==='СВ'?'word-tip-cv':'word-tip-ncv'}">${w.tip}</span>` : '';
+    const cvHTML = w.cv ? `<div class="word-cv-pair">⇄ СВ: <b>${w.cv}</b></div>` : '';
+    const ncvHTML = w.ncv ? `<div class="word-cv-pair">⇄ НСВ: <b>${w.ncv}</b></div>` : '';
+    const extraHTML = (cvHTML||ncvHTML) ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--light-gray);">${cvHTML}${ncvHTML}</div>` : '';
+    const genderClass = w.cinsiyet==='м'?'gender-m':w.cinsiyet==='ж'?'gender-f':'gender-n';
+    const genderLabel = w.cinsiyet==='м'?'м (erkil)':w.cinsiyet==='ж'?'ж (dişil)':w.cinsiyet==='с'?'с (nötr)':'';
+    const genderHTML = w.cinsiyet ? `<span class="word-gender ${genderClass}">${genderLabel}</span>` : '';
+    const padejHTML = w.padej ? `<span class="word-padej">${w.padej}</span><br>` : '';
+    const lc = levelColor[w.level] || '#6b7280';
+    const ruSafe = w.ru.replace(/'/g, "\\'");
+    return `
+    <div class="word-card">
+      <button class="word-speak" onclick="speak('${ruSafe}')">🔊</button>
+      <span style="position:absolute;top:12px;right:44px;font-size:0.6rem;font-weight:700;color:${lc};background:${lc}22;padding:2px 6px;border-radius:10px;">${w.level}</span>
+      <div class="word-ru">${highlight(w.ru,q)} ${genderHTML}</div>
+      ${tipHTML}${padejHTML}
+      <div class="word-tr">${highlight(w.tr,q)}</div>
+      <div class="word-pron">[${w.p}]</div>
+      ${extraHTML}
+      ${w.ornek?`<div class="word-example"><div class="word-example-ru">${w.ornek}</div><div class="word-example-tr">${w.ornekTr}</div></div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function sozlukTemizle() {
+  const input = document.getElementById('sozluk-input');
+  input.value = '';
+  input.focus();
+  sozlukAra('');
+}
+
+function getLevelWords() {
+  return words.filter(w => {
+    if (currentLevel === 'a1a2') return w.level === 'A1' || w.level === 'A2';
+    if (currentLevel === 'b1') return w.level === 'B1';
+    if (currentLevel === 'b2') return w.level === 'B2';
+    if (currentLevel === 'c1') return w.level === 'C1';
+    return true;
+  });
+}
+
+function updateCatCounts() {
+  const levelWords = getLevelWords();
+  const cats = ['isim','fiil','sıfat','zarf','zamir','edat','bağlaç'];
+  cats.forEach(cat => {
+    const el = document.getElementById('cnt-' + cat);
+    if (el) el.textContent = levelWords.filter(w => w.cat === cat).length;
+  });
+}
+
+
+function renderWords(cat) {
+  const grid = document.getElementById('words-grid');
+  const levelWords = getLevelWords();
+
+  if (cat === 'esanlamli') {
+    grid.innerHTML = synonymGroups.map(g => `
+      <div class="syn-card">
+        <div class="syn-label">≈ Eş Anlamlı Grup</div>
+        <div style="font-weight:700; color:var(--text); font-size:0.85rem; margin-bottom:10px;">${g.grup}</div>
+        <div class="syn-group">
+          ${g.kelimeler.map(k => `
+            <div class="syn-item">
+              <div>
+                <div class="syn-item-ru">${k.ru}</div>
+                <div class="syn-item-tr">${k.tr}</div>
+              </div>
+              <button class="syn-item-speak" onclick="speak('${k.ru.replace(/'/g,"\\'")}')">🔊</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+    return;
+  }
+
+  if (cat === 'zitanlamli') {
+    grid.innerHTML = antonymPairs.map(p => `
+      <div class="ant-card">
+        <div class="ant-label">↔ Zıt Anlamlı Çift</div>
+        <div class="ant-pair">
+          <div class="ant-row">
+            <div class="ant-word">
+              <div class="ant-word-ru">${p.ru1}</div>
+              <div class="ant-word-tr">${p.tr1}</div>
+              <div class="ant-word-bottom">
+                <button class="ant-speak" onclick="speak('${p.ru1.replace(/'/g,"\\'")}')">🔊</button>
+              </div>
+            </div>
+            <div class="ant-divider"><div class="ant-arrow">↔</div></div>
+            <div class="ant-word">
+              <div class="ant-word-ru">${p.ru2}</div>
+              <div class="ant-word-tr">${p.tr2}</div>
+              <div class="ant-word-bottom">
+                <button class="ant-speak" onclick="speak('${p.ru2.replace(/'/g,"\\'")}')">🔊</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+    return;
+  }
+
+  if (cat === 'akraba') {
+    grid.innerHTML = wordFamilies.map(f => `
+      <div class="family-card">
+        <div class="family-label">🌿 Akraba Kelimeler</div>
+        <div class="family-root">Kök: <span>${f.kok}</span> — ${f.anlam}</div>
+        <div class="family-words">
+          ${f.kelimeler.map(k => `
+            <div class="family-item">
+              <div>
+                <div class="family-item-ru">${k.ru}</div>
+              </div>
+              <div class="family-item-info">
+                <div class="family-item-tr">${k.tr}</div>
+                <div class="family-item-cat">${k.cat}</div>
+              </div>
+              <button class="family-item-speak" onclick="speak('${k.ru.replace(/'/g,"\\'")}')">🔊</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+    return;
+  }
+
+  const filtered = cat === 'hepsi' ? levelWords : levelWords.filter(w => w.cat === cat);
+  grid.innerHTML = filtered.map(w => {
+    const tipHTML = w.tip ? `<span class="word-tip ${w.tip==='СВ'||w.tip==='CV'?'word-tip-cv':'word-tip-ncv'}">${w.tip==='CV'?'СВ':w.tip==='NCV'?'НСВ':w.tip}</span>` : '';
+    const cvHTML = w.cv ? `<div class="word-cv-pair">⇄ СВ: <b>${w.cv}</b></div>` : '';
+    const ncvHTML = w.ncv ? `<div class="word-cv-pair">⇄ НСВ: <b>${w.ncv}</b></div>` : '';
+    const extraHTML = (cvHTML||ncvHTML) ? `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--light-gray);">${cvHTML}${ncvHTML}</div>` : '';
+    const genderClass = w.cinsiyet === 'м' ? 'gender-m' : w.cinsiyet === 'ж' ? 'gender-f' : 'gender-n';
+    const genderLabel = w.cinsiyet === 'м' ? 'м (erkil)' : w.cinsiyet === 'ж' ? 'ж (dişil)' : w.cinsiyet === 'с' ? 'с (nötr)' : '';
+    const genderHTML = w.cinsiyet ? `<span class="word-gender ${genderClass}">${genderLabel}</span>` : '';
+    const padejHTML = w.padej ? `<span class="word-padej">${w.padej}</span><br>` : '';
+    const ruSafe = w.ru.replace(/'/g, "\\'");
+    return `
+    <div class="word-card">
+      <button class="word-speak" onclick="speak('${ruSafe}')">🔊</button>
+      <div class="word-ru">${w.ru} ${genderHTML}</div>
+      ${tipHTML}
+      ${padejHTML}
+      <div class="word-tr">${w.tr}</div>
+      <div class="word-pron">[${w.p}]</div>
+      ${extraHTML}
+      ${w.ornek ? `<div class="word-example"><div class="word-example-ru">${w.ornek}</div><div class="word-example-tr">${w.ornekTr}</div></div>` : ''}
+    </div>`;
+  }).join('');
+}
+function filterWords(cat, btn) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderWords(cat);
+}
+// renderWords çağrısı selectLevel'dan yapılacak
+
+// SPEECH - Mobil uyumlu
+function speak(text) {
+  // Önce Web Speech API dene (mobilde daha iyi çalışır)
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ru-RU';
+    u.rate = 0.85;
+    u.pitch = 1;
+    // Rus sesi bul
+    const voices = window.speechSynthesis.getVoices();
+    const ruVoice = voices.find(v => v.lang.startsWith('ru'));
+    if (ruVoice) u.voice = ruVoice;
+    window.speechSynthesis.speak(u);
+    return;
+  }
+  // Fallback: Google TTS
+  const audio = new Audio();
+  audio.src = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=ru&client=tw-ob`;
+  audio.play().catch(e => console.log('Ses çalınamadı:', e));
+}
+// Sesleri önceden yükle
+if (window.speechSynthesis) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+}
+
+// QUIZ
+let qList=[], qIdx=0, qScore=0, qAnswered=false, qWrong=0;
+let quizSettings = { type:'ru-tr', cat:'hepsi', count:20, level:'hepsi' };
+
+function selectSetup(key, val, btn) {
+  quizSettings[key] = val;
+  btn.closest('.setup-options').querySelectorAll('.setup-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function showSetup() {
+  document.getElementById('quiz-setup').style.display = 'block';
+  document.getElementById('quiz-playing').style.display = 'none';
+  document.getElementById('quiz-result').style.display = 'none';
+}
+
+function shuffle(a){return[...a].sort(()=>Math.random()-0.5);}
+
+function startQuiz(){
+  // Seviye filtresi
+  let pool = words;
+  if (quizSettings.level !== 'hepsi') {
+    pool = words.filter(w => w.level === quizSettings.level);
+  }
+  // Kategori filtresi
+  if (quizSettings.cat !== 'hepsi') {
+    pool = pool.filter(w => w.cat === quizSettings.cat);
+  }
+  if (pool.length < 4) {
+    alert('Bu seviye/kategori kombinasyonunda yeterli kelime yok. Lütfen başka seçim yapın.');
+    showSetup();
+    return;
+  }
+  const count = parseInt(quizSettings.count) || 20;
+  qList = shuffle(pool).slice(0, count);
+  qIdx = 0; qScore = 0; qWrong = 0;
+
+  document.getElementById('quiz-setup').style.display = 'none';
+  document.getElementById('quiz-playing').style.display = 'block';
+  document.getElementById('quiz-result').style.display = 'none';
+  document.getElementById('quiz-card').style.display = 'block';
+  loadQ();
+}
+
+function loadQ(){
+  qAnswered = false;
+  const q = qList[qIdx];
+  const type = quizSettings.type;
+
+  document.getElementById('quiz-fill').style.width = (qIdx/qList.length*100)+'%';
+  document.getElementById('quiz-num').textContent = `Soru ${qIdx+1} / ${qList.length}`;
+  document.getElementById('quiz-fb').textContent = '';
+  document.getElementById('quiz-fb').className = 'quiz-feedback';
+  document.getElementById('quiz-next').style.display = 'none';
+
+  // Tip etiketi
+  const typeLabels = {'ru-tr':'🇷🇺 → 🇹🇷 Rusça → Türkçe','tr-ru':'🇹🇷 → 🇷🇺 Türkçe → Rusça','fill':'✍️ Yaz Bakalım','tf':'✓✗ Doğru / Yanlış'};
+  document.getElementById('quiz-type-badge').textContent = typeLabels[type];
+
+  if (type === 'ru-tr') {
+    // Rusça kelimeyi gör → Türkçe seç
+    document.getElementById('quiz-q').innerHTML = `<span style="font-family:'Noto Sans',sans-serif;">${q.ru}</span>`;
+    document.getElementById('quiz-pron').textContent = `[${q.p}]`;
+    const wrong = shuffle(words.filter(w=>w.ru!==q.ru)).slice(0,3).map(w=>w.tr);
+    const opts = shuffle([q.tr, ...wrong]);
+    renderOpts(opts, q.tr, q.ru, 'tr');
+
+  } else if (type === 'tr-ru') {
+    // Türkçe kelimeyi gör → Rusça seç
+    document.getElementById('quiz-q').textContent = q.tr;
+    document.getElementById('quiz-pron').textContent = '';
+    const wrong = shuffle(words.filter(w=>w.ru!==q.ru)).slice(0,3).map(w=>w.ru);
+    const opts = shuffle([q.ru, ...wrong]);
+    renderOpts(opts, q.ru, q.ru, 'ru');
+
+  } else if (type === 'fill') {
+    // Yaz Bakalım — kelimeyi klavyeyle yaz
+    const subType = Math.random() > 0.5 ? 'ru-yaz' : 'tr-yaz';
+    if (subType === 'ru-yaz') {
+      // Türkçe göster → Rusça yaz
+      document.getElementById('quiz-q').innerHTML = `<div style="font-size:1.1rem;color:var(--gray);margin-bottom:8px;">Türkçesi:</div><div style="font-size:1.6rem;font-weight:700;">${q.tr}</div>`;
+      document.getElementById('quiz-pron').textContent = '';
+      renderWriteInput(q.ru, q.ru, 'ru');
+    } else {
+      // Rusça göster → Türkçe yaz
+      document.getElementById('quiz-q').innerHTML = `<div style="font-size:1.1rem;color:var(--gray);margin-bottom:8px;">Rusçası:</div><div style="font-family:'Noto Sans',sans-serif;font-size:1.8rem;font-weight:700;">${q.ru}</div><div style="font-size:0.9rem;color:var(--gray);">[${q.p}]</div>`;
+      document.getElementById('quiz-pron').textContent = '';
+      renderWriteInput(q.tr, q.ru, 'tr');
+    }
+
+  } else if (type === 'tf') {
+    // Doğru/Yanlış — Rusça kelime ve Türkçe anlam eşleşiyor mu?
+    const isCorrect = Math.random() > 0.5;
+    let shownTr = q.tr;
+    if (!isCorrect) {
+      const decoy = shuffle(words.filter(w=>w.ru!==q.ru))[0];
+      shownTr = decoy.tr;
+    }
+    document.getElementById('quiz-q').innerHTML = `<span style="font-family:'Noto Sans',sans-serif;">${q.ru}</span><br><small style="font-size:1rem;color:var(--gray);">${shownTr}</small>`;
+    document.getElementById('quiz-pron').textContent = `[${q.p}]`;
+    const correctAns = isCorrect ? 'Doğru ✓' : 'Yanlış ✗';
+    const opts = ['Doğru ✓', 'Yanlış ✗'];
+    renderOpts(opts, correctAns, q.ru, 'tf');
+  }
+}
+
+function renderWriteInput(correct, ru, mode) {
+  const isRu = mode === 'ru';
+  const placeholder = isRu ? 'Rusça yaz...' : 'Türkçe yaz...';
+  const fontStyle = isRu ? "font-family:'Noto Sans',sans-serif;" : '';
+  document.getElementById('quiz-opts').innerHTML = `
+    <div class="write-input-wrap">
+      <input type="text" id="write-answer" class="write-answer-input" 
+        placeholder="${placeholder}"
+        style="${fontStyle}"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        onkeydown="if(event.key==='Enter') checkWrite('${correct.replace(/'/g,"\\'")}','${ru.replace(/'/g,"\\'")}')">
+      <button class="write-submit-btn" onclick="checkWrite('${correct.replace(/'/g,"\\'")}','${ru.replace(/'/g,"\\'")}')">
+        Kontrol Et →
+      </button>
+    </div>
+  `;
+  setTimeout(() => {
+    const inp = document.getElementById('write-answer');
+    if (inp) inp.focus();
+  }, 100);
+}
+
+function checkWrite(correct, ru) {
+  if (qAnswered) return;
+  const inp = document.getElementById('write-answer');
+  if (!inp) return;
+  const given = inp.value.trim().toLowerCase();
+  const expected = correct.trim().toLowerCase();
+
+  // Esnek karşılaştırma - parantez içini dikkate alma
+  const cleanExpected = expected.replace(/\s*\([^)]*\)/g, '').trim();
+  const isCorrect = given === expected || given === cleanExpected ||
+    cleanExpected.split('/').map(s=>s.trim()).includes(given);
+
+  qAnswered = true;
+  inp.disabled = true;
+  document.querySelector('.write-submit-btn').disabled = true;
+
+  const fb = document.getElementById('quiz-fb');
+  if (isCorrect) {
+    fb.innerHTML = '✓ Doğru!';
+    fb.className = 'quiz-feedback feedback-correct';
+    qScore++;
+  } else {
+    fb.innerHTML = `✗ Yanlış. Doğru cevap: <span style="font-weight:700;">${correct}</span>`;
+    fb.className = 'quiz-feedback feedback-wrong';
+    qWrong++;
+  }
+  speak(ru);
+  document.getElementById('quiz-next').style.display = 'inline-block';
+}
+
+function renderOpts(opts, correct, ru, mode) {
+  document.getElementById('quiz-opts').innerHTML = opts.map(o => {
+    const safe = o.replace(/'/g,"\\'");
+    const correctSafe = correct.replace(/'/g,"\\'");
+    const ruSafe = ru.replace(/'/g,"\\'");
+    const style = mode==='ru' ? "font-family:'Noto Sans',sans-serif;" : '';
+    return `<button class="quiz-opt" style="${style}" onclick="checkA(this,'${safe}','${correctSafe}','${ruSafe}')">${o}</button>`;
+  }).join('');
+}
+
+function checkA(btn, chosen, correct, ru){
+  if(qAnswered) return;
+  qAnswered = true;
+  document.querySelectorAll('.quiz-opt').forEach(b => b.disabled = true);
+  const fb = document.getElementById('quiz-fb');
+  if(chosen === correct){
+    btn.classList.add('correct');
+    fb.textContent = '✓ Doğru!';
+    fb.className = 'quiz-feedback feedback-correct';
+    qScore++;
+  } else {
+    btn.classList.add('wrong');
+    document.querySelectorAll('.quiz-opt').forEach(b => { if(b.textContent===correct) b.classList.add('correct'); });
+    fb.innerHTML = `✗ Yanlış. Doğru: <span style="font-family:'Noto Sans',sans-serif;">${correct}</span>`;
+    fb.className = 'quiz-feedback feedback-wrong';
+    qWrong++;
+  }
+  speak(ru);
+  document.getElementById('quiz-next').style.display = 'inline-block';
+}
+
+function nextQ(){
+  qIdx++;
+  if(qIdx >= qList.length) showResult();
+  else loadQ();
+}
+
+function showResult(){
+  document.getElementById('quiz-fill').style.width = '100%';
+  document.getElementById('quiz-card').style.display = 'none';
+  document.getElementById('quiz-result').style.display = 'block';
+  const pct = Math.round(qScore/qList.length*100);
+  document.getElementById('res-score').textContent = `${qScore}/${qList.length}`;
+  const msgs = [[0,40,'Daha çok çalış 💪','Pes etme, tekrar dene!'],[40,70,'Fena değil! 🙂','Biraz daha pratik yap.'],[70,90,'Çok iyi! 👏','Başarın artıyor!'],[90,101,'Mükemmel! 🏆','Harika bir sınav performansı!']];
+  const [,,l,s] = msgs.find(([mn,mx]) => pct>=mn && pct<mx);
+  document.getElementById('res-label').textContent = l;
+  document.getElementById('res-sub').textContent = s;
+  document.getElementById('res-stats').innerHTML = `
+    <div class="result-stat"><div class="result-stat-num" style="color:#10b981;">${qScore}</div><div class="result-stat-label">Doğru</div></div>
+    <div class="result-stat"><div class="result-stat-num" style="color:#ef4444;">${qWrong}</div><div class="result-stat-label">Yanlış</div></div>
+    <div class="result-stat"><div class="result-stat-num">${pct}%</div><div class="result-stat-label">Başarı</div></div>
+  `;
+}
+
+// VIDEO
+function renderVideos(){
+  document.getElementById('video-grid').innerHTML=videos.map(v=>`
+    <div class="video-card ${v.locked?'video-locked':''}">
+      <div class="video-thumb" style="background:${v.locked?'#1a2744':'#003580'}">
+        <div class="video-thumb-num">${v.num}</div>
+        ${v.locked?'<div class="video-lock-icon">🔒</div>':''}
+        <div class="video-play" onclick="${v.locked?'showPage(\'pricing\')':'alert(\'Video yakında eklenecek!\')'}">
+          ${v.locked?'🔒':'▶'}
+        </div>
+      </div>
+      <div class="video-info">
+        <div class="video-level">${v.level} Seviye</div>
+        <div class="video-title">${v.title}</div>
+        <div class="video-desc">${v.desc}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// NAV
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-links button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const nb=document.getElementById('nav-'+id);
+  if(nb) nb.classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='quiz') showSetup();
+}
+
+// AUTH
+function openAuth(tab){
+  document.getElementById('auth-modal').classList.add('active');
+  switchTab(tab);
+}
+function closeAuth(){
+  document.getElementById('auth-modal').classList.remove('active');
+}
+function switchTab(tab){
+  document.getElementById('auth-form-login').style.display=tab==='login'?'block':'none';
+  document.getElementById('auth-form-register').style.display=tab==='register'?'block':'none';
+  document.getElementById('tab-login').classList.toggle('active',tab==='login');
+  document.getElementById('tab-register').classList.toggle('active',tab==='register');
+}
+document.getElementById('auth-modal').addEventListener('click',function(e){
+  if(e.target===this) closeAuth();
+});
+
+// ============================================================
+//  VERİ YÜKLEME — JSON dosyaları buradan otomatik yüklenir.
+//  Yeni içerik eklemek için ilgili JSON dosyasını düzenlemen
+//  yeterli; bu dosyaya (app.js) dokunmana gerek yok.
+// ============================================================
+async function loadData() {
+  const j = (p) => fetch(p).then(r => { if(!r.ok) throw new Error('Yüklenemedi: '+p); return r.json(); });
+  const [a1a2,b1,b2,c1,syn,ant,fam,vids] = await Promise.all([
+    j('data/kelimeler/a1-a2.json'),
+    j('data/kelimeler/b1.json'),
+    j('data/kelimeler/b2.json'),
+    j('data/kelimeler/c1.json'),
+    j('data/es-anlamlilar/es-anlamlilar.json'),
+    j('data/zit-anlamlilar/zit-anlamlilar.json'),
+    j('data/akraba-kelimeler/akraba-kelimeler.json'),
+    j('data/videolar/videolar.json'),
+  ]);
+  words = [].concat(a1a2,b1,b2,c1);
+  synonymGroups = syn; antonymPairs = ant; wordFamilies = fam; videos = vids;
+}
+async function init(){
+  try { await loadData(); renderVideos(); }
+  catch(e){ console.error('Veri yükleme hatası:', e); alert('İçerik yüklenemedi. Sayfayı yenileyin.'); }
+}
+init();

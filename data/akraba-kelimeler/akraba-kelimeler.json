@@ -1,0 +1,296 @@
+[
+ {
+  "kok": "чит / прочит",
+  "anlam": "\"okumak\" kökü",
+  "kelimeler": [
+   {
+    "ru": "читать",
+    "tr": "okumak",
+    "p": "çitat",
+    "cat": "НСВ fiil"
+   },
+   {
+    "ru": "прочитать",
+    "tr": "okumak (CV)",
+    "p": "praçitat",
+    "cat": "СВ fiil"
+   },
+   {
+    "ru": "читатель",
+    "tr": "okuyucu",
+    "p": "çitatel",
+    "cat": "isim"
+   },
+   {
+    "ru": "чтение",
+    "tr": "okuma",
+    "p": "çtenie",
+    "cat": "isim"
+   },
+   {
+    "ru": "читаемый",
+    "tr": "okunabilir",
+    "p": "çitayemy",
+    "cat": "sıfat"
+   }
+  ]
+ },
+ {
+  "kok": "пис / напис",
+  "anlam": "\"yazmak\" kökü",
+  "kelimeler": [
+   {
+    "ru": "писать",
+    "tr": "yazmak",
+    "p": "pisat",
+    "cat": "НСВ fiil"
+   },
+   {
+    "ru": "написать",
+    "tr": "yazmak (CV)",
+    "p": "napisat",
+    "cat": "СВ fiil"
+   },
+   {
+    "ru": "писатель",
+    "tr": "yazar",
+    "p": "pisatel",
+    "cat": "isim"
+   },
+   {
+    "ru": "письмо",
+    "tr": "mektup",
+    "p": "pismo",
+    "cat": "isim"
+   },
+   {
+    "ru": "письменный",
+    "tr": "yazılı",
+    "p": "pismenny",
+    "cat": "sıfat"
+   }
+  ]
+ },
+ {
+  "kok": "говор / сказ",
+  "anlam": "\"konuşmak\" kökü",
+  "kelimeler": [
+   {
+    "ru": "говорить",
+    "tr": "konuşmak",
+    "p": "gavarit",
+    "cat": "НСВ fiil"
+   },
+   {
+    "ru": "сказать",
+    "tr": "söylemek (CV)",
+    "p": "skazat",
+    "cat": "СВ fiil"
+   },
+   {
+    "ru": "разговор",
+    "tr": "konuşma/sohbet",
+    "p": "razgavar",
+    "cat": "isim"
+   },
+   {
+    "ru": "говорящий",
+    "tr": "konuşan",
+    "p": "gavoryaşiy",
+    "cat": "sıfat"
+   },
+   {
+    "ru": "высказывание",
+    "tr": "ifade/söylem",
+    "p": "vıskazıvaniye",
+    "cat": "isim"
+   }
+  ]
+ },
+ {
+  "kok": "раб",
+  "anlam": "\"çalışmak\" kökü",
+  "kelimeler": [
+   {
+    "ru": "работать",
+    "tr": "çalışmak",
+    "p": "rabotat",
+    "cat": "НСВ fiil"
+   },
+   {
+    "ru": "работа",
+    "tr": "iş",
+    "p": "rabota",
+    "cat": "isim"
+   },
+   {
+    "ru": "работник",
+    "tr": "işçi/çalışan",
+    "p": "rabotnik",
+    "cat": "isim"
+   },
+   {
+    "ru": "рабочий",
+    "tr": "işçi/çalışma",
+    "p": "raboçiy",
+    "cat": "sıfat"
+   },
+   {
+    "ru": "безработный",
+    "tr": "işsiz",
+    "p": "bezrabotny",
+    "cat": "sıfat"
+   }
+  ]
+ },
+ {
+  "kok": "уч",
+  "anlam": "\"öğrenmek\" kökü",
+  "kelimeler": [
+   {
+    "ru": "учиться",
+    "tr": "öğrenmek",
+    "p": "uçitsya",
+    "cat": "НСВ fiil"
+   },
+   {
+    "ru": "учить",
+    "tr": "öğretmek",
+    "p": "uçit",
+    "cat": "НСВ fiil"
+   },
+   {
+    "ru": "учитель",
+    "tr": "öğretmen",
+    "p": "uçitel",
+    "cat": "isim"
+   },
+   {
+    "ru": "ученик",
+    "tr": "öğrenci",
+    "p": "uçenik",
+    "cat": "isim"
+   },
+   {
+    "ru": "учебник",
+    "tr": "ders kitabı",
+    "p": "uçebnik",
+    "cat": "isim"
+   },
+   {
+    "ru": "учёный",
+    "tr": "bilim insanı",
+    "p": "uçyony",
+    "cat": "isim"
+   }
+  ]
+ },
+ {
+  "kok": "люб",
+  "anlam": "\"sevmek\" kökü",
+  "kelimeler": [
+   {
+    "ru": "любить",
+    "tr": "sevmek",
+    "p": "lyubit",
+    "cat": "НСВ fiil"
+   },
+   {
+    "ru": "любовь",
+    "tr": "aşk/sevgi",
+    "p": "lyubov",
+    "cat": "isim"
+   },
+   {
+    "ru": "любимый",
+    "tr": "sevgili/favori",
+    "p": "lyubimy",
+    "cat": "sıfat"
+   },
+   {
+    "ru": "любезный",
+    "tr": "nazik/sevimli",
+    "p": "lyubezny",
+    "cat": "sıfat"
+   },
+   {
+    "ru": "влюбиться",
+    "tr": "aşık olmak",
+    "p": "vlyubitsya",
+    "cat": "СВ fiil"
+   }
+  ]
+ },
+ {
+  "kok": "знa",
+  "anlam": "\"bilmek\" kökü",
+  "kelimeler": [
+   {
+    "ru": "знать",
+    "tr": "bilmek",
+    "p": "znat",
+    "cat": "НСВ fiil"
+   },
+   {
+    "ru": "знание",
+    "tr": "bilgi",
+    "p": "znaniye",
+    "cat": "isim"
+   },
+   {
+    "ru": "знакомый",
+    "tr": "tanıdık/tanışık",
+    "p": "znakomy",
+    "cat": "sıfat"
+   },
+   {
+    "ru": "знакомство",
+    "tr": "tanışma",
+    "p": "znakomstvo",
+    "cat": "isim"
+   },
+   {
+    "ru": "узнать",
+    "tr": "öğrenmek/tanımak",
+    "p": "uznat",
+    "cat": "СВ fiil"
+   }
+  ]
+ },
+ {
+  "kok": "жив",
+  "anlam": "\"yaşamak\" kökü",
+  "kelimeler": [
+   {
+    "ru": "жить",
+    "tr": "yaşamak",
+    "p": "jit",
+    "cat": "НСВ fiil"
+   },
+   {
+    "ru": "жизнь",
+    "tr": "hayat",
+    "p": "jizn",
+    "cat": "isim"
+   },
+   {
+    "ru": "живой",
+    "tr": "canlı",
+    "p": "jivoy",
+    "cat": "sıfat"
+   },
+   {
+    "ru": "жилой",
+    "tr": "konut/oturma",
+    "p": "jilov",
+    "cat": "sıfat"
+   },
+   {
+    "ru": "жильё",
+    "tr": "konut",
+    "p": "jilyo",
+    "cat": "isim"
+   }
+  ]
+ }
+]

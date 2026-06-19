@@ -1,0 +1,162 @@
+[
+ {
+  "ru1": "большой",
+  "tr1": "büyük",
+  "p1": "balşoy",
+  "ru2": "маленький",
+  "tr2": "küçük",
+  "p2": "malenkiy"
+ },
+ {
+  "ru1": "хороший",
+  "tr1": "iyi",
+  "p1": "haroşiy",
+  "ru2": "плохой",
+  "tr2": "kötü",
+  "p2": "plahoy"
+ },
+ {
+  "ru1": "быстрый",
+  "tr1": "hızlı",
+  "p1": "bıstry",
+  "ru2": "медленный",
+  "tr2": "yavaş",
+  "p2": "medlenny"
+ },
+ {
+  "ru1": "новый",
+  "tr1": "yeni",
+  "p1": "novy",
+  "ru2": "старый",
+  "tr2": "eski",
+  "p2": "stary"
+ },
+ {
+  "ru1": "горячий",
+  "tr1": "sıcak",
+  "p1": "garyaçiy",
+  "ru2": "холодный",
+  "tr2": "soğuk",
+  "p2": "holodny"
+ },
+ {
+  "ru1": "светлый",
+  "tr1": "aydınlık",
+  "p1": "svetly",
+  "ru2": "тёмный",
+  "tr2": "karanlık",
+  "p2": "tyomny"
+ },
+ {
+  "ru1": "начинать",
+  "tr1": "başlamak",
+  "p1": "naçinat",
+  "ru2": "заканчивать",
+  "tr2": "bitirmek",
+  "p2": "zakanşivat"
+ },
+ {
+  "ru1": "давать",
+  "tr1": "vermek",
+  "p1": "davat",
+  "ru2": "брать",
+  "tr2": "almak",
+  "p2": "brat"
+ },
+ {
+  "ru1": "открывать",
+  "tr1": "açmak",
+  "p1": "atkrıvat",
+  "ru2": "закрывать",
+  "tr2": "kapatmak",
+  "p2": "zakrıvat"
+ },
+ {
+  "ru1": "любить",
+  "tr1": "sevmek",
+  "p1": "lyubit",
+  "ru2": "ненавидеть",
+  "tr2": "nefret etmek",
+  "p2": "nenavıdet"
+ },
+ {
+  "ru1": "смеяться",
+  "tr1": "gülmek",
+  "p1": "smeyatsya",
+  "ru2": "плакать",
+  "tr2": "ağlamak",
+  "p2": "plakat"
+ },
+ {
+  "ru1": "говорить",
+  "tr1": "konuşmak",
+  "p1": "gavarit",
+  "ru2": "молчать",
+  "tr2": "susmak",
+  "p2": "molçat"
+ },
+ {
+  "ru1": "приходить",
+  "tr1": "gelmek",
+  "p1": "prihodit",
+  "ru2": "уходить",
+  "tr2": "gitmek",
+  "p2": "uhodit"
+ },
+ {
+  "ru1": "покупать",
+  "tr1": "satın almak",
+  "p1": "pakupat",
+  "ru2": "продавать",
+  "tr2": "satmak",
+  "p2": "pradavat"
+ },
+ {
+  "ru1": "строить",
+  "tr1": "inşa etmek",
+  "p1": "stroit",
+  "ru2": "разрушать",
+  "tr2": "yıkmak",
+  "p2": "razruşat"
+ },
+ {
+  "ru1": "чистый",
+  "tr1": "temiz",
+  "p1": "çisty",
+  "ru2": "грязный",
+  "tr2": "kirli",
+  "p2": "gryazny"
+ },
+ {
+  "ru1": "богатый",
+  "tr1": "zengin",
+  "p1": "bogaty",
+  "ru2": "бедный",
+  "tr2": "fakir",
+  "p2": "bedny"
+ },
+ {
+  "ru1": "умный",
+  "tr1": "zeki",
+  "p1": "umny",
+  "ru2": "глупый",
+  "tr2": "aptal",
+  "p2": "glupy"
+ },
+ {
+  "ru1": "сильный",
+  "tr1": "güçlü",
+  "p1": "silny",
+  "ru2": "слабый",
+  "tr2": "zayıf",
+  "p2": "slaby"
+ },
+ {
+  "ru1": "находить",
+  "tr1": "bulmak",
+  "p1": "nahodit",
+  "ru2": "терять",
+  "tr2": "kaybetmek",
+  "p2": "teryat"
+ }
+]

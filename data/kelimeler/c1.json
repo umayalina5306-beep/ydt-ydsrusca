@@ -1,0 +1,329 @@
+[
+ {
+  "ru": "лещина",
+  "tr": "fındık ağacı",
+  "p": "leşina",
+  "cat": "isim",
+  "level": "C1",
+  "cinsiyet": "ж",
+  "ornek": "Под лещиной лежали орехи.",
+  "ornekTr": "Fındık ağacının altında fındıklar duruyordu."
+ },
+ {
+  "ru": "журавлиный",
+  "tr": "turna (sıfat)",
+  "p": "juravinıy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Журавлиный крик слышен осенью.",
+  "ornekTr": "Turna çığlığı sonbaharda duyulur."
+ },
+ {
+  "ru": "громада",
+  "tr": "kitle/yığın/dev",
+  "p": "gramada",
+  "cat": "isim",
+  "level": "C1",
+  "cinsiyet": "ж",
+  "ornek": "Белая громада облаков на небе.",
+  "ornekTr": "Gökyüzünde beyaz bulut yığını."
+ },
+ {
+  "ru": "кучевой",
+  "tr": "kümülüs (bulut türü)",
+  "p": "kuçevoy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Кучевые облака предвещают грозу.",
+  "ornekTr": "Kümülüs bulutlar fırtınaya işaret eder."
+ },
+ {
+  "ru": "золотить",
+  "tr": "altınlaştırmak/altın rengi vermek",
+  "p": "zolatit",
+  "tip": "НСВ",
+  "cat": "fiil",
+  "level": "C1",
+  "ornek": "Закат золотит облака.",
+  "ornekTr": "Gün batımı bulutları altın rengine boyuyor."
+ },
+ {
+  "ru": "куриться",
+  "tr": "tütmek/buharlaşmak",
+  "p": "kuritsya",
+  "tip": "НСВ",
+  "cat": "fiil",
+  "level": "C1",
+  "ornek": "Туман осторожно курится над омутом.",
+  "ornekTr": "Sis derin gölün üzerinde usulca tütüyor."
+ },
+ {
+  "ru": "омут",
+  "tr": "derin göl/girdap",
+  "p": "omut",
+  "cat": "isim",
+  "level": "C1",
+  "cinsiyet": "м",
+  "ornek": "В омуте водится рыба.",
+  "ornekTr": "Derin gölde balık yaşıyor."
+ },
+ {
+  "ru": "обложной",
+  "tr": "sürekli/kapkara (hava)",
+  "p": "ablajnoy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Обложной дождь шёл весь день.",
+  "ornekTr": "Sürekli yağmur bütün gün yağdı."
+ },
+ {
+  "ru": "окатный",
+  "tr": "sağanak (yağmur)",
+  "p": "okatnıy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Окатный ливень застал нас врасплох.",
+  "ornekTr": "Sağanak yağmur bizi hazırlıksız yakaladı."
+ },
+ {
+  "ru": "умозрительный",
+  "tr": "soyut/spekülatif",
+  "p": "umozritelnıy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Умозрительный подход не всегда верен.",
+  "ornekTr": "Spekülatif yaklaşım her zaman doğru değil."
+ },
+ {
+  "ru": "вавилонский",
+  "tr": "Babil (sıfat)",
+  "p": "vavilonskiy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Вавилонская башня — символ разногласий.",
+  "ornekTr": "Babil Kulesi anlaşmazlığın simgesi."
+ },
+ {
+  "ru": "неупитанный",
+  "tr": "besili olmayan/zayıf",
+  "p": "neupitannıy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Неупитанный вид.",
+  "ornekTr": "Zayıf görünüm."
+ },
+ {
+  "ru": "нетолстый",
+  "tr": "şişman olmayan/ince",
+  "p": "netolstıy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Нетолстый человек.",
+  "ornekTr": "Şişman olmayan kişi."
+ },
+ {
+  "ru": "соотноситься",
+  "tr": "karşılık gelmek/ilişkili olmak",
+  "p": "saatnositsya",
+  "tip": "НСВ",
+  "cat": "fiil",
+  "level": "C1",
+  "ornek": "Слово соотносится с понятием.",
+  "ornekTr": "Kelime kavramla ilişkili."
+ },
+ {
+  "ru": "костлявый",
+  "tr": "kemikli/iskelet gibi",
+  "p": "kostlyavıy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Костлявый человек.",
+  "ornekTr": "Kemikli/ince bir kişi."
+ },
+ {
+  "ru": "отощалый",
+  "tr": "iyice zayıflamış",
+  "p": "atoşalıy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Отощалый вид.",
+  "ornekTr": "İyice zayıflamış görünüm."
+ },
+ {
+  "ru": "худющий",
+  "tr": "yassı/çok ince",
+  "p": "hudyuşiy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Худющий как щепка.",
+  "ornekTr": "Talaş gibi ince."
+ },
+ {
+  "ru": "кощей",
+  "tr": "iskelet/deri kemik kalmış",
+  "p": "koşey",
+  "cat": "isim",
+  "level": "C1",
+  "cinsiyet": "м",
+  "ornek": "Кощей — образ очень худого человека.",
+  "ornekTr": "Koşey — çok zayıf kişinin imgesi."
+ },
+ {
+  "ru": "некомплиментарный",
+  "tr": "iltifat içermeyen/olumsuz",
+  "p": "nekomplimentarnıy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Некомплиментарное слово.",
+  "ornekTr": "İltifat içermeyen kelime."
+ },
+ {
+  "ru": "полнотелый",
+  "tr": "dolgun vücutlu",
+  "p": "polnotelıy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Полнотелая женщина.",
+  "ornekTr": "Dolgun vücutlu kadın."
+ },
+ {
+  "ru": "дородный",
+  "tr": "kilolu/dolgun/heybetli",
+  "p": "dorodnıy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Дородный мужчина.",
+  "ornekTr": "Heybetli adam."
+ },
+ {
+  "ru": "аристократический",
+  "tr": "aristokratik/soylu",
+  "p": "aristokratiçeskiy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Аристократический вкус.",
+  "ornekTr": "Aristokratik zevk."
+ },
+ {
+  "ru": "контрастировать",
+  "tr": "zıtlık oluşturmak",
+  "p": "kontrastirovat",
+  "tip": "НСВ",
+  "cat": "fiil",
+  "level": "C1",
+  "ornek": "Взгляды резко контрастируют.",
+  "ornekTr": "Görüşler keskin biçimde zıtlaşıyor."
+ },
+ {
+  "ru": "породистый",
+  "tr": "soylu/safkan",
+  "p": "porodistıy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Породистая кошка стоит дорого.",
+  "ornekTr": "Safkan kedi pahalıya mal olur."
+ },
+ {
+  "ru": "удельный",
+  "tr": "özgül/birim başına",
+  "p": "udelnıy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Удельный вес города в культуре страны.",
+  "ornekTr": "Şehrin ülke kültüründeki özgül ağırlığı."
+ },
+ {
+  "ru": "неисчезающий",
+  "tr": "kaybolmayan/kalıcı",
+  "p": "neisçezayuşiy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Неисчезающая история города.",
+  "ornekTr": "Şehrin kaybolmayan tarihi."
+ },
+ {
+  "ru": "богемный",
+  "tr": "bohem/sanatçı hayatı",
+  "p": "bagemnyy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Богемная жизнь артистов.",
+  "ornekTr": "Sanatçıların bohem hayatı."
+ },
+ {
+  "ru": "осаждённый",
+  "tr": "kuşatılmış",
+  "p": "asajdyonnıy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Осаждённый город держался.",
+  "ornekTr": "Kuşatılmış şehir direndi."
+ },
+ {
+  "ru": "пронизать",
+  "tr": "nüfuz etmek/kaplamak (tamamlanmış)",
+  "p": "pronizat",
+  "tip": "СВ",
+  "cat": "fiil",
+  "level": "C1",
+  "ornek": "Музыка пронизала всё их существование.",
+  "ornekTr": "Müzik tüm var oluşlarına nüfuz etti."
+ },
+ {
+  "ru": "насущный",
+  "tr": "zorunlu/günlük (ekmek)",
+  "p": "nasuşçnıy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Хлеб насущный — самое важное.",
+  "ornekTr": "Günlük ekmek en önemli şey."
+ },
+ {
+  "ru": "буржуазный",
+  "tr": "burjuva (sıfat)",
+  "p": "burjuaznıy",
+  "cat": "sıfat",
+  "level": "C1",
+  "ornek": "Богатая буржуазная квартира.",
+  "ornekTr": "Zengin burjuva dairesi."
+ },
+ {
+  "ru": "сосуществовать",
+  "tr": "bir arada yaşamak",
+  "p": "sasušestvovat",
+  "tip": "НСВ",
+  "cat": "fiil",
+  "level": "C1",
+  "ornek": "Разные культуры сосуществуют.",
+  "ornekTr": "Farklı kültürler bir arada yaşıyor."
+ },
+ {
+  "ru": "раздёргивать",
+  "tr": "parçalara ayırmak/dağıtmak",
+  "p": "razdyorgіvat",
+  "tip": "НСВ",
+  "cat": "fiil",
+  "level": "C1",
+  "ornek": "Жизнь раздёргивает человека.",
+  "ornekTr": "Hayat insanı paramparça ediyor."
+ },
+ {
+  "ru": "воедино",
+  "tr": "bir araya/tek bir bütün olarak",
+  "p": "vayedino",
+  "cat": "zarf",
+  "level": "C1",
+  "ornek": "Всё слилось воедино.",
+  "ornekTr": "Her şey tek bir bütün oldu."
+ },
+ {
+  "ru": "проживаться",
+  "tr": "yaşanmak",
+  "p": "projivatsya",
+  "tip": "НСВ",
+  "cat": "fiil",
+  "level": "C1",
+  "ornek": "Повседневность проживалась музыкально.",
+  "ornekTr": "Gündelik hayat müzikal biçimde yaşanıyordu."
+ }
+]
