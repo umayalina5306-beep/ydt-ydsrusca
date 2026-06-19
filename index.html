@@ -122,6 +122,27 @@
         <div class="level-desc">Rusça veya Türkçe kelime yazarak listede ara.</div>
         <div class="level-badge" style="background:var(--gold);color:var(--dark);border-color:var(--gold);">Arama</div>
       </div>
+      <div class="level-card" onclick="showSpecial('esanlamli')" style="border-color:#a7f3d0; background:linear-gradient(135deg,#ecfdf5,#fff);">
+        <div class="level-flag">≈</div>
+        <div class="level-name" style="color:#10b981;">Eş Anlamlılar</div>
+        <div class="level-count" style="color:var(--gray);">1.719 grup</div>
+        <div class="level-desc">Anlamca yakın kelimeler (tüm seviyeler).</div>
+        <div class="level-badge" style="background:#10b981;color:#fff;border-color:#10b981;">Eş Anlam</div>
+      </div>
+      <div class="level-card" onclick="showSpecial('zitanlamli')" style="border-color:#fca5a5; background:linear-gradient(135deg,#fef2f2,#fff);">
+        <div class="level-flag">↔</div>
+        <div class="level-name" style="color:#ef4444;">Zıt Anlamlılar</div>
+        <div class="level-count" style="color:var(--gray);">20 çift</div>
+        <div class="level-desc">Birbirinin tersi kelime çiftleri (tüm seviyeler).</div>
+        <div class="level-badge" style="background:#ef4444;color:#fff;border-color:#ef4444;">Zıt Anlam</div>
+      </div>
+      <div class="level-card" onclick="showSpecial('akraba')" style="border-color:#c4b5fd; background:linear-gradient(135deg,#f5f3ff,#fff);">
+        <div class="level-flag">🌿</div>
+        <div class="level-name" style="color:#8b5cf6;">Akraba Kelimeler</div>
+        <div class="level-count" style="color:var(--gray);">8 kök</div>
+        <div class="level-desc">Aynı kökten türeyen kelime aileleri (tüm seviyeler).</div>
+        <div class="level-badge" style="background:#8b5cf6;color:#fff;border-color:#8b5cf6;">Akraba</div>
+      </div>
     </div>
   </div>
 
@@ -155,8 +176,18 @@
       </div>
       <p>Kategori seç ve kelimeleri incele.</p>
     </div>
+    <div class="sozluk-search-wrap" id="level-search-wrap" style="margin-bottom:16px;">
+      <div class="sozluk-input-wrap">
+        <span class="sozluk-icon">🔍</span>
+        <input type="text" id="level-search-input" class="sozluk-input"
+          placeholder="Bu seviyede ara... (Rusça veya Türkçe)"
+          oninput="levelAra(this.value)"
+          autocomplete="off" autocorrect="off" spellcheck="false">
+        <button class="sozluk-clear" onclick="levelTemizle()" id="level-search-clear" style="display:none;">✕</button>
+      </div>
+    </div>
     <div class="cat-tabs" id="cat-tabs">
-      <button class="cat-btn active" onclick="filterWords('hepsi',this)">Hepsi</button>
+      <button class="cat-btn active" onclick="filterWords('hepsi',this)">Hepsi <span class="cat-count" id="cnt-hepsi"></span></button>
       <button class="cat-btn" onclick="filterWords('isim',this)">İsimler <span class="cat-count" id="cnt-isim"></span></button>
       <button class="cat-btn" onclick="filterWords('fiil',this)">Fiiller <span class="cat-count" id="cnt-fiil"></span></button>
       <button class="cat-btn" onclick="filterWords('sıfat',this)">Sıfatlar <span class="cat-count" id="cnt-sıfat"></span></button>

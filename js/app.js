@@ -34,6 +34,14 @@ function selectLevel(level) {
   }
 
   document.getElementById('words-category-select').style.display = 'block';
+  document.getElementById('cat-tabs').style.display = '';
+  const lsw = document.getElementById('level-search-wrap');
+  if (lsw) lsw.style.display = '';
+  const lsi = document.getElementById('level-search-input');
+  if (lsi) lsi.value = '';
+  const lsc = document.getElementById('level-search-clear');
+  if (lsc) lsc.style.display = 'none';
+  currentCat = 'hepsi';
   document.getElementById('words-level-title').innerHTML = `${levelTitles[level]} <span>Kelimeleri</span>`;
   updateCatCounts();
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
@@ -120,6 +128,7 @@ function sozlukTemizle() {
   sozlukAra('');
 }
 
+let currentCat = 'hepsi';
 function getLevelWords() {
   return words.filter(w => {
     if (currentLevel === 'a1a2') return w.level === 'A1' || w.level === 'A2';
@@ -132,6 +141,8 @@ function getLevelWords() {
 
 function updateCatCounts() {
   const levelWords = getLevelWords();
+  const allEl = document.getElementById('cnt-hepsi');
+  if (allEl) allEl.textContent = levelWords.length;
   const cats = ['isim','fiil','sıfat','zarf','zamir','edat','bağlaç'];
   cats.forEach(cat => {
     const el = document.getElementById('cnt-' + cat);
@@ -218,7 +229,10 @@ function renderWords(cat) {
   }
 
   const filtered = cat === 'hepsi' ? levelWords : levelWords.filter(w => w.cat === cat);
-  grid.innerHTML = filtered.map(w => {
+  grid.innerHTML = filtered.map(wordCardHTML).join('');
+}
+
+function wordCardHTML(w) {
     const tipHTML = w.tip ? `<span class="word-tip ${w.tip==='СВ'||w.tip==='CV'?'word-tip-cv':'word-tip-ncv'}">${w.tip==='CV'?'СВ':w.tip==='NCV'?'НСВ':w.tip}</span>` : '';
     const cvHTML = w.cv ? `<div class="word-cv-pair">⇄ СВ: <b>${w.cv}</b></div>` : '';
     const ncvHTML = w.ncv ? `<div class="word-cv-pair">⇄ НСВ: <b>${w.ncv}</b></div>` : '';
@@ -239,12 +253,56 @@ function renderWords(cat) {
       ${extraHTML}
       ${w.ornek ? `<div class="word-example"><div class="word-example-ru">${w.ornek}</div><div class="word-example-tr">${w.ornekTr}</div></div>` : ''}
     </div>`;
-  }).join('');
 }
 function filterWords(cat, btn) {
+  currentCat = cat;
+  const ls = document.getElementById('level-search-input');
+  if (ls) ls.value = '';
+  const lc = document.getElementById('level-search-clear');
+  if (lc) lc.style.display = 'none';
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderWords(cat);
+}
+
+// #3 — Sadece bulunulan seviye içinde arama
+function levelAra(q) {
+  const grid = document.getElementById('words-grid');
+  const clearBtn = document.getElementById('level-search-clear');
+  const query = (q || '').trim().toLowerCase();
+  if (clearBtn) clearBtn.style.display = query ? 'block' : 'none';
+  if (!query) { renderWords(currentCat); return; }
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  const lw = getLevelWords().filter(w =>
+    w.ru.toLowerCase().includes(query) ||
+    w.tr.toLowerCase().includes(query) ||
+    (w.p && w.p.toLowerCase().includes(query))
+  );
+  if (lw.length === 0) {
+    grid.innerHTML = `<div class="sozluk-not-found"><div class="not-found-icon">📭</div><div class="not-found-title">"${q}" bulunamadı</div><div class="not-found-sub">Bu seviyede böyle bir kelime yok.</div></div>`;
+    return;
+  }
+  grid.innerHTML = lw.map(wordCardHTML).join('');
+}
+function levelTemizle() {
+  const input = document.getElementById('level-search-input');
+  if (input) { input.value = ''; input.focus(); }
+  levelAra('');
+}
+
+// #1 — Eş/Zıt/Akraba ayrı kategori görünümü (tüm seviyeler)
+function showSpecial(type) {
+  currentLevel = 'special';
+  document.getElementById('words-level-select').style.display = 'none';
+  document.getElementById('words-sozluk').style.display = 'none';
+  document.getElementById('words-category-select').style.display = 'block';
+  document.getElementById('cat-tabs').style.display = 'none';
+  const lsw = document.getElementById('level-search-wrap');
+  if (lsw) lsw.style.display = 'none';
+  const titles = { esanlamli: 'Eş <span>Anlamlılar</span>', zitanlamli: 'Zıt <span>Anlamlılar</span>', akraba: 'Akraba <span>Kelimeler</span>' };
+  document.getElementById('words-level-title').innerHTML = titles[type] || '';
+  renderWords(type);
+  window.scrollTo(0, 0);
 }
 // renderWords çağrısı selectLevel'dan yapılacak
 

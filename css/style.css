@@ -569,6 +569,7 @@ nav {
 .cat-count {
   font-size: 0.65rem;
   background: var(--off-white);
+  color: var(--blue);
   padding: 1px 6px;
   border-radius: 10px;
   margin-left: 4px;
@@ -623,6 +624,7 @@ nav {
   letter-spacing: 0.5px;
 }
 .cat-btn.active, .cat-btn:hover { background: var(--blue); color: var(--white); border-color: var(--blue); }
+.cat-btn.active .cat-count, .cat-btn:hover .cat-count { background: var(--white); color: var(--blue); }
 .words-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
