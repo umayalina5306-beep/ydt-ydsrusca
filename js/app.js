@@ -304,6 +304,38 @@ function showSpecial(type) {
   renderWords(type);
   window.scrollTo(0, 0);
 }
+
+// === DİNAMİK SIĞDIRMA (zıt anlamlılar tek satır kalsın, asla kırpılmasın) ===
+function fitAntWords() {
+  const els = document.querySelectorAll('#words-grid .ant-word-ru');
+  els.forEach(el => {
+    el.style.whiteSpace = 'nowrap';
+    el.style.wordBreak = 'normal';
+    el.style.fontSize = '';            // CSS varsayılanına dön (1.15rem)
+    let size = 1.15, guard = 0;
+    // sığana kadar fontu küçült (en az 0.72rem)
+    while (el.scrollWidth > el.clientWidth + 1 && size > 0.72 && guard < 24) {
+      size -= 0.05;
+      el.style.fontSize = size.toFixed(2) + 'rem';
+      guard++;
+    }
+    // hâlâ sığmıyorsa (aşırı uzun kelime): kırpma yerine sar
+    if (el.scrollWidth > el.clientWidth + 1) {
+      el.style.whiteSpace = 'normal';
+      el.style.wordBreak = 'break-word';
+    }
+  });
+}
+// Grid değişince, pencere boyutlanınca ve fontlar yüklenince otomatik yeniden ayarla
+(function () {
+  const grid = document.getElementById('words-grid');
+  if (grid && 'MutationObserver' in window) {
+    new MutationObserver(() => requestAnimationFrame(fitAntWords)).observe(grid, { childList: true });
+  }
+  let t;
+  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(fitAntWords, 120); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => requestAnimationFrame(fitAntWords));
+})();
 // renderWords çağrısı selectLevel'dan yapılacak
 
 // SPEECH - Mobil uyumlu
