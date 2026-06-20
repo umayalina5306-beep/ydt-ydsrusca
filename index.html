@@ -21,8 +21,16 @@
     <li><button onclick="showPage('pricing')" id="nav-pricing">Fiyatlar</button></li>
   </ul>
   <div class="nav-auth">
-    <button class="btn-login" onclick="openAuth('login')">Giriş Yap</button>
-    <button class="btn-signup" onclick="openAuth('register')">Üye Ol</button>
+    <div id="nav-auth-buttons" style="display:flex; gap:8px; align-items:center;">
+      <button class="btn-login" onclick="openAuth('login')">Giriş Yap</button>
+      <button class="btn-signup" onclick="openAuth('register')">Üye Ol</button>
+    </div>
+    <div id="nav-account" style="display:none; align-items:center; gap:10px;">
+      <span id="account-name" class="account-name"></span>
+      <span id="account-plan" class="plan-badge plan-free">FREE</span>
+      <span id="account-admin" title="Yönetici" style="display:none; color:var(--gold); font-weight:700;">★</span>
+      <button class="btn-login" onclick="authLogout()">Çıkış</button>
+    </div>
   </div>
 </nav>
 
@@ -376,35 +384,38 @@
       <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Giriş Yap</button>
       <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Üye Ol</button>
     </div>
+    <div id="auth-msg" style="display:none; margin:0 0 10px; font-size:0.82rem; font-weight:600; text-align:center;"></div>
     <div id="auth-form-login">
       <div class="form-group">
         <label class="form-label">E-posta</label>
-        <input class="form-input" type="email" placeholder="ornek@mail.com">
+        <input id="login-email" class="form-input" type="email" placeholder="ornek@mail.com" autocomplete="email">
       </div>
       <div class="form-group">
         <label class="form-label">Şifre</label>
-        <input class="form-input" type="password" placeholder="••••••••">
+        <input id="login-pass" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password">
       </div>
-      <button class="btn-auth" onclick="closeAuth()">Giriş Yap</button>
+      <button class="btn-auth" onclick="authLogin()">Giriş Yap</button>
       <div class="auth-divider">veya</div>
-      <p style="text-align:center; font-size:0.82rem; color:var(--gray);">Hesabın yok mu? <a href="#" onclick="switchTab('register')" style="color:var(--red); font-weight:600;">Üye ol</a></p>
+      <button class="btn-google" onclick="authGoogle()"><span class="g-icon">G</span> Google ile devam et</button>
+      <p style="text-align:center; font-size:0.82rem; color:var(--gray); margin-top:10px;">Hesabın yok mu? <a href="#" onclick="switchTab('register')" style="color:var(--red); font-weight:600;">Üye ol</a></p>
     </div>
     <div id="auth-form-register" style="display:none;">
       <div class="form-group">
         <label class="form-label">Ad Soyad</label>
-        <input class="form-input" type="text" placeholder="Adınız Soyadınız">
+        <input id="reg-name" class="form-input" type="text" placeholder="Adınız Soyadınız" autocomplete="name">
       </div>
       <div class="form-group">
         <label class="form-label">E-posta</label>
-        <input class="form-input" type="email" placeholder="ornek@mail.com">
+        <input id="reg-email" class="form-input" type="email" placeholder="ornek@mail.com" autocomplete="email">
       </div>
       <div class="form-group">
         <label class="form-label">Şifre</label>
-        <input class="form-input" type="password" placeholder="En az 8 karakter">
+        <input id="reg-pass" class="form-input" type="password" placeholder="En az 6 karakter" autocomplete="new-password">
       </div>
-      <button class="btn-auth" onclick="closeAuth()">Hesap Oluştur</button>
+      <button class="btn-auth" onclick="authRegister()">Hesap Oluştur</button>
       <div class="auth-divider">veya</div>
-      <p style="text-align:center; font-size:0.82rem; color:var(--gray);">Hesabın var mı? <a href="#" onclick="switchTab('login')" style="color:var(--red); font-weight:600;">Giriş yap</a></p>
+      <button class="btn-google" onclick="authGoogle()"><span class="g-icon">G</span> Google ile devam et</button>
+      <p style="text-align:center; font-size:0.82rem; color:var(--gray); margin-top:10px;">Hesabın var mı? <a href="#" onclick="switchTab('login')" style="color:var(--red); font-weight:600;">Giriş yap</a></p>
     </div>
   </div>
 </div>
@@ -413,6 +424,10 @@
   <p>© 2026 <span>YDT-YDS Rusça Platformu</span> — Tüm hakları saklıdır.</p>
 </footer>
 
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="js/supabase-config.js"></script>
+<script defer src="js/auth.js"></script>
+<script defer src="js/extras.js"></script>
 <script defer src="js/app.js"></script>
 </body>
 </html>
