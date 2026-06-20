@@ -302,39 +302,63 @@ function showSpecial(type) {
   const titles = { esanlamli: 'Eş <span>Anlamlılar</span>', zitanlamli: 'Zıt <span>Anlamlılar</span>', akraba: 'Akraba <span>Kelimeler</span>' };
   document.getElementById('words-level-title').innerHTML = titles[type] || '';
   renderWords(type);
+  requestAnimationFrame(fitWords);
   window.scrollTo(0, 0);
 }
 
-// === DİNAMİK SIĞDIRMA (zıt anlamlılar tek satır kalsın, asla kırpılmasın) ===
-function fitAntWords() {
-  const els = document.querySelectorAll('#words-grid .ant-word-ru');
+// === DİNAMİK SIĞDIRMA (eş & zıt anlamlılar tek satır kalsın, asla kırpılmasın) ===
+// Performans: binlerce öğede reflow (layout) titremesini önlemek için
+// önce hepsini sıfırla, sonra TEK seferde ölç, sonra TEK seferde yaz.
+function fitOneLine(selector, baseRem, minRem) {
+  const els = document.querySelectorAll(selector);
+  if (!els.length) return;
+  // 1) Sıfırla
   els.forEach(el => {
     el.style.whiteSpace = 'nowrap';
     el.style.wordBreak = 'normal';
-    el.style.fontSize = '';            // CSS varsayılanına dön (1.15rem)
-    let size = 1.15, guard = 0;
-    // sığana kadar fontu küçült (en az 0.72rem)
-    while (el.scrollWidth > el.clientWidth + 1 && size > 0.72 && guard < 24) {
-      size -= 0.05;
-      el.style.fontSize = size.toFixed(2) + 'rem';
+    el.style.overflowWrap = 'normal';
+    el.style.fontSize = '';
+  });
+  // 2) Ölç (taşanları topla — oran ile tek adımda küçülteceğiz)
+  const jobs = [];
+  els.forEach(el => {
+    const cw = el.clientWidth, sw = el.scrollWidth;
+    if (sw > cw + 1) jobs.push({ el, ratio: cw / sw });
+  });
+  // 3) Yaz (oran tahminiyle tek adımda küçült)
+  jobs.forEach(job => {
+    job.size = baseRem * job.ratio * 0.97; // küçük güvenlik payı
+    if (job.size < minRem) job.size = minRem;
+    job.el.style.fontSize = job.size.toFixed(3) + 'rem';
+  });
+  // 4) Doğrula: tahminden sonra hâlâ taşan varsa biraz daha küçült; en küçükte bile sığmazsa kırpma yerine sar
+  jobs.forEach(job => {
+    const el = job.el; let size = job.size, guard = 0;
+    while (el.scrollWidth > el.clientWidth + 1 && size > minRem && guard < 6) {
+      size = Math.max(minRem, size - 0.04);
+      el.style.fontSize = size.toFixed(3) + 'rem';
       guard++;
     }
-    // hâlâ sığmıyorsa (aşırı uzun kelime): kırpma yerine sar
     if (el.scrollWidth > el.clientWidth + 1) {
       el.style.whiteSpace = 'normal';
       el.style.wordBreak = 'break-word';
+      el.style.overflowWrap = 'anywhere';
     }
   });
+}
+function fitWords() {
+  fitOneLine('#words-grid .ant-word-ru', 1.15, 0.72);
+  fitOneLine('#words-grid .syn-item-ru', 1.10, 0.70);
 }
 // Grid değişince, pencere boyutlanınca ve fontlar yüklenince otomatik yeniden ayarla
 (function () {
   const grid = document.getElementById('words-grid');
   if (grid && 'MutationObserver' in window) {
-    new MutationObserver(() => requestAnimationFrame(fitAntWords)).observe(grid, { childList: true });
+    new MutationObserver(() => requestAnimationFrame(fitWords)).observe(grid, { childList: true });
   }
   let t;
-  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(fitAntWords, 120); });
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => requestAnimationFrame(fitAntWords));
+  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(fitWords, 150); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => requestAnimationFrame(fitWords));
 })();
 // renderWords çağrısı selectLevel'dan yapılacak
 
