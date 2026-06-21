@@ -67,7 +67,7 @@ async function authRegister() {
     email, password: pass,
     options: { data: { display_name: name } }
   });
-  if (error) { authMsg(cevirHata(error.message)); return; }
+  if (error) { console.error("Kayıt hatası:", error); authMsg(cevirHata(error.message)); return; }
   if (data.user && !data.session) {
     authMsg("Kayıt başarılı! E-postanı kontrol edip hesabını onayla, sonra giriş yap.", true);
     switchTab("login");
@@ -129,12 +129,13 @@ function updateAuthUI() {
 
 // Supabase hata mesajlarını Türkçeleştir
 function cevirHata(msg) {
-  msg = (msg || "").toLowerCase();
-  if (msg.includes("invalid login")) return "E-posta veya şifre hatalı.";
-  if (msg.includes("already registered") || msg.includes("already exists")) return "Bu e-posta zaten kayıtlı.";
-  if (msg.includes("email not confirmed")) return "Önce e-postanı onaylaman gerekiyor.";
-  if (msg.includes("password")) return "Şifre çok kısa (en az 6 karakter).";
-  return "Bir hata oluştu. Tekrar dene.";
+  const m = (msg || "").toLowerCase();
+  if (m.includes("invalid login")) return "E-posta veya şifre hatalı.";
+  if (m.includes("already registered") || m.includes("already exists") || m.includes("user already")) return "Bu e-posta zaten kayıtlı.";
+  if (m.includes("email not confirmed")) return "Önce e-postanı onaylaman gerekiyor.";
+  if (m.includes("database error")) return "Veritabanı hatası: profil oluşturma trigger'ı takıldı. SQL düzeltmesini çalıştır.";
+  if (m.includes("password")) return "Şifre en az 6 karakter olmalı.";
+  return "Hata: " + (msg || "bilinmeyen hata");
 }
 
 // Başlat
