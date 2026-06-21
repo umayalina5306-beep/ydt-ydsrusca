@@ -391,6 +391,7 @@ if (window.speechSynthesis) {
 
 // QUIZ
 let qList=[], qIdx=0, qScore=0, qAnswered=false, qWrong=0;
+let paragraphQuestions = [];
 let quizSettings = { type:'ru-tr', cat:'hepsi', count:20, level:'hepsi' };
 
 function selectSetup(key, val, btn) {
@@ -408,6 +409,21 @@ function showSetup() {
 function shuffle(a){return[...a].sort(()=>Math.random()-0.5);}
 
 function startQuiz(){
+  // Paragraf soruları ayrı havuzdan gelir (kelime değil)
+  if (quizSettings.type === 'paragraf') {
+    let pool = (paragraphQuestions || []).slice();
+    if (quizSettings.level !== 'hepsi') pool = pool.filter(p => p.level === quizSettings.level);
+    if (pool.length < 1) { alert('Bu seviyede paragraf sorusu yok. "Hepsi" seç ya da başka seviye dene.'); showSetup(); return; }
+    const count = parseInt(quizSettings.count) || 20;
+    qList = shuffle(pool).slice(0, count);
+    qIdx = 0; qScore = 0; qWrong = 0;
+    document.getElementById('quiz-setup').style.display = 'none';
+    document.getElementById('quiz-playing').style.display = 'block';
+    document.getElementById('quiz-result').style.display = 'none';
+    document.getElementById('quiz-card').style.display = 'block';
+    loadQ();
+    return;
+  }
   // Seviye filtresi
   let pool = words;
   if (quizSettings.level !== 'hepsi') {
@@ -445,7 +461,7 @@ function loadQ(){
   document.getElementById('quiz-next').style.display = 'none';
 
   // Tip etiketi
-  const typeLabels = {'ru-tr':'🇷🇺 → 🇹🇷 Rusça → Türkçe','tr-ru':'🇹🇷 → 🇷🇺 Türkçe → Rusça','fill':'✍️ Yaz Bakalım','tf':'✓✗ Doğru / Yanlış'};
+  const typeLabels = {'ru-tr':'🇷🇺 → 🇹🇷 Rusça → Türkçe','tr-ru':'🇹🇷 → 🇷🇺 Türkçe → Rusça','fill':'✍️ Yaz Bakalım','tf':'✓✗ Doğru / Yanlış','paragraf':'📖 Paragraf Soruları'};
   document.getElementById('quiz-type-badge').textContent = typeLabels[type];
 
   if (type === 'ru-tr') {
@@ -492,6 +508,13 @@ function loadQ(){
     const correctAns = isCorrect ? 'Doğru ✓' : 'Yanlış ✗';
     const opts = ['Doğru ✓', 'Yanlış ✗'];
     renderOpts(opts, correctAns, q.ru, 'tf');
+
+  } else if (type === 'paragraf') {
+    // Paragraf okuma sorusu: paragraf + soru + şıklar
+    document.getElementById('quiz-q').innerHTML =
+      `<div class="para-text">${q.paragraf}</div><div class="para-soru">${q.soru}</div>`;
+    document.getElementById('quiz-pron').textContent = '';
+    renderParaOpts(q.siklar, q.dogru, q.aciklama);
   }
 }
 
@@ -575,6 +598,36 @@ function checkA(btn, chosen, correct, ru){
     qWrong++;
   }
   speak(ru);
+  document.getElementById('quiz-next').style.display = 'inline-block';
+}
+
+// Paragraf sorusu: şıkları göster ve kontrol et (açıklama ile)
+function renderParaOpts(siklar, correctIdx, aciklama) {
+  window._paraAciklama = aciklama || '';
+  document.getElementById('quiz-opts').innerHTML = siklar.map((o, i) =>
+    `<button class="quiz-opt" style="text-align:left;" onclick="checkParaA(this, ${i}, ${correctIdx})">${o}</button>`
+  ).join('');
+}
+
+function checkParaA(btn, chosenIdx, correctIdx) {
+  if (qAnswered) return;
+  qAnswered = true;
+  const opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(b => b.disabled = true);
+  const fb = document.getElementById('quiz-fb');
+  const acik = window._paraAciklama ? `<div class="para-aciklama">${window._paraAciklama}</div>` : '';
+  if (chosenIdx === correctIdx) {
+    btn.classList.add('correct');
+    fb.innerHTML = '✓ Doğru!' + acik;
+    fb.className = 'quiz-feedback feedback-correct';
+    qScore++;
+  } else {
+    btn.classList.add('wrong');
+    if (opts[correctIdx]) opts[correctIdx].classList.add('correct');
+    fb.innerHTML = '✗ Yanlış.' + acik;
+    fb.className = 'quiz-feedback feedback-wrong';
+    qWrong++;
+  }
   document.getElementById('quiz-next').style.display = 'inline-block';
 }
 
@@ -669,6 +722,9 @@ async function loadData() {
   ]);
   words = [].concat(a1a2,b1,b2,c1);
   synonymGroups = syn; antonymPairs = ant; wordFamilies = fam; videos = vids;
+  // Paragraf soruları (dosya yoksa site yine çalışsın diye ayrı try/catch)
+  try { paragraphQuestions = await j('data/sorular/paragraf-sorulari.json'); }
+  catch (e) { console.warn('Paragraf soruları yüklenemedi:', e); paragraphQuestions = []; }
 }
 async function init(){
   try { await loadData(); renderVideos(); }
