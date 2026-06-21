@@ -15,7 +15,10 @@ function authInit() {
     console.warn("Supabase bilgileri henüz girilmemiş (js/supabase-config.js).");
     return;
   }
-  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  // URL'i temizle: sadece çıplak adresi kullan (fazla /rest/v1, sondaki / vb. at)
+  let url = (SUPABASE_URL || "").trim();
+  try { url = new URL(url).origin; } catch (e) { console.error("SUPABASE_URL geçersiz:", url); }
+  sb = window.supabase.createClient(url, (SUPABASE_KEY || "").trim());
 
   // Oturum durumu değişince arayüzü güncelle (giriş, çıkış, Google dönüşü dahil)
   sb.auth.onAuthStateChange((_event, session) => {
