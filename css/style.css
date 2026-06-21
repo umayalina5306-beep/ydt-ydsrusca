@@ -1129,8 +1129,9 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 /* ===== POMODORO WIDGET ===== */
 #pomo-wrap { position: fixed; right: 20px; bottom: 20px; z-index: 9999; font-family: 'Inter', sans-serif; }
 #pomo-fab {
-  width: 54px; height: 54px; border-radius: 50%; border: none; cursor: pointer;
-  background: var(--blue); color: #fff; font-size: 1.4rem;
+  width: 62px; height: 62px; border-radius: 50%; border: none; cursor: pointer;
+  background: var(--blue); color: #fff; font-size: 2.05rem;
+  display: flex; align-items: center; justify-content: center;
   box-shadow: 0 4px 16px rgba(0,0,0,0.18); transition: transform 0.15s;
 }
 #pomo-fab:hover { transform: scale(1.06); }
