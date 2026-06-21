@@ -2,7 +2,7 @@
 //  GİRİŞ / KAYIT SİSTEMİ (Supabase)
 //  - E-posta + şifre ile kayıt ve giriş
 //  - Google ile giriş
-//  - Oturum yönetimi + profil (free/premium etiketi)
+//  - Oturum yönetimi + profil (Ücretsiz/Premium etiketi)
 //  Bu dosya mevcut site koduna dokunmaz; sadece ekler.
 // ============================================================
 
@@ -32,6 +32,7 @@ async function handleSession(session) {
   currentUser = session ? session.user : null;
   if (currentUser) {
     await loadProfile();
+    await syncName();            // YENİ: Google adını profile yaz
   } else {
     currentProfile = null;
   }
@@ -49,6 +50,36 @@ async function loadProfile() {
   } catch (e) {
     console.error("Profil yüklenemedi:", e);
   }
+}
+
+// YENİ: Görüntülenecek en iyi isim (Google/sağlayıcı adı > profil adı > e-posta öneki)
+function bestName() {
+  const m = (currentUser && currentUser.user_metadata) || {};
+  let idData = {};
+  try { idData = (currentUser.identities && currentUser.identities[0] && currentUser.identities[0].identity_data) || {}; } catch (e) {}
+  const adaylar = [
+    m.full_name, m.name, m.display_name, m.user_name, m.given_name,
+    idData.full_name, idData.name,
+    currentProfile && currentProfile.display_name
+  ];
+  for (const a of adaylar) { if (a && String(a).trim()) return String(a).trim(); }
+  const email = (currentUser && currentUser.email) || "";
+  return email.split("@")[0] || email;   // son çare: @ öncesi (tam e-posta değil)
+}
+
+// YENİ: Çözülen adı profile kaydet (mevcut "id gibi" kayıtları da düzeltir)
+async function syncName() {
+  try {
+    const m = (currentUser && currentUser.user_metadata) || {};
+    let idData = {};
+    try { idData = (currentUser.identities && currentUser.identities[0] && currentUser.identities[0].identity_data) || {}; } catch (e) {}
+    const ad = m.full_name || m.name || idData.full_name || idData.name;
+    console.log("AUTH isim teşhisi -> user_metadata:", m, "| identity_data:", idData);
+    if (ad && (!currentProfile || currentProfile.display_name !== ad)) {
+      await sb.from("profiles").update({ display_name: ad }).eq("id", currentUser.id);
+      if (currentProfile) currentProfile.display_name = ad;
+    }
+  } catch (e) { console.error("İsim güncellenemedi:", e); }
 }
 
 function authMsg(text, ok) {
@@ -70,7 +101,7 @@ async function authRegister() {
     email, password: pass,
     options: { data: { display_name: name } }
   });
-  if (error) { console.error("Kayıt hatası:", error); authMsg(cevirHata(error.message)); return; }
+  if (error) { authHata(error); return; }       // DEĞİŞTİ: orijinal hatayı da göster
   if (data.user && !data.session) {
     authMsg("Kayıt başarılı! E-postanı kontrol edip hesabını onayla, sonra giriş yap.", true);
     switchTab("login");
@@ -87,7 +118,7 @@ async function authLogin() {
   if (!email || !pass) { authMsg("E-posta ve şifre gir."); return; }
   authMsg("Giriş yapılıyor...", true);
   const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-  if (error) { authMsg(cevirHata(error.message)); return; }
+  if (error) { authHata(error); return; }        // DEĞİŞTİ: orijinal hatayı da göster
   authMsg("");
   closeAuth();
 }
@@ -98,7 +129,7 @@ async function authGoogle() {
     provider: "google",
     options: { redirectTo: window.location.origin + window.location.pathname }
   });
-  if (error) authMsg(cevirHata(error.message));
+  if (error) authHata(error);                     // DEĞİŞTİ
 }
 
 async function authLogout() {
@@ -116,10 +147,10 @@ function updateAuthUI() {
     buttons.style.display = "none";
     account.style.display = "flex";
     const isPremium = currentProfile && currentProfile.plan === "premium";
-    const name = (currentProfile && currentProfile.display_name) || currentUser.email;
+    const name = bestName();                                  // DEĞİŞTİ
     document.getElementById("account-name").textContent = name;
     const badge = document.getElementById("account-plan");
-    badge.textContent = isPremium ? "PREMIUM" : "FREE";
+    badge.textContent = isPremium ? "Premium" : "Ücretsiz";   // DEĞİŞTİ
     badge.className = "plan-badge " + (isPremium ? "plan-premium" : "plan-free");
     // Yönetici ise küçük bir işaret
     const adminDot = document.getElementById("account-admin");
@@ -136,9 +167,16 @@ function cevirHata(msg) {
   if (m.includes("invalid login")) return "E-posta veya şifre hatalı.";
   if (m.includes("already registered") || m.includes("already exists") || m.includes("user already")) return "Bu e-posta zaten kayıtlı.";
   if (m.includes("email not confirmed")) return "Önce e-postanı onaylaman gerekiyor.";
-  if (m.includes("database error")) return "Veritabanı hatası: profil oluşturma trigger'ı takıldı. SQL düzeltmesini çalıştır.";
+  if (m.includes("database error")) return "Veritabanı hatası: profil oluşturma trigger'ı takıldı.";
   if (m.includes("password")) return "Şifre en az 6 karakter olmalı.";
-  return "Hata: " + (msg || "bilinmeyen hata");
+  return "Bir hata oluştu.";
+}
+
+// YENİ: Türkçe mesaj + orijinal hata metnini birlikte göster
+function authHata(error) {
+  const raw = (error && error.message) || "bilinmeyen hata";
+  console.error("Auth hatası:", error);
+  authMsg(cevirHata(raw) + "  —  (orijinal: " + raw + ")");
 }
 
 // Başlat
