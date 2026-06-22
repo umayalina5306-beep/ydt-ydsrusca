@@ -1135,6 +1135,7 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   box-shadow: 0 4px 16px rgba(0,0,0,0.18); transition: transform 0.15s;
 }
 #pomo-fab:hover { transform: scale(1.06); }
+.pomo-fab-icon { display: block; line-height: 1; transform: translate(1px, 1.5px); }
 #pomo-panel {
   position: absolute; right: 0; bottom: 66px; width: 240px;
   background: var(--white); border: 1px solid var(--light-gray);
