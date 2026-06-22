@@ -37,6 +37,7 @@ async function handleSession(session) {
     currentProfile = null;
   }
   updateAuthUI();
+  if (typeof loadSavedWords === "function") loadSavedWords();
 }
 
 async function loadProfile() {

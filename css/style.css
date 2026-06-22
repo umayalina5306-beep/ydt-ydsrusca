@@ -644,7 +644,7 @@ nav {
   height: 100%;
 }
 .word-card:hover { border-color: var(--gold); box-shadow: 0 6px 20px rgba(0,0,0,0.07); transform: translateY(-2px); }
-.word-ru { font-family: 'Noto Sans', 'PT Serif', sans-serif; font-size: 1.3rem; font-weight: 600; color: var(--blue); margin-bottom: 4px; line-height: 1.3; word-break: break-word; overflow-wrap: break-word; padding-right: 38px; }
+.word-ru { font-family: 'Noto Sans', 'PT Serif', sans-serif; font-size: 1.3rem; font-weight: 600; color: var(--blue); margin-bottom: 4px; line-height: 1.3; word-break: break-word; overflow-wrap: break-word; padding-right: 72px; }
 #sozluk-grid .word-ru { padding-right: 78px; }
 .word-tr { font-size: 0.88rem; font-weight: 600; color: var(--text); margin-bottom: 4px; }
 .word-pron { font-size: 0.75rem; color: var(--gold); font-style: italic; margin-bottom: 8px; }
@@ -1116,7 +1116,7 @@ footer span { color: var(--gold); }
   background: #fff; border: 1px solid #e5e7eb;
   color: #4285F4; font-weight: 800; font-size: 0.85rem;
 }
-.account-name { font-size: 0.85rem; font-weight: 600; color: var(--text); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-name { font-size: 0.85rem; font-weight: 600; color: #fff; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plan-badge { font-size: 0.62rem; font-weight: 800; padding: 2px 8px; border-radius: 10px; letter-spacing: 0.5px; }
 .plan-free { background: #e5e7eb; color: #4b5563; }
 .plan-premium { background: var(--gold); color: var(--dark); }
@@ -1227,3 +1227,27 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .profile-act-date { font-size: 0.78rem; color: var(--gray); }
 .profile-empty { text-align: center; color: var(--gray); padding: 24px; font-size: 0.88rem; background: var(--off-white); border-radius: 12px; }
 @media (max-width: 560px) { .profile-stats { grid-template-columns: repeat(2, 1fr); } }
+
+/* ===== KELİME KAYDET BUTONU + KAYITLI KART ===== */
+.word-save {
+  position: absolute;
+  top: 12px; right: 44px;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: var(--off-white);
+  color: var(--gray);
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.18s;
+  padding: 0;
+  z-index: 2;
+}
+.word-save:hover { background: var(--light-gray); color: var(--gold); }
+.word-save.active { color: var(--gold); }
+.word-card.saved {
+  background: #fffdf3;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold) inset;
+}

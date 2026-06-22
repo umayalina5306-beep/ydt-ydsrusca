@@ -242,8 +242,11 @@ function wordCardHTML(w) {
     const genderHTML = w.cinsiyet ? `<span class="word-gender ${genderClass}">${genderLabel}</span>` : '';
     const padejHTML = w.padej ? `<span class="word-padej">${w.padej}</span><br>` : '';
     const ruSafe = w.ru.replace(/'/g, "\\'");
+    const trSafe = (w.tr || '').replace(/'/g, "\\'");
+    const isSaved = (typeof savedWords !== 'undefined') && savedWords.has(w.ru);
     return `
-    <div class="word-card">
+    <div class="word-card${isSaved ? ' saved' : ''}">
+      <button class="word-save${isSaved ? ' active' : ''}" onclick="toggleSaveWord(event,'${ruSafe}','${trSafe}','${w.level || ''}')" title="Kaydet">${isSaved ? '★' : '☆'}</button>
       <button class="word-speak" onclick="speak('${ruSafe}')">🔊</button>
       <div class="word-ru">${w.ru} ${genderHTML}</div>
       ${tipHTML}
@@ -254,6 +257,58 @@ function wordCardHTML(w) {
       ${w.ornek ? `<div class="word-example"><div class="word-example-ru">${w.ornek}</div><div class="word-example-tr">${w.ornekTr}</div></div>` : ''}
     </div>`;
 }
+// ===== KELİME KAYDETME (Premium) =====
+let savedWords = new Set();
+
+async function loadSavedWords() {
+  savedWords = new Set();
+  try {
+    if (typeof sb !== 'undefined' && sb && typeof currentUser !== 'undefined' && currentUser) {
+      const { data, error } = await sb.from('saved_words').select('word_ru').eq('user_id', currentUser.id);
+      if (!error && data) data.forEach(r => savedWords.add(r.word_ru));
+    }
+  } catch (e) { console.error('Kayıtlı kelimeler yüklenemedi:', e); }
+  // Kelimeler sayfasındaysak görünümü tazele
+  const cs = document.getElementById('words-category-select');
+  const normalCats = ['hepsi','isim','fiil','sıfat','zarf','zamir','edat','bağlaç'];
+  if (cs && cs.style.display === 'block' && typeof currentCat !== 'undefined' && normalCats.includes(currentCat)) {
+    renderWords(currentCat);
+  }
+}
+
+async function toggleSaveWord(ev, ru, tr, level) {
+  if (ev) ev.stopPropagation();
+  if (typeof currentUser === 'undefined' || !currentUser) { if (typeof openAuth === 'function') openAuth('login'); return; }
+  const isPremium = currentProfile && (currentProfile.plan === 'premium' || currentProfile.is_admin);
+  if (!isPremium) {
+    alert('Kelime kaydetme Premium özelliğidir.\n\nPremium ile öğrendiğin kelimeleri kaydedip her gün tekrar edebilirsin.');
+    return;
+  }
+  const btn = ev ? ev.currentTarget : null;
+  const card = btn ? btn.closest('.word-card') : null;
+  try {
+    if (savedWords.has(ru)) {
+      const { error } = await sb.from('saved_words').delete().eq('user_id', currentUser.id).eq('word_ru', ru);
+      if (error) throw error;
+      savedWords.delete(ru);
+      if (btn) { btn.classList.remove('active'); btn.textContent = '☆'; }
+      if (card) card.classList.remove('saved');
+    } else {
+      const { error } = await sb.from('saved_words').upsert(
+        { user_id: currentUser.id, word_ru: ru, word_tr: tr, level: level || null },
+        { onConflict: 'user_id,word_ru' }
+      );
+      if (error) throw error;
+      savedWords.add(ru);
+      if (btn) { btn.classList.add('active'); btn.textContent = '★'; }
+      if (card) card.classList.add('saved');
+    }
+  } catch (e) {
+    console.error('Kelime kaydedilemedi:', e);
+    alert('İşlem başarısız oldu. Tekrar dene.');
+  }
+}
+
 function filterWords(cat, btn) {
   currentCat = cat;
   const ls = document.getElementById('level-search-input');
