@@ -146,18 +146,29 @@ function updateAuthUI() {
   if (currentUser) {
     buttons.style.display = "none";
     account.style.display = "flex";
+    const isAdmin = currentProfile && currentProfile.is_admin;
     const isPremium = currentProfile && currentProfile.plan === "premium";
-    const name = bestName();                                  // DEĞİŞTİ
+    const name = bestName();
     document.getElementById("account-name").textContent = name;
     const badge = document.getElementById("account-plan");
-    badge.textContent = isPremium ? "Premium" : "Ücretsiz";   // DEĞİŞTİ
-    badge.className = "plan-badge " + (isPremium ? "plan-premium" : "plan-free");
-    // Yönetici ise küçük bir işaret
+    if (isAdmin) {
+      badge.textContent = "Yönetici";
+      badge.className = "plan-badge plan-admin";
+    } else {
+      badge.textContent = isPremium ? "Premium" : "Ücretsiz";
+      badge.className = "plan-badge " + (isPremium ? "plan-premium" : "plan-free");
+    }
+    // Eski ★ işaretini gizle (artık etiket "Yönetici" yazıyor)
     const adminDot = document.getElementById("account-admin");
-    if (adminDot) adminDot.style.display = (currentProfile && currentProfile.is_admin) ? "inline" : "none";
+    if (adminDot) adminDot.style.display = "none";
+    // Yönetim paneli linki (sadece yöneticide)
+    const adminLink = document.getElementById("nav-admin-link");
+    if (adminLink) adminLink.style.display = isAdmin ? "inline-block" : "none";
   } else {
     buttons.style.display = "flex";
     account.style.display = "none";
+    const adminLink = document.getElementById("nav-admin-link");
+    if (adminLink) adminLink.style.display = "none";
   }
 }
 

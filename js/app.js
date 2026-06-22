@@ -683,6 +683,7 @@ function showPage(id){
   if(nb) nb.classList.add('active');
   window.scrollTo(0,0);
   if(id==='quiz') showSetup();
+  if(id==='admin' && typeof openAdmin==='function') openAdmin();
 }
 
 // AUTH
