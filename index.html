@@ -29,6 +29,7 @@
       <span id="account-name" class="account-name"></span>
       <span id="account-plan" class="plan-badge plan-free">FREE</span>
       <span id="account-admin" title="Yönetici" style="display:none; color:var(--gold); font-weight:700;">★</span>
+      <button id="nav-profile-link" class="btn-login" onclick="showPage('profile')">Profilim</button>
       <button id="nav-admin-link" class="btn-login" style="display:none;" onclick="showPage('admin')">Yönetim</button>
       <button class="btn-login" onclick="authLogout()">Çıkış</button>
     </div>
@@ -376,6 +377,27 @@
   </div>
 </div>
 
+<!-- ===== PROFİL ===== -->
+<div id="page-profile" class="page">
+  <div class="profile-wrap">
+    <div class="profile-card">
+      <div class="profile-avatar" id="profile-initial">?</div>
+      <div class="profile-id">
+        <div class="profile-name-row"><span id="profile-name"></span> <span id="profile-plan" class="plan-badge plan-free">Ücretsiz</span></div>
+        <div class="profile-email" id="profile-email"></div>
+      </div>
+    </div>
+    <div class="profile-stats">
+      <div class="profile-stat"><div class="profile-stat-num" id="profile-level">-</div><div class="profile-stat-lbl">Seviye</div></div>
+      <div class="profile-stat"><div class="profile-stat-num" id="profile-streak">0</div><div class="profile-stat-lbl">Gün Serisi</div></div>
+      <div class="profile-stat"><div class="profile-stat-num" id="profile-words">0</div><div class="profile-stat-lbl">Kayıtlı Kelime</div></div>
+      <div class="profile-stat"><div class="profile-stat-num" id="profile-tests">0</div><div class="profile-stat-lbl">Çözülen Test</div></div>
+    </div>
+    <div class="profile-section-title">Son Etkinlikler</div>
+    <div id="profile-activity" class="profile-activity"><div class="profile-empty">Yükleniyor...</div></div>
+  </div>
+</div>
+
 <!-- ===== ADMIN PANEL ===== -->
 <div id="page-admin" class="page">
   <div class="admin-wrap">
@@ -448,6 +470,7 @@
 <script defer src="js/supabase-config.js"></script>
 <script defer src="js/auth.js"></script>
 <script defer src="js/admin.js"></script>
+<script defer src="js/profile.js"></script>
 <script defer src="js/extras.js"></script>
 <script defer src="js/app.js"></script>
 </body>

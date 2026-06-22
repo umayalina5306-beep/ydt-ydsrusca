@@ -684,6 +684,7 @@ function showPage(id){
   window.scrollTo(0,0);
   if(id==='quiz') showSetup();
   if(id==='admin' && typeof openAdmin==='function') openAdmin();
+  if(id==='profile' && typeof openProfile==='function') openProfile();
 }
 
 // AUTH
