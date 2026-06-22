@@ -73,7 +73,7 @@
     const wrap = document.createElement("div");
     wrap.id = "pomo-wrap";
     wrap.innerHTML =
-      '<button id="pomo-fab" title="Odak / Pomodoro">⏱️</button>' +
+      '<button id="pomo-fab" title="Odak / Pomodoro"><span class="pomo-fab-icon">⏱️</span></button>' +
       '<div id="pomo-panel">' +
       '  <div class="pomo-head"><span>Odak & Pomodoro</span><button id="pomo-x">✕</button></div>' +
       '  <div id="pomo-mode" class="pomo-mode">Çalışma</div>' +
