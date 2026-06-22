@@ -1,5 +1,6 @@
 // DATA
 let words = [];
+let wordsByRu = {};
 
 
 let videos = [];
@@ -53,6 +54,8 @@ function backToLevels() {
   document.getElementById('words-level-select').style.display = 'block';
   document.getElementById('words-category-select').style.display = 'none';
   document.getElementById('words-sozluk').style.display = 'none';
+  const bank = document.getElementById('words-bank');
+  if (bank) bank.style.display = 'none';
 }
 
 function sozlukAra(query) {
@@ -232,7 +235,7 @@ function renderWords(cat) {
   grid.innerHTML = filtered.map(wordCardHTML).join('');
 }
 
-function wordCardHTML(w) {
+function wordCardHTML(w, inBank) {
     const tipHTML = w.tip ? `<span class="word-tip ${w.tip==='СВ'||w.tip==='CV'?'word-tip-cv':'word-tip-ncv'}">${w.tip==='CV'?'СВ':w.tip==='NCV'?'НСВ':w.tip}</span>` : '';
     const cvHTML = w.cv ? `<div class="word-cv-pair">⇄ СВ: <b>${w.cv}</b></div>` : '';
     const ncvHTML = w.ncv ? `<div class="word-cv-pair">⇄ НСВ: <b>${w.ncv}</b></div>` : '';
@@ -243,37 +246,55 @@ function wordCardHTML(w) {
     const padejHTML = w.padej ? `<span class="word-padej">${w.padej}</span><br>` : '';
     const ruSafe = w.ru.replace(/'/g, "\\'");
     const trSafe = (w.tr || '').replace(/'/g, "\\'");
-    const isSaved = (typeof savedWords !== 'undefined') && savedWords.has(w.ru);
+    const isSaved = (typeof isWordSaved === 'function') && isWordSaved(w.ru);
+    const isLearned = (typeof learnedWords !== 'undefined') && learnedWords.has(w.ru);
+    const learnBtn = inBank
+      ? `<button class="word-learn${isLearned ? ' active' : ''}" onclick="toggleLearned(event,'${ruSafe}')" title="Öğrenildi olarak işaretle">✓</button>`
+      : '';
     return `
-    <div class="word-card${isSaved ? ' saved' : ''}">
+    <div class="word-card${isSaved ? ' saved' : ''}${inBank ? ' in-bank' : ''}">
+      ${learnBtn}
       <button class="word-save${isSaved ? ' active' : ''}" onclick="toggleSaveWord(event,'${ruSafe}','${trSafe}','${w.level || ''}')" title="Kaydet">${isSaved ? '★' : '☆'}</button>
       <button class="word-speak" onclick="speak('${ruSafe}')">🔊</button>
       <div class="word-ru">${w.ru} ${genderHTML}</div>
       ${tipHTML}
       ${padejHTML}
       <div class="word-tr">${w.tr}</div>
-      <div class="word-pron">[${w.p}]</div>
+      <div class="word-pron">[${w.p || ''}]</div>
       ${extraHTML}
       ${w.ornek ? `<div class="word-example"><div class="word-example-ru">${w.ornek}</div><div class="word-example-tr">${w.ornekTr}</div></div>` : ''}
     </div>`;
 }
 // ===== KELİME KAYDETME (Premium) =====
-let savedWords = new Set();
+let savedWords = new Set();      // status = 'saved'  (tekrar listesi)
+let learnedWords = new Set();    // status = 'learned' (öğrenildi)
+// Banka filtre durumu
+let bankStatus = 'saved', bankLevel = 'hepsi', bankType = 'hepsi';
+
+function isWordSaved(ru) {
+  return savedWords.has(ru) || learnedWords.has(ru);
+}
 
 async function loadSavedWords() {
   savedWords = new Set();
+  learnedWords = new Set();
   try {
     if (typeof sb !== 'undefined' && sb && typeof currentUser !== 'undefined' && currentUser) {
-      const { data, error } = await sb.from('saved_words').select('word_ru').eq('user_id', currentUser.id);
-      if (!error && data) data.forEach(r => savedWords.add(r.word_ru));
+      const { data, error } = await sb.from('saved_words').select('word_ru, status').eq('user_id', currentUser.id);
+      if (!error && data) data.forEach(r => {
+        if (r.status === 'learned') learnedWords.add(r.word_ru);
+        else savedWords.add(r.word_ru);
+      });
     }
   } catch (e) { console.error('Kayıtlı kelimeler yüklenemedi:', e); }
-  // Kelimeler sayfasındaysak görünümü tazele
+  // Görünümleri tazele
   const cs = document.getElementById('words-category-select');
   const normalCats = ['hepsi','isim','fiil','sıfat','zarf','zamir','edat','bağlaç'];
   if (cs && cs.style.display === 'block' && typeof currentCat !== 'undefined' && normalCats.includes(currentCat)) {
     renderWords(currentCat);
   }
+  const bank = document.getElementById('words-bank');
+  if (bank && bank.style.display === 'block') renderBank();
 }
 
 async function toggleSaveWord(ev, ru, tr, level) {
@@ -287,15 +308,17 @@ async function toggleSaveWord(ev, ru, tr, level) {
   const btn = ev ? ev.currentTarget : null;
   const card = btn ? btn.closest('.word-card') : null;
   try {
-    if (savedWords.has(ru)) {
+    if (isWordSaved(ru)) {
       const { error } = await sb.from('saved_words').delete().eq('user_id', currentUser.id).eq('word_ru', ru);
       if (error) throw error;
-      savedWords.delete(ru);
+      savedWords.delete(ru); learnedWords.delete(ru);
       if (btn) { btn.classList.remove('active'); btn.textContent = '☆'; }
       if (card) card.classList.remove('saved');
+      // Bankadaysak kart listeden çıksın
+      if (card && card.classList.contains('in-bank')) card.remove();
     } else {
       const { error } = await sb.from('saved_words').upsert(
-        { user_id: currentUser.id, word_ru: ru, word_tr: tr, level: level || null },
+        { user_id: currentUser.id, word_ru: ru, word_tr: tr, level: level || null, status: 'saved' },
         { onConflict: 'user_id,word_ru' }
       );
       if (error) throw error;
@@ -307,6 +330,68 @@ async function toggleSaveWord(ev, ru, tr, level) {
     console.error('Kelime kaydedilemedi:', e);
     alert('İşlem başarısız oldu. Tekrar dene.');
   }
+}
+
+// ✓ Öğrenildi: kelimeyi kayıtlı <-> öğrenildi arasında taşı
+async function toggleLearned(ev, ru) {
+  if (ev) ev.stopPropagation();
+  if (!currentUser) return;
+  const yeni = learnedWords.has(ru) ? 'saved' : 'learned';
+  try {
+    const { error } = await sb.from('saved_words').update({ status: yeni }).eq('user_id', currentUser.id).eq('word_ru', ru);
+    if (error) throw error;
+    if (yeni === 'learned') { savedWords.delete(ru); learnedWords.add(ru); }
+    else { learnedWords.delete(ru); savedWords.add(ru); }
+    renderBank();
+  } catch (e) { console.error('Öğrenildi işaretlenemedi:', e); alert('İşlem başarısız oldu.'); }
+}
+
+// ===== KELİME BANKASI =====
+function showBank() {
+  if (!currentUser) { if (typeof openAuth === 'function') openAuth('login'); return; }
+  currentLevel = 'bank';
+  document.getElementById('words-level-select').style.display = 'none';
+  document.getElementById('words-sozluk').style.display = 'none';
+  document.getElementById('words-category-select').style.display = 'none';
+  document.getElementById('words-bank').style.display = 'block';
+  bankStatus = 'saved'; bankLevel = 'hepsi'; bankType = 'hepsi';
+  ['bank-status-tabs','bank-level-tabs','bank-type-tabs'].forEach(id => {
+    const bar = document.getElementById(id);
+    if (bar) bar.querySelectorAll('button').forEach((b,i) => b.classList.toggle('active', i === 0));
+  });
+  renderBank();
+  window.scrollTo(0, 0);
+}
+
+function bankSetStatus(s, btn) { bankStatus = s; _bankActive(btn); renderBank(); }
+function bankSetLevel(l, btn) { bankLevel = l; _bankActive(btn); renderBank(); }
+function bankSetType(t, btn) { bankType = t; _bankActive(btn); renderBank(); }
+function _bankActive(btn) {
+  if (!btn || !btn.parentElement) return;
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function renderBank() {
+  const grid = document.getElementById('bank-grid');
+  if (!grid) return;
+  const set = bankStatus === 'learned' ? learnedWords : savedWords;
+  let list = [];
+  set.forEach(ru => {
+    const w = wordsByRu[ru];
+    list.push(w || { ru: ru, tr: '', p: '', cat: '', level: '' });
+  });
+  if (bankLevel !== 'hepsi') {
+    if (bankLevel === 'A1-A2') list = list.filter(w => w.level === 'A1' || w.level === 'A2');
+    else list = list.filter(w => w.level === bankLevel);
+  }
+  if (bankType !== 'hepsi') list = list.filter(w => w.cat === bankType);
+  if (!list.length) {
+    grid.innerHTML = `<div class="profile-empty" style="grid-column:1/-1;">Bu filtrede ${bankStatus === 'learned' ? 'öğrenilmiş' : 'kayıtlı'} kelime yok.</div>`;
+    return;
+  }
+  list.sort((a,b) => (a.ru || '').localeCompare(b.ru || '', 'ru'));
+  grid.innerHTML = list.map(w => wordCardHTML(w, true)).join('');
 }
 
 function filterWords(cat, btn) {
@@ -778,6 +863,8 @@ async function loadData() {
     j('data/videolar/videolar.json'),
   ]);
   words = [].concat(a1a2,b1,b2,c1);
+  wordsByRu = {};
+  words.forEach(w => { wordsByRu[w.ru] = w; });
   synonymGroups = syn; antonymPairs = ant; wordFamilies = fam; videos = vids;
   // Paragraf soruları (dosya yoksa site yine çalışsın diye ayrı try/catch)
   try { paragraphQuestions = await j('data/sorular/paragraf-sorulari.json'); }

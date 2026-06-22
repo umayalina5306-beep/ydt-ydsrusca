@@ -153,6 +153,13 @@
         <div class="level-desc">Aynı kökten türeyen kelime aileleri (tüm seviyeler).</div>
         <div class="level-badge" style="background:#8b5cf6;color:#fff;border-color:#8b5cf6;">Akraba</div>
       </div>
+      <div class="level-card" onclick="showBank()" style="border-color:var(--gold); background:linear-gradient(135deg,#fffaf0,#fff);">
+        <div class="level-flag">📚</div>
+        <div class="level-name" style="color:var(--gold);">Kelime Bankası</div>
+        <div class="level-count" style="color:var(--gray);">Kaydettiğin kelimeler</div>
+        <div class="level-desc">Kaydettiğin ve öğrendiğin kelimeleri seviye ve türe göre gör.</div>
+        <div class="level-badge" style="background:var(--gold);color:var(--dark);border-color:var(--gold);">Bankam</div>
+      </div>
     </div>
   </div>
 
@@ -207,6 +214,39 @@
       <button class="cat-btn" onclick="filterWords('bağlaç',this)">Bağlaçlar <span class="cat-count" id="cnt-bağlaç"></span></button>
     </div>
     <div class="words-grid" id="words-grid"></div>
+  </div>
+
+  <!-- KELİME BANKASI -->
+  <div id="words-bank" style="display:none;">
+    <div class="words-header">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+        <button onclick="backToLevels()" class="back-btn">← Geri</button>
+        <h2>Kelime <span>Bankası</span></h2>
+      </div>
+      <p>Kaydettiğin ve öğrendiğin kelimeler. Durum, seviye ve türe göre filtrele.</p>
+    </div>
+    <div class="bank-tabs" id="bank-status-tabs">
+      <button class="bank-tab active" onclick="bankSetStatus('saved',this)">⭐ Kayıtlı</button>
+      <button class="bank-tab" onclick="bankSetStatus('learned',this)">✓ Öğrenilmiş</button>
+    </div>
+    <div class="cat-tabs" id="bank-level-tabs">
+      <button class="cat-btn active" onclick="bankSetLevel('hepsi',this)">Tüm Seviyeler</button>
+      <button class="cat-btn" onclick="bankSetLevel('A1-A2',this)">A1-A2</button>
+      <button class="cat-btn" onclick="bankSetLevel('B1',this)">B1</button>
+      <button class="cat-btn" onclick="bankSetLevel('B2',this)">B2</button>
+      <button class="cat-btn" onclick="bankSetLevel('C1',this)">C1</button>
+    </div>
+    <div class="cat-tabs" id="bank-type-tabs">
+      <button class="cat-btn active" onclick="bankSetType('hepsi',this)">Hepsi</button>
+      <button class="cat-btn" onclick="bankSetType('isim',this)">İsimler</button>
+      <button class="cat-btn" onclick="bankSetType('fiil',this)">Fiiller</button>
+      <button class="cat-btn" onclick="bankSetType('sıfat',this)">Sıfatlar</button>
+      <button class="cat-btn" onclick="bankSetType('zarf',this)">Zarflar</button>
+      <button class="cat-btn" onclick="bankSetType('zamir',this)">Zamirler</button>
+      <button class="cat-btn" onclick="bankSetType('edat',this)">Edatlar</button>
+      <button class="cat-btn" onclick="bankSetType('bağlaç',this)">Bağlaçlar</button>
+    </div>
+    <div class="words-grid" id="bank-grid"></div>
   </div>
 
 </div>
@@ -395,6 +435,11 @@
       <div class="profile-stat"><div class="profile-stat-num" id="profile-words">0</div><div class="profile-stat-lbl">Kayıtlı Kelime</div></div>
       <div class="profile-stat"><div class="profile-stat-num" id="profile-tests">0</div><div class="profile-stat-lbl">Çözülen Test</div></div>
     </div>
+    <div class="profile-wordlist-bar">
+      <button class="profile-wl-btn active" id="pwl-saved" onclick="profileShowList('saved',this)">⭐ Kayıtlı Kelimeler</button>
+      <button class="profile-wl-btn" id="pwl-learned" onclick="profileShowList('learned',this)">✓ Öğrenilmiş Kelimeler</button>
+    </div>
+    <div id="profile-wordlist" class="profile-wordlist"></div>
     <div class="profile-section-title">Son Etkinlikler</div>
     <div id="profile-activity" class="profile-activity"><div class="profile-empty">Yükleniyor...</div></div>
   </div>

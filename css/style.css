@@ -1251,3 +1251,60 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   border-color: var(--gold);
   box-shadow: 0 0 0 1px var(--gold) inset;
 }
+
+/* ===== ÖĞRENİLDİ BUTONU + BANKA KARTI ===== */
+.word-learn {
+  position: absolute;
+  top: 12px; right: 76px;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: var(--off-white);
+  color: var(--gray);
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.18s;
+  padding: 0;
+  z-index: 2;
+}
+.word-learn:hover { background: #d1fae5; color: #10b981; }
+.word-learn.active { background: #10b981; color: #fff; }
+.word-card.in-bank .word-ru { padding-right: 104px; }
+
+/* ===== BANKA SEKMELERİ ===== */
+.bank-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.bank-tab {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--light-gray);
+  background: var(--white);
+  color: var(--gray);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.bank-tab.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+/* ===== PROFİL KELİME LİSTESİ ===== */
+.profile-wordlist-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+.profile-wl-btn {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--light-gray);
+  background: var(--white);
+  color: var(--gray);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.profile-wl-btn.active { background: var(--gold); color: var(--dark); border-color: var(--gold); }
+.profile-wordlist { display: flex; flex-direction: column; gap: 6px; margin-bottom: 26px; max-height: 360px; overflow-y: auto; }
+.profile-wl-item { display: flex; align-items: center; gap: 10px; background: var(--white); border: 1px solid var(--light-gray); border-radius: 9px; padding: 9px 13px; font-size: 0.9rem; }
+.pwl-ru { font-weight: 700; color: var(--blue); min-width: 110px; }
+.pwl-tr { color: var(--text); flex: 1; }
+.pwl-lvl { font-size: 0.72rem; color: var(--gray); background: var(--off-white); padding: 2px 8px; border-radius: 8px; }

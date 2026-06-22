@@ -19,6 +19,34 @@ async function openProfile() {
 
   loadProfileStats();
   loadProfileActivity();
+  if (typeof profileShowList === "function") profileShowList("saved");
+}
+
+// Profilde kayıtlı / öğrenilmiş kelime listesi
+function profileShowList(kind, btn) {
+  const sb1 = document.getElementById("pwl-saved");
+  const lb1 = document.getElementById("pwl-learned");
+  if (sb1) sb1.classList.toggle("active", kind === "saved");
+  if (lb1) lb1.classList.toggle("active", kind === "learned");
+
+  const box = document.getElementById("profile-wordlist");
+  if (!box) return;
+  const set = kind === "learned"
+    ? (typeof learnedWords !== "undefined" ? learnedWords : new Set())
+    : (typeof savedWords !== "undefined" ? savedWords : new Set());
+  if (!set || !set.size) {
+    box.innerHTML = `<div class="profile-empty">${kind === "learned" ? "Henüz öğrenilmiş kelime yok." : "Henüz kayıtlı kelime yok. Kelimeler sayfasından ☆ ile kaydet."}</div>`;
+    return;
+  }
+  const items = [];
+  set.forEach(ru => {
+    const w = (typeof wordsByRu !== "undefined" && wordsByRu[ru]) || { ru: ru, tr: "", level: "" };
+    items.push(w);
+  });
+  items.sort((a, b) => (a.ru || "").localeCompare(b.ru || "", "ru"));
+  box.innerHTML = items.map(w =>
+    `<div class="profile-wl-item"><span class="pwl-ru">${w.ru}</span><span class="pwl-tr">${w.tr || ""}</span><span class="pwl-lvl">${w.level || ""}</span></div>`
+  ).join("");
 }
 
 async function loadProfileStats() {
