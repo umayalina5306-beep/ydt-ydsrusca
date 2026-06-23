@@ -330,7 +330,7 @@ async function toggleSaveWord(ev, ru, tr, level) {
     }
   } catch (e) {
     console.error('Kelime kaydedilemedi:', e);
-    alert('İşlem başarısız oldu. Tekrar dene.');
+    alert('Kelime kaydedilemedi.\n\nGerçek hata: ' + (e && e.message ? e.message : JSON.stringify(e)));
   }
 }
 
@@ -345,7 +345,7 @@ async function toggleLearned(ev, ru) {
     if (yeni === 'learned') { savedWords.delete(ru); learnedWords.add(ru); }
     else { learnedWords.delete(ru); savedWords.add(ru); }
     renderBank();
-  } catch (e) { console.error('Öğrenildi işaretlenemedi:', e); alert('İşlem başarısız oldu.'); }
+  } catch (e) { console.error('Öğrenildi işaretlenemedi:', e); alert('İşlem başarısız.\n\nGerçek hata: ' + (e && e.message ? e.message : JSON.stringify(e))); }
 }
 
 // ===== KELİME BANKASI =====
