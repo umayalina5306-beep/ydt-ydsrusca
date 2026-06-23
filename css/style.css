@@ -1304,7 +1304,7 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 }
 .profile-wl-btn.active { background: var(--gold); color: var(--dark); border-color: var(--gold); }
 .profile-wordlist { display: flex; flex-direction: column; gap: 6px; margin-bottom: 26px; max-height: 360px; overflow-y: auto; }
-.profile-wl-item { display: flex; align-items: center; gap: 10px; background: var(--white); border: 1px solid var(--light-gray); border-radius: 9px; padding: 9px 13px; font-size: 0.9rem; }
-.pwl-ru { font-weight: 700; color: var(--blue); min-width: 110px; }
-.pwl-tr { color: var(--text); flex: 1; }
-.pwl-lvl { font-size: 0.72rem; color: var(--gray); background: var(--off-white); padding: 2px 8px; border-radius: 8px; }
+.profile-wl-item { display: flex; align-items: center; gap: 12px; justify-content: flex-start; background: var(--white); border: 1px solid var(--light-gray); border-radius: 9px; padding: 9px 13px; font-size: 0.9rem; }
+.pwl-ru { font-weight: 700; color: var(--blue); min-width: 100px; }
+.pwl-tr { color: var(--text); flex: 0 1 auto; }
+.pwl-lvl { font-size: 0.72rem; color: var(--gray); background: var(--off-white); padding: 2px 8px; border-radius: 8px; margin-left: auto; }
