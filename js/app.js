@@ -232,7 +232,7 @@ function renderWords(cat) {
   }
 
   const filtered = cat === 'hepsi' ? levelWords : levelWords.filter(w => w.cat === cat);
-  grid.innerHTML = filtered.map(wordCardHTML).join('');
+  grid.innerHTML = filtered.map(w => wordCardHTML(w)).join('');
 }
 
 function wordCardHTML(w, inBank) {
@@ -422,7 +422,7 @@ function levelAra(q) {
     grid.innerHTML = `<div class="sozluk-not-found"><div class="not-found-icon">📭</div><div class="not-found-title">"${q}" bulunamadı</div><div class="not-found-sub">Bu seviyede böyle bir kelime yok.</div></div>`;
     return;
   }
-  grid.innerHTML = lw.map(wordCardHTML).join('');
+  grid.innerHTML = lw.map(w => wordCardHTML(w)).join('');
 }
 function levelTemizle() {
   const input = document.getElementById('level-search-input');
