@@ -248,11 +248,13 @@ function wordCardHTML(w, inBank) {
     const trSafe = (w.tr || '').replace(/'/g, "\\'");
     const isSaved = (typeof isWordSaved === 'function') && isWordSaved(w.ru);
     const isLearned = (typeof learnedWords !== 'undefined') && learnedWords.has(w.ru);
-    const learnBtn = inBank
+    // ✓ öğrenildi butonu YALNIZCA kaydedilmiş kelimelerde görünür (normal sayfa + banka)
+    const showLearn = isSaved;
+    const learnBtn = showLearn
       ? `<button class="word-learn${isLearned ? ' active' : ''}" onclick="toggleLearned(event,'${ruSafe}')" title="Öğrenildi olarak işaretle">✓</button>`
       : '';
     return `
-    <div class="word-card${isSaved ? ' saved' : ''}${inBank ? ' in-bank' : ''}">
+    <div class="word-card${isSaved ? ' saved' : ''}${showLearn ? ' has-learn' : ''}">
       ${learnBtn}
       <button class="word-save${isSaved ? ' active' : ''}" onclick="toggleSaveWord(event,'${ruSafe}','${trSafe}','${w.level || ''}')" title="Kaydet">${isSaved ? '★' : '☆'}</button>
       <button class="word-speak" onclick="speak('${ruSafe}')">🔊</button>
