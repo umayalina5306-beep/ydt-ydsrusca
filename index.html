@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=9">
+<link rel="stylesheet" href="css/style.css?v=11">
 </head>
 <body>
 
@@ -462,28 +462,115 @@
 
 <!-- ===== PROFİL ===== -->
 <div id="page-profile" class="page">
-  <div class="profile-wrap">
-    <div class="profile-card">
-      <div class="profile-avatar" id="profile-initial">?</div>
-      <div class="profile-id">
-        <div class="profile-name-row"><span id="profile-name"></span> <span id="profile-plan" class="plan-badge plan-free">Ücretsiz</span></div>
-        <div class="profile-email" id="profile-email"></div>
+  <div class="profile-layout">
+    <aside class="profile-sidebar">
+      <button class="psb-item active" id="psb-overview" onclick="profileNav('overview',this)"><span class="psb-ic">👤</span> Profil Özeti</button>
+      <button class="psb-item" onclick="profileGoKasa('saved')"><span class="psb-ic">📦</span> Kelime Kasam</button>
+      <button class="psb-item" onclick="profileGoKasa('learned')"><span class="psb-ic">✓</span> Öğrenilen Kelimeler</button>
+      <button class="psb-item" id="psb-tests" onclick="profileNav('tests',this)"><span class="psb-ic">📋</span> Test Geçmişim</button>
+      <button class="psb-item" id="psb-videos" onclick="profileNav('videos',this)"><span class="psb-ic">▶️</span> Video İzleme Geçmişim</button>
+      <button class="psb-item" id="psb-settings" onclick="profileNav('settings',this)"><span class="psb-ic">⚙️</span> Ayarlar</button>
+    </aside>
+
+    <div class="profile-main">
+      <!-- PROFİL ÖZETİ -->
+      <div id="pv-overview" class="profile-view">
+        <h2 class="profile-h2">Profil Özeti</h2>
+        <p class="profile-sub">Çalışma istatistiklerinize genel bir bakış.</p>
+
+        <div class="profile-id-card">
+          <div class="profile-avatar" id="profile-initial">?</div>
+          <div class="profile-id">
+            <div class="profile-name-row"><span id="profile-name"></span> <span id="profile-plan" class="plan-badge plan-free">Ücretsiz</span></div>
+            <div class="profile-email" id="profile-email"></div>
+            <div class="profile-joined">📅 Üyelik Tarihi: <span id="profile-joined">—</span></div>
+          </div>
+          <button class="profile-edit-btn" onclick="profileNav('settings')">✏️ Profili Düzenle</button>
+        </div>
+
+        <div class="profile-statgrid">
+          <div class="pstat">
+            <div class="pstat-ic blue">📘</div>
+            <div class="pstat-num" id="profile-words">0</div>
+            <div class="pstat-lbl">Kayıtlı Kelime</div>
+            <span class="pstat-link" onclick="profileGoKasa('saved')">Kelime Kasam →</span>
+          </div>
+          <div class="pstat">
+            <div class="pstat-ic green">✓</div>
+            <div class="pstat-num" id="profile-learned">0</div>
+            <div class="pstat-lbl">Öğrenilen Kelime</div>
+            <span class="pstat-link" onclick="profileGoKasa('learned')">Detayları Gör →</span>
+          </div>
+          <div class="pstat">
+            <div class="pstat-ic purple">📋</div>
+            <div class="pstat-num" id="profile-tests">0</div>
+            <div class="pstat-lbl">Çözülen Test</div>
+            <span class="pstat-link" onclick="profileNav('tests')">Geçmişim →</span>
+          </div>
+          <div class="pstat">
+            <div class="pstat-ic orange">▶️</div>
+            <div class="pstat-num" id="profile-videos">0</div>
+            <div class="pstat-lbl">İzlenen Video</div>
+            <span class="pstat-link" onclick="profileNav('videos')">Geçmişim →</span>
+          </div>
+        </div>
+
+        <div class="profile-cols">
+          <div class="profile-panel">
+            <div class="panel-head">
+              <div class="panel-title">📦 Kelime Kasam</div>
+              <button class="panel-cta" onclick="profileGoKasa('saved')">Tüm Kelime Kasama Git →</button>
+            </div>
+            <div class="panel-sub">Kayıtlı kelimelerinizi tekrar edin ve pekiştirin.</div>
+            <div id="profile-kasa-preview" class="kasa-preview"></div>
+            <button class="kasa-preview-all" id="profile-kasa-all" onclick="profileGoKasa('saved')">Tümünü Gör →</button>
+          </div>
+
+          <div class="profile-side">
+            <div class="profile-panel">
+              <div class="panel-title">🔥 Çalışma Serisi</div>
+              <div class="streak-sub">Günlük çalışmaya devam et!</div>
+              <div class="streak-num"><span id="profile-streak">0</span> <small>Gün</small></div>
+              <div class="streak-foot">En uzun seri: <span id="profile-streak-max">0</span> gün</div>
+              <div class="streak-dots" id="streak-dots"></div>
+            </div>
+            <div class="profile-panel">
+              <div class="panel-title">Hızlı İşlemler</div>
+              <div class="quick-row" onclick="profileGoKasa('saved')"><span class="quick-ic green">➕</span><span class="quick-txt">Kelime Ekle</span><span class="quick-arrow">›</span></div>
+              <div class="quick-row" onclick="showPage('quiz')"><span class="quick-ic blue">📋</span><span class="quick-txt">Test Çöz</span><span class="quick-arrow">›</span></div>
+              <div class="quick-row" onclick="showPage('video')"><span class="quick-ic red">▶️</span><span class="quick-txt">Video Ders İzle</span><span class="quick-arrow">›</span></div>
+              <div class="quick-row" onclick="showPage('words')"><span class="quick-ic gold">🔍</span><span class="quick-txt">Kelime Arama</span><span class="quick-arrow">›</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TEST GEÇMİŞİM -->
+      <div id="pv-tests" class="profile-view" style="display:none;">
+        <h2 class="profile-h2">Test Geçmişim</h2>
+        <p class="profile-sub">Çözdüğün testler ve sonuçların burada görünecek.</p>
+        <div class="profile-panel"><div class="profile-empty">Henüz test çözülmedi. Test çözdükçe sonuçların burada listelenecek.</div></div>
+      </div>
+
+      <!-- VIDEO İZLEME GEÇMİŞİM -->
+      <div id="pv-videos" class="profile-view" style="display:none;">
+        <h2 class="profile-h2">Video İzleme Geçmişim</h2>
+        <p class="profile-sub">İzlediğin video dersler burada görünecek.</p>
+        <div class="profile-panel"><div class="profile-empty">Henüz video izlenmedi.</div></div>
+      </div>
+
+      <!-- AYARLAR -->
+      <div id="pv-settings" class="profile-view" style="display:none;">
+        <h2 class="profile-h2">Ayarlar</h2>
+        <p class="profile-sub">Profil bilgilerini düzenle.</p>
+        <div class="profile-panel">
+          <label class="settings-label">Görünen Ad</label>
+          <input id="settings-name" class="settings-input" type="text" placeholder="Adınız" autocomplete="off">
+          <button class="settings-save" onclick="saveProfileName()">Kaydet</button>
+          <div class="settings-hint">E-posta ve plan bilgisi değiştirilemez.</div>
+        </div>
       </div>
     </div>
-    <div class="profile-stats">
-      <div class="profile-stat"><div class="profile-stat-num" id="profile-level">-</div><div class="profile-stat-lbl">Seviye</div></div>
-      <div class="profile-stat"><div class="profile-stat-num" id="profile-streak">0</div><div class="profile-stat-lbl">Gün Serisi</div></div>
-      <div class="profile-stat"><div class="profile-stat-num" id="profile-words">0</div><div class="profile-stat-lbl">Kayıtlı Kelime</div></div>
-      <div class="profile-stat"><div class="profile-stat-num" id="profile-tests">0</div><div class="profile-stat-lbl">Çözülen Test</div></div>
-    </div>
-    <div class="profile-wordlist-bar">
-      <button class="profile-wl-btn active" id="pwl-saved" onclick="profileShowList('saved',this)">⭐ Kayıtlı Kelimeler</button>
-      <button class="profile-wl-btn" id="pwl-learned" onclick="profileShowList('learned',this)">✓ Öğrenilmiş Kelimeler</button>
-    </div>
-    <button class="review-btn" onclick="startReviewQuiz(false)">🔁 Kayıtlı kelimeleri tekrar et</button>
-    <div id="profile-wordlist" class="profile-wordlist"></div>
-    <div class="profile-section-title">Son Etkinlikler</div>
-    <div id="profile-activity" class="profile-activity"><div class="profile-empty">Yükleniyor...</div></div>
   </div>
 </div>
 
@@ -556,11 +643,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=9"></script>
-<script defer src="js/auth.js?v=9"></script>
-<script defer src="js/admin.js?v=9"></script>
-<script defer src="js/profile.js?v=9"></script>
-<script defer src="js/extras.js?v=9"></script>
-<script defer src="js/app.js?v=9"></script>
+<script defer src="js/supabase-config.js?v=11"></script>
+<script defer src="js/auth.js?v=11"></script>
+<script defer src="js/admin.js?v=11"></script>
+<script defer src="js/profile.js?v=11"></script>
+<script defer src="js/extras.js?v=11"></script>
+<script defer src="js/app.js?v=11"></script>
 </body>
 </html>
