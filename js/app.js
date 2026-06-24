@@ -24,7 +24,7 @@ const levelTitles = {
 
 function selectLevel(level) {
   currentLevel = level;
-  rangeFrom = null; rangeTo = null;
+  rangeFrom = null; rangeTo = null; wordsPage = 1;
   const _f = document.getElementById('range-from'); if (_f) _f.value = '';
   const _t = document.getElementById('range-to'); if (_t) _t.value = '';
   document.getElementById('words-level-select').style.display = 'none';
@@ -136,8 +136,17 @@ function sozlukTemizle() {
 
 let currentCat = 'hepsi';
 let rangeFrom = null, rangeTo = null;
+let wordsPage = 1;
+const WORDS_PAGE_SIZE = 20;
+function wordsGoPage(p) {
+  wordsPage = p;
+  renderWords(currentCat);
+  const cs = document.getElementById('words-category-select');
+  if (cs) cs.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 function applyRange() {
+  wordsPage = 1;
   const f = parseInt(document.getElementById('range-from').value);
   const t = parseInt(document.getElementById('range-to').value);
   rangeFrom = (!isNaN(f) && f > 0) ? f : null;
@@ -146,16 +155,33 @@ function applyRange() {
   renderWords(currentCat);
 }
 function quickRange(n) {
+  wordsPage = 1;
   rangeFrom = 1; rangeTo = n;
   const fEl = document.getElementById('range-from'); if (fEl) fEl.value = 1;
   const tEl = document.getElementById('range-to'); if (tEl) tEl.value = n;
   renderWords(currentCat);
 }
 function clearRange() {
+  wordsPage = 1;
   rangeFrom = null; rangeTo = null;
   const fEl = document.getElementById('range-from'); if (fEl) fEl.value = '';
   const tEl = document.getElementById('range-to'); if (tEl) tEl.value = '';
   renderWords(currentCat);
+}
+
+// Özel uyarı baloncuğu (tarayıcı alert'i yerine, temaya uygun)
+function toast(msg) {
+  let t = document.getElementById('app-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'app-toast';
+    t.className = 'app-toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3400);
 }
 function getLevelWords() {
   return words.filter(w => {
@@ -267,7 +293,14 @@ function renderWords(cat) {
   }
   const _info = document.getElementById('range-info');
   if (_info) _info.textContent = (rangeFrom || rangeTo) ? `${filtered.length} / ${toplam} kelime` : `${toplam} kelime`;
-  grid.innerHTML = filtered.map(w => wordCardHTML(w)).join('');
+  // Sayfalama
+  const _tp = Math.max(1, Math.ceil(filtered.length / WORDS_PAGE_SIZE));
+  if (wordsPage > _tp) wordsPage = _tp;
+  if (wordsPage < 1) wordsPage = 1;
+  const _st = (wordsPage - 1) * WORDS_PAGE_SIZE;
+  const _items = filtered.slice(_st, _st + WORDS_PAGE_SIZE);
+  grid.innerHTML = _items.map(w => wordCardHTML(w)).join('');
+  if (typeof renderPagination === 'function') renderPagination('words-pagination', wordsPage, _tp, 'wordsGoPage');
 }
 
 function wordCardHTML(w, inBank) {
@@ -301,6 +334,7 @@ function wordCardHTML(w, inBank) {
       <div class="word-pron">[${w.p || ''}]</div>
       ${extraHTML}
       ${w.ornek ? `<div class="word-example"><div class="word-example-ru">${w.ornek}</div><div class="word-example-tr">${w.ornekTr}</div></div>` : ''}
+      ${inBank ? `<button class="card-review-btn" onclick="reviewOneWord('${ruSafe}')">🔁 Tekrar Et</button>` : ''}
     </div>`;
 }
 // ===== KELİME KAYDETME (Premium) =====
@@ -308,6 +342,8 @@ let savedWords = new Set();      // status = 'saved'  (tekrar listesi)
 let learnedWords = new Set();    // status = 'learned' (öğrenildi)
 // Banka filtre durumu
 let bankStatus = 'saved', bankLevel = 'hepsi', bankType = 'hepsi';
+let bankSearchQuery = '', bankPage = 1;
+const BANK_PAGE_SIZE = 20;
 
 function isWordSaved(ru) {
   return savedWords.has(ru) || learnedWords.has(ru);
@@ -340,7 +376,7 @@ async function toggleSaveWord(ev, ru, tr, level) {
   if (typeof currentUser === 'undefined' || !currentUser) { if (typeof openAuth === 'function') openAuth('login'); return; }
   const isPremium = currentProfile && (currentProfile.plan === 'premium' || currentProfile.is_admin);
   if (!isPremium) {
-    alert('Kelime kaydetme Premium özelliğidir.\n\nPremium ile öğrendiğin kelimeleri kaydedip her gün tekrar edebilirsin.');
+    toast('Kelime kaydetme Premium özelliğidir. Premium ile öğrendiğin kelimeleri kaydedip her gün tekrar edebilirsin.');
     return;
   }
   const btn = ev ? ev.currentTarget : null;
@@ -381,7 +417,7 @@ async function toggleSaveWord(ev, ru, tr, level) {
     }
   } catch (e) {
     console.error('Kelime kaydedilemedi:', e);
-    alert('Kelime kaydedilemedi.\n\nGerçek hata: ' + (e && e.message ? e.message : JSON.stringify(e)));
+    toast('Kelime kaydedilemedi. Lütfen tekrar dene.');
   }
 }
 
@@ -401,10 +437,10 @@ async function toggleLearned(ev, ru) {
     // Bankadaysak listeyi tazele (kayıtlı/öğrenilmiş sekmeleri arası taşıma)
     const bank = document.getElementById('words-bank');
     if (bank && bank.style.display === 'block') renderBank();
-  } catch (e) { console.error('Öğrenildi işaretlenemedi:', e); alert('İşlem başarısız.\n\nGerçek hata: ' + (e && e.message ? e.message : JSON.stringify(e))); }
+  } catch (e) { console.error('Öğrenildi işaretlenemedi:', e); toast('İşlem başarısız oldu. Lütfen tekrar dene.'); }
 }
 
-// ===== KELİME BANKASI =====
+// ===== KELİME KASASI =====
 function showBank() {
   if (!currentUser) { if (typeof openAuth === 'function') openAuth('login'); return; }
   currentLevel = 'bank';
@@ -413,6 +449,8 @@ function showBank() {
   document.getElementById('words-category-select').style.display = 'none';
   document.getElementById('words-bank').style.display = 'block';
   bankStatus = 'saved'; bankLevel = 'hepsi'; bankType = 'hepsi';
+  bankSearchQuery = ''; bankPage = 1;
+  const si = document.getElementById('kasa-search-input'); if (si) si.value = '';
   ['bank-status-tabs','bank-level-tabs','bank-type-tabs'].forEach(id => {
     const bar = document.getElementById(id);
     if (bar) bar.querySelectorAll('button').forEach((b,i) => b.classList.toggle('active', i === 0));
@@ -421,9 +459,9 @@ function showBank() {
   window.scrollTo(0, 0);
 }
 
-function bankSetStatus(s, btn) { bankStatus = s; _bankActive(btn); renderBank(); }
-function bankSetLevel(l, btn) { bankLevel = l; _bankActive(btn); renderBank(); }
-function bankSetType(t, btn) { bankType = t; _bankActive(btn); renderBank(); }
+function bankSetStatus(s, btn) { bankStatus = s; bankPage = 1; _bankActive(btn); renderBank(); }
+function bankSetLevel(l, btn) { bankLevel = l; bankPage = 1; _bankActive(btn); renderBank(); }
+function bankSetType(t, btn) { bankType = t; bankPage = 1; _bankActive(btn); renderBank(); }
 function _bankActive(btn) {
   if (!btn || !btn.parentElement) return;
   btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
@@ -445,7 +483,7 @@ function startReviewQuiz(fromBank) {
   } else {
     savedWords.forEach(ru => { const w = wordsByRu[ru]; if (w) pool.push(w); });
   }
-  if (pool.length < 4) { alert('Tekrar için en az 4 kaydedilmiş kelime gerekli. Önce birkaç kelime kaydet.'); return; }
+  if (pool.length < 4) { toast('Tekrar için en az 4 kaydedilmiş kelime gerekli.'); return; }
   quizSettings = { type: 'ru-tr', cat: 'hepsi', count: pool.length, level: 'hepsi' };
   qList = shuffle(pool);
   qIdx = 0; qScore = 0; qWrong = 0;
@@ -461,30 +499,126 @@ function startReviewQuiz(fromBank) {
   loadQ();
 }
 
+function _bankBaseList() {
+  // Durum (kayıtlı/öğrenilmiş) + arama uygulanmış liste
+  const set = bankStatus === 'learned' ? learnedWords : savedWords;
+  let list = [];
+  set.forEach(ru => { const w = wordsByRu[ru]; list.push(w || { ru: ru, tr: '', p: '', cat: '', level: '' }); });
+  const q = (bankSearchQuery || '').trim().toLowerCase();
+  if (q) list = list.filter(w => (w.ru || '').toLowerCase().includes(q) || (w.tr || '').toLowerCase().includes(q));
+  return list;
+}
+
+function _setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
 function renderBank() {
   const grid = document.getElementById('bank-grid');
   if (!grid) return;
-  const set = bankStatus === 'learned' ? learnedWords : savedWords;
-  let list = [];
-  set.forEach(ru => {
-    const w = wordsByRu[ru];
-    list.push(w || { ru: ru, tr: '', p: '', cat: '', level: '' });
-  });
+
+  // Üst istatistik + sekme sayıları (toplam)
+  _setText('kasa-saved-count', savedWords.size);
+  _setText('kasa-learned-count', learnedWords.size);
+  _setText('tab-saved-count', '(' + savedWords.size + ')');
+  _setText('tab-learned-count', '(' + learnedWords.size + ')');
+
+  // Durum + arama
+  let baseList = _bankBaseList();
+
+  // Seviye sayıları (arama dahil, seviye filtresi öncesi)
+  const lvlCount = (fn) => baseList.filter(fn).length;
+  _setText('blc-hepsi', '(' + baseList.length + ')');
+  _setText('blc-a1a2', '(' + lvlCount(w => w.level === 'A1' || w.level === 'A2') + ')');
+  _setText('blc-b1', '(' + lvlCount(w => w.level === 'B1') + ')');
+  _setText('blc-b2', '(' + lvlCount(w => w.level === 'B2') + ')');
+  _setText('blc-c1', '(' + lvlCount(w => w.level === 'C1') + ')');
+
+  // Seviye filtresi
+  let levelList = baseList;
   if (bankLevel !== 'hepsi') {
-    if (bankLevel === 'A1-A2') list = list.filter(w => w.level === 'A1' || w.level === 'A2');
-    else list = list.filter(w => w.level === bankLevel);
+    if (bankLevel === 'A1-A2') levelList = baseList.filter(w => w.level === 'A1' || w.level === 'A2');
+    else levelList = baseList.filter(w => w.level === bankLevel);
   }
-  if (bankType !== 'hepsi') list = list.filter(w => w.cat === bankType);
-  if (!list.length) {
+
+  // Tür sayıları (seviye filtresi sonrası)
+  const tCount = (c) => levelList.filter(w => w.cat === c).length;
+  _setText('btc-hepsi', '(' + levelList.length + ')');
+  ['isim','fiil','sıfat','zarf','zamir','edat','bağlaç'].forEach(c => _setText('btc-' + c, '(' + tCount(c) + ')'));
+
+  // Tür filtresi
+  let finalList = (bankType === 'hepsi') ? levelList : levelList.filter(w => w.cat === bankType);
+  finalList.sort((a, b) => (a.ru || '').localeCompare(b.ru || '', 'ru'));
+
+  if (!finalList.length) {
     grid.innerHTML = `<div class="profile-empty" style="grid-column:1/-1;">Bu filtrede ${bankStatus === 'learned' ? 'öğrenilmiş' : 'kayıtlı'} kelime yok.</div>`;
+    const pg = document.getElementById('bank-pagination'); if (pg) pg.innerHTML = '';
     return;
   }
-  list.sort((a,b) => (a.ru || '').localeCompare(b.ru || '', 'ru'));
-  grid.innerHTML = list.map(w => wordCardHTML(w, true)).join('');
+
+  // Sayfalama
+  const totalPages = Math.max(1, Math.ceil(finalList.length / BANK_PAGE_SIZE));
+  if (bankPage > totalPages) bankPage = totalPages;
+  if (bankPage < 1) bankPage = 1;
+  const start = (bankPage - 1) * BANK_PAGE_SIZE;
+  const pageItems = finalList.slice(start, start + BANK_PAGE_SIZE);
+  grid.innerHTML = pageItems.map(w => wordCardHTML(w, true)).join('');
+  renderPagination('bank-pagination', bankPage, totalPages, 'bankGoPage');
+}
+
+function bankGoPage(p) {
+  bankPage = p;
+  renderBank();
+  const top = document.getElementById('words-bank');
+  if (top) top.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function bankSearch(q) {
+  bankSearchQuery = q || '';
+  bankPage = 1;
+  renderBank();
+}
+
+// Sayfalama kontrolü (« Önceki  1 2 3 … N  Sonraki »)
+function renderPagination(containerId, page, totalPages, fnName) {
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  if (totalPages <= 1) { c.innerHTML = ''; return; }
+  let html = `<button class="pg-btn" ${page === 1 ? 'disabled' : ''} onclick="${fnName}(${page - 1})">« Önceki</button>`;
+  const pages = [];
+  const add = (n) => pages.push(n);
+  add(1);
+  let s = Math.max(2, page - 1), e = Math.min(totalPages - 1, page + 1);
+  if (s > 2) pages.push('...');
+  for (let i = s; i <= e; i++) add(i);
+  if (e < totalPages - 1) pages.push('...');
+  if (totalPages > 1) add(totalPages);
+  html += pages.map(p => p === '...'
+    ? `<span class="pg-ellipsis">…</span>`
+    : `<button class="pg-btn ${p === page ? 'active' : ''}" onclick="${fnName}(${p})">${p}</button>`
+  ).join('');
+  html += `<button class="pg-btn" ${page === totalPages ? 'disabled' : ''} onclick="${fnName}(${page + 1})">Sonraki »</button>`;
+  c.innerHTML = html;
+}
+
+// Tek kelimeyi hızlı tekrar et (kart üzerindeki Tekrar Et butonu)
+function reviewOneWord(ru) {
+  const w = wordsByRu[ru];
+  if (!w) return;
+  quizSettings = { type: 'ru-tr', cat: 'hepsi', count: 1, level: 'hepsi' };
+  qList = [w];
+  qIdx = 0; qScore = 0; qWrong = 0;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const qp = document.getElementById('page-quiz'); if (qp) qp.classList.add('active');
+  document.getElementById('quiz-setup').style.display = 'none';
+  document.getElementById('quiz-playing').style.display = 'block';
+  document.getElementById('quiz-result').style.display = 'none';
+  document.getElementById('quiz-card').style.display = 'block';
+  window.scrollTo(0, 0);
+  loadQ();
 }
 
 function filterWords(cat, btn) {
   currentCat = cat;
+  wordsPage = 1;
   const ls = document.getElementById('level-search-input');
   if (ls) ls.value = '';
   const lc = document.getElementById('level-search-clear');
@@ -642,7 +776,7 @@ function startQuiz(){
   if (quizSettings.type === 'paragraf') {
     let pool = (paragraphQuestions || []).slice();
     if (quizSettings.level !== 'hepsi') pool = pool.filter(p => p.level === quizSettings.level);
-    if (pool.length < 1) { alert('Bu seviyede paragraf sorusu yok. "Hepsi" seç ya da başka seviye dene.'); showSetup(); return; }
+    if (pool.length < 1) { toast('Bu seviyede paragraf sorusu yok. "Hepsi" seç ya da başka seviye dene.'); showSetup(); return; }
     const count = parseInt(quizSettings.count) || 20;
     qList = shuffle(pool).slice(0, count);
     qIdx = 0; qScore = 0; qWrong = 0;
@@ -663,7 +797,7 @@ function startQuiz(){
     pool = pool.filter(w => w.cat === quizSettings.cat);
   }
   if (pool.length < 4) {
-    alert('Bu seviye/kategori kombinasyonunda yeterli kelime yok. Lütfen başka seçim yapın.');
+    toast('Bu seviye/kategori kombinasyonunda yeterli kelime yok.');
     showSetup();
     return;
   }
@@ -890,7 +1024,7 @@ function renderVideos(){
       <div class="video-thumb" style="background:${v.locked?'#1a2744':'#003580'}">
         <div class="video-thumb-num">${v.num}</div>
         ${v.locked?'<div class="video-lock-icon">🔒</div>':''}
-        <div class="video-play" onclick="${v.locked?'showPage(\'pricing\')':'alert(\'Video yakında eklenecek!\')'}">
+        <div class="video-play" onclick="${v.locked?'showPage(\'pricing\')':'toast(\'Video yakında eklenecek!\')'}">
           ${v.locked?'🔒':'▶'}
         </div>
       </div>
@@ -961,6 +1095,6 @@ async function loadData() {
 }
 async function init(){
   try { await loadData(); renderVideos(); }
-  catch(e){ console.error('Veri yükleme hatası:', e); alert('İçerik yüklenemedi. Sayfayı yenileyin.'); }
+  catch(e){ console.error('Veri yükleme hatası:', e); toast('İçerik yüklenemedi. Sayfayı yenileyin.'); }
 }
 init();
