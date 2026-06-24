@@ -24,6 +24,9 @@ const levelTitles = {
 
 function selectLevel(level) {
   currentLevel = level;
+  rangeFrom = null; rangeTo = null;
+  const _f = document.getElementById('range-from'); if (_f) _f.value = '';
+  const _t = document.getElementById('range-to'); if (_t) _t.value = '';
   document.getElementById('words-level-select').style.display = 'none';
   document.getElementById('words-category-select').style.display = 'none';
   document.getElementById('words-sozluk').style.display = 'none';
@@ -132,6 +135,28 @@ function sozlukTemizle() {
 }
 
 let currentCat = 'hepsi';
+let rangeFrom = null, rangeTo = null;
+
+function applyRange() {
+  const f = parseInt(document.getElementById('range-from').value);
+  const t = parseInt(document.getElementById('range-to').value);
+  rangeFrom = (!isNaN(f) && f > 0) ? f : null;
+  rangeTo = (!isNaN(t) && t > 0) ? t : null;
+  if (rangeFrom && rangeTo && rangeFrom > rangeTo) { const tmp = rangeFrom; rangeFrom = rangeTo; rangeTo = tmp; }
+  renderWords(currentCat);
+}
+function quickRange(n) {
+  rangeFrom = 1; rangeTo = n;
+  const fEl = document.getElementById('range-from'); if (fEl) fEl.value = 1;
+  const tEl = document.getElementById('range-to'); if (tEl) tEl.value = n;
+  renderWords(currentCat);
+}
+function clearRange() {
+  rangeFrom = null; rangeTo = null;
+  const fEl = document.getElementById('range-from'); if (fEl) fEl.value = '';
+  const tEl = document.getElementById('range-to'); if (tEl) tEl.value = '';
+  renderWords(currentCat);
+}
 function getLevelWords() {
   return words.filter(w => {
     if (currentLevel === 'a1a2') return w.level === 'A1' || w.level === 'A2';
@@ -157,6 +182,8 @@ function updateCatCounts() {
 function renderWords(cat) {
   const grid = document.getElementById('words-grid');
   const levelWords = getLevelWords();
+  const _rb = document.getElementById('range-bar');
+  if (_rb) _rb.style.display = (cat === 'esanlamli' || cat === 'zitanlamli' || cat === 'akraba') ? 'none' : 'flex';
 
   if (cat === 'esanlamli') {
     grid.innerHTML = synonymGroups.map(g => `
@@ -231,7 +258,15 @@ function renderWords(cat) {
     return;
   }
 
-  const filtered = cat === 'hepsi' ? levelWords : levelWords.filter(w => w.cat === cat);
+  let filtered = cat === 'hepsi' ? levelWords : levelWords.filter(w => w.cat === cat);
+  const toplam = filtered.length;
+  if (rangeFrom || rangeTo) {
+    const from = (rangeFrom && rangeFrom > 0) ? rangeFrom - 1 : 0;
+    const to = (rangeTo && rangeTo > 0) ? rangeTo : filtered.length;
+    filtered = filtered.slice(from, to);
+  }
+  const _info = document.getElementById('range-info');
+  if (_info) _info.textContent = (rangeFrom || rangeTo) ? `${filtered.length} / ${toplam} kelime` : `${toplam} kelime`;
   grid.innerHTML = filtered.map(w => wordCardHTML(w)).join('');
 }
 
@@ -316,7 +351,11 @@ async function toggleSaveWord(ev, ru, tr, level) {
       if (error) throw error;
       savedWords.delete(ru); learnedWords.delete(ru);
       if (btn) { btn.classList.remove('active'); btn.textContent = '☆'; }
-      if (card) card.classList.remove('saved');
+      if (card) {
+        card.classList.remove('saved', 'has-learn');
+        const lb = card.querySelector('.word-learn');
+        if (lb) lb.remove();
+      }
       // Bankadaysak kart listeden çıksın
       if (card && card.classList.contains('in-bank')) card.remove();
     } else {
@@ -327,7 +366,18 @@ async function toggleSaveWord(ev, ru, tr, level) {
       if (error) throw error;
       savedWords.add(ru);
       if (btn) { btn.classList.add('active'); btn.textContent = '★'; }
-      if (card) card.classList.add('saved');
+      if (card) {
+        card.classList.add('saved', 'has-learn');
+        // ✓ öğrenildi butonunu anında ekle (yoksa)
+        if (!card.querySelector('.word-learn')) {
+          const lb = document.createElement('button');
+          lb.className = 'word-learn';
+          lb.title = 'Öğrenildi olarak işaretle';
+          lb.textContent = '✓';
+          lb.onclick = function (e) { toggleLearned(e, ru); };
+          card.insertBefore(lb, card.firstChild);
+        }
+      }
     }
   } catch (e) {
     console.error('Kelime kaydedilemedi:', e);
@@ -378,6 +428,37 @@ function _bankActive(btn) {
   if (!btn || !btn.parentElement) return;
   btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+}
+
+// ===== TEKRAR ET (kaydedilen kelimelerden rastgele quiz) =====
+function startReviewQuiz(fromBank) {
+  if (typeof currentUser === 'undefined' || !currentUser) { if (typeof openAuth === 'function') openAuth('login'); return; }
+  let pool = [];
+  if (fromBank) {
+    const set = bankStatus === 'learned' ? learnedWords : savedWords;
+    set.forEach(ru => { const w = wordsByRu[ru]; if (w) pool.push(w); });
+    if (bankLevel !== 'hepsi') {
+      if (bankLevel === 'A1-A2') pool = pool.filter(w => w.level === 'A1' || w.level === 'A2');
+      else pool = pool.filter(w => w.level === bankLevel);
+    }
+    if (bankType !== 'hepsi') pool = pool.filter(w => w.cat === bankType);
+  } else {
+    savedWords.forEach(ru => { const w = wordsByRu[ru]; if (w) pool.push(w); });
+  }
+  if (pool.length < 4) { alert('Tekrar için en az 4 kaydedilmiş kelime gerekli. Önce birkaç kelime kaydet.'); return; }
+  quizSettings = { type: 'ru-tr', cat: 'hepsi', count: pool.length, level: 'hepsi' };
+  qList = shuffle(pool);
+  qIdx = 0; qScore = 0; qWrong = 0;
+  // Quiz sayfasına geç (kurulum ekranını atlayarak doğrudan başlat)
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const qp = document.getElementById('page-quiz');
+  if (qp) qp.classList.add('active');
+  document.getElementById('quiz-setup').style.display = 'none';
+  document.getElementById('quiz-playing').style.display = 'block';
+  document.getElementById('quiz-result').style.display = 'none';
+  document.getElementById('quiz-card').style.display = 'block';
+  window.scrollTo(0, 0);
+  loadQ();
 }
 
 function renderBank() {
