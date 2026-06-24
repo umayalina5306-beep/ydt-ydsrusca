@@ -44,7 +44,7 @@ async function loadProfile() {
   try {
     const { data, error } = await sb
       .from("profiles")
-      .select("display_name, plan, is_admin, level")
+      .select("display_name, plan, is_admin, level, streak_count, created_at")
       .eq("id", currentUser.id)
       .single();
     if (!error) currentProfile = data;
@@ -151,6 +151,7 @@ function updateAuthUI() {
     const isPremium = currentProfile && currentProfile.plan === "premium";
     const name = bestName();
     document.getElementById("account-name").textContent = name;
+    if (typeof applyAvatar === "function") applyAvatar();
     const badge = document.getElementById("account-plan");
     if (isAdmin) {
       badge.textContent = "Yönetici";
