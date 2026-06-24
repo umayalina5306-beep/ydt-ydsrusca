@@ -137,12 +137,25 @@ function sozlukTemizle() {
 let currentCat = 'hepsi';
 let rangeFrom = null, rangeTo = null;
 let wordsPage = 1;
+let wordsPerPage = 20;
 const WORDS_PAGE_SIZE = 20;
 function wordsGoPage(p) {
   wordsPage = p;
   renderWords(currentCat);
   const cs = document.getElementById('words-category-select');
   if (cs) cs.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function setWordsPerPage(n) {
+  wordsPerPage = parseInt(n, 10) || 20;
+  wordsPage = 1;
+  renderWords(currentCat);
+}
+function wordsJumpGo() {
+  const el = document.getElementById('words-jump');
+  if (!el) return;
+  let p = parseInt(el.value, 10);
+  if (isNaN(p) || p < 1) { el.value = ''; return; }
+  wordsGoPage(p);
 }
 
 function applyRange() {
@@ -294,13 +307,29 @@ function renderWords(cat) {
   const _info = document.getElementById('range-info');
   if (_info) _info.textContent = (rangeFrom || rangeTo) ? `${filtered.length} / ${toplam} kelime` : `${toplam} kelime`;
   // Sayfalama
-  const _tp = Math.max(1, Math.ceil(filtered.length / WORDS_PAGE_SIZE));
+  const _tp = Math.max(1, Math.ceil(filtered.length / wordsPerPage));
   if (wordsPage > _tp) wordsPage = _tp;
   if (wordsPage < 1) wordsPage = 1;
-  const _st = (wordsPage - 1) * WORDS_PAGE_SIZE;
-  const _items = filtered.slice(_st, _st + WORDS_PAGE_SIZE);
+  const _st = (wordsPage - 1) * wordsPerPage;
+  const _items = filtered.slice(_st, _st + wordsPerPage);
   grid.innerHTML = _items.map(w => wordCardHTML(w)).join('');
-  if (typeof renderPagination === 'function') renderPagination('words-pagination', wordsPage, _tp, 'wordsGoPage');
+
+  const footer = document.getElementById('words-pagination');
+  if (footer) {
+    const buttons = pageButtonsHTML(wordsPage, _tp, 'wordsGoPage');
+    const jump = _tp > 1
+      ? `<span class="pg-jump">Sayfa <input type="number" min="1" max="${_tp}" id="words-jump" placeholder="${wordsPage}" onkeydown="if(event.key==='Enter')wordsJumpGo()"><button class="pg-btn" onclick="wordsJumpGo()">Git</button></span>`
+      : '';
+    const perpage = `<div class="pg-perpage">Sayfa başına
+      <select onchange="setWordsPerPage(this.value)">
+        ${[20, 50, 100].map(n => `<option value="${n}" ${n === wordsPerPage ? 'selected' : ''}>${n}</option>`).join('')}
+      </select></div>`;
+    footer.innerHTML = `<div class="pg-footer">
+      <div class="pg-total">Toplam ${filtered.length} kelime</div>
+      <div class="pg-center">${buttons}${jump}</div>
+      ${perpage}
+    </div>`;
+  }
 }
 
 function wordCardHTML(w, inBank) {
@@ -577,11 +606,9 @@ function bankSearch(q) {
   renderBank();
 }
 
-// Sayfalama kontrolü (« Önceki  1 2 3 … N  Sonraki »)
-function renderPagination(containerId, page, totalPages, fnName) {
-  const c = document.getElementById(containerId);
-  if (!c) return;
-  if (totalPages <= 1) { c.innerHTML = ''; return; }
+// Sayfa düğmeleri HTML'i (« Önceki  1 2 3 … N  Sonraki »)
+function pageButtonsHTML(page, totalPages, fnName) {
+  if (totalPages <= 1) return '';
   let html = `<button class="pg-btn" ${page === 1 ? 'disabled' : ''} onclick="${fnName}(${page - 1})">« Önceki</button>`;
   const pages = [];
   const add = (n) => pages.push(n);
@@ -596,7 +623,13 @@ function renderPagination(containerId, page, totalPages, fnName) {
     : `<button class="pg-btn ${p === page ? 'active' : ''}" onclick="${fnName}(${p})">${p}</button>`
   ).join('');
   html += `<button class="pg-btn" ${page === totalPages ? 'disabled' : ''} onclick="${fnName}(${page + 1})">Sonraki »</button>`;
-  c.innerHTML = html;
+  return html;
+}
+
+function renderPagination(containerId, page, totalPages, fnName) {
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  c.innerHTML = pageButtonsHTML(page, totalPages, fnName);
 }
 
 // Tek kelimeyi hızlı tekrar et (kart üzerindeki Tekrar Et butonu)
