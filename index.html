@@ -213,6 +213,18 @@
       <button class="cat-btn" onclick="filterWords('edat',this)">Edatlar <span class="cat-count" id="cnt-edat"></span></button>
       <button class="cat-btn" onclick="filterWords('bağlaç',this)">Bağlaçlar <span class="cat-count" id="cnt-bağlaç"></span></button>
     </div>
+    <div class="range-bar" id="range-bar">
+      <span class="range-label">Aralık:</span>
+      <input type="number" id="range-from" min="1" placeholder="1">
+      <span class="range-label">–</span>
+      <input type="number" id="range-to" min="1" placeholder="50">
+      <button onclick="applyRange()">Listele</button>
+      <button class="range-quick" onclick="quickRange(10)">İlk 10</button>
+      <button class="range-quick" onclick="quickRange(50)">İlk 50</button>
+      <button class="range-quick" onclick="quickRange(100)">İlk 100</button>
+      <button class="range-quick" onclick="clearRange()">Tümü</button>
+      <span class="range-info" id="range-info"></span>
+    </div>
     <div class="words-grid" id="words-grid"></div>
   </div>
 
@@ -229,6 +241,7 @@
       <button class="bank-tab active" onclick="bankSetStatus('saved',this)">⭐ Kayıtlı</button>
       <button class="bank-tab" onclick="bankSetStatus('learned',this)">✓ Öğrenilmiş</button>
     </div>
+    <button class="review-btn" onclick="startReviewQuiz(true)">🔁 Bu listeyi tekrar et</button>
     <div class="cat-tabs" id="bank-level-tabs">
       <button class="cat-btn active" onclick="bankSetLevel('hepsi',this)">Tüm Seviyeler</button>
       <button class="cat-btn" onclick="bankSetLevel('A1-A2',this)">A1-A2</button>
@@ -439,6 +452,7 @@
       <button class="profile-wl-btn active" id="pwl-saved" onclick="profileShowList('saved',this)">⭐ Kayıtlı Kelimeler</button>
       <button class="profile-wl-btn" id="pwl-learned" onclick="profileShowList('learned',this)">✓ Öğrenilmiş Kelimeler</button>
     </div>
+    <button class="review-btn" onclick="startReviewQuiz(false)">🔁 Kayıtlı kelimeleri tekrar et</button>
     <div id="profile-wordlist" class="profile-wordlist"></div>
     <div class="profile-section-title">Son Etkinlikler</div>
     <div id="profile-activity" class="profile-activity"><div class="profile-empty">Yükleniyor...</div></div>
