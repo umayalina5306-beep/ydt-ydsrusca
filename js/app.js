@@ -1131,3 +1131,22 @@ async function init(){
   catch(e){ console.error('Veri yükleme hatası:', e); toast('İçerik yüklenemedi. Sayfayı yenileyin.'); }
 }
 init();
+
+// ===== Kelime Bankası başlık araması (Sözlük) =====
+function kbSearch(q) {
+  q = (q || '').trim().toLowerCase();
+  const res = document.getElementById('kb-results');
+  const grid = document.querySelector('#words-level-select .level-grid');
+  const clr = document.getElementById('kb-search-clear');
+  if (!res) return;
+  if (!q) { res.style.display = 'none'; res.innerHTML = ''; if (grid) grid.style.display = ''; if (clr) clr.style.display = 'none'; return; }
+  if (clr) clr.style.display = 'block';
+  if (grid) grid.style.display = 'none';
+  res.style.display = 'grid';
+  const all = (typeof words !== 'undefined' ? words : []);
+  const list = all.filter(w => (w.ru || '').toLowerCase().includes(q) || (w.tr || '').toLowerCase().includes(q)).slice(0, 60);
+  res.innerHTML = list.length
+    ? list.map(w => wordCardHTML(w)).join('')
+    : '<div class="profile-empty" style="grid-column:1/-1;">Sonuç bulunamadı.</div>';
+}
+function kbClear() { const i = document.getElementById('kb-search-input'); if (i) i.value = ''; kbSearch(''); }
