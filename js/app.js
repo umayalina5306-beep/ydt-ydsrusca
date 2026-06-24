@@ -258,7 +258,8 @@ function wordCardHTML(w, inBank) {
       ${learnBtn}
       <button class="word-save${isSaved ? ' active' : ''}" onclick="toggleSaveWord(event,'${ruSafe}','${trSafe}','${w.level || ''}')" title="Kaydet">${isSaved ? '★' : '☆'}</button>
       <button class="word-speak" onclick="speak('${ruSafe}')">🔊</button>
-      <div class="word-ru">${w.ru} ${genderHTML}</div>
+      <div class="word-ru">${w.ru}</div>
+      ${genderHTML}
       ${tipHTML}
       ${padejHTML}
       <div class="word-tr">${w.tr}</div>
@@ -339,12 +340,17 @@ async function toggleLearned(ev, ru) {
   if (ev) ev.stopPropagation();
   if (!currentUser) return;
   const yeni = learnedWords.has(ru) ? 'saved' : 'learned';
+  const btn = ev ? ev.currentTarget : null;
   try {
     const { error } = await sb.from('saved_words').update({ status: yeni }).eq('user_id', currentUser.id).eq('word_ru', ru);
     if (error) throw error;
     if (yeni === 'learned') { savedWords.delete(ru); learnedWords.add(ru); }
     else { learnedWords.delete(ru); savedWords.add(ru); }
-    renderBank();
+    // Tıklanan butonu anında güncelle (normal sayfada da yeşil olsun)
+    if (btn) btn.classList.toggle('active', yeni === 'learned');
+    // Bankadaysak listeyi tazele (kayıtlı/öğrenilmiş sekmeleri arası taşıma)
+    const bank = document.getElementById('words-bank');
+    if (bank && bank.style.display === 'block') renderBank();
   } catch (e) { console.error('Öğrenildi işaretlenemedi:', e); alert('İşlem başarısız.\n\nGerçek hata: ' + (e && e.message ? e.message : JSON.stringify(e))); }
 }
 
