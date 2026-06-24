@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=11">
+<link rel="stylesheet" href="css/style.css?v=13">
 </head>
 <body>
 
@@ -26,6 +26,7 @@
       <button class="btn-signup" onclick="openAuth('register')">Üye Ol</button>
     </div>
     <div id="nav-account" style="display:none; align-items:center; gap:10px;">
+      <span id="account-avatar" class="nav-avatar" onclick="showPage('profile')" title="Profilim"></span>
       <span id="account-name" class="account-name"></span>
       <span id="account-plan" class="plan-badge plan-free">FREE</span>
       <span id="account-admin" title="Yönetici" style="display:none; color:var(--gold); font-weight:700;">★</span>
@@ -93,9 +94,19 @@
   <!-- SEVİYE SEÇİMİ -->
   <div id="words-level-select">
     <div class="words-header">
-      <h2>Kelime <span>Kasası</span></h2>
-      <p>Önce seviyeni seç, sonra kategoriye göre kelimeleri incele.</p>
+      <div class="kb-header-row">
+        <div>
+          <h2>Kelime <span>Bankası</span></h2>
+          <p>Önce seviyeni seç, sonra kategoriye göre kelimeleri incele.</p>
+        </div>
+        <div class="kb-search">
+          <span class="kb-search-ic">🔍</span>
+          <input type="text" id="kb-search-input" placeholder="Sözlükte ara... (Rusça veya Türkçe)" oninput="kbSearch(this.value)" autocomplete="off">
+          <button class="kb-search-clear" id="kb-search-clear" onclick="kbClear()" style="display:none;">✕</button>
+        </div>
+      </div>
     </div>
+    <div id="kb-results" class="words-grid" style="display:none;"></div>
     <div class="level-grid">
       <div class="level-card" onclick="selectLevel('a1a2')">
         <div class="level-flag">🟢</div>
@@ -124,13 +135,6 @@
         <div class="level-count">36 kelime</div>
         <div class="level-desc">İleri seviye. YDS'de yüksek puan için.</div>
         <div class="level-badge">İleri</div>
-      </div>
-      <div class="level-card" onclick="selectLevel('sozluk')" style="border-color: var(--gold); background: linear-gradient(135deg, #fff9e6, #fff);">
-        <div class="level-flag">🔍</div>
-        <div class="level-name" style="color:var(--gold);">Sözlükte Ara</div>
-        <div class="level-count" style="color:var(--gray);">2.272 kelime</div>
-        <div class="level-desc">Rusça veya Türkçe kelime yazarak listede ara.</div>
-        <div class="level-badge" style="background:var(--gold);color:var(--dark);border-color:var(--gold);">Arama</div>
       </div>
       <div class="level-card" onclick="showSpecial('esanlamli')" style="border-color:#a7f3d0; background:linear-gradient(135deg,#ecfdf5,#fff);">
         <div class="level-flag">≈</div>
@@ -232,7 +236,7 @@
       <div class="kasa-head">
         <button onclick="backToLevels()" class="back-btn">← Geri</button>
         <div>
-          <h2 class="kasa-title">Kelime <span>Kasam</span></h2>
+          <h2 class="kasa-title">Kelime <span>Kasası</span></h2>
           <p class="kasa-sub">Kaydettiğin ve öğrendiğin kelimeleri görüntüle, tekrar et ve pekiştir.</p>
         </div>
       </div>
@@ -256,10 +260,10 @@
     <div class="kasa-review-banner">
       <div class="kasa-review-ic">🔁</div>
       <div class="kasa-review-txt">
-        <div class="kasa-review-title">Tekrar Oturumu Başlat</div>
+        <div class="kasa-review-title">Tekrar Et</div>
         <div class="kasa-review-desc">Kayıtlı kelimelerini tekrar sistemiyle çalış ve kalıcı hâle getir.</div>
       </div>
-      <button class="kasa-review-btn" onclick="startReviewQuiz(true)">🔁 Tekrara Başla</button>
+      <button class="kasa-review-btn" onclick="startReviewQuiz(true)">Tekrara Başla</button>
     </div>
 
     <div class="kasa-search">
@@ -464,12 +468,38 @@
 <div id="page-profile" class="page">
   <div class="profile-layout">
     <aside class="profile-sidebar">
-      <button class="psb-item active" id="psb-overview" onclick="profileNav('overview',this)"><span class="psb-ic">👤</span> Profil Özeti</button>
-      <button class="psb-item" onclick="profileGoKasa('saved')"><span class="psb-ic">📦</span> Kelime Kasam</button>
-      <button class="psb-item" onclick="profileGoKasa('learned')"><span class="psb-ic">✓</span> Öğrenilen Kelimeler</button>
-      <button class="psb-item" id="psb-tests" onclick="profileNav('tests',this)"><span class="psb-ic">📋</span> Test Geçmişim</button>
-      <button class="psb-item" id="psb-videos" onclick="profileNav('videos',this)"><span class="psb-ic">▶️</span> Video İzleme Geçmişim</button>
-      <button class="psb-item" id="psb-settings" onclick="profileNav('settings',this)"><span class="psb-ic">⚙️</span> Ayarlar</button>
+      <div class="psb-card">
+        <div class="psb-avatar" id="sidebar-avatar">?</div>
+        <div class="psb-card-id">
+          <div class="psb-card-name"><span id="sidebar-name"></span> <span id="sidebar-plan" class="plan-badge plan-free">Ücretsiz</span></div>
+          <div class="psb-card-email" id="sidebar-email"></div>
+        </div>
+      </div>
+
+      <nav class="psb-menu">
+        <button class="psb-item active" id="psb-overview" onclick="profileNav('overview',this)"><span class="psb-ic">👤</span> Profil Özeti</button>
+        <button class="psb-item" onclick="profileGoKasa('saved')"><span class="psb-ic">📦</span> Kelime Kasam</button>
+        <button class="psb-item" onclick="profileGoKasa('learned')"><span class="psb-ic">✓</span> Öğrenilen Kelimeler</button>
+        <button class="psb-item" id="psb-tests" onclick="profileNav('tests',this)"><span class="psb-ic">📋</span> Test Geçmişim</button>
+        <button class="psb-item" id="psb-videos" onclick="profileNav('videos',this)"><span class="psb-ic">▶️</span> Video İzleme Geçmişim</button>
+        <button class="psb-item" id="psb-stats" onclick="profileNav('stats',this)"><span class="psb-ic">📊</span> İstatistikler</button>
+        <button class="psb-item" id="psb-settings" onclick="profileNav('settings',this)"><span class="psb-ic">⚙️</span> Ayarlar</button>
+      </nav>
+
+      <div class="psb-section-title">Hızlı İşlemler</div>
+      <nav class="psb-quick">
+        <div class="psb-q" onclick="startReviewQuiz(false)"><span class="psb-q-ic green">🔁</span> Tekrar Et</div>
+        <div class="psb-q" onclick="showPage('quiz')"><span class="psb-q-ic blue">📋</span> Test Çöz</div>
+        <div class="psb-q" onclick="showPage('video')"><span class="psb-q-ic red">▶️</span> Video Ders İzle</div>
+        <div class="psb-q" onclick="showPage('words')"><span class="psb-q-ic purple">🔍</span> Kelime Arama</div>
+        <div class="psb-q" onclick="profileNav('stats')"><span class="psb-q-ic gold">📈</span> İlerlememi Görüntüle</div>
+      </nav>
+
+      <div class="psb-premium" id="psb-premium">
+        <div class="psb-premium-head">👑 Premium Üyelik</div>
+        <div class="psb-premium-sub">Tüm içeriklere erişim, reklamsız deneyim yaşayın.</div>
+        <button class="psb-premium-btn" onclick="showPage('pricing')">Premium'a Geç</button>
+      </div>
     </aside>
 
     <div class="profile-main">
@@ -479,7 +509,7 @@
         <p class="profile-sub">Çalışma istatistiklerinize genel bir bakış.</p>
 
         <div class="profile-id-card">
-          <div class="profile-avatar" id="profile-initial">?</div>
+          <div class="profile-avatar avatar-clickable" id="profile-initial" onclick="profileNav('settings')" title="Avatarı Ayarlar'dan değiştir">?</div>
           <div class="profile-id">
             <div class="profile-name-row"><span id="profile-name"></span> <span id="profile-plan" class="plan-badge plan-free">Ücretsiz</span></div>
             <div class="profile-email" id="profile-email"></div>
@@ -536,12 +566,18 @@
             </div>
             <div class="profile-panel">
               <div class="panel-title">Hızlı İşlemler</div>
-              <div class="quick-row" onclick="profileGoKasa('saved')"><span class="quick-ic green">➕</span><span class="quick-txt">Kelime Ekle</span><span class="quick-arrow">›</span></div>
+              <div class="quick-row" onclick="startReviewQuiz(false)"><span class="quick-ic green">🔁</span><span class="quick-txt">Tekrar Et</span><span class="quick-arrow">›</span></div>
               <div class="quick-row" onclick="showPage('quiz')"><span class="quick-ic blue">📋</span><span class="quick-txt">Test Çöz</span><span class="quick-arrow">›</span></div>
               <div class="quick-row" onclick="showPage('video')"><span class="quick-ic red">▶️</span><span class="quick-txt">Video Ders İzle</span><span class="quick-arrow">›</span></div>
               <div class="quick-row" onclick="showPage('words')"><span class="quick-ic gold">🔍</span><span class="quick-txt">Kelime Arama</span><span class="quick-arrow">›</span></div>
             </div>
           </div>
+        </div>
+
+        <div class="profile-panel profile-badges-panel">
+          <div class="panel-title">🏅 Rozetlerim</div>
+          <div class="panel-sub">Çalıştıkça yeni rozetler kazanırsın.</div>
+          <div id="profile-badges" class="badge-grid"></div>
         </div>
       </div>
 
@@ -559,15 +595,83 @@
         <div class="profile-panel"><div class="profile-empty">Henüz video izlenmedi.</div></div>
       </div>
 
+      <!-- İSTATİSTİKLER -->
+      <div id="pv-stats" class="profile-view" style="display:none;">
+        <h2 class="profile-h2">İstatistikler</h2>
+        <p class="profile-sub">Çalışma ilerlemenin detaylı görünümü.</p>
+        <div class="profile-panel"><div class="profile-empty">Detaylı istatistikler yakında eklenecek.</div></div>
+      </div>
+
       <!-- AYARLAR -->
       <div id="pv-settings" class="profile-view" style="display:none;">
         <h2 class="profile-h2">Ayarlar</h2>
-        <p class="profile-sub">Profil bilgilerini düzenle.</p>
-        <div class="profile-panel">
-          <label class="settings-label">Görünen Ad</label>
-          <input id="settings-name" class="settings-input" type="text" placeholder="Adınız" autocomplete="off">
-          <button class="settings-save" onclick="saveProfileName()">Kaydet</button>
-          <div class="settings-hint">E-posta ve plan bilgisi değiştirilemez.</div>
+        <p class="profile-sub">Hesap ve uygulama tercihlerinizi yönetin.</p>
+
+        <div class="st-tabs">
+          <button class="st-tab active" onclick="settingsTab('account',this)">👤 Hesap Bilgileri</button>
+          <button class="st-tab" onclick="settingsTab('Güvenlik',this)">🛡️ Güvenlik</button>
+          <button class="st-tab" onclick="settingsTab('Bildirimler',this)">🔔 Bildirimler</button>
+          <button class="st-tab" onclick="settingsTab('Görünüm',this)">🎨 Görünüm</button>
+          <button class="st-tab" onclick="settingsTab('Çalışma Ayarları',this)">🎯 Çalışma Ayarları</button>
+          <button class="st-tab" onclick="settingsTab('Üyelik Yönetimi',this)">👑 Üyelik Yönetimi</button>
+          <button class="st-tab" onclick="settingsTab('Veri Yönetimi',this)">🗄️ Veri Yönetimi</button>
+        </div>
+
+        <div id="stab-account" class="st-panel">
+          <div class="st-panel-head">
+            <div>
+              <div class="st-panel-title">Hesap Bilgileri</div>
+              <div class="st-panel-sub">Kişisel bilgilerinizi güncelleyebilirsiniz.</div>
+            </div>
+            <button class="st-save-btn" onclick="saveProfileName()">💾 Bilgileri Kaydet</button>
+          </div>
+
+          <div class="acc-cols">
+            <div class="acc-col">
+              <label class="settings-label">Ad Soyad</label>
+              <input id="settings-name" class="settings-input" type="text" placeholder="Adınız" autocomplete="off">
+              <label class="settings-label">Kullanıcı Adı</label>
+              <input id="settings-username" class="settings-input" type="text" placeholder="kullaniciadi" disabled>
+              <label class="settings-label">E-posta</label>
+              <input id="settings-email" class="settings-input" type="text" disabled>
+              <label class="settings-label">Üyelik Tarihi</label>
+              <input id="settings-joined" class="settings-input" type="text" disabled>
+            </div>
+
+            <div class="acc-col">
+              <div class="acc-block-title">Avatar</div>
+              <div class="acc-block-sub">Kendinizi ifade eden bir avatar seçin.</div>
+              <div class="avatar-grid" id="avatar-grid"></div>
+              <button class="acc-avatar-all" onclick="showAllAvatars()">👥 Tüm avatarları göster</button>
+            </div>
+
+            <div class="acc-col">
+              <div class="acc-block-title">Hesabı Dondur / Sil</div>
+              <div class="acc-danger" onclick="toast('Bu özellik yakında eklenecek.')">
+                <div class="acc-danger-ic blue">❄️</div>
+                <div><div class="acc-danger-t">Hesabı Geçici Dondur</div><div class="acc-danger-d">Hesabınızı geçici olarak dondurabilirsiniz. Dilediğiniz zaman yeniden aktif hale getirebilirsiniz.</div></div>
+                <span class="acc-danger-arrow">›</span>
+              </div>
+              <div class="acc-danger red" onclick="toast('Bu özellik yakında eklenecek.')">
+                <div class="acc-danger-ic red">🗑️</div>
+                <div><div class="acc-danger-t" style="color:var(--red);">Hesabı Sil</div><div class="acc-danger-d">Hesabınızı silmeniz durumunda tüm verileriniz kalıcı olarak silinir. Bu işlem geri alınamaz.</div></div>
+                <span class="acc-danger-arrow">›</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="acc-secure">
+            <div class="acc-secure-ic">🛡️</div>
+            <div class="acc-secure-txt">
+              <div class="acc-secure-t">Hesabınız Güvende</div>
+              <div class="acc-secure-d">Hesabınızı korumak için güçlü bir şifre kullanın ve kişisel bilgilerinizi kimseyle paylaşmayın.</div>
+            </div>
+            <button class="acc-secure-btn" onclick="toast('Şifre değiştirme yakında eklenecek.')">🔒 Şifre Değiştir</button>
+          </div>
+        </div>
+
+        <div id="stab-other" class="st-panel" style="display:none;">
+          <div class="profile-panel"><div class="profile-empty" id="stab-other-msg">Bu bölüm yakında eklenecek.</div></div>
         </div>
       </div>
     </div>
@@ -643,11 +747,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=11"></script>
-<script defer src="js/auth.js?v=11"></script>
-<script defer src="js/admin.js?v=11"></script>
-<script defer src="js/profile.js?v=11"></script>
-<script defer src="js/extras.js?v=11"></script>
-<script defer src="js/app.js?v=11"></script>
+<script defer src="js/supabase-config.js?v=13"></script>
+<script defer src="js/auth.js?v=13"></script>
+<script defer src="js/admin.js?v=13"></script>
+<script defer src="js/profile.js?v=13"></script>
+<script defer src="js/extras.js?v=13"></script>
+<script defer src="js/app.js?v=13"></script>
 </body>
 </html>
