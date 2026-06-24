@@ -223,40 +223,70 @@
       <span class="range-info" id="range-info"></span>
     </div>
     <div class="words-grid" id="words-grid"></div>
+    <div class="pagination" id="words-pagination"></div>
   </div>
 
   <!-- KELİME BANKASI -->
   <div id="words-bank" style="display:none;">
-    <div class="words-header">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+    <div class="kasa-top">
+      <div class="kasa-head">
         <button onclick="backToLevels()" class="back-btn">← Geri</button>
-        <h2>Kelime <span>Kasası</span></h2>
+        <div>
+          <h2 class="kasa-title">Kelime <span>Kasam</span></h2>
+          <p class="kasa-sub">Kaydettiğin ve öğrendiğin kelimeleri görüntüle, tekrar et ve pekiştir.</p>
+        </div>
       </div>
-      <p>Kaydettiğin ve öğrendiğin kelimeler. Durum, seviye ve türe göre filtrele.</p>
+      <div class="kasa-stats">
+        <div class="kasa-stat">
+          <div class="kasa-stat-ic">📘</div>
+          <div><div class="kasa-stat-lbl">Kayıtlı Kelime</div><div class="kasa-stat-num" id="kasa-saved-count">0</div><div class="kasa-stat-foot">Toplam kaydettiğin kelime</div></div>
+        </div>
+        <div class="kasa-stat">
+          <div class="kasa-stat-ic gold">🎓</div>
+          <div><div class="kasa-stat-lbl">Öğrenilmiş Kelime</div><div class="kasa-stat-num gold" id="kasa-learned-count">0</div><div class="kasa-stat-foot">Öğrendiğin kelime</div></div>
+        </div>
+      </div>
     </div>
+
     <div class="bank-tabs" id="bank-status-tabs">
-      <button class="bank-tab active" onclick="bankSetStatus('saved',this)">⭐ Kayıtlı</button>
-      <button class="bank-tab" onclick="bankSetStatus('learned',this)">✓ Öğrenilmiş</button>
+      <button class="bank-tab active" onclick="bankSetStatus('saved',this)">⭐ Kayıtlı <span id="tab-saved-count"></span></button>
+      <button class="bank-tab" onclick="bankSetStatus('learned',this)">✓ Öğrenilmiş <span id="tab-learned-count"></span></button>
     </div>
-    <button class="review-btn" onclick="startReviewQuiz(true)">🔁 Bu listeyi tekrar et</button>
+
+    <div class="kasa-review-banner">
+      <div class="kasa-review-ic">🔁</div>
+      <div class="kasa-review-txt">
+        <div class="kasa-review-title">Tekrar Oturumu Başlat</div>
+        <div class="kasa-review-desc">Kayıtlı kelimelerini tekrar sistemiyle çalış ve kalıcı hâle getir.</div>
+      </div>
+      <button class="kasa-review-btn" onclick="startReviewQuiz(true)">🔁 Tekrara Başla</button>
+    </div>
+
+    <div class="kasa-search">
+      <span class="kasa-search-ic">🔍</span>
+      <input type="text" id="kasa-search-input" placeholder="Rusça veya Türkçe ara..." oninput="bankSearch(this.value)" autocomplete="off">
+    </div>
+
     <div class="cat-tabs" id="bank-level-tabs">
-      <button class="cat-btn active" onclick="bankSetLevel('hepsi',this)">Tüm Seviyeler</button>
-      <button class="cat-btn" onclick="bankSetLevel('A1-A2',this)">A1-A2</button>
-      <button class="cat-btn" onclick="bankSetLevel('B1',this)">B1</button>
-      <button class="cat-btn" onclick="bankSetLevel('B2',this)">B2</button>
-      <button class="cat-btn" onclick="bankSetLevel('C1',this)">C1</button>
+      <button class="cat-btn active" onclick="bankSetLevel('hepsi',this)">TÜMÜ <span class="cat-count" id="blc-hepsi"></span></button>
+      <button class="cat-btn" onclick="bankSetLevel('A1-A2',this)">A1-A2 <span class="cat-count" id="blc-a1a2"></span></button>
+      <button class="cat-btn" onclick="bankSetLevel('B1',this)">B1 <span class="cat-count" id="blc-b1"></span></button>
+      <button class="cat-btn" onclick="bankSetLevel('B2',this)">B2 <span class="cat-count" id="blc-b2"></span></button>
+      <button class="cat-btn" onclick="bankSetLevel('C1',this)">C1 <span class="cat-count" id="blc-c1"></span></button>
     </div>
     <div class="cat-tabs" id="bank-type-tabs">
-      <button class="cat-btn active" onclick="bankSetType('hepsi',this)">Hepsi</button>
-      <button class="cat-btn" onclick="bankSetType('isim',this)">İsimler</button>
-      <button class="cat-btn" onclick="bankSetType('fiil',this)">Fiiller</button>
-      <button class="cat-btn" onclick="bankSetType('sıfat',this)">Sıfatlar</button>
-      <button class="cat-btn" onclick="bankSetType('zarf',this)">Zarflar</button>
-      <button class="cat-btn" onclick="bankSetType('zamir',this)">Zamirler</button>
-      <button class="cat-btn" onclick="bankSetType('edat',this)">Edatlar</button>
-      <button class="cat-btn" onclick="bankSetType('bağlaç',this)">Bağlaçlar</button>
+      <button class="cat-btn active" onclick="bankSetType('hepsi',this)">HEPSİ <span class="cat-count" id="btc-hepsi"></span></button>
+      <button class="cat-btn" onclick="bankSetType('isim',this)">İSİMLER <span class="cat-count" id="btc-isim"></span></button>
+      <button class="cat-btn" onclick="bankSetType('fiil',this)">FİİLLER <span class="cat-count" id="btc-fiil"></span></button>
+      <button class="cat-btn" onclick="bankSetType('sıfat',this)">SIFATLAR <span class="cat-count" id="btc-sıfat"></span></button>
+      <button class="cat-btn" onclick="bankSetType('zarf',this)">ZARFLAR <span class="cat-count" id="btc-zarf"></span></button>
+      <button class="cat-btn" onclick="bankSetType('zamir',this)">ZAMİRLER <span class="cat-count" id="btc-zamir"></span></button>
+      <button class="cat-btn" onclick="bankSetType('edat',this)">EDATLAR <span class="cat-count" id="btc-edat"></span></button>
+      <button class="cat-btn" onclick="bankSetType('bağlaç',this)">BAĞLAÇLAR <span class="cat-count" id="btc-bağlaç"></span></button>
     </div>
+
     <div class="words-grid" id="bank-grid"></div>
+    <div class="pagination" id="bank-pagination"></div>
   </div>
 
 </div>
