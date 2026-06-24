@@ -1547,3 +1547,115 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   .profile-statgrid { grid-template-columns: repeat(2, 1fr); }
   .profile-cols { grid-template-columns: 1fr; }
 }
+
+/* ===== Kelime Bankası başlık araması ===== */
+.kb-header-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.kb-search { display: flex; align-items: center; gap: 8px; background: var(--white); border: 1.5px solid var(--light-gray); border-radius: 12px; padding: 6px 14px; min-width: 280px; flex: 0 1 380px; }
+.kb-search:focus-within { border-color: var(--gold); }
+.kb-search-ic { color: var(--gray); }
+.kb-search input { flex: 1; border: none; outline: none; font-size: 0.92rem; padding: 8px 0; background: transparent; }
+.kb-search-clear { background: none; border: none; color: var(--gray); cursor: pointer; font-size: 0.9rem; }
+
+/* ===== Kasa istatistik kartları taşma düzeltmesi ===== */
+.kasa-top { align-items: center; }
+.kasa-head { flex: 1 1 300px; min-width: 0; }
+.kasa-stats { flex: 1 1 auto; justify-content: flex-end; min-width: 0; }
+.kasa-stat { min-width: 0; flex: 0 1 230px; }
+@media (max-width: 1024px) {
+  .kasa-stats { flex-basis: 100%; justify-content: flex-start; }
+  .kasa-stat { flex: 1 1 0; }
+}
+
+/* ============================================================
+   PROFİL — Sidebar kartı, Hızlı İşlemler, Premium, Ayarlar, Avatar, Rozet
+   ============================================================ */
+/* Nav avatar */
+.nav-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--blue); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.95rem; overflow: hidden; cursor: pointer; flex-shrink: 0; }
+.nav-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.avatar-clickable { cursor: pointer; position: relative; overflow: visible; }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+
+/* Sidebar profil kartı */
+.psb-card { display: flex; align-items: center; gap: 12px; background: var(--white); border: 1px solid var(--light-gray); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+.psb-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--blue); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 800; flex-shrink: 0; overflow: hidden; }
+.psb-card-id { min-width: 0; }
+.psb-card-name { display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text); font-size: 0.95rem; flex-wrap: wrap; }
+.psb-card-email { font-size: 0.76rem; color: var(--gray); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
+
+.psb-menu { display: flex; flex-direction: column; gap: 2px; margin-bottom: 16px; }
+.psb-section-title { font-size: 0.72rem; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 0.04em; margin: 6px 6px 8px; }
+.psb-quick { display: flex; flex-direction: column; gap: 2px; margin-bottom: 18px; }
+.psb-q { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; font-size: 0.86rem; font-weight: 600; color: var(--text); cursor: pointer; }
+.psb-q:hover { background: var(--off-white); }
+.psb-q-ic { width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; flex-shrink: 0; }
+.psb-q-ic.green { background: #e3f5ea; } .psb-q-ic.blue { background: #e8eef7; } .psb-q-ic.red { background: #fdeaea; } .psb-q-ic.purple { background: #efe9f9; } .psb-q-ic.gold { background: #fdeee0; }
+
+.psb-premium { background: linear-gradient(140deg, #1f2d4a, var(--blue)); color: #fff; border-radius: 16px; padding: 18px; }
+.psb-premium-head { font-weight: 800; color: var(--gold); font-size: 1rem; }
+.psb-premium-sub { font-size: 0.78rem; color: #d7deea; margin: 6px 0 14px; }
+.psb-premium-btn { width: 100%; background: var(--gold); color: var(--dark); border: none; border-radius: 10px; padding: 11px; font-weight: 800; font-size: 0.85rem; cursor: pointer; }
+.psb-premium-btn:hover { filter: brightness(1.05); }
+
+/* Ayarlar sekmeleri */
+.st-tabs { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--light-gray); margin-bottom: 22px; padding-bottom: 2px; }
+.st-tab { background: none; border: none; border-bottom: 2px solid transparent; padding: 12px 14px; font-weight: 600; font-size: 0.86rem; color: var(--gray); cursor: pointer; font-family: inherit; white-space: nowrap; }
+.st-tab:hover { color: var(--text); }
+.st-tab.active { color: var(--blue); border-bottom-color: var(--gold); }
+
+.st-panel { background: var(--white); border: 1px solid var(--light-gray); border-radius: 18px; padding: 24px; }
+.st-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+.st-panel-title { font-weight: 800; color: var(--blue); font-size: 1.15rem; }
+.st-panel-sub { color: var(--gray); font-size: 0.85rem; margin-top: 2px; }
+.st-save-btn { background: var(--blue); color: #fff; border: none; border-radius: 11px; padding: 12px 20px; font-weight: 700; font-size: 0.88rem; cursor: pointer; white-space: nowrap; }
+.st-save-btn:hover { opacity: 0.92; }
+
+.acc-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 26px; }
+.acc-col { min-width: 0; }
+.acc-block-title { font-weight: 700; color: var(--text); font-size: 0.95rem; margin-bottom: 4px; }
+.acc-block-sub { font-size: 0.8rem; color: var(--gray); margin-bottom: 14px; }
+.acc-avatar-all { width: 100%; margin-top: 14px; background: var(--off-white); border: none; color: var(--blue); border-radius: 11px; padding: 12px; font-weight: 700; font-size: 0.84rem; cursor: pointer; }
+.acc-avatar-all:hover { background: #eee7da; }
+
+.acc-danger { display: flex; align-items: flex-start; gap: 12px; background: #f7f9fc; border: 1px solid var(--light-gray); border-radius: 12px; padding: 14px; margin-bottom: 12px; cursor: pointer; }
+.acc-danger.red { background: #fdf3f3; border-color: #f6d4d4; }
+.acc-danger:hover { border-color: var(--blue); }
+.acc-danger.red:hover { border-color: var(--red); }
+.acc-danger-ic { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+.acc-danger-ic.blue { background: #e8eef7; } .acc-danger-ic.red { background: #fdeaea; }
+.acc-danger-t { font-weight: 700; color: var(--blue); font-size: 0.88rem; }
+.acc-danger-d { font-size: 0.76rem; color: var(--gray); margin-top: 3px; }
+.acc-danger-arrow { color: var(--light-gray); font-size: 1.2rem; margin-left: auto; align-self: center; }
+
+.acc-secure { display: flex; align-items: center; gap: 16px; background: var(--off-white); border-radius: 14px; padding: 18px 20px; margin-top: 22px; flex-wrap: wrap; }
+.acc-secure-ic { width: 44px; height: 44px; border-radius: 12px; background: #e8eef7; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+.acc-secure-txt { flex: 1; min-width: 200px; }
+.acc-secure-t { font-weight: 700; color: var(--text); }
+.acc-secure-d { font-size: 0.8rem; color: var(--gray); margin-top: 2px; }
+.acc-secure-btn { background: var(--white); border: 1.5px solid var(--light-gray); color: var(--text); border-radius: 10px; padding: 11px 18px; font-weight: 600; font-size: 0.85rem; cursor: pointer; white-space: nowrap; }
+.acc-secure-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+/* Avatar grid (Ayarlar) */
+.avatar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.avatar-opt { position: relative; aspect-ratio: 1; border-radius: 50%; border: 2px solid var(--light-gray); padding: 0; overflow: hidden; cursor: pointer; background: var(--off-white); }
+.avatar-opt img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar-opt:hover { border-color: var(--gray); }
+.avatar-opt.selected { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.25); }
+.avatar-check { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; background: var(--gold); color: #fff; border-radius: 50%; font-size: 0.68rem; display: flex; align-items: center; justify-content: center; }
+
+/* Rozetler */
+.profile-badges-panel { margin-top: 4px; }
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.badge-grid .badge { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 18px 12px; border-radius: 14px; border: 1px solid var(--light-gray); background: var(--white); }
+.badge-ic { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 4px; background: var(--off-white); }
+.badge-grid .badge.on .badge-ic { background: #fff3d6; }
+.badge-grid .badge.off { opacity: 0.55; }
+.badge-grid .badge.off .badge-ic { filter: grayscale(1); }
+.badge-t { font-weight: 700; font-size: 0.9rem; color: var(--text); }
+.badge-grid .badge.off .badge-t { color: var(--gray); }
+.badge-d { font-size: 0.74rem; color: var(--gray); }
+
+@media (max-width: 980px) {
+  .acc-cols { grid-template-columns: 1fr; }
+  .avatar-grid { grid-template-columns: repeat(8, 1fr); }
+}
