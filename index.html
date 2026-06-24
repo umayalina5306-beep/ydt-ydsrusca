@@ -65,7 +65,7 @@
     <div class="features-grid">
       <div class="feature-card" onclick="showPage('words')">
         <div class="feature-icon">📚</div>
-        <div class="feature-title">Kelime Bankası</div>
+        <div class="feature-title">Kelime Kasası</div>
         <div class="feature-desc">YDT/YDS sınavına özel 2.272 kelime. Seviyeye ve konuya göre filtrele, sesli telaffuzla öğren.</div>
       </div>
       <div class="feature-card" onclick="showPage('quiz')">
@@ -93,7 +93,7 @@
   <!-- SEVİYE SEÇİMİ -->
   <div id="words-level-select">
     <div class="words-header">
-      <h2>Kelime <span>Bankası</span></h2>
+      <h2>Kelime <span>Kasası</span></h2>
       <p>Önce seviyeni seç, sonra kategoriye göre kelimeleri incele.</p>
     </div>
     <div class="level-grid">
@@ -155,10 +155,10 @@
       </div>
       <div class="level-card" onclick="showBank()" style="border-color:var(--gold); background:linear-gradient(135deg,#fffaf0,#fff);">
         <div class="level-flag">📚</div>
-        <div class="level-name" style="color:var(--gold);">Kelime Bankası</div>
+        <div class="level-name" style="color:var(--gold);">Kelime Kasası</div>
         <div class="level-count" style="color:var(--gray);">Kaydettiğin kelimeler</div>
         <div class="level-desc">Kaydettiğin ve öğrendiğin kelimeleri seviye ve türe göre gör.</div>
-        <div class="level-badge" style="background:var(--gold);color:var(--dark);border-color:var(--gold);">Bankam</div>
+        <div class="level-badge" style="background:var(--gold);color:var(--dark);border-color:var(--gold);">Kasam</div>
       </div>
     </div>
   </div>
@@ -219,9 +219,6 @@
       <span class="range-label">–</span>
       <input type="number" id="range-to" min="1" placeholder="50">
       <button onclick="applyRange()">Listele</button>
-      <button class="range-quick" onclick="quickRange(10)">İlk 10</button>
-      <button class="range-quick" onclick="quickRange(50)">İlk 50</button>
-      <button class="range-quick" onclick="quickRange(100)">İlk 100</button>
       <button class="range-quick" onclick="clearRange()">Tümü</button>
       <span class="range-info" id="range-info"></span>
     </div>
@@ -233,7 +230,7 @@
     <div class="words-header">
       <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
         <button onclick="backToLevels()" class="back-btn">← Geri</button>
-        <h2>Kelime <span>Bankası</span></h2>
+        <h2>Kelime <span>Kasası</span></h2>
       </div>
       <p>Kaydettiğin ve öğrendiğin kelimeler. Durum, seviye ve türe göre filtrele.</p>
     </div>
@@ -332,6 +329,7 @@
 
     <!-- QUIZ PROGRESS -->
     <div id="quiz-playing" style="display:none;">
+      <button class="quiz-back-btn" onclick="showSetup()">← Geri</button>
       <div class="quiz-progress-bar"><div class="quiz-progress-fill" id="quiz-fill"></div></div>
       <div class="quiz-card" id="quiz-card">
         <div class="quiz-num" id="quiz-num"></div>
