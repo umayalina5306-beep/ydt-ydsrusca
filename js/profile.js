@@ -1,29 +1,83 @@
 // ============================================================
-//  PROFİL SAYFASI — Profil Özeti (yeni tasarım)
+//  PROFİL SAYFASI — Profil Özeti + Ayarlar (yeni tasarım)
 // ============================================================
+const AVATAR_SEEDS = [
+  "Aneka", "Felix", "Mason", "Luna", "Kai", "Mia", "Leo", "Zoe", "Ezra", "Nova",
+  "Ada", "Bruno", "Cleo", "Dora", "Enzo", "Gaia", "Hugo", "Iris", "Jonas", "Kira"
+];
+let avatarShowAll = false;
+function avatarUrl(seed) { return "https://api.dicebear.com/9.x/avataaars/svg?seed=" + encodeURIComponent(seed); }
+
+function _planBadge(el) {
+  if (!el) return;
+  if (currentProfile && currentProfile.is_admin) { el.textContent = "Yönetici"; el.className = "plan-badge plan-admin"; }
+  else if (currentProfile && currentProfile.plan === "premium") { el.textContent = "Premium"; el.className = "plan-badge plan-premium"; }
+  else { el.textContent = "Ücretsiz"; el.className = "plan-badge plan-free"; }
+}
+
+// ---- Avatar ----
+function applyAvatar() {
+  const seed = (typeof localStorage !== "undefined") ? localStorage.getItem("ydt_avatar") : null;
+  const name = (typeof bestName === "function") ? bestName() : ((currentUser && currentUser.email) || "");
+  const letter = (name || "?").charAt(0).toUpperCase();
+  ["profile-initial", "sidebar-avatar", "account-avatar"].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (seed) el.innerHTML = `<img src="${avatarUrl(seed)}" alt="avatar" class="avatar-img">`;
+    else { el.textContent = letter; el.innerHTML = letter; }
+  });
+}
+
+function renderAvatarGrid() {
+  const grid = document.getElementById("avatar-grid");
+  if (!grid) return;
+  const sel = (typeof localStorage !== "undefined") ? localStorage.getItem("ydt_avatar") : null;
+  const list = avatarShowAll ? AVATAR_SEEDS : AVATAR_SEEDS.slice(0, 10);
+  grid.innerHTML = list.map(seed =>
+    `<button class="avatar-opt ${seed === sel ? "selected" : ""}" onclick="selectAvatar('${seed}')" title="${seed}">
+      <img src="${avatarUrl(seed)}" alt="${seed}">
+      ${seed === sel ? '<span class="avatar-check">✓</span>' : ""}
+    </button>`).join("");
+}
+
+function selectAvatar(seed) {
+  try { localStorage.setItem("ydt_avatar", seed); } catch (e) {}
+  renderAvatarGrid();
+  applyAvatar();
+  if (typeof toast === "function") toast("Avatar seçildi.");
+}
+
+function showAllAvatars() {
+  avatarShowAll = !avatarShowAll;
+  renderAvatarGrid();
+}
+
+// ---- Profil ----
 async function openProfile() {
   if (!currentUser) { if (typeof openAuth === "function") openAuth("login"); return; }
 
   const name = (typeof bestName === "function") ? bestName() : (currentUser.email || "");
-  const nameEl = document.getElementById("profile-name");
-  if (nameEl) nameEl.textContent = name;
-  const emailEl = document.getElementById("profile-email");
-  if (emailEl) emailEl.textContent = currentUser.email || "";
-  const initEl = document.getElementById("profile-initial");
-  if (initEl) initEl.textContent = (name || "?").charAt(0).toUpperCase();
+  const email = currentUser.email || "";
 
-  // Plan rozeti
-  const badge = document.getElementById("profile-plan");
-  if (badge) {
-    if (currentProfile && currentProfile.is_admin) { badge.textContent = "Yönetici"; badge.className = "plan-badge plan-admin"; }
-    else if (currentProfile && currentProfile.plan === "premium") { badge.textContent = "Premium"; badge.className = "plan-badge plan-premium"; }
-    else { badge.textContent = "Ücretsiz"; badge.className = "plan-badge plan-free"; }
-  }
+  ["profile-name", "sidebar-name"].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = name; });
+  ["profile-email", "sidebar-email"].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = email; });
+  _planBadge(document.getElementById("profile-plan"));
+  _planBadge(document.getElementById("sidebar-plan"));
+
+  // Premium kartı: premium/admin kullanıcıda gizle
+  const prem = document.getElementById("psb-premium");
+  if (prem) prem.style.display = (currentProfile && (currentProfile.plan === "premium" || currentProfile.is_admin)) ? "none" : "block";
 
   // Üyelik tarihi
   const joined = (currentProfile && currentProfile.created_at) || (currentUser && currentUser.created_at);
-  const jEl = document.getElementById("profile-joined");
-  if (jEl) jEl.textContent = joined ? new Date(joined).toLocaleDateString("tr-TR") : "—";
+  const joinedStr = joined ? new Date(joined).toLocaleDateString("tr-TR") : "—";
+  const jEl = document.getElementById("profile-joined"); if (jEl) jEl.textContent = joinedStr;
+
+  // Ayarlar form alanları
+  const sn = document.getElementById("settings-name"); if (sn) sn.value = name;
+  const un = document.getElementById("settings-username"); if (un) un.value = email.split("@")[0];
+  const se = document.getElementById("settings-email"); if (se) se.value = email;
+  const sj = document.getElementById("settings-joined"); if (sj) sj.value = joinedStr === "—" ? "" : joinedStr;
 
   // Çalışma serisi
   const streak = (currentProfile && currentProfile.streak_count) || 0;
@@ -31,18 +85,16 @@ async function openProfile() {
   const maxEl = document.getElementById("profile-streak-max"); if (maxEl) maxEl.textContent = streak;
   renderStreakDots(streak);
 
-  // Ayarlar adı
-  const sn = document.getElementById("settings-name"); if (sn) sn.value = name;
-
-  // İstatistikler (anında: kasa setlerinden; sonra DB ile güncellenir)
-  const wEl = document.getElementById("profile-words");
-  if (wEl) wEl.textContent = (typeof savedWords !== "undefined" ? savedWords.size : 0);
-  const lEl = document.getElementById("profile-learned");
-  if (lEl) lEl.textContent = (typeof learnedWords !== "undefined" ? learnedWords.size : 0);
+  // İstatistik kartları (anında)
+  const wEl = document.getElementById("profile-words"); if (wEl) wEl.textContent = (typeof savedWords !== "undefined" ? savedWords.size : 0);
+  const lEl = document.getElementById("profile-learned"); if (lEl) lEl.textContent = (typeof learnedWords !== "undefined" ? learnedWords.size : 0);
   const tEl = document.getElementById("profile-tests"); if (tEl) tEl.textContent = 0;
   const vEl = document.getElementById("profile-videos"); if (vEl) vEl.textContent = 0;
 
+  applyAvatar();
+  renderAvatarGrid();
   renderKasaPreview();
+  renderBadges();
   loadProfileStats();
   profileNav("overview");
 }
@@ -53,13 +105,28 @@ function profileNav(view, btn) {
   const target = document.getElementById("pv-" + view);
   if (target) target.style.display = "block";
   document.querySelectorAll(".psb-item").forEach(b => b.classList.remove("active"));
-  const map = { overview: "psb-overview", tests: "psb-tests", videos: "psb-videos", settings: "psb-settings" };
+  const map = { overview: "psb-overview", tests: "psb-tests", videos: "psb-videos", stats: "psb-stats", settings: "psb-settings" };
   if (btn && btn.classList) btn.classList.add("active");
   else { const el = document.getElementById(map[view]); if (el) el.classList.add("active"); }
   window.scrollTo(0, 0);
 }
 
-// Profilden Kelime Kasası'na git (saved / learned sekmesi)
+// Ayarlar sekmeleri
+function settingsTab(key, btn) {
+  document.querySelectorAll(".st-tab").forEach(t => t.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+  const acc = document.getElementById("stab-account");
+  const oth = document.getElementById("stab-other");
+  if (key === "account") { if (acc) acc.style.display = "block"; if (oth) oth.style.display = "none"; }
+  else {
+    if (acc) acc.style.display = "none";
+    if (oth) oth.style.display = "block";
+    const m = document.getElementById("stab-other-msg");
+    if (m) m.textContent = key + " bölümü yakında eklenecek.";
+  }
+}
+
+// Profilden Kelime Kasası'na git (saved / learned)
 function profileGoKasa(status) {
   if (typeof showPage === "function") showPage("words");
   if (typeof showBank === "function") showBank();
@@ -79,7 +146,7 @@ function renderStreakDots(streak) {
   box.innerHTML = html;
 }
 
-// Kelime Kasam önizleme tablosu (ilk 5 kayıtlı kelime)
+// Kelime Kasam önizleme (ilk 5)
 function renderKasaPreview() {
   const box = document.getElementById("profile-kasa-preview");
   const allBtn = document.getElementById("profile-kasa-all");
@@ -115,10 +182,11 @@ async function loadProfileStats() {
     ]);
     if (w && typeof w.count === "number") { const e1 = document.getElementById("profile-words"); if (e1) e1.textContent = w.count; }
     if (t && typeof t.count === "number") { const e2 = document.getElementById("profile-tests"); if (e2) e2.textContent = t.count; }
+    if (typeof renderBadges === "function") renderBadges();
   } catch (e) { console.error("Profil istatistikleri yüklenemedi:", e); }
 }
 
-// Ayarlar: görünen adı kaydet
+// Ayarlar: görünen adı kaydet (Bilgileri Kaydet)
 async function saveProfileName() {
   const el = document.getElementById("settings-name");
   if (!el) return;
@@ -129,12 +197,36 @@ async function saveProfileName() {
     const { error } = await sb.from("profiles").update({ display_name: newName }).eq("id", currentUser.id);
     if (error) throw error;
     if (currentProfile) currentProfile.display_name = newName;
-    const n1 = document.getElementById("profile-name"); if (n1) n1.textContent = newName;
-    const n2 = document.getElementById("profile-initial"); if (n2) n2.textContent = newName.charAt(0).toUpperCase();
+    ["profile-name", "sidebar-name"].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = newName; });
     const n3 = document.getElementById("account-name"); if (n3) n3.textContent = newName;
-    if (typeof toast === "function") toast("Adın güncellendi.");
+    applyAvatar();
+    if (typeof toast === "function") toast("Bilgilerin kaydedildi.");
   } catch (e) {
     console.error("Ad güncellenemedi:", e);
-    if (typeof toast === "function") toast("Ad güncellenemedi. Lütfen tekrar dene.");
+    if (typeof toast === "function") toast("Kaydedilemedi. Lütfen tekrar dene.");
   }
+}
+
+// ---- Rozetler ----
+const BADGES = [
+  { e: "📌", t: "İlk Kelime", d: "1 kelime kaydet", chk: s => s.saved >= 1 },
+  { e: "📚", t: "Koleksiyoncu", d: "10 kelime kaydet", chk: s => s.saved >= 10 },
+  { e: "🏆", t: "Kelime Avcısı", d: "50 kelime kaydet", chk: s => s.saved >= 50 },
+  { e: "✅", t: "İlk Öğrenme", d: "1 kelime öğren", chk: s => s.learned >= 1 },
+  { e: "🎯", t: "Azimli", d: "25 kelime öğren", chk: s => s.learned >= 25 },
+  { e: "🧠", t: "Test Çözücü", d: "1 test çöz", chk: s => s.tests >= 1 }
+];
+function renderBadges() {
+  const box = document.getElementById("profile-badges");
+  if (!box) return;
+  const tEl = document.getElementById("profile-tests");
+  const stats = {
+    saved: (typeof savedWords !== "undefined" ? savedWords.size : 0),
+    learned: (typeof learnedWords !== "undefined" ? learnedWords.size : 0),
+    tests: tEl ? (parseInt(tEl.textContent, 10) || 0) : 0
+  };
+  box.innerHTML = BADGES.map(b => {
+    const on = b.chk(stats);
+    return `<div class="badge ${on ? "on" : "off"}"><div class="badge-ic">${b.e}</div><div class="badge-t">${b.t}</div><div class="badge-d">${b.d}</div></div>`;
+  }).join("");
 }
