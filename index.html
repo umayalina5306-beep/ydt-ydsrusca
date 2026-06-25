@@ -6,7 +6,19 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=14">
+<link rel="stylesheet" href="css/style.css?v=15">
+<!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
+<style id="psb-hotfix">
+  .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky; top:90px; }
+  .profile-sidebar > * { width:100% !important; position:static !important; float:none !important; }
+  .psb-card { display:flex !important; align-items:center; gap:12px; position:static !important; }
+  .psb-menu, .psb-quick { display:flex !important; flex-direction:column !important; gap:2px !important; width:100% !important; position:static !important; margin:0 0 14px !important; }
+  .psb-section-title { display:block !important; position:static !important; }
+  .psb-item { display:flex !important; align-items:center; gap:12px; width:100% !important; position:static !important; float:none !important; text-align:left; background:none; border:none; padding:12px 14px; border-radius:11px; font-weight:600; color:var(--gray); cursor:pointer; }
+  .psb-item.active { background:#fff5e0 !important; color:var(--blue) !important; }
+  .psb-q { display:flex !important; align-items:center; gap:10px; width:100% !important; position:static !important; float:none !important; padding:9px 12px; border-radius:10px; color:var(--text); font-weight:600; cursor:pointer; background:none; }
+  .psb-q:hover, .psb-item:hover { background:var(--off-white); }
+</style>
 </head>
 <body>
 
@@ -747,11 +759,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=14"></script>
-<script defer src="js/auth.js?v=14"></script>
-<script defer src="js/admin.js?v=14"></script>
-<script defer src="js/profile.js?v=14"></script>
-<script defer src="js/extras.js?v=14"></script>
-<script defer src="js/app.js?v=14"></script>
+<script defer src="js/supabase-config.js?v=15"></script>
+<script defer src="js/auth.js?v=15"></script>
+<script defer src="js/admin.js?v=15"></script>
+<script defer src="js/profile.js?v=15"></script>
+<script defer src="js/extras.js?v=15"></script>
+<script defer src="js/app.js?v=15"></script>
 </body>
 </html>
