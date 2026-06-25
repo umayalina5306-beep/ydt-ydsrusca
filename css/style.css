@@ -1339,8 +1339,10 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 4px 0 14px;
-  padding: 12px 14px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 4px 0 16px auto;
+  padding: 8px 12px;
   background: var(--off-white);
   border: 1px solid var(--light-gray);
   border-radius: 12px;
@@ -1371,7 +1373,7 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   border: 1.5px solid var(--light-gray);
 }
 .range-bar .range-quick:hover { border-color: var(--blue); }
-.range-bar .range-info { font-size: 0.8rem; color: var(--gray); margin-left: auto; }
+.range-bar .range-info { font-size: 0.8rem; color: var(--gray); margin-left: 4px; }
 
 /* ===== TOAST / UYARI BALONCUĞU ===== */
 .app-toast {
