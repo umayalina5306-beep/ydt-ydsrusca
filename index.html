@@ -6,13 +6,13 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=17">
+<link rel="stylesheet" href="css/style.css?v=18">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
   #page-profile .profile-sidebar > * { width:100% !important; position:static !important; float:none !important; transform:none !important; }
   #page-profile .psb-card { display:flex !important; align-items:center !important; gap:12px !important; position:static !important; margin:0 0 14px !important; }
-  #page-profile .psb-menu, #page-profile .psb-quick { display:flex !important; flex-direction:column !important; gap:2px !important; width:100% !important; position:static !important; margin:0 0 14px !important; }
+  #page-profile .psb-menu, #page-profile .psb-quick { display:flex !important; flex-direction:column !important; gap:2px !important; width:100% !important; height:auto !important; min-height:0 !important; background:none !important; position:static !important; align-items:stretch !important; margin:0 0 14px !important; }
   #page-profile .psb-section-title { display:block !important; position:static !important; margin:6px 6px 8px !important; }
   #page-profile .psb-item { display:flex !important; align-items:center !important; gap:12px !important; width:100% !important; position:static !important; float:none !important; transform:none !important; margin:0 !important; text-align:left !important; background:none !important; border:none !important; padding:12px 14px !important; border-radius:11px !important; font-weight:600 !important; color:var(--gray) !important; cursor:pointer !important; height:auto !important; }
   #page-profile .psb-item.active { background:#fff5e0 !important; color:var(--blue) !important; }
@@ -490,7 +490,7 @@
         </div>
       </div>
 
-      <nav class="psb-menu">
+      <div class="psb-menu">
         <button class="psb-item active" id="psb-overview" onclick="profileNav('overview',this)"><span class="psb-ic">👤</span> Profil Özeti</button>
         <button class="psb-item" onclick="profileGoKasa('saved')"><span class="psb-ic">📦</span> Kelime Kasam</button>
         <button class="psb-item" onclick="profileGoKasa('learned')"><span class="psb-ic">✓</span> Öğrenilen Kelimeler</button>
@@ -498,16 +498,7 @@
         <button class="psb-item" id="psb-videos" onclick="profileNav('videos',this)"><span class="psb-ic">▶️</span> Video İzleme Geçmişim</button>
         <button class="psb-item" id="psb-stats" onclick="profileNav('stats',this)"><span class="psb-ic">📊</span> İstatistikler</button>
         <button class="psb-item" id="psb-settings" onclick="profileNav('settings',this)"><span class="psb-ic">⚙️</span> Ayarlar</button>
-      </nav>
-
-      <div class="psb-section-title">Hızlı İşlemler</div>
-      <nav class="psb-quick">
-        <div class="psb-q" onclick="startReviewQuiz(false)"><span class="psb-q-ic green">🔁</span> Tekrar Et</div>
-        <div class="psb-q" onclick="showPage('quiz')"><span class="psb-q-ic blue">📋</span> Test Çöz</div>
-        <div class="psb-q" onclick="showPage('video')"><span class="psb-q-ic red">▶️</span> Video Ders İzle</div>
-        <div class="psb-q" onclick="showPage('words')"><span class="psb-q-ic purple">🔍</span> Kelime Arama</div>
-        <div class="psb-q" onclick="profileNav('stats')"><span class="psb-q-ic gold">📈</span> İlerlememi Görüntüle</div>
-      </nav>
+      </div>
 
       <div class="psb-premium" id="psb-premium">
         <div class="psb-premium-head">👑 Premium Üyelik</div>
@@ -756,18 +747,18 @@
   </div>
 </div>
 
-<div id="build-stamp" style="position:fixed;left:10px;bottom:10px;z-index:99999;background:#0d1b2a;color:#c9a84c;font:700 12px/1 system-ui,sans-serif;padding:7px 11px;border-radius:8px;opacity:0.9;box-shadow:0 2px 8px rgba(0,0,0,0.3);">BUILD v17</div>
+<div id="build-stamp" style="position:fixed;left:10px;bottom:10px;z-index:99999;background:#0d1b2a;color:#c9a84c;font:700 12px/1 system-ui,sans-serif;padding:7px 11px;border-radius:8px;opacity:0.9;box-shadow:0 2px 8px rgba(0,0,0,0.3);">BUILD v18</div>
 
 <footer>
-  <p>© 2026 <span>YDT-YDS Rusça Platformu</span> — Tüm hakları saklıdır. · sürüm v17</p>
+  <p>© 2026 <span>YDT-YDS Rusça Platformu</span> — Tüm hakları saklıdır. · sürüm v18</p>
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=17"></script>
-<script defer src="js/auth.js?v=17"></script>
-<script defer src="js/admin.js?v=17"></script>
-<script defer src="js/profile.js?v=17"></script>
-<script defer src="js/extras.js?v=17"></script>
-<script defer src="js/app.js?v=17"></script>
+<script defer src="js/supabase-config.js?v=18"></script>
+<script defer src="js/auth.js?v=18"></script>
+<script defer src="js/admin.js?v=18"></script>
+<script defer src="js/profile.js?v=18"></script>
+<script defer src="js/extras.js?v=18"></script>
+<script defer src="js/app.js?v=18"></script>
 </body>
 </html>
