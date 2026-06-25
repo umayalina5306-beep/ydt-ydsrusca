@@ -500,6 +500,7 @@ function _bankActive(btn) {
 // ===== TEKRAR ET (kaydedilen kelimelerden rastgele quiz) =====
 function startReviewQuiz(fromBank) {
   if (typeof currentUser === 'undefined' || !currentUser) { if (typeof openAuth === 'function') openAuth('login'); return; }
+  reviewReturnTo = fromBank ? 'bank' : 'profile';
   let pool = [];
   if (fromBank) {
     const set = bankStatus === 'learned' ? learnedWords : savedWords;
@@ -787,6 +788,7 @@ if (window.speechSynthesis) {
 
 // QUIZ
 let qList=[], qIdx=0, qScore=0, qAnswered=false, qWrong=0;
+let reviewReturnTo = null;
 let paragraphQuestions = [];
 let quizSettings = { type:'ru-tr', cat:'hepsi', count:20, level:'hepsi' };
 
@@ -794,6 +796,21 @@ function selectSetup(key, val, btn) {
   quizSettings[key] = val;
   btn.closest('.setup-options').querySelectorAll('.setup-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+}
+
+function quizBack() {
+  if (reviewReturnTo === 'bank') {
+    reviewReturnTo = null;
+    if (typeof showPage === 'function') showPage('words');
+    if (typeof showBank === 'function') showBank();
+    return;
+  }
+  if (reviewReturnTo === 'profile') {
+    reviewReturnTo = null;
+    if (typeof showPage === 'function') showPage('profile');
+    return;
+  }
+  showSetup();
 }
 
 function showSetup() {
@@ -805,6 +822,7 @@ function showSetup() {
 function shuffle(a){return[...a].sort(()=>Math.random()-0.5);}
 
 function startQuiz(){
+  reviewReturnTo = null;
   // Paragraf soruları ayrı havuzdan gelir (kelime değil)
   if (quizSettings.type === 'paragraf') {
     let pool = (paragraphQuestions || []).slice();
