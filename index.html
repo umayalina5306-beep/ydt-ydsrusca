@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=18">
+<link rel="stylesheet" href="css/style.css?v=19">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -377,7 +377,7 @@
 
     <!-- QUIZ PROGRESS -->
     <div id="quiz-playing" style="display:none;">
-      <button class="quiz-back-btn" onclick="showSetup()">← Geri</button>
+      <button class="quiz-back-btn" onclick="quizBack()">← Geri</button>
       <div class="quiz-progress-bar"><div class="quiz-progress-fill" id="quiz-fill"></div></div>
       <div class="quiz-card" id="quiz-card">
         <div class="quiz-num" id="quiz-num"></div>
@@ -747,18 +747,17 @@
   </div>
 </div>
 
-<div id="build-stamp" style="position:fixed;left:10px;bottom:10px;z-index:99999;background:#0d1b2a;color:#c9a84c;font:700 12px/1 system-ui,sans-serif;padding:7px 11px;border-radius:8px;opacity:0.9;box-shadow:0 2px 8px rgba(0,0,0,0.3);">BUILD v18</div>
 
 <footer>
-  <p>© 2026 <span>YDT-YDS Rusça Platformu</span> — Tüm hakları saklıdır. · sürüm v18</p>
+  <p>© 2026 <span>YDT-YDS Rusça Platformu</span> — Tüm hakları saklıdır.</p>
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=18"></script>
-<script defer src="js/auth.js?v=18"></script>
-<script defer src="js/admin.js?v=18"></script>
-<script defer src="js/profile.js?v=18"></script>
-<script defer src="js/extras.js?v=18"></script>
-<script defer src="js/app.js?v=18"></script>
+<script defer src="js/supabase-config.js?v=19"></script>
+<script defer src="js/auth.js?v=19"></script>
+<script defer src="js/admin.js?v=19"></script>
+<script defer src="js/profile.js?v=19"></script>
+<script defer src="js/extras.js?v=19"></script>
+<script defer src="js/app.js?v=19"></script>
 </body>
 </html>
