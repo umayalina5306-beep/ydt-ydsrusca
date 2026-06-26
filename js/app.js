@@ -1168,3 +1168,239 @@ function kbSearch(q) {
     : '<div class="profile-empty" style="grid-column:1/-1;">Sonuç bulunamadı.</div>';
 }
 function kbClear() { const i = document.getElementById('kb-search-input'); if (i) i.value = ''; kbSearch(''); }
+
+/* ============================================================
+   TEKRAR SİSTEMİ — yöntem seçimi + kelime seçimi
+   Kelime Kartları (flashcards) + Eşleştirme (matching)
+   Test / Doğru-Yanlış => mevcut quiz motoruna yönlendirir
+   ============================================================ */
+let reviewPool = [];
+let reviewSelected = new Set();
+let reviewMethod = 'flash';
+let reviewFrom = 'bank';
+
+function _escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function _escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function openReview(from) {
+  if (typeof currentUser === 'undefined' || !currentUser) { if (typeof openAuth === 'function') openAuth('login'); return; }
+  reviewFrom = from || 'bank';
+  let pool = [];
+  if (reviewFrom === 'profile') {
+    const all = new Set([...savedWords, ...learnedWords]);
+    all.forEach(ru => { const w = wordsByRu[ru]; if (w) pool.push(w); });
+  } else {
+    const set = (bankStatus === 'learned') ? learnedWords : savedWords;
+    set.forEach(ru => { const w = wordsByRu[ru]; if (w) pool.push(w); });
+    if (bankLevel !== 'hepsi') {
+      if (bankLevel === 'A1-A2') pool = pool.filter(w => w.level === 'A1' || w.level === 'A2');
+      else pool = pool.filter(w => w.level === bankLevel);
+    }
+    if (bankType !== 'hepsi') pool = pool.filter(w => w.cat === bankType);
+  }
+  if (pool.length < 1) { toast('Tekrar için önce kelime kaydetmelisin.'); return; }
+  reviewPool = pool;
+  reviewSelected = new Set(pool.map(w => w.ru));
+  reviewMethod = 'flash';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const pr = document.getElementById('page-review'); if (pr) pr.classList.add('active');
+  _revShow('review-setup');
+  document.querySelectorAll('.rev-method').forEach(b => b.classList.toggle('active', b.dataset.m === 'flash'));
+  const f = document.getElementById('rev-filter'); if (f) f.value = '';
+  renderReviewWords('');
+  updateRevCount();
+  window.scrollTo(0, 0);
+}
+
+function _revShow(id) {
+  ['review-setup','review-flash','review-match','review-done'].forEach(x => {
+    const el = document.getElementById(x); if (el) el.style.display = (x === id ? 'block' : 'none');
+  });
+}
+
+function reviewPickMethod(m, btn) {
+  reviewMethod = m;
+  document.querySelectorAll('.rev-method').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+function renderReviewWords(q) {
+  const box = document.getElementById('rev-words'); if (!box) return;
+  q = (q || '').trim().toLowerCase();
+  let list = reviewPool;
+  if (q) list = list.filter(w => (w.ru||'').toLowerCase().includes(q) || (w.tr||'').toLowerCase().includes(q));
+  if (!list.length) { box.innerHTML = '<div class="rev-empty">Kelime bulunamadı.</div>'; return; }
+  box.innerHTML = list.map(w => {
+    const on = reviewSelected.has(w.ru);
+    return `<button class="rev-word ${on?'on':''}" onclick="toggleReviewWord('${_escAttr(w.ru)}',this)">
+      <span class="rev-word-check">${on?'✓':''}</span>
+      <span class="rev-word-ru">${_escHtml(w.ru)}</span>
+      <span class="rev-word-tr">${_escHtml(w.tr)}</span>
+    </button>`;
+  }).join('');
+}
+
+function toggleReviewWord(ru, btn) {
+  if (reviewSelected.has(ru)) { reviewSelected.delete(ru); btn.classList.remove('on'); const c=btn.querySelector('.rev-word-check'); if(c)c.textContent=''; }
+  else { reviewSelected.add(ru); btn.classList.add('on'); const c=btn.querySelector('.rev-word-check'); if(c)c.textContent='✓'; }
+  updateRevCount();
+}
+
+function reviewSelectAll(on) {
+  if (on) reviewPool.forEach(w => reviewSelected.add(w.ru));
+  else reviewSelected.clear();
+  const f = document.getElementById('rev-filter');
+  renderReviewWords(f ? f.value : '');
+  updateRevCount();
+}
+
+function updateRevCount() {
+  const el = document.getElementById('rev-sel-count');
+  if (el) el.textContent = reviewSelected.size + ' seçili';
+}
+
+function reviewExit() {
+  if (reviewFrom === 'profile') { showPage('profile'); return; }
+  showPage('words');
+  if (typeof showBank === 'function') showBank();
+}
+
+function reviewBackToSetup() { _revShow('review-setup'); window.scrollTo(0,0); }
+
+function reviewStart() {
+  const sel = reviewPool.filter(w => reviewSelected.has(w.ru));
+  const pool = sel.length ? sel : reviewPool.slice();
+  if (pool.length < 1) { toast('Tekrar edilecek kelime seç.'); return; }
+  if (reviewMethod === 'flash') return startFlash(pool);
+  if (reviewMethod === 'match') {
+    if (pool.length < 2) { toast('Eşleştirme için en az 2 kelime gerekli.'); return; }
+    return startMatch(pool);
+  }
+  // test / tf -> mevcut quiz motoru
+  if ((reviewMethod === 'test' || reviewMethod === 'tf') && pool.length < 4) {
+    toast('Test için en az 4 kelime gerekli.'); return;
+  }
+  quizSettings = { type: (reviewMethod === 'tf' ? 'tf' : 'ru-tr'), cat: 'hepsi', count: pool.length, level: 'hepsi' };
+  qList = shuffle(pool); qIdx = 0; qScore = 0; qWrong = 0;
+  reviewReturnTo = (reviewFrom === 'profile') ? 'profile' : 'bank';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-quiz').classList.add('active');
+  document.getElementById('quiz-setup').style.display = 'none';
+  document.getElementById('quiz-playing').style.display = 'block';
+  document.getElementById('quiz-result').style.display = 'none';
+  document.getElementById('quiz-card').style.display = 'block';
+  window.scrollTo(0, 0);
+  loadQ();
+}
+
+/* ---------- Kelime Kartları ---------- */
+let flashList = [], flashIdx = 0, flashFlipped = false;
+
+function startFlash(pool) {
+  flashList = shuffle(pool); flashIdx = 0; flashFlipped = false;
+  _revShow('review-flash');
+  renderFlash(); window.scrollTo(0,0);
+}
+
+function renderFlash() {
+  const w = flashList[flashIdx]; if (!w) return;
+  flashFlipped = false;
+  const inner = document.getElementById('flashcard-inner'); if (inner) inner.classList.remove('flipped');
+  document.getElementById('flash-front').textContent = w.ru || '';
+  document.getElementById('flash-back').textContent = w.tr || '';
+  document.getElementById('flash-pron').textContent = w.p ? ('[' + w.p + ']') : '';
+  document.getElementById('flash-ex').textContent = w.ornek || '';
+  document.getElementById('rev-flash-count').textContent = (flashIdx + 1) + ' / ' + flashList.length;
+  const bar = document.getElementById('rev-flash-bar');
+  if (bar) bar.style.width = ((flashIdx + 1) / flashList.length * 100) + '%';
+}
+
+function flashFlip() {
+  flashFlipped = !flashFlipped;
+  const inner = document.getElementById('flashcard-inner');
+  if (inner) inner.classList.toggle('flipped', flashFlipped);
+}
+
+function flashNext() { if (flashIdx < flashList.length - 1) { flashIdx++; renderFlash(); } else flashDone(); }
+function flashPrev() { if (flashIdx > 0) { flashIdx--; renderFlash(); } }
+function flashSpeak() { const w = flashList[flashIdx]; if (w && typeof speak === 'function') speak(w.ru); }
+
+function flashMark(known) {
+  const w = flashList[flashIdx];
+  if (!known && w) flashList.push(w); // "Tekrar et" -> sona ekle, tekrar görülsün
+  flashNext();
+}
+
+function flashDone() {
+  showReviewDone('Kartları bitirdin! 🃏', 'Tüm kartları gözden geçirdin. Harika çalışma!');
+}
+
+/* ---------- Eşleştirme ---------- */
+let matchQueue = [], matchBatch = [], matchFirst = null, matchSolved = 0, matchTotal = 0, matchLock = false;
+const MATCH_BATCH = 5;
+
+function startMatch(pool) {
+  matchQueue = shuffle(pool).slice();
+  matchTotal = matchQueue.length; matchSolved = 0; matchFirst = null; matchLock = false;
+  _revShow('review-match');
+  nextMatchBatch(); window.scrollTo(0,0);
+}
+
+function nextMatchBatch() {
+  matchBatch = matchQueue.splice(0, MATCH_BATCH);
+  if (!matchBatch.length) return matchFinish();
+  matchFirst = null;
+  let cards = [];
+  matchBatch.forEach((w, i) => {
+    cards.push({ id: i, side: 'ru', text: w.ru });
+    cards.push({ id: i, side: 'tr', text: w.tr });
+  });
+  cards = shuffle(cards);
+  const grid = document.getElementById('match-grid');
+  grid.innerHTML = cards.map(c =>
+    `<button class="match-card ${c.side}" data-pair="${c.id}" data-side="${c.side}" onclick="matchPick(this)">${_escHtml(c.text)}</button>`
+  ).join('');
+  updateMatchProgress();
+  const msg = document.getElementById('rev-match-msg'); if (msg) msg.textContent = '';
+}
+
+function updateMatchProgress() {
+  const p = document.getElementById('rev-match-progress');
+  if (p) p.textContent = 'Eşleşen: ' + matchSolved + ' / ' + matchTotal;
+}
+
+function matchPick(btn) {
+  if (matchLock || btn.classList.contains('done')) return;
+  if (!matchFirst) { matchFirst = btn; btn.classList.add('sel'); return; }
+  if (btn === matchFirst) { btn.classList.remove('sel'); matchFirst = null; return; }
+  const a = matchFirst, b = btn;
+  const ok = (a.dataset.pair === b.dataset.pair) && (a.dataset.side !== b.dataset.side);
+  if (ok) {
+    a.classList.remove('sel'); a.classList.add('done'); b.classList.add('done');
+    matchFirst = null; matchSolved++; updateMatchProgress();
+    const remaining = document.querySelectorAll('#match-grid .match-card:not(.done)').length;
+    if (remaining === 0) {
+      const msg = document.getElementById('rev-match-msg'); if (msg) msg.textContent = 'Harika! Yeni grup geliyor…';
+      matchLock = true;
+      setTimeout(() => { matchLock = false; nextMatchBatch(); }, 750);
+    }
+  } else {
+    matchLock = true;
+    a.classList.add('wrong'); b.classList.add('wrong','sel');
+    setTimeout(() => {
+      a.classList.remove('sel','wrong'); b.classList.remove('sel','wrong');
+      matchFirst = null; matchLock = false;
+    }, 600);
+  }
+}
+
+function matchFinish() {
+  showReviewDone('Eşleştirme tamam! 🔗', matchTotal + ' kelimeyi başarıyla eşleştirdin!');
+}
+
+/* ---------- Ortak bitiş ekranı ---------- */
+function showReviewDone(title, sub) {
+  const t = document.getElementById('rev-done-title'); if (t) t.textContent = title;
+  const s = document.getElementById('rev-done-sub'); if (s) s.textContent = sub || '';
+  _revShow('review-done'); window.scrollTo(0,0);
+}
