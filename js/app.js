@@ -1178,6 +1178,7 @@ let reviewPool = [];
 let reviewSelected = new Set();
 let reviewMethod = 'flash';
 let reviewFrom = 'bank';
+let revF = { level: 'hepsi', type: 'hepsi', status: 'hepsi' };
 
 function _escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function _escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -1185,29 +1186,23 @@ function _escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(
 function openReview(from) {
   if (typeof currentUser === 'undefined' || !currentUser) { if (typeof openAuth === 'function') openAuth('login'); return; }
   reviewFrom = from || 'bank';
-  let pool = [];
-  if (reviewFrom === 'profile') {
-    const all = new Set([...savedWords, ...learnedWords]);
-    all.forEach(ru => { const w = wordsByRu[ru]; if (w) pool.push(w); });
-  } else {
-    const set = (bankStatus === 'learned') ? learnedWords : savedWords;
-    set.forEach(ru => { const w = wordsByRu[ru]; if (w) pool.push(w); });
-    if (bankLevel !== 'hepsi') {
-      if (bankLevel === 'A1-A2') pool = pool.filter(w => w.level === 'A1' || w.level === 'A2');
-      else pool = pool.filter(w => w.level === bankLevel);
-    }
-    if (bankType !== 'hepsi') pool = pool.filter(w => w.cat === bankType);
-  }
-  if (pool.length < 1) { toast('Tekrar için önce kelime kaydetmelisin.'); return; }
-  reviewPool = pool;
-  reviewSelected = new Set(pool.map(w => w.ru));
+  // Ana havuz: kayıtlı + öğrenilen (tekilleştir)
+  const seen = new Set(); reviewPool = [];
+  [...savedWords, ...learnedWords].forEach(ru => {
+    if (seen.has(ru)) return; seen.add(ru);
+    const w = wordsByRu[ru]; if (w) reviewPool.push(w);
+  });
+  if (reviewPool.length < 1) { toast('Tekrar için önce kelime kaydetmelisin.'); return; }
+  reviewSelected = new Set(reviewPool.map(w => w.ru));
   reviewMethod = 'flash';
+  revF = { level: 'hepsi', type: 'hepsi', status: 'hepsi' };
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const pr = document.getElementById('page-review'); if (pr) pr.classList.add('active');
   _revShow('review-setup');
   document.querySelectorAll('.rev-method').forEach(b => b.classList.toggle('active', b.dataset.m === 'flash'));
+  document.querySelectorAll('#page-review .rev-select').forEach(sel => { sel.value = 'hepsi'; });
   const f = document.getElementById('rev-filter'); if (f) f.value = '';
-  renderReviewWords('');
+  renderReviewWords();
   updateRevCount();
   window.scrollTo(0, 0);
 }
@@ -1224,39 +1219,70 @@ function reviewPickMethod(m, btn) {
   if (btn) btn.classList.add('active');
 }
 
-function renderReviewWords(q) {
+function reviewSetFilter(kind, val) {
+  if (kind === 'level') revF.level = val;
+  else if (kind === 'type') revF.type = val;
+  else if (kind === 'status') revF.status = val;
+  renderReviewWords();
+}
+
+function _reviewFiltered() {
+  const f = document.getElementById('rev-filter');
+  const q = (f ? f.value : '').trim().toLowerCase();
+  return reviewPool.filter(w => {
+    if (revF.status === 'saved' && !savedWords.has(w.ru)) return false;
+    if (revF.status === 'learned' && !learnedWords.has(w.ru)) return false;
+    if (revF.level !== 'hepsi') {
+      if (revF.level === 'A1-A2') { if (!(w.level === 'A1' || w.level === 'A2')) return false; }
+      else if (w.level !== revF.level) return false;
+    }
+    if (revF.type !== 'hepsi' && w.cat !== revF.type) return false;
+    if (q && !((w.ru||'').toLowerCase().includes(q) || (w.tr||'').toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+function renderReviewWords() {
   const box = document.getElementById('rev-words'); if (!box) return;
-  q = (q || '').trim().toLowerCase();
-  let list = reviewPool;
-  if (q) list = list.filter(w => (w.ru||'').toLowerCase().includes(q) || (w.tr||'').toLowerCase().includes(q));
-  if (!list.length) { box.innerHTML = '<div class="rev-empty">Kelime bulunamadı.</div>'; return; }
+  const list = _reviewFiltered();
+  if (!list.length) { box.innerHTML = '<div class="rev-empty">Bu filtreyle kelime bulunamadı.</div>'; return; }
   box.innerHTML = list.map(w => {
     const on = reviewSelected.has(w.ru);
-    return `<button class="rev-word ${on?'on':''}" onclick="toggleReviewWord('${_escAttr(w.ru)}',this)">
-      <span class="rev-word-check">${on?'✓':''}</span>
-      <span class="rev-word-ru">${_escHtml(w.ru)}</span>
-      <span class="rev-word-tr">${_escHtml(w.tr)}</span>
-    </button>`;
+    const ru = _escAttr(w.ru);
+    return `<div class="rev-chip ${on?'on':''}" onclick="toggleReviewWord('${ru}')">
+      <span class="rev-chip-box">${on?'✓':''}</span>
+      <span class="rev-chip-text"><span class="rev-chip-ru">${_escHtml(w.ru)}</span><span class="rev-chip-tr">${_escHtml(w.tr)}</span></span>
+      <span class="rev-chip-x">${on?'✕':'+'}</span>
+    </div>`;
   }).join('');
 }
 
-function toggleReviewWord(ru, btn) {
-  if (reviewSelected.has(ru)) { reviewSelected.delete(ru); btn.classList.remove('on'); const c=btn.querySelector('.rev-word-check'); if(c)c.textContent=''; }
-  else { reviewSelected.add(ru); btn.classList.add('on'); const c=btn.querySelector('.rev-word-check'); if(c)c.textContent='✓'; }
+function toggleReviewWord(ru) {
+  if (reviewSelected.has(ru)) reviewSelected.delete(ru);
+  else reviewSelected.add(ru);
+  renderReviewWords();
   updateRevCount();
 }
 
 function reviewSelectAll(on) {
-  if (on) reviewPool.forEach(w => reviewSelected.add(w.ru));
+  if (on) _reviewFiltered().forEach(w => reviewSelected.add(w.ru));
   else reviewSelected.clear();
-  const f = document.getElementById('rev-filter');
-  renderReviewWords(f ? f.value : '');
+  renderReviewWords();
   updateRevCount();
 }
 
 function updateRevCount() {
-  const el = document.getElementById('rev-sel-count');
-  if (el) el.textContent = reviewSelected.size + ' seçili';
+  const n = reviewSelected.size;
+  const el = document.getElementById('rev-sel-count'); if (el) el.textContent = n + ' kelime';
+  const g = document.getElementById('rev-goal-num'); if (g) g.textContent = n;
+}
+
+function revGoProfile(view) {
+  if (typeof showPage === 'function') showPage('profile');
+  setTimeout(() => { if (typeof profileNav === 'function') {
+    const btn = document.getElementById('psb-' + view);
+    profileNav(view, btn);
+  } }, 60);
 }
 
 function reviewExit() {
