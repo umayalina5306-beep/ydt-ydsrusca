@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=19">
+<link rel="stylesheet" href="css/style.css?v=20">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -277,7 +277,7 @@
         <div class="kasa-review-title">Tekrar Et</div>
         <div class="kasa-review-desc">Kayıtlı kelimelerini tekrar sistemiyle çalış ve kalıcı hâle getir.</div>
       </div>
-      <button class="kasa-review-btn" onclick="startReviewQuiz(true)">Tekrara Başla</button>
+      <button class="kasa-review-btn" onclick="openReview('bank')">Tekrara Başla</button>
     </div>
 
     <div class="kasa-search">
@@ -399,6 +399,109 @@
       <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:20px;">
         <button class="btn-restart" onclick="startQuiz()">Tekrar Başla</button>
         <button class="btn-restart" style="background:var(--blue);" onclick="showSetup()">Yeni Test</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ===== TEKRAR SİSTEMİ ===== -->
+<div id="page-review" class="page">
+  <div class="container">
+
+    <!-- KURULUM -->
+    <div id="review-setup">
+      <button class="quiz-back-btn" onclick="reviewExit()">← Kasaya Dön</button>
+      <h1 class="rev-h1">Tekrar Et</h1>
+      <p class="rev-lead">Bir yöntem seç, tekrar etmek istediğin kelimeleri işaretle ve başla.</p>
+
+      <div class="rev-step-title">1 · Yöntem seç</div>
+      <div class="rev-methods">
+        <button class="rev-method active" data-m="flash" onclick="reviewPickMethod('flash',this)">
+          <span class="rev-method-ic">🃏</span>
+          <span class="rev-method-name">Kelime Kartları</span>
+          <span class="rev-method-desc">Rusça'yı gör, çevir, Türkçesini hatırla</span>
+        </button>
+        <button class="rev-method" data-m="match" onclick="reviewPickMethod('match',this)">
+          <span class="rev-method-ic">🔗</span>
+          <span class="rev-method-name">Eşleştirme</span>
+          <span class="rev-method-desc">Rusça–Türkçe kelimeleri eşleştir</span>
+        </button>
+        <button class="rev-method" data-m="test" onclick="reviewPickMethod('test',this)">
+          <span class="rev-method-ic">📝</span>
+          <span class="rev-method-name">Test</span>
+          <span class="rev-method-desc">Çoktan seçmeli sorular</span>
+        </button>
+        <button class="rev-method" data-m="tf" onclick="reviewPickMethod('tf',this)">
+          <span class="rev-method-ic">✔️</span>
+          <span class="rev-method-name">Doğru / Yanlış</span>
+          <span class="rev-method-desc">Eşleşme doğru mu, yanlış mı?</span>
+        </button>
+      </div>
+
+      <div class="rev-step-title">2 · Kelimeleri seç <span id="rev-sel-count" class="rev-count"></span></div>
+      <div class="rev-select-tools">
+        <button class="rev-tool-btn" onclick="reviewSelectAll(true)">Tümünü Seç</button>
+        <button class="rev-tool-btn" onclick="reviewSelectAll(false)">Temizle</button>
+        <input type="text" id="rev-filter" class="rev-filter" placeholder="Ara..." oninput="renderReviewWords(this.value)" autocomplete="off">
+      </div>
+      <div id="rev-words" class="rev-words"></div>
+
+      <div class="rev-start-bar">
+        <button class="rev-start-btn" onclick="reviewStart()">Başla →</button>
+      </div>
+    </div>
+
+    <!-- KELİME KARTLARI -->
+    <div id="review-flash" style="display:none;">
+      <button class="quiz-back-btn" onclick="reviewBackToSetup()">← Geri</button>
+      <div class="rev-progress"><div class="rev-progress-bar" id="rev-flash-bar"></div></div>
+      <div class="rev-flash-count" id="rev-flash-count"></div>
+      <div class="flashcard" id="flashcard" onclick="flashFlip()">
+        <div class="flashcard-inner" id="flashcard-inner">
+          <div class="flashcard-face flashcard-front">
+            <div class="flashcard-word" id="flash-front"></div>
+            <div class="flashcard-hint">Çevirmek için karta dokun</div>
+          </div>
+          <div class="flashcard-face flashcard-back">
+            <div class="flashcard-word" id="flash-back"></div>
+            <div class="flashcard-pron" id="flash-pron"></div>
+            <div class="flashcard-ex" id="flash-ex"></div>
+          </div>
+        </div>
+      </div>
+      <div class="flash-controls">
+        <button class="flash-nav" onclick="event.stopPropagation();flashPrev()">‹ Önceki</button>
+        <button class="flash-speak" onclick="event.stopPropagation();flashSpeak()">🔊 Dinle</button>
+        <button class="flash-nav" onclick="event.stopPropagation();flashNext()">Sonraki ›</button>
+      </div>
+      <div class="flash-know">
+        <button class="flash-know-no" onclick="flashMark(false)">🔁 Tekrar et</button>
+        <button class="flash-know-yes" onclick="flashMark(true)">✓ Biliyorum</button>
+      </div>
+    </div>
+
+    <!-- EŞLEŞTİRME -->
+    <div id="review-match" style="display:none;">
+      <button class="quiz-back-btn" onclick="reviewBackToSetup()">← Geri</button>
+      <div class="rev-match-head">
+        <div class="rev-match-progress" id="rev-match-progress"></div>
+        <div class="rev-match-msg" id="rev-match-msg"></div>
+      </div>
+      <div id="match-grid" class="match-grid"></div>
+    </div>
+
+    <!-- BİTİŞ -->
+    <div id="review-done" style="display:none;">
+      <div class="rev-done-card">
+        <div class="rev-done-ic">🎉</div>
+        <div class="rev-done-title" id="rev-done-title">Tebrikler!</div>
+        <div class="rev-done-sub" id="rev-done-sub"></div>
+        <div class="rev-done-actions">
+          <button class="rev-done-again" onclick="reviewBackToSetup()">Yeni Tekrar</button>
+          <button class="rev-done-exit" onclick="reviewExit()">Kasaya Dön</button>
+        </div>
       </div>
     </div>
 
@@ -571,7 +674,7 @@
             </div>
             <div class="profile-panel">
               <div class="panel-title">Hızlı İşlemler</div>
-              <div class="quick-row" onclick="startReviewQuiz(false)"><span class="quick-ic green">🔁</span><span class="quick-txt">Tekrar Et</span><span class="quick-arrow">›</span></div>
+              <div class="quick-row" onclick="openReview('profile')"><span class="quick-ic green">🔁</span><span class="quick-txt">Tekrar Et</span><span class="quick-arrow">›</span></div>
               <div class="quick-row" onclick="showPage('quiz')"><span class="quick-ic blue">📋</span><span class="quick-txt">Test Çöz</span><span class="quick-arrow">›</span></div>
               <div class="quick-row" onclick="showPage('video')"><span class="quick-ic red">▶️</span><span class="quick-txt">Video Ders İzle</span><span class="quick-arrow">›</span></div>
               <div class="quick-row" onclick="showPage('words')"><span class="quick-ic gold">🔍</span><span class="quick-txt">Kelime Arama</span><span class="quick-arrow">›</span></div>
@@ -753,11 +856,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=19"></script>
-<script defer src="js/auth.js?v=19"></script>
-<script defer src="js/admin.js?v=19"></script>
-<script defer src="js/profile.js?v=19"></script>
-<script defer src="js/extras.js?v=19"></script>
-<script defer src="js/app.js?v=19"></script>
+<script defer src="js/supabase-config.js?v=20"></script>
+<script defer src="js/auth.js?v=20"></script>
+<script defer src="js/admin.js?v=20"></script>
+<script defer src="js/profile.js?v=20"></script>
+<script defer src="js/extras.js?v=20"></script>
+<script defer src="js/app.js?v=20"></script>
 </body>
 </html>
