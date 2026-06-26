@@ -790,6 +790,10 @@ if (window.speechSynthesis) {
 let qList=[], qIdx=0, qScore=0, qAnswered=false, qWrong=0;
 let reviewReturnTo = null;
 let qTypes = null;  // 'mix' testlerinde her soru için tür
+let quizReveal = 'instant';   // 'instant' | 'end'
+let qAnswers = [];            // her sorunun {n, ok, your, correct, ru, tr}
+let quizTimerId = null;
+let quizTimeLeft = 0;
 let paragraphQuestions = [];
 let quizSettings = { type:'ru-tr', cat:'hepsi', count:20, level:'hepsi' };
 
@@ -799,7 +803,13 @@ function selectSetup(key, val, btn) {
   btn.classList.add('active');
 }
 
+function selectReveal(val, btn) {
+  quizReveal = val;
+  if (btn) { btn.closest('.setup-options').querySelectorAll('.setup-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+}
+
 function quizBack() {
+  stopQuizTimer();
   if (reviewReturnTo === 'bank') {
     reviewReturnTo = null;
     if (typeof showPage === 'function') showPage('words');
@@ -829,6 +839,7 @@ function shuffle(a){return[...a].sort(()=>Math.random()-0.5);}
 
 function startQuiz(){
   reviewReturnTo = null;
+  const _rb = document.querySelector('#quiz-setup [data-reveal].active'); quizReveal = _rb ? _rb.dataset.reveal : 'instant';
   // Paragraf soruları ayrı havuzdan gelir (kelime değil)
   if (quizSettings.type === 'paragraf') {
     let pool = (paragraphQuestions || []).slice();
@@ -871,6 +882,7 @@ function startQuiz(){
 
 function loadQ(){
   qAnswered = false;
+  if (qIdx === 0) { qAnswers = []; startQuizTimer(qList.length * 60); }
   const q = qList[qIdx];
   let type = quizSettings.type;
   if (type === 'mix') type = (qTypes && qTypes[qIdx]) ? qTypes[qIdx] : 'ru-tr';
@@ -977,17 +989,22 @@ function checkWrite(correct, ru) {
   inp.disabled = true;
   document.querySelector('.write-submit-btn').disabled = true;
 
+  if (isCorrect) qScore++; else qWrong++;
+  recordAnswer(isCorrect, inp.value.trim() || '(boş)', correct);
   const fb = document.getElementById('quiz-fb');
-  if (isCorrect) {
-    fb.innerHTML = '✓ Doğru!';
-    fb.className = 'quiz-feedback feedback-correct';
-    qScore++;
+  if (quizReveal === 'end') {
+    fb.innerHTML = 'Cevabın kaydedildi.';
+    fb.className = 'quiz-feedback';
   } else {
-    fb.innerHTML = `✗ Yanlış. Doğru cevap: <span style="font-weight:700;">${correct}</span>`;
-    fb.className = 'quiz-feedback feedback-wrong';
-    qWrong++;
+    if (isCorrect) {
+      fb.innerHTML = '✓ Doğru!';
+      fb.className = 'quiz-feedback feedback-correct';
+    } else {
+      fb.innerHTML = `✗ Yanlış. Doğru cevap: <span style="font-weight:700;">${correct}</span>`;
+      fb.className = 'quiz-feedback feedback-wrong';
+    }
+    speak(ru);
   }
-  speak(ru);
   document.getElementById('quiz-next').style.display = 'inline-block';
 }
 
@@ -1005,20 +1022,25 @@ function checkA(btn, chosen, correct, ru){
   if(qAnswered) return;
   qAnswered = true;
   document.querySelectorAll('.quiz-opt').forEach(b => b.disabled = true);
+  const ok = (chosen === correct);
+  if (ok) qScore++; else qWrong++;
+  recordAnswer(ok, chosen, correct);
   const fb = document.getElementById('quiz-fb');
-  if(chosen === correct){
-    btn.classList.add('correct');
-    fb.textContent = '✓ Doğru!';
-    fb.className = 'quiz-feedback feedback-correct';
-    qScore++;
+  if (quizReveal === 'end') {
+    btn.classList.add('chosen');
   } else {
-    btn.classList.add('wrong');
-    document.querySelectorAll('.quiz-opt').forEach(b => { if(b.textContent===correct) b.classList.add('correct'); });
-    fb.innerHTML = `✗ Yanlış. Doğru: <span style="font-family:'Noto Sans',sans-serif;">${correct}</span>`;
-    fb.className = 'quiz-feedback feedback-wrong';
-    qWrong++;
+    if (ok) {
+      btn.classList.add('correct');
+      fb.textContent = '✓ Doğru!';
+      fb.className = 'quiz-feedback feedback-correct';
+    } else {
+      btn.classList.add('wrong');
+      document.querySelectorAll('.quiz-opt').forEach(b => { if(b.textContent===correct) b.classList.add('correct'); });
+      fb.innerHTML = `✗ Yanlış. Doğru: <span style="font-family:'Noto Sans',sans-serif;">${correct}</span>`;
+      fb.className = 'quiz-feedback feedback-wrong';
+    }
+    speak(ru);
   }
-  speak(ru);
   document.getElementById('quiz-next').style.display = 'inline-block';
 }
 
@@ -1037,17 +1059,20 @@ function checkParaA(btn, chosenIdx, correctIdx) {
   opts.forEach(b => b.disabled = true);
   const fb = document.getElementById('quiz-fb');
   const acik = window._paraAciklama ? `<div class="para-aciklama">${window._paraAciklama}</div>` : '';
-  if (chosenIdx === correctIdx) {
+  const ok = (chosenIdx === correctIdx);
+  if (ok) qScore++; else qWrong++;
+  recordAnswer(ok, 'Şık ' + (chosenIdx+1), 'Şık ' + (correctIdx+1), 'Paragraf sorusu');
+  if (quizReveal === 'end') {
+    btn.classList.add('chosen');
+  } else if (ok) {
     btn.classList.add('correct');
     fb.innerHTML = '✓ Doğru!' + acik;
     fb.className = 'quiz-feedback feedback-correct';
-    qScore++;
   } else {
     btn.classList.add('wrong');
     if (opts[correctIdx]) opts[correctIdx].classList.add('correct');
     fb.innerHTML = '✗ Yanlış.' + acik;
     fb.className = 'quiz-feedback feedback-wrong';
-    qWrong++;
   }
   document.getElementById('quiz-next').style.display = 'inline-block';
 }
@@ -1059,9 +1084,12 @@ function nextQ(){
 }
 
 function showResult(){
+  stopQuizTimer();
   document.getElementById('quiz-fill').style.width = '100%';
   document.getElementById('quiz-card').style.display = 'none';
   document.getElementById('quiz-result').style.display = 'block';
+  for (let i=0;i<qList.length;i++){ if(!qAnswers[i]){ const w=qList[i]||{}; qAnswers[i]={n:i+1, ok:false, your:'(cevaplanmadı)', correct:'', ru:w.ru||'', tr:w.tr||''}; } }
+  qWrong = qList.length - qScore;
   const pct = Math.round(qScore/qList.length*100);
   document.getElementById('res-score').textContent = `${qScore}/${qList.length}`;
   const msgs = [[0,40,'Daha çok çalış 💪','Pes etme, tekrar dene!'],[40,70,'Fena değil! 🙂','Biraz daha pratik yap.'],[70,90,'Çok iyi! 👏','Başarın artıyor!'],[90,101,'Mükemmel! 🏆','Harika bir sınav performansı!']];
@@ -1073,6 +1101,8 @@ function showResult(){
     <div class="result-stat"><div class="result-stat-num" style="color:#ef4444;">${qWrong}</div><div class="result-stat-label">Yanlış</div></div>
     <div class="result-stat"><div class="result-stat-num">${pct}%</div><div class="result-stat-label">Başarı</div></div>
   `;
+  renderQuizReview('quiz-review', qAnswers);
+  saveTestResult();
 }
 
 // VIDEO
@@ -1316,6 +1346,7 @@ function reviewStart() {
   quizSettings = { type: (reviewMethod === 'tf' ? 'tf' : 'ru-tr'), cat: 'hepsi', count: pool.length, level: 'hepsi' };
   qList = shuffle(pool); qIdx = 0; qScore = 0; qWrong = 0;
   reviewReturnTo = (reviewFrom === 'profile') ? 'profile' : 'bank';
+  quizReveal = 'instant';
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-quiz').classList.add('active');
   document.getElementById('quiz-setup').style.display = 'none';
@@ -1441,7 +1472,7 @@ function showReviewDone(title, sub) {
 /* ============================================================
    TEST OLUŞTUR — öğrenci kendi pratik testini kurar
    ============================================================ */
-let tb = { type:'ru-tr', source:'all', level:'hepsi', cat:'hepsi', count:20 };
+let tb = { type:'ru-tr', source:'all', level:'hepsi', cat:'hepsi', count:20, reveal:'instant' };
 
 function openTestBuilder() {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1456,6 +1487,7 @@ function tbPick(kind, val, btn) {
   if (btn) {
     if (kind === 'type') { document.querySelectorAll('#page-testbuilder .rev-method').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
     if (kind === 'count') { document.querySelectorAll('#page-testbuilder .tb-count').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+    if (kind === 'reveal') { document.querySelectorAll('#page-testbuilder .tb-reveal').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
   }
   tbUpdatePool();
 }
@@ -1489,6 +1521,7 @@ function tbStart() {
 }
 
 function launchCustomQuiz(pool, type, count) {
+  quizReveal = tb.reveal || 'instant';
   qList = shuffle(pool).slice(0, count);
   quizSettings = { type: type, cat: 'hepsi', count: qList.length, level: 'hepsi' };
   if (type === 'mix') {
@@ -1560,3 +1593,90 @@ function tbDelete(id) {
   tbSetSaved(tbGetSaved().filter(x => x.id !== id));
   renderSavedTests();
 }
+
+/* ============================================================
+   SAYAÇ · CEVAP KAYDI · İNCELEME · TEST GEÇMİŞİ
+   ============================================================ */
+function startQuizTimer(totalSec) {
+  stopQuizTimer();
+  quizTimeLeft = totalSec;
+  _renderTimer();
+  quizTimerId = setInterval(() => {
+    quizTimeLeft--;
+    _renderTimer();
+    if (quizTimeLeft <= 0) { stopQuizTimer(); finishByTimer(); }
+  }, 1000);
+}
+function stopQuizTimer() { if (quizTimerId) { clearInterval(quizTimerId); quizTimerId = null; } }
+function _renderTimer() {
+  const el = document.getElementById('quiz-timer'); if (!el) return;
+  const t = Math.max(0, quizTimeLeft);
+  el.textContent = '⏱️ ' + Math.floor(t/60) + ':' + String(t%60).padStart(2,'0');
+  el.classList.toggle('low', quizTimeLeft <= 30);
+}
+function finishByTimer() {
+  const playing = document.getElementById('quiz-playing');
+  if (!playing || playing.style.display === 'none') return;
+  if (document.getElementById('quiz-result').style.display === 'block') return;
+  toast('Süre doldu! Test sonlandırıldı.');
+  showResult();
+}
+
+function recordAnswer(ok, your, correct, label) {
+  const w = qList[qIdx] || {};
+  qAnswers[qIdx] = { n: qIdx+1, ok: !!ok, your: your, correct: correct || '', ru: w.ru || label || '', tr: w.tr || '' };
+}
+
+function _qrevItemsHTML(items) {
+  return items.map(a => `
+    <div class="qrev-item ${a.ok?'ok':'no'}" id="qrev-item-${a.n}">
+      <div class="qrev-item-head"><span class="qrev-badge ${a.ok?'ok':'no'}">${a.ok?'✓':'✗'}</span><span class="qrev-q">${a.n}. ${_escHtml(a.ru)}${a.tr?' — '+_escHtml(a.tr):''}</span></div>
+      <div class="qrev-ans">Senin cevabın: <b class="${a.ok?'g':'r'}">${_escHtml(a.your)}</b>${a.ok?'':(a.correct?` &nbsp;·&nbsp; Doğru: <b class="g">${_escHtml(a.correct)}</b>`:'')}</div>
+    </div>`).join('');
+}
+function renderQuizReview(containerId, answers) {
+  const box = document.getElementById(containerId); if (!box) return;
+  if (!answers || !answers.length) { box.innerHTML = ''; return; }
+  const grid = answers.map(a => `<button class="qrev-num ${a.ok?'ok':'no'}" onclick="(document.getElementById('qrev-item-${a.n}')||{}).scrollIntoView&&document.getElementById('qrev-item-${a.n}').scrollIntoView({behavior:'smooth',block:'center'})">${a.n}</button>`).join('');
+  box.innerHTML = `<div class="qrev-title">Soru Dağılımı <span>· numaraya tıkla, o sorunun detayına git</span></div><div class="qrev-grid">${grid}</div><div class="qrev-list">${_qrevItemsHTML(answers)}</div>`;
+}
+
+/* Test geçmişi (localStorage) */
+function getTestResults() { try { return JSON.parse(localStorage.getItem('ydt_test_results') || '[]'); } catch (e) { return []; } }
+function setTestResults(l) { try { localStorage.setItem('ydt_test_results', JSON.stringify(l.slice(0,50))); } catch (e) {} }
+function quizTypeLabel(t) { return {'ru-tr':'Rusça → Türkçe','tr-ru':'Türkçe → Rusça','fill':'Yazmalı','tf':'Doğru / Yanlış','paragraf':'Paragraf','mix':'Karışık'}[t] || t; }
+function saveTestResult() {
+  const list = getTestResults();
+  list.unshift({
+    id: 'r' + Date.now(), date: new Date().toISOString(),
+    type: quizSettings.type, name: quizTypeLabel(quizSettings.type),
+    score: qScore, total: qList.length,
+    items: qAnswers.map(a => ({ n:a.n, ok:a.ok, your:a.your, correct:a.correct, ru:a.ru, tr:a.tr }))
+  });
+  setTestResults(list);
+}
+function renderTestHistory() {
+  const box = document.getElementById('test-history'); if (!box) return;
+  const list = getTestResults();
+  if (!list.length) { box.innerHTML = '<div class="profile-panel"><div class="profile-empty">Henüz test çözülmedi. Test çözdükçe sonuçların burada listelenecek.</div></div>'; return; }
+  box.innerHTML = list.map(r => {
+    const pct = Math.round(r.score / r.total * 100);
+    const d = new Date(r.date);
+    const ds = d.toLocaleDateString('tr-TR') + ' ' + d.toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
+    return `<div class="th-row">
+      <div class="th-main" onclick="toggleTestResult('${r.id}')">
+        <div class="th-info"><div class="th-name">${_escHtml(r.name)}</div><div class="th-meta">${ds} · ${r.total} soru</div></div>
+        <div class="th-score ${pct>=70?'good':(pct>=40?'mid':'low')}">${r.score}/${r.total}<span>%${pct}</span></div>
+      </div>
+      <div class="th-detail" id="th-detail-${r.id}" style="display:none;"></div>
+    </div>`;
+  }).join('') + '<button class="th-clear" onclick="clearTestHistory()">Geçmişi Temizle</button>';
+}
+function toggleTestResult(id) {
+  const det = document.getElementById('th-detail-' + id); if (!det) return;
+  if (det.style.display !== 'none') { det.style.display = 'none'; det.innerHTML = ''; return; }
+  const r = getTestResults().find(x => x.id === id); if (!r) return;
+  det.innerHTML = _qrevItemsHTML(r.items);
+  det.style.display = 'block';
+}
+function clearTestHistory() { if (confirm('Tüm test geçmişi silinsin mi?')) { setTestResults([]); renderTestHistory(); } }
