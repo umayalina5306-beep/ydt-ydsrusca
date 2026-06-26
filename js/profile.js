@@ -104,6 +104,7 @@ function profileNav(view, btn) {
   document.querySelectorAll(".profile-view").forEach(v => v.style.display = "none");
   const target = document.getElementById("pv-" + view);
   if (target) target.style.display = "block";
+  if (view === "tests" && typeof renderTestHistory === "function") renderTestHistory();
   document.querySelectorAll(".psb-item").forEach(b => b.classList.remove("active"));
   const map = { overview: "psb-overview", tests: "psb-tests", videos: "psb-videos", stats: "psb-stats", settings: "psb-settings" };
   if (btn && btn.classList) btn.classList.add("active");
