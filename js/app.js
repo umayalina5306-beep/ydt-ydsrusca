@@ -789,6 +789,7 @@ if (window.speechSynthesis) {
 // QUIZ
 let qList=[], qIdx=0, qScore=0, qAnswered=false, qWrong=0;
 let reviewReturnTo = null;
+let qTypes = null;  // 'mix' testlerinde her soru için tür
 let paragraphQuestions = [];
 let quizSettings = { type:'ru-tr', cat:'hepsi', count:20, level:'hepsi' };
 
@@ -808,6 +809,11 @@ function quizBack() {
   if (reviewReturnTo === 'profile') {
     reviewReturnTo = null;
     if (typeof showPage === 'function') showPage('profile');
+    return;
+  }
+  if (reviewReturnTo === 'testbuilder') {
+    reviewReturnTo = null;
+    if (typeof openTestBuilder === 'function') openTestBuilder();
     return;
   }
   showSetup();
@@ -866,7 +872,8 @@ function startQuiz(){
 function loadQ(){
   qAnswered = false;
   const q = qList[qIdx];
-  const type = quizSettings.type;
+  let type = quizSettings.type;
+  if (type === 'mix') type = (qTypes && qTypes[qIdx]) ? qTypes[qIdx] : 'ru-tr';
 
   document.getElementById('quiz-fill').style.width = (qIdx/qList.length*100)+'%';
   document.getElementById('quiz-num').textContent = `Soru ${qIdx+1} / ${qList.length}`;
@@ -1429,4 +1436,127 @@ function showReviewDone(title, sub) {
   const t = document.getElementById('rev-done-title'); if (t) t.textContent = title;
   const s = document.getElementById('rev-done-sub'); if (s) s.textContent = sub || '';
   _revShow('review-done'); window.scrollTo(0,0);
+}
+
+/* ============================================================
+   TEST OLUŞTUR — öğrenci kendi pratik testini kurar
+   ============================================================ */
+let tb = { type:'ru-tr', source:'all', level:'hepsi', cat:'hepsi', count:20 };
+
+function openTestBuilder() {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const pg = document.getElementById('page-testbuilder'); if (pg) pg.classList.add('active');
+  tbUpdatePool();
+  renderSavedTests();
+  window.scrollTo(0, 0);
+}
+
+function tbPick(kind, val, btn) {
+  tb[kind] = (kind === 'count') ? parseInt(val) : val;
+  if (btn) {
+    if (kind === 'type') { document.querySelectorAll('#page-testbuilder .rev-method').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+    if (kind === 'count') { document.querySelectorAll('#page-testbuilder .tb-count').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+  }
+  tbUpdatePool();
+}
+
+function tbPool() {
+  let pool = [];
+  if (tb.source === 'all') pool = (typeof words !== 'undefined' ? words.slice() : []);
+  else {
+    if (typeof currentUser === 'undefined' || !currentUser) return [];
+    const set = (tb.source === 'learned') ? learnedWords : savedWords;
+    set.forEach(ru => { const w = wordsByRu[ru]; if (w) pool.push(w); });
+  }
+  if (tb.level !== 'hepsi') pool = pool.filter(w => w.level === tb.level);
+  if (tb.cat !== 'hepsi') pool = pool.filter(w => w.cat === tb.cat);
+  return pool;
+}
+
+function tbUpdatePool() {
+  const el = document.getElementById('tb-pool-info'); if (!el) return;
+  if (tb.source !== 'all' && (typeof currentUser === 'undefined' || !currentUser)) {
+    el.innerHTML = '<span class="tb-warn">⚠️ Bu kaynak için giriş yapmalısın.</span>'; return;
+  }
+  const n = tbPool().length;
+  el.innerHTML = `Bu kapsamda <strong>${n}</strong> kelime var.` + (n < 4 ? ' <span class="tb-warn">Test için en az 4 kelime gerekli.</span>' : '');
+}
+
+function tbStart() {
+  const pool = tbPool();
+  if (pool.length < 4) { toast('Bu kapsamda yeterli kelime yok (en az 4).'); return; }
+  launchCustomQuiz(pool, tb.type, tb.count);
+}
+
+function launchCustomQuiz(pool, type, count) {
+  qList = shuffle(pool).slice(0, count);
+  quizSettings = { type: type, cat: 'hepsi', count: qList.length, level: 'hepsi' };
+  if (type === 'mix') {
+    const ts = ['ru-tr','tr-ru','fill','tf'];
+    qTypes = qList.map(() => ts[Math.floor(Math.random() * ts.length)]);
+  } else qTypes = null;
+  qIdx = 0; qScore = 0; qWrong = 0;
+  reviewReturnTo = 'testbuilder';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-quiz').classList.add('active');
+  document.getElementById('quiz-setup').style.display = 'none';
+  document.getElementById('quiz-playing').style.display = 'block';
+  document.getElementById('quiz-result').style.display = 'none';
+  document.getElementById('quiz-card').style.display = 'block';
+  window.scrollTo(0, 0);
+  loadQ();
+}
+
+/* Kayıtlı testler — localStorage */
+function tbGetSaved() { try { return JSON.parse(localStorage.getItem('ydt_saved_tests') || '[]'); } catch (e) { return []; } }
+function tbSetSaved(list) { try { localStorage.setItem('ydt_saved_tests', JSON.stringify(list.slice(0, 30))); } catch (e) {} }
+
+function tbDefaultName() {
+  const tl = {'ru-tr':'R→T','tr-ru':'T→R','fill':'Yazmalı','tf':'D/Y','mix':'Karışık'};
+  const sl = {'all':'Tüm Kelimeler','saved':'Kasam','learned':'Öğrendiğim'};
+  let extra = '';
+  if (tb.level !== 'hepsi') extra += ' ' + tb.level;
+  if (tb.cat !== 'hepsi') extra += ' ' + tb.cat;
+  return `${sl[tb.source]}${extra} · ${tl[tb.type]} · ${tb.count} soru`;
+}
+
+function tbSave() {
+  const name = prompt('Teste bir isim ver:', tbDefaultName());
+  if (name === null) return;
+  const list = tbGetSaved();
+  list.unshift({ id: 't' + Date.now(), name: (name.trim() || tbDefaultName()), type: tb.type, source: tb.source, level: tb.level, cat: tb.cat, count: tb.count });
+  tbSetSaved(list);
+  toast('Test kaydedildi.');
+  renderSavedTests();
+}
+
+function renderSavedTests() {
+  const panel = document.getElementById('tb-saved-panel');
+  const box = document.getElementById('tb-saved-list');
+  if (!panel || !box) return;
+  const list = tbGetSaved();
+  if (!list.length) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  box.innerHTML = list.map(t => `
+    <div class="tb-saved">
+      <div class="tb-saved-info"><div class="tb-saved-name">${_escHtml(t.name)}</div><div class="tb-saved-meta">${t.count} soru</div></div>
+      <div class="tb-saved-actions">
+        <button class="tb-run" onclick="tbRun('${t.id}')">▶ Başlat</button>
+        <button class="tb-del" onclick="tbDelete('${t.id}')" title="Sil">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+function tbRun(id) {
+  const t = tbGetSaved().find(x => x.id === id); if (!t) return;
+  const prev = tb;
+  tb = { type: t.type, source: t.source, level: t.level, cat: t.cat, count: t.count };
+  const pool = tbPool();
+  if (pool.length < 4) { toast('Bu testin kapsamında yeterli kelime yok.'); tb = prev; return; }
+  launchCustomQuiz(pool, t.type, t.count);
+}
+
+function tbDelete(id) {
+  tbSetSaved(tbGetSaved().filter(x => x.id !== id));
+  renderSavedTests();
 }
