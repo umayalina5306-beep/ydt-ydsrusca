@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=23">
+<link rel="stylesheet" href="css/style.css?v=24">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -379,6 +379,15 @@
             <button class="setup-btn" data-count="100" onclick="selectSetup('count','100',this)">100 Soru</button>
           </div>
         </div>
+
+        <!-- Cevap gösterimi -->
+        <div class="setup-section">
+          <div class="setup-label">👁️ Cevaplar</div>
+          <div class="setup-options">
+            <button class="setup-btn active" data-reveal="instant" onclick="selectReveal('instant',this)">Anında göster</button>
+            <button class="setup-btn" data-reveal="end" onclick="selectReveal('end',this)">Test sonunda göster</button>
+          </div>
+        </div>
       </div>
 
       <button class="btn-start-quiz" onclick="startQuiz()">Teste Başla →</button>
@@ -387,6 +396,7 @@
     <!-- QUIZ PROGRESS -->
     <div id="quiz-playing" style="display:none;">
       <button class="quiz-back-btn" onclick="quizBack()">← Geri</button>
+      <div class="quiz-timer" id="quiz-timer"></div>
       <div class="quiz-progress-bar"><div class="quiz-progress-fill" id="quiz-fill"></div></div>
       <div class="quiz-card" id="quiz-card">
         <div class="quiz-num" id="quiz-num"></div>
@@ -405,6 +415,7 @@
       <div class="result-label" id="res-label"></div>
       <div class="result-sub" id="res-sub"></div>
       <div class="result-stats" id="res-stats"></div>
+      <div id="quiz-review" class="quiz-review"></div>
       <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:20px;">
         <button class="btn-restart" onclick="startQuiz()">Tekrar Başla</button>
         <button class="btn-restart" style="background:var(--blue);" onclick="showSetup()">Yeni Test</button>
@@ -655,6 +666,11 @@
       <!-- 3: SAYI + BAŞLAT -->
       <div class="rev-panel">
         <div class="rev-step"><span class="rev-step-no">3</span> Soru Sayısı ve Başlat</div>
+        <div class="tb-reveal-row">
+          <span class="rev-field-cap">Cevaplar:</span>
+          <button class="tb-reveal active" data-r="instant" onclick="tbPick('reveal','instant',this)">Anında göster</button>
+          <button class="tb-reveal" data-r="end" onclick="tbPick('reveal','end',this)">Test sonunda göster</button>
+        </div>
         <div class="tb-counts">
           <button class="tb-count" data-c="10" onclick="tbPick('count','10',this)">10 Soru</button>
           <button class="tb-count active" data-c="20" onclick="tbPick('count','20',this)">20 Soru</button>
@@ -862,8 +878,8 @@
       <!-- TEST GEÇMİŞİM -->
       <div id="pv-tests" class="profile-view" style="display:none;">
         <h2 class="profile-h2">Test Geçmişim</h2>
-        <p class="profile-sub">Çözdüğün testler ve sonuçların burada görünecek.</p>
-        <div class="profile-panel"><div class="profile-empty">Henüz test çözülmedi. Test çözdükçe sonuçların burada listelenecek.</div></div>
+        <p class="profile-sub">Çözdüğün testler ve sonuçların burada görünecek. Bir teste tıklayıp doğru/yanlışlarını inceleyebilirsin.</p>
+        <div id="test-history"></div>
       </div>
 
       <!-- VIDEO İZLEME GEÇMİŞİM -->
@@ -1026,11 +1042,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=23"></script>
-<script defer src="js/auth.js?v=23"></script>
-<script defer src="js/admin.js?v=23"></script>
-<script defer src="js/profile.js?v=23"></script>
-<script defer src="js/extras.js?v=23"></script>
-<script defer src="js/app.js?v=23"></script>
+<script defer src="js/supabase-config.js?v=24"></script>
+<script defer src="js/auth.js?v=24"></script>
+<script defer src="js/admin.js?v=24"></script>
+<script defer src="js/profile.js?v=24"></script>
+<script defer src="js/extras.js?v=24"></script>
+<script defer src="js/app.js?v=24"></script>
 </body>
 </html>
