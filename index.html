@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=22">
+<link rel="stylesheet" href="css/style.css?v=23">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -320,6 +320,15 @@
         <p>Test türünü, kategoriyi ve soru sayısını seç.</p>
       </div>
 
+      <div class="tb-entry">
+        <div class="tb-entry-ic">🛠️</div>
+        <div class="tb-entry-tx">
+          <h3>Kendi Testini Oluştur</h3>
+          <p>Tür, kaynak ve soru sayısını sen belirle; istersen kaydet, sonra tek tıkla tekrar çöz.</p>
+        </div>
+        <button class="tb-entry-btn" onclick="openTestBuilder()">Test Oluştur →</button>
+      </div>
+
       <div class="setup-grid">
         <!-- Test türü -->
         <div class="setup-section">
@@ -579,6 +588,95 @@
 </div>
 
 
+<!-- ===== TEST OLUŞTUR ===== -->
+<div id="page-testbuilder" class="page">
+  <div class="container">
+    <div class="tb-wrap">
+      <button class="quiz-back-btn" onclick="showPage('quiz')">← Testlere Dön</button>
+      <div class="rev-top">
+        <div>
+          <h1 class="rev-h1">Test Oluştur</h1>
+          <p class="rev-lead">Kendi pratik testini kur: tür, kaynak ve soru sayısını seç; istersen kaydet, sonra tek tıkla tekrar çöz.</p>
+        </div>
+      </div>
+
+      <!-- 1: TÜR -->
+      <div class="rev-panel">
+        <div class="rev-step"><span class="rev-step-no">1</span> Soru Türü</div>
+        <div class="rev-methods">
+          <button class="rev-method active" data-t="ru-tr" onclick="tbPick('type','ru-tr',this)">
+            <span class="rev-method-ic">🇷🇺</span>
+            <span class="rev-method-body"><span class="rev-method-name">Rusça → Türkçe</span><span class="rev-method-desc">Rusça kelimenin Türkçesini seç.</span></span>
+          </button>
+          <button class="rev-method" data-t="tr-ru" onclick="tbPick('type','tr-ru',this)">
+            <span class="rev-method-ic">🇹🇷</span>
+            <span class="rev-method-body"><span class="rev-method-name">Türkçe → Rusça</span><span class="rev-method-desc">Türkçe kelimenin Rusçasını seç.</span></span>
+          </button>
+          <button class="rev-method" data-t="fill" onclick="tbPick('type','fill',this)">
+            <span class="rev-method-ic">✍️</span>
+            <span class="rev-method-body"><span class="rev-method-name">Yazmalı</span><span class="rev-method-desc">Cevabı klavyeyle yaz.</span></span>
+          </button>
+          <button class="rev-method" data-t="tf" onclick="tbPick('type','tf',this)">
+            <span class="rev-method-ic">✔️</span>
+            <span class="rev-method-body"><span class="rev-method-name">Doğru / Yanlış</span><span class="rev-method-desc">Eşleşme doğru mu yanlış mı?</span></span>
+          </button>
+          <button class="rev-method" data-t="mix" onclick="tbPick('type','mix',this)">
+            <span class="rev-method-ic">🎲</span>
+            <span class="rev-method-body"><span class="rev-method-name">Karışık</span><span class="rev-method-desc">Tüm türlerden karışık sorular.</span></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2: KAYNAK -->
+      <div class="rev-panel">
+        <div class="rev-step"><span class="rev-step-no">2</span> Kelime Kaynağı ve Kapsam</div>
+        <div class="rev-filters">
+          <label class="rev-field"><span class="rev-field-cap">Kaynak</span>
+            <select class="rev-select" id="tb-source" onchange="tbPick('source',this.value)">
+              <option value="all">Tüm Kelimeler</option>
+              <option value="saved">Kasamdaki Kelimeler</option>
+              <option value="learned">Öğrendiğim Kelimeler</option>
+            </select>
+          </label>
+          <label class="rev-field"><span class="rev-field-cap">Seviye</span>
+            <select class="rev-select" id="tb-level" onchange="tbPick('level',this.value)">
+              <option value="hepsi">Tümü</option><option value="A1">A1</option><option value="A2">A2</option><option value="B1">B1</option><option value="B2">B2</option><option value="C1">C1</option>
+            </select>
+          </label>
+          <label class="rev-field"><span class="rev-field-cap">Kategori</span>
+            <select class="rev-select" id="tb-cat" onchange="tbPick('cat',this.value)">
+              <option value="hepsi">Tümü</option><option value="isim">İsim</option><option value="fiil">Fiil</option><option value="sıfat">Sıfat</option><option value="zarf">Zarf</option><option value="zamir">Zamir</option><option value="edat">Edat</option><option value="bağlaç">Bağlaç</option>
+            </select>
+          </label>
+        </div>
+        <div class="tb-pool-info" id="tb-pool-info"></div>
+      </div>
+
+      <!-- 3: SAYI + BAŞLAT -->
+      <div class="rev-panel">
+        <div class="rev-step"><span class="rev-step-no">3</span> Soru Sayısı ve Başlat</div>
+        <div class="tb-counts">
+          <button class="tb-count" data-c="10" onclick="tbPick('count','10',this)">10 Soru</button>
+          <button class="tb-count active" data-c="20" onclick="tbPick('count','20',this)">20 Soru</button>
+          <button class="tb-count" data-c="30" onclick="tbPick('count','30',this)">30 Soru</button>
+          <button class="tb-count" data-c="50" onclick="tbPick('count','50',this)">50 Soru</button>
+        </div>
+        <div class="tb-actions">
+          <button class="rev-start-btn" onclick="tbStart()">▶ Testi Başlat</button>
+          <button class="tb-save-btn" onclick="tbSave()">💾 Bu Testi Kaydet</button>
+        </div>
+      </div>
+
+      <!-- KAYITLI TESTLER -->
+      <div class="rev-panel" id="tb-saved-panel" style="display:none;">
+        <div class="rev-step"><span class="rev-step-no">★</span> Kayıtlı Testlerim</div>
+        <div id="tb-saved-list" class="tb-saved-list"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <!-- ===== VIDEO ===== -->
 <div id="page-video" class="page">
   <div class="video-header">
@@ -747,6 +845,7 @@
               <div class="panel-title">Hızlı İşlemler</div>
               <div class="quick-row" onclick="openReview('profile')"><span class="quick-ic green">🔁</span><span class="quick-txt">Tekrar Et</span><span class="quick-arrow">›</span></div>
               <div class="quick-row" onclick="showPage('quiz')"><span class="quick-ic blue">📋</span><span class="quick-txt">Test Çöz</span><span class="quick-arrow">›</span></div>
+              <div class="quick-row" onclick="openTestBuilder()"><span class="quick-ic gold">🛠️</span><span class="quick-txt">Test Oluştur</span><span class="quick-arrow">›</span></div>
               <div class="quick-row" onclick="showPage('video')"><span class="quick-ic red">▶️</span><span class="quick-txt">Video Ders İzle</span><span class="quick-arrow">›</span></div>
               <div class="quick-row" onclick="showPage('words')"><span class="quick-ic gold">🔍</span><span class="quick-txt">Kelime Arama</span><span class="quick-arrow">›</span></div>
             </div>
@@ -927,11 +1026,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=22"></script>
-<script defer src="js/auth.js?v=22"></script>
-<script defer src="js/admin.js?v=22"></script>
-<script defer src="js/profile.js?v=22"></script>
-<script defer src="js/extras.js?v=22"></script>
-<script defer src="js/app.js?v=22"></script>
+<script defer src="js/supabase-config.js?v=23"></script>
+<script defer src="js/auth.js?v=23"></script>
+<script defer src="js/admin.js?v=23"></script>
+<script defer src="js/profile.js?v=23"></script>
+<script defer src="js/extras.js?v=23"></script>
+<script defer src="js/app.js?v=23"></script>
 </body>
 </html>
