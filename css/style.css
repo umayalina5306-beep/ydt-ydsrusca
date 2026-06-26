@@ -1836,3 +1836,50 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .tb-entry-btn { background:var(--gold); color:var(--blue); border:none; padding:12px 22px; border-radius:11px; font-weight:700; cursor:pointer; white-space:nowrap; transition:.16s; }
 .tb-entry-btn:hover { background:var(--gold-light); transform:translateY(-2px); }
 @media (max-width:600px){ .tb-wrap .rev-methods { grid-template-columns:1fr; } }
+
+/* ============ SAYAÇ · İNCELEME · GEÇMİŞ ============ */
+.quiz-timer { text-align:right; font-weight:800; color:var(--blue); font-size:1.05rem; margin:4px 0 8px; font-variant-numeric:tabular-nums; }
+.quiz-timer.low { color:var(--red); animation:revshake .4s infinite; }
+.quiz-opt.chosen { border-color:var(--gold) !important; background:#fff7e6 !important; }
+
+.tb-reveal-row { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+.tb-reveal { padding:9px 16px; border:1.5px solid var(--light-gray); border-radius:10px; background:var(--white); color:var(--blue); font-weight:600; cursor:pointer; }
+.tb-reveal.active { border-color:var(--gold); background:#fffdf7; }
+
+/* sonuç inceleme */
+.quiz-review { margin-top:24px; text-align:left; }
+.qrev-title { font-weight:700; color:var(--blue); margin-bottom:10px; }
+.qrev-title span { font-weight:400; color:var(--gray); font-size:.85rem; }
+.qrev-grid { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:18px; }
+.qrev-num { width:38px; height:38px; border-radius:9px; border:none; font-weight:700; cursor:pointer; color:#fff; transition:.13s; }
+.qrev-num.ok { background:#10b981; }
+.qrev-num.no { background:#ef4444; }
+.qrev-num:hover { transform:scale(1.08); }
+.qrev-list { display:flex; flex-direction:column; gap:8px; }
+.qrev-item { border:1px solid var(--light-gray); border-left-width:4px; border-radius:11px; padding:12px 15px; background:var(--white); }
+.qrev-item.ok { border-left-color:#10b981; }
+.qrev-item.no { border-left-color:#ef4444; }
+.qrev-item-head { display:flex; align-items:center; gap:9px; font-weight:700; color:var(--blue); }
+.qrev-q { font-family:'Noto Sans',sans-serif; }
+.qrev-badge { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:.8rem; flex-shrink:0; }
+.qrev-badge.ok { background:#10b981; }
+.qrev-badge.no { background:#ef4444; }
+.qrev-ans { font-size:.9rem; color:var(--gray); margin-top:6px; }
+.qrev-ans b.g { color:#0f9d58; }
+.qrev-ans b.r { color:#ef4444; }
+
+/* test geçmişi */
+#test-history { display:flex; flex-direction:column; gap:10px; }
+.th-row { border:1px solid var(--light-gray); border-radius:13px; background:var(--white); overflow:hidden; }
+.th-main { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; cursor:pointer; }
+.th-main:hover { background:var(--off-white); }
+.th-name { font-weight:700; color:var(--blue); }
+.th-meta { font-size:.8rem; color:var(--gray); margin-top:2px; }
+.th-score { font-weight:800; font-size:1.05rem; text-align:right; }
+.th-score span { display:block; font-size:.72rem; font-weight:600; opacity:.8; }
+.th-score.good { color:#10b981; }
+.th-score.mid { color:var(--gold); }
+.th-score.low { color:#ef4444; }
+.th-detail { padding:6px 14px 16px; display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--off-white); }
+.th-clear { align-self:flex-start; margin-top:4px; padding:9px 16px; border:1px solid var(--light-gray); border-radius:10px; background:var(--white); color:var(--gray); font-weight:600; cursor:pointer; }
+.th-clear:hover { background:#fde8e8; border-color:var(--red); color:var(--red); }
