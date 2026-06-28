@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=24">
+<link rel="stylesheet" href="css/style.css?v=25">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -396,16 +396,26 @@
     <!-- QUIZ PROGRESS -->
     <div id="quiz-playing" style="display:none;">
       <button class="quiz-back-btn" onclick="quizBack()">← Geri</button>
-      <div class="quiz-timer" id="quiz-timer"></div>
-      <div class="quiz-progress-bar"><div class="quiz-progress-fill" id="quiz-fill"></div></div>
-      <div class="quiz-card" id="quiz-card">
-        <div class="quiz-num" id="quiz-num"></div>
-        <div class="quiz-type-badge" id="quiz-type-badge"></div>
-        <div class="quiz-q" id="quiz-q"></div>
-        <div class="quiz-pron" id="quiz-pron"></div>
-        <div class="quiz-opts" id="quiz-opts"></div>
-        <div class="quiz-feedback" id="quiz-fb"></div>
-        <button class="quiz-next" id="quiz-next" onclick="nextQ()">Sonraki →</button>
+      <div class="quiz-live">
+        <div class="quiz-live-main">
+          <div class="quiz-timer" id="quiz-timer"></div>
+          <div class="quiz-progress-bar"><div class="quiz-progress-fill" id="quiz-fill"></div></div>
+          <div class="quiz-card" id="quiz-card">
+            <div class="quiz-num" id="quiz-num"></div>
+            <div class="quiz-type-badge" id="quiz-type-badge"></div>
+            <div class="quiz-q" id="quiz-q"></div>
+            <div class="quiz-pron" id="quiz-pron"></div>
+            <div class="quiz-opts" id="quiz-opts"></div>
+            <div class="quiz-feedback" id="quiz-fb"></div>
+            <button class="quiz-next" id="quiz-next" onclick="quizAdvance()">Sonraki Soru →</button>
+          </div>
+        </div>
+        <aside class="quiz-nav" id="quiz-nav">
+          <div class="quiz-nav-title">Sorular</div>
+          <div class="quiz-nav-grid" id="quiz-nav-grid"></div>
+          <div class="quiz-nav-legend" id="quiz-nav-legend"></div>
+          <button class="quiz-nav-finish" onclick="finishQuizNow()">Testi Bitir</button>
+        </aside>
       </div>
     </div>
 
@@ -1042,11 +1052,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=24"></script>
-<script defer src="js/auth.js?v=24"></script>
-<script defer src="js/admin.js?v=24"></script>
-<script defer src="js/profile.js?v=24"></script>
-<script defer src="js/extras.js?v=24"></script>
-<script defer src="js/app.js?v=24"></script>
+<script defer src="js/supabase-config.js?v=25"></script>
+<script defer src="js/auth.js?v=25"></script>
+<script defer src="js/admin.js?v=25"></script>
+<script defer src="js/profile.js?v=25"></script>
+<script defer src="js/extras.js?v=25"></script>
+<script defer src="js/app.js?v=25"></script>
 </body>
 </html>
