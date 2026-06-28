@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=27">
+<link rel="stylesheet" href="css/style.css?v=29">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -664,13 +664,23 @@
               <option value="hepsi">Tümü</option><option value="A1">A1</option><option value="A2">A2</option><option value="B1">B1</option><option value="B2">B2</option><option value="C1">C1</option>
             </select>
           </label>
-          <label class="rev-field"><span class="rev-field-cap">Kategori</span>
+          <label class="rev-field"><span class="rev-field-cap">Tür</span>
             <select class="rev-select" id="tb-cat" onchange="tbPick('cat',this.value)">
               <option value="hepsi">Tümü</option><option value="isim">İsim</option><option value="fiil">Fiil</option><option value="sıfat">Sıfat</option><option value="zarf">Zarf</option><option value="zamir">Zamir</option><option value="edat">Edat</option><option value="bağlaç">Bağlaç</option>
             </select>
           </label>
+          <div class="rev-search-wrap tb-search-wrap">
+            <span class="rev-search-ic">🔍</span>
+            <input type="text" id="tb-search" class="rev-search" placeholder="Kelime ara (Rusça/Türkçe)…" oninput="tbSearch(this.value)" autocomplete="off">
+          </div>
         </div>
-        <div class="tb-pool-info" id="tb-pool-info"></div>
+        <div class="tb-pool-bar">
+          <div class="tb-pool-info" id="tb-pool-info">Kapsam: <strong id="tb-scope-count">0</strong> kelime · Seçilen: <strong id="tb-sel-count">0</strong></div>
+          <div class="tb-pool-actions"><button class="rev-link" onclick="tbSelectAllShown()">Görünenleri Seç</button><span class="rev-sep">|</span><button class="rev-link gold" onclick="tbClearSel()">Seçimi Temizle</button></div>
+        </div>
+        <div id="tb-words" class="rev-words"></div>
+        <div id="tb-pager" class="tb-pager"></div>
+        <div class="tb-pool-hint">Hiç seçmezsen bu kapsamdaki tüm kelimeler kullanılır.</div>
       </div>
 
       <!-- 3: SAYI + BAŞLAT -->
@@ -1052,11 +1062,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=27"></script>
-<script defer src="js/auth.js?v=27"></script>
-<script defer src="js/admin.js?v=27"></script>
-<script defer src="js/profile.js?v=27"></script>
-<script defer src="js/extras.js?v=27"></script>
-<script defer src="js/app.js?v=27"></script>
+<script defer src="js/supabase-config.js?v=29"></script>
+<script defer src="js/auth.js?v=29"></script>
+<script defer src="js/admin.js?v=29"></script>
+<script defer src="js/profile.js?v=29"></script>
+<script defer src="js/extras.js?v=29"></script>
+<script defer src="js/app.js?v=29"></script>
 </body>
 </html>
