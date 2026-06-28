@@ -1053,26 +1053,31 @@ function showResult(){
   stopQuizTimer();
   document.getElementById('quiz-fill').style.width = '100%';
   document.getElementById('quiz-card').style.display = 'none';
+  document.getElementById('quiz-playing').style.display = 'none';
   document.getElementById('quiz-result').style.display = 'block';
-  // İnceleme öğelerini hazırla (boşların doğru cevabı da dahil)
+  // İnceleme öğeleri — durum: ok (doğru) / wrong (yanlış) / blank (boş)
   qReviewItems = qList.map((w,i)=>{
     const prep = qPrep[i], a = qAnswers[i];
     const correct = prep.kind === 'write' ? prep.correct : prep.options[prep.correctIndex];
-    const answered = !!(a && a.answered);
-    return { n:i+1, ok: answered ? a.ok : false, your: answered ? a.your : '(boş)', correct,
+    let st = 'blank', your = '(boş)';
+    if (a && a.answered) { st = a.ok ? 'ok' : 'wrong'; your = a.your; }
+    return { n:i+1, st, ok: st==='ok', your, correct,
       ru: w.ru || (prep.type==='paragraf' ? 'Paragraf sorusu' : ''), tr: w.tr || '' };
   });
-  qScore = qReviewItems.filter(x=>x.ok).length;
-  qWrong = qList.length - qScore;
-  const pct = Math.round(qScore/qList.length*100);
-  document.getElementById('res-score').textContent = `${qScore}/${qList.length}`;
+  const cOk = qReviewItems.filter(x=>x.st==='ok').length;
+  const cWrong = qReviewItems.filter(x=>x.st==='wrong').length;
+  const cBlank = qReviewItems.filter(x=>x.st==='blank').length;
+  qScore = cOk; qWrong = cWrong;
+  const pct = Math.round(cOk/qList.length*100);
+  document.getElementById('res-score').textContent = `${cOk}/${qList.length}`;
   const msgs = [[0,40,'Daha çok çalış 💪','Pes etme, tekrar dene!'],[40,70,'Fena değil! 🙂','Biraz daha pratik yap.'],[70,90,'Çok iyi! 👏','Başarın artıyor!'],[90,101,'Mükemmel! 🏆','Harika bir sınav performansı!']];
   const [,,l,s] = msgs.find(([mn,mx]) => pct>=mn && pct<mx);
   document.getElementById('res-label').textContent = l;
   document.getElementById('res-sub').textContent = s;
   document.getElementById('res-stats').innerHTML = `
-    <div class="result-stat"><div class="result-stat-num" style="color:#10b981;">${qScore}</div><div class="result-stat-label">Doğru</div></div>
-    <div class="result-stat"><div class="result-stat-num" style="color:#ef4444;">${qWrong}</div><div class="result-stat-label">Yanlış</div></div>
+    <div class="result-stat"><div class="result-stat-num" style="color:#10b981;">${cOk}</div><div class="result-stat-label">Doğru</div></div>
+    <div class="result-stat"><div class="result-stat-num" style="color:#ef4444;">${cWrong}</div><div class="result-stat-label">Yanlış</div></div>
+    <div class="result-stat"><div class="result-stat-num" style="color:#9ca3af;">${cBlank}</div><div class="result-stat-label">Boş</div></div>
     <div class="result-stat"><div class="result-stat-num">${pct}%</div><div class="result-stat-label">Başarı</div></div>
   `;
   renderQuizReview('quiz-review', qReviewItems);
@@ -1602,17 +1607,25 @@ function recordAnswer(ok, your, correct, label) {
   qAnswers[qIdx] = { n: qIdx+1, ok: !!ok, your: your, correct: correct || '', ru: w.ru || label || '', tr: w.tr || '' };
 }
 
+function _qrevStatus(a){ return a.st || (a.ok ? 'ok' : 'wrong'); }
 function _qrevItemsHTML(items) {
-  return items.map(a => `
-    <div class="qrev-item ${a.ok?'ok':'no'}" id="qrev-item-${a.n}">
-      <div class="qrev-item-head"><span class="qrev-badge ${a.ok?'ok':'no'}">${a.ok?'✓':'✗'}</span><span class="qrev-q">${a.n}. ${_escHtml(a.ru)}${a.tr?' — '+_escHtml(a.tr):''}</span></div>
-      <div class="qrev-ans">Senin cevabın: <b class="${a.ok?'g':'r'}">${_escHtml(a.your)}</b>${a.ok?'':(a.correct?` &nbsp;·&nbsp; Doğru: <b class="g">${_escHtml(a.correct)}</b>`:'')}</div>
-    </div>`).join('');
+  return items.map(a => {
+    const st = _qrevStatus(a);
+    const cls = st==='ok' ? 'ok' : (st==='wrong' ? 'no' : 'blank');
+    const badge = st==='ok' ? '✓' : (st==='wrong' ? '✗' : '—');
+    const ansLine = (st==='blank')
+      ? `Boş bıraktın &nbsp;·&nbsp; Doğru: <b class="g">${_escHtml(a.correct)}</b>`
+      : `Senin cevabın: <b class="${st==='ok'?'g':'r'}">${_escHtml(a.your)}</b>${st==='ok'?'':(a.correct?` &nbsp;·&nbsp; Doğru: <b class="g">${_escHtml(a.correct)}</b>`:'')}`;
+    return `<div class="qrev-item ${cls}" id="qrev-item-${a.n}">
+      <div class="qrev-item-head"><span class="qrev-badge ${cls}">${badge}</span><span class="qrev-q">${a.n}. ${_escHtml(a.ru)}${a.tr?' — '+_escHtml(a.tr):''}</span></div>
+      <div class="qrev-ans">${ansLine}</div>
+    </div>`;
+  }).join('');
 }
 function renderQuizReview(containerId, answers) {
   const box = document.getElementById(containerId); if (!box) return;
   if (!answers || !answers.length) { box.innerHTML = ''; return; }
-  const grid = answers.map(a => `<button class="qrev-num ${a.ok?'ok':'no'}" onclick="(document.getElementById('qrev-item-${a.n}')||{}).scrollIntoView&&document.getElementById('qrev-item-${a.n}').scrollIntoView({behavior:'smooth',block:'center'})">${a.n}</button>`).join('');
+  const grid = answers.map(a => { const st=_qrevStatus(a); const cls= st==='ok'?'ok':(st==='wrong'?'no':'blank'); return `<button class="qrev-num ${cls}" onclick="(document.getElementById('qrev-item-${a.n}')||{}).scrollIntoView&&document.getElementById('qrev-item-${a.n}').scrollIntoView({behavior:'smooth',block:'center'})">${a.n}</button>`; }).join('');
   box.innerHTML = `<div class="qrev-title">Soru Dağılımı <span>· numaraya tıkla, o sorunun detayına git</span></div><div class="qrev-grid">${grid}</div><div class="qrev-list">${_qrevItemsHTML(answers)}</div>`;
 }
 
@@ -1626,7 +1639,7 @@ function saveTestResult() {
     id: 'r' + Date.now(), date: new Date().toISOString(),
     type: quizSettings.type, name: quizTypeLabel(quizSettings.type),
     score: qScore, total: qList.length,
-    items: (qReviewItems && qReviewItems.length ? qReviewItems : qAnswers).map(a => ({ n:a.n, ok:a.ok, your:a.your, correct:a.correct, ru:a.ru, tr:a.tr }))
+    items: (qReviewItems && qReviewItems.length ? qReviewItems : qAnswers).map(a => ({ n:a.n, st:a.st||(a.ok?'ok':'wrong'), ok:a.ok, your:a.your, correct:a.correct, ru:a.ru, tr:a.tr }))
   });
   setTestResults(list);
 }
