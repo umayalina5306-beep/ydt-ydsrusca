@@ -1453,11 +1453,17 @@ function showReviewDone(title, sub) {
    TEST OLUŞTUR — öğrenci kendi pratik testini kurar
    ============================================================ */
 let tb = { type:'ru-tr', source:'all', level:'hepsi', cat:'hepsi', count:20, reveal:'instant' };
+let tbSelected = new Set();
+let tbWordsPage = 1;
+let tbSearchQ = '';
+const TB_PAGE_SIZE = 24;
 
 function openTestBuilder() {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const pg = document.getElementById('page-testbuilder'); if (pg) pg.classList.add('active');
-  tbUpdatePool();
+  tbSelected = new Set(); tbWordsPage = 1; tbSearchQ = '';
+  const sb = document.getElementById('tb-search'); if (sb) sb.value = '';
+  renderTbWords();
   renderSavedTests();
   window.scrollTo(0, 0);
 }
@@ -1469,7 +1475,8 @@ function tbPick(kind, val, btn) {
     if (kind === 'count') { document.querySelectorAll('#page-testbuilder .tb-count').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
     if (kind === 'reveal') { document.querySelectorAll('#page-testbuilder .tb-reveal').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
   }
-  tbUpdatePool();
+  if (kind === 'source' || kind === 'level' || kind === 'cat') tbWordsPage = 1;
+  renderTbWords();
 }
 
 function tbPool() {
@@ -1485,18 +1492,73 @@ function tbPool() {
   return pool;
 }
 
-function tbUpdatePool() {
-  const el = document.getElementById('tb-pool-info'); if (!el) return;
-  if (tb.source !== 'all' && (typeof currentUser === 'undefined' || !currentUser)) {
-    el.innerHTML = '<span class="tb-warn">⚠️ Bu kaynak için giriş yapmalısın.</span>'; return;
-  }
-  const n = tbPool().length;
-  el.innerHTML = `Bu kapsamda <strong>${n}</strong> kelime var.` + (n < 4 ? ' <span class="tb-warn">Test için en az 4 kelime gerekli.</span>' : '');
+function tbVisibleWords() {
+  let list = tbPool();
+  const q = (tbSearchQ || '').trim().toLowerCase();
+  if (q) list = list.filter(w => (w.ru||'').toLowerCase().includes(q) || (w.tr||'').toLowerCase().includes(q) || (w.p||'').toLowerCase().includes(q));
+  return list;
 }
 
+function renderTbWords() {
+  const info = document.getElementById('tb-pool-info');
+  const box = document.getElementById('tb-words');
+  const pager = document.getElementById('tb-pager');
+  if (!box) return;
+  // giriş gerekiyorsa
+  if (tb.source !== 'all' && (typeof currentUser === 'undefined' || !currentUser)) {
+    if (info) info.innerHTML = '<span class="tb-warn">⚠️ Bu kaynak için giriş yapmalısın.</span>';
+    box.innerHTML = ''; if (pager) pager.innerHTML = '';
+    return;
+  }
+  const scopeN = tbPool().length;
+  if (info) info.innerHTML = `Kapsam: <strong>${scopeN}</strong> kelime · Seçilen: <strong>${tbSelected.size}</strong>`;
+  const list = tbVisibleWords();
+  if (!list.length) { box.innerHTML = '<div class="rev-empty">Bu kapsam/arama ile kelime yok.</div>'; if (pager) pager.innerHTML = ''; return; }
+  const pages = Math.max(1, Math.ceil(list.length / TB_PAGE_SIZE));
+  if (tbWordsPage > pages) tbWordsPage = pages;
+  if (tbWordsPage < 1) tbWordsPage = 1;
+  const start = (tbWordsPage - 1) * TB_PAGE_SIZE;
+  box.innerHTML = list.slice(start, start + TB_PAGE_SIZE).map(w => {
+    const on = tbSelected.has(w.ru);
+    return `<div class="rev-chip ${on?'on':''}" onclick="tbToggleWord('${_escAttr(w.ru)}')">
+      <span class="rev-chip-box">${on?'✓':''}</span>
+      <span class="rev-chip-text"><span class="rev-chip-ru">${_escHtml(w.ru)}</span><span class="rev-chip-tr">${_escHtml(w.tr)}</span></span>
+      <span class="rev-chip-x">${on?'✕':'+'}</span>
+    </div>`;
+  }).join('');
+  tbRenderPager(pages);
+}
+
+function tbRenderPager(pages) {
+  const el = document.getElementById('tb-pager'); if (!el) return;
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  const cur = tbWordsPage, nums = []; let last = 0;
+  for (let i = 1; i <= pages; i++) {
+    if (i === 1 || i === pages || (i >= cur-1 && i <= cur+1)) {
+      if (last && i - last > 1) nums.push('…');
+      nums.push(i); last = i;
+    }
+  }
+  let html = `<button class="tbp-btn" ${cur===1?'disabled':''} onclick="tbGoPage(${cur-1})">«</button>`;
+  html += nums.map(n => n === '…' ? '<span class="tbp-dots">…</span>' : `<button class="tbp-btn ${n===cur?'active':''}" onclick="tbGoPage(${n})">${n}</button>`).join('');
+  html += `<button class="tbp-btn" ${cur===pages?'disabled':''} onclick="tbGoPage(${cur+1})">»</button>`;
+  el.innerHTML = html;
+}
+
+function tbGoPage(n) { tbWordsPage = n; renderTbWords(); const b=document.getElementById('tb-words'); if(b) b.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+function tbSearch(v) { tbSearchQ = v; tbWordsPage = 1; renderTbWords(); }
+function tbToggleWord(ru) { if (tbSelected.has(ru)) tbSelected.delete(ru); else tbSelected.add(ru); renderTbWords(); }
+function tbSelectAllShown() { tbVisibleWords().forEach(w => tbSelected.add(w.ru)); renderTbWords(); }
+function tbClearSel() { tbSelected.clear(); renderTbWords(); }
+
 function tbStart() {
-  const pool = tbPool();
-  if (pool.length < 4) { toast('Bu kapsamda yeterli kelime yok (en az 4).'); return; }
+  let pool;
+  if (tbSelected.size > 0) {
+    pool = []; tbSelected.forEach(ru => { const w = wordsByRu[ru]; if (w) pool.push(w); });
+  } else {
+    pool = tbPool();
+  }
+  if (pool.length < 4) { toast('En az 4 kelime gerekli — kelime seç ya da kapsamı genişlet.'); return; }
   launchCustomQuiz(pool, tb.type, tb.count);
 }
 
