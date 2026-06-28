@@ -1919,3 +1919,8 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .qrev-item.blank { border-left-color:#9ca3af; }
 .qrev-badge.blank { background:#9ca3af; }
 .result-stats { flex-wrap:wrap; }
+
+/* mevcut soru + test butonları: tema laciverti (altın halka kaldırıldı) */
+.qnav-cell.now { background:var(--blue) !important; border-color:var(--blue) !important; box-shadow:0 0 0 3px rgba(13,27,42,0.22) !important; color:#fff !important; }
+.quiz-next, .quiz-nav-finish { background:var(--blue) !important; color:#fff !important; }
+.quiz-next:hover, .quiz-nav-finish:hover { background:var(--blue-light) !important; }
