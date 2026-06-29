@@ -7,6 +7,10 @@ const AVATAR_SEEDS = [
 ];
 let avatarShowAll = false;
 function avatarUrl(seed) { return "https://api.dicebear.com/9.x/avataaars/svg?seed=" + encodeURIComponent(seed); }
+function _avatarSeed() {
+  if (typeof currentProfile !== "undefined" && currentProfile && currentProfile.avatar_seed) return currentProfile.avatar_seed;
+  return (typeof localStorage !== "undefined") ? localStorage.getItem("ydt_avatar") : null;
+}
 
 function _planBadge(el) {
   if (!el) return;
@@ -17,7 +21,7 @@ function _planBadge(el) {
 
 // ---- Avatar ----
 function applyAvatar() {
-  const seed = (typeof localStorage !== "undefined") ? localStorage.getItem("ydt_avatar") : null;
+  const seed = _avatarSeed();
   const name = (typeof bestName === "function") ? bestName() : ((currentUser && currentUser.email) || "");
   const letter = (name || "?").charAt(0).toUpperCase();
   ["profile-initial", "sidebar-avatar", "account-avatar"].forEach(id => {
@@ -31,7 +35,7 @@ function applyAvatar() {
 function renderAvatarGrid() {
   const grid = document.getElementById("avatar-grid");
   if (!grid) return;
-  const sel = (typeof localStorage !== "undefined") ? localStorage.getItem("ydt_avatar") : null;
+  const sel = _avatarSeed();
   const list = avatarShowAll ? AVATAR_SEEDS : AVATAR_SEEDS.slice(0, 10);
   grid.innerHTML = list.map(seed =>
     `<button class="avatar-opt ${seed === sel ? "selected" : ""}" onclick="selectAvatar('${seed}')" title="${seed}">
@@ -40,10 +44,15 @@ function renderAvatarGrid() {
     </button>`).join("");
 }
 
-function selectAvatar(seed) {
+async function selectAvatar(seed) {
   try { localStorage.setItem("ydt_avatar", seed); } catch (e) {}
+  if (typeof currentProfile !== "undefined" && currentProfile) currentProfile.avatar_seed = seed;
   renderAvatarGrid();
   applyAvatar();
+  if (typeof sb !== "undefined" && sb && typeof currentUser !== "undefined" && currentUser) {
+    try { await sb.from("profiles").update({ avatar_seed: seed }).eq("id", currentUser.id); }
+    catch (e) { /* sessiz: localStorage yedeği var */ }
+  }
   if (typeof toast === "function") toast("Avatar seçildi.");
 }
 
@@ -97,6 +106,7 @@ async function openProfile() {
   renderAvatarGrid();
   renderKasaPreview();
   renderBadges();
+  if (typeof renderStudyCalendar === "function") renderStudyCalendar();
   loadProfileStats();
   profileNav("overview");
 }
@@ -108,8 +118,11 @@ function profileNav(view, btn) {
   if (target) target.style.display = "block";
   if (view === "tests" && typeof renderTestHistory === "function") renderTestHistory();
   if (view === "stats" && typeof renderStatsView === "function") renderStatsView();
+  if (view === "saved" && typeof renderKasaView === "function") renderKasaView("saved");
+  if (view === "learned" && typeof renderKasaView === "function") renderKasaView("learned");
+  if (view === "overview" && typeof renderStudyCalendar === "function") renderStudyCalendar();
   document.querySelectorAll(".psb-item").forEach(b => b.classList.remove("active"));
-  const map = { overview: "psb-overview", tests: "psb-tests", videos: "psb-videos", stats: "psb-stats", settings: "psb-settings" };
+  const map = { overview: "psb-overview", saved: "psb-saved", learned: "psb-learned", tests: "psb-tests", videos: "psb-videos", stats: "psb-stats", settings: "psb-settings" };
   if (btn && btn.classList) btn.classList.add("active");
   else { const el = document.getElementById(map[view]); if (el) el.classList.add("active"); }
   window.scrollTo(0, 0);
@@ -187,8 +200,10 @@ async function loadProfileStats() {
       sb.from("saved_words").select("id", { count: "exact", head: true }).eq("user_id", uid),
       sb.from("test_results").select("id", { count: "exact", head: true }).eq("user_id", uid),
     ]);
-    if (w && typeof w.count === "number") { const e1 = document.getElementById("profile-words"); if (e1) e1.textContent = w.count; }
-    if (t && typeof t.count === "number") { const e2 = document.getElementById("profile-tests"); if (e2) e2.textContent = t.count; }
+    const localTests = (typeof getTestResults === "function") ? getTestResults().length : 0;
+    const localSaved = (typeof savedWords !== "undefined") ? savedWords.size : 0;
+    if (w && typeof w.count === "number") { const e1 = document.getElementById("profile-words"); if (e1) e1.textContent = Math.max(w.count, localSaved); }
+    if (t && typeof t.count === "number") { const e2 = document.getElementById("profile-tests"); if (e2) e2.textContent = Math.max(t.count, localTests); }
     if (typeof renderBadges === "function") renderBadges();
   } catch (e) { console.error("Profil istatistikleri yüklenemedi:", e); }
 }
@@ -219,18 +234,30 @@ const BADGES = [
   { e: "📌", t: "İlk Kelime", d: "1 kelime kaydet", chk: s => s.saved >= 1 },
   { e: "📚", t: "Koleksiyoncu", d: "10 kelime kaydet", chk: s => s.saved >= 10 },
   { e: "🏆", t: "Kelime Avcısı", d: "50 kelime kaydet", chk: s => s.saved >= 50 },
+  { e: "💎", t: "Kelime Ustası", d: "100 kelime kaydet", chk: s => s.saved >= 100 },
   { e: "✅", t: "İlk Öğrenme", d: "1 kelime öğren", chk: s => s.learned >= 1 },
   { e: "🎯", t: "Azimli", d: "25 kelime öğren", chk: s => s.learned >= 25 },
-  { e: "🧠", t: "Test Çözücü", d: "1 test çöz", chk: s => s.tests >= 1 }
+  { e: "🌟", t: "Bilge", d: "50 kelime öğren", chk: s => s.learned >= 50 },
+  { e: "🧠", t: "Test Çözücü", d: "1 test çöz", chk: s => s.tests >= 1 },
+  { e: "📝", t: "Sınav Kurdu", d: "10 test çöz", chk: s => s.tests >= 10 },
+  { e: "🎓", t: "Disiplinli", d: "30 test çöz", chk: s => s.tests >= 30 },
+  { e: "💯", t: "Kusursuz", d: "Bir testte %100 yap", chk: s => s.bestPct >= 100 },
+  { e: "🔥", t: "İstikrarlı", d: "7 gün üst üste çalış", chk: s => s.streak >= 7 },
+  { e: "⚡", t: "Azim Şampiyonu", d: "30 gün seri yap", chk: s => s.streak >= 30 }
 ];
 function renderBadges() {
   const box = document.getElementById("profile-badges");
   if (!box) return;
   const tEl = document.getElementById("profile-tests");
+  const res = (typeof getTestResults === "function") ? getTestResults() : [];
+  const bestPct = res.reduce((m, r) => Math.max(m, r.total ? Math.round(r.score / r.total * 100) : 0), 0);
+  const streak = (typeof computeStreakFromResults === "function") ? computeStreakFromResults() : 0;
   const stats = {
     saved: (typeof savedWords !== "undefined" ? savedWords.size : 0),
     learned: (typeof learnedWords !== "undefined" ? learnedWords.size : 0),
-    tests: tEl ? (parseInt(tEl.textContent, 10) || 0) : 0
+    tests: tEl ? (parseInt(tEl.textContent, 10) || 0) : 0,
+    bestPct: bestPct,
+    streak: streak
   };
   box.innerHTML = BADGES.map(b => {
     const on = b.chk(stats);
