@@ -31,7 +31,7 @@
         mode = "break"; remaining = breakMin * 60;
       }
       else { mode = "work"; remaining = workMin * 60; }
-      alert(mode === "break" ? "Çalışma bitti! 5 dakika mola ver. ☕" : "Mola bitti! Çalışmaya devam. 💪");
+      if (typeof window.uiAlert === "function") window.uiAlert(mode === "break" ? "Çalışma bitti! 5 dakika mola ver. ☕" : "Mola bitti! Çalışmaya devam. 💪", "Pomodoro"); else alert(mode === "break" ? "Çalışma bitti! 5 dakika mola ver." : "Mola bitti! Çalışmaya devam.");
       const btn = document.getElementById("pomo-startbtn");
       if (btn) btn.textContent = "Başlat";
     }
