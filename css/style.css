@@ -2002,3 +2002,29 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .kv-pg { background:var(--white); border:1px solid var(--light-gray); min-width:36px; height:36px; border-radius:9px; cursor:pointer; font-weight:600; color:var(--text); }
 .kv-pg:hover { border-color:var(--gold); }
 .kv-pg.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+
+/* ============ PROFİL SOL SÜTUN + GELİŞİM GRAFİĞİ ============ */
+.profile-main-col { display:flex; flex-direction:column; gap:20px; min-width:0; }
+.pg-top { display:flex; align-items:center; gap:16px; margin:6px 0 18px; }
+.pg-avg-ring { --p:0; width:78px; height:78px; border-radius:50%; flex-shrink:0;
+  background:conic-gradient(var(--gold) calc(var(--p)*1%), var(--off-white) 0);
+  display:flex; align-items:center; justify-content:center; position:relative; }
+.pg-avg-ring::before { content:""; position:absolute; inset:9px; background:var(--white); border-radius:50%; }
+.pg-avg-ring span { position:relative; font-weight:800; color:var(--blue); font-size:1.05rem; }
+.pg-avg-lab { font-weight:700; color:var(--blue); font-size:.95rem; }
+.pg-bars { display:flex; flex-direction:column; gap:11px; }
+.pg-row { display:flex; align-items:center; gap:12px; }
+.pg-lab { width:108px; font-size:.84rem; color:var(--text); font-weight:600; flex-shrink:0; }
+.pg-track { flex:1; height:16px; background:var(--off-white); border-radius:9px; overflow:hidden; }
+.pg-fill { height:100%; border-radius:9px; transition:width .5s ease; min-width:2px; }
+.pg-val { width:46px; text-align:right; font-weight:800; color:var(--blue); font-size:.9rem; }
+.pg-foot { margin-top:14px; font-size:.76rem; color:var(--gray); font-style:italic; }
+
+/* ============ GÜNLÜK TEKRAR + TEST SİLME + TÜR FİLTRESİ ============ */
+.daily-review-row { background:linear-gradient(135deg, rgba(201,168,76,.16), rgba(232,201,106,.10)); border:1px solid var(--gold); }
+.daily-review-row .quick-txt small { color:var(--gray); font-weight:600; font-size:.74rem; margin-left:4px; }
+.th-del { background:transparent; border:none; color:var(--gray); font-size:1.4rem; line-height:1; cursor:pointer; padding:0 6px; flex-shrink:0; align-self:center; transition:.15s; }
+.th-del:hover { color:var(--red); }
+.kv-filter-type { margin-top:-8px; }
+.kv-pill-type { font-size:.8rem; padding:6px 13px; }
+.th-main .th-info { flex:1 1 auto; min-width:0; }
