@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=34">
+<link rel="stylesheet" href="css/style.css?v=35">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -957,7 +957,6 @@
           <button class="st-tab active" onclick="settingsTab('account',this)">👤 Hesap Bilgileri</button>
           <button class="st-tab" onclick="settingsTab('Güvenlik',this)">🛡️ Güvenlik</button>
           <button class="st-tab" onclick="settingsTab('Bildirimler',this)">🔔 Bildirimler</button>
-          <button class="st-tab" onclick="settingsTab('Çalışma Ayarları',this)">🎯 Çalışma Ayarları</button>
           <button class="st-tab" onclick="settingsTab('Üyelik Yönetimi',this)">👑 Üyelik Yönetimi</button>
           <button class="st-tab" onclick="settingsTab('Veri Yönetimi',this)">🗄️ Veri Yönetimi</button>
         </div>
@@ -991,17 +990,16 @@
             </div>
 
             <div class="acc-col">
-              <div class="acc-block-title">Hesabı Dondur / Sil</div>
-              <div class="acc-danger" onclick="freezeAccount()">
-                <div class="acc-danger-ic blue">❄️</div>
-                <div><div class="acc-danger-t">Hesabı Geçici Dondur</div><div class="acc-danger-d">Hesabınızı geçici olarak dondurabilirsiniz. Dilediğiniz zaman yeniden aktif hale getirebilirsiniz.</div></div>
-                <span class="acc-danger-arrow">›</span>
+              <div class="acc-block-title">Çalışma Tercihleri</div>
+              <div class="acc-block-sub">Test sırasında öğrenmeni kolaylaştır.</div>
+              <div class="set-switch-row" style="margin-top:14px;">
+                <div>
+                  <div style="font-weight:700;color:var(--text);">Otomatik Kelime Kaydetme</div>
+                  <div style="font-size:.8rem;color:var(--gray);margin-top:3px;">Testte doğru bildiğin kelimeler otomatik olarak Kelime Kasam'a eklenir (Premium).</div>
+                </div>
+                <label class="set-switch"><input type="checkbox" id="set-autosave" onchange="toggleAutoSave(this.checked)"><span class="set-slider"></span></label>
               </div>
-              <div class="acc-danger red" onclick="deleteAccount()">
-                <div class="acc-danger-ic red">🗑️</div>
-                <div><div class="acc-danger-t" style="color:var(--red);">Hesabı Sil</div><div class="acc-danger-d">Hesabınızı silmeniz durumunda tüm verileriniz kalıcı olarak silinir. Bu işlem geri alınamaz.</div></div>
-                <span class="acc-danger-arrow">›</span>
-              </div>
+              <div class="acc-block-sub" style="margin-top:16px;">Hesabı dondurma/silme işlemleri <b>Üyelik Yönetimi</b> sekmesindedir.</div>
             </div>
           </div>
 
@@ -1093,11 +1091,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=34"></script>
-<script defer src="js/auth.js?v=34"></script>
-<script defer src="js/admin.js?v=34"></script>
-<script defer src="js/profile.js?v=34"></script>
-<script defer src="js/extras.js?v=34"></script>
-<script defer src="js/app.js?v=34"></script>
+<script defer src="js/supabase-config.js?v=35"></script>
+<script defer src="js/auth.js?v=35"></script>
+<script defer src="js/admin.js?v=35"></script>
+<script defer src="js/profile.js?v=35"></script>
+<script defer src="js/extras.js?v=35"></script>
+<script defer src="js/app.js?v=35"></script>
 </body>
 </html>
