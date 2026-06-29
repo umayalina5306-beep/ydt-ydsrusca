@@ -461,6 +461,7 @@ async function toggleLearned(ev, ru) {
     if (error) throw error;
     if (yeni === 'learned') { savedWords.delete(ru); learnedWords.add(ru); }
     else { learnedWords.delete(ru); savedWords.add(ru); }
+    if (yeni === 'learned' && typeof logActivity === 'function') logActivity('wordsLearned', 1);
     // Tıklanan butonu anında güncelle (normal sayfada da yeşil olsun)
     if (btn) btn.classList.toggle('active', yeni === 'learned');
     // Bankadaysak listeyi tazele (kayıtlı/öğrenilmiş sekmeleri arası taşıma)
@@ -1703,6 +1704,7 @@ function saveTestResult() {
     items: (qReviewItems && qReviewItems.length ? qReviewItems : qAnswers).map(a => ({ n:a.n, st:a.st||(a.ok?'ok':'wrong'), ok:a.ok, your:a.your, correct:a.correct, ru:a.ru, tr:a.tr }))
   };
   const list = getTestResults(); list.unshift(rec); setTestResults(list);
+  if (typeof logActivity === 'function') logActivity('questions', rec.total);
   saveTestResultToDB(rec);
 }
 
@@ -1928,20 +1930,16 @@ async function kasaRemoveLearned(ru) {
    PROFİL — Çalışma Takvimi (aktivite günleri işaretli)
    ============================================================ */
 let calRef = new Date(); calRef.setDate(1);
-function calMove(delta) { calRef.setMonth(calRef.getMonth() + delta); renderStudyCalendar(); }
+let calSelected = null;
+function calMove(delta) { calRef.setMonth(calRef.getMonth() + delta); calSelected = null; const dt = document.getElementById('cal-detail'); if (dt) dt.innerHTML = ''; renderStudyCalendar(); }
 function renderStudyCalendar() {
   const box = document.getElementById('study-calendar'); if (!box) return;
   const titleEl = document.getElementById('cal-title');
   const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
   const y = calRef.getFullYear(), m = calRef.getMonth();
   if (titleEl) titleEl.textContent = `${months[m]} ${y}`;
-  const activeDays = new Set((typeof _resultDays === 'function' ? _resultDays() : []));
-  const dayMap = {};
-  (typeof getTestResults === 'function' ? getTestResults() : []).forEach(r => {
-    const k = (r.date || '').slice(0,10); if (!k) return;
-    (dayMap[k] = dayMap[k] || { tests:0, questions:0, correct:0 });
-    dayMap[k].tests++; dayMap[k].questions += (r.total||0); dayMap[k].correct += (r.score||0);
-  });
+  const active = (typeof activeDaySet === 'function') ? activeDaySet() : new Set();
+  const plans = (typeof getPlans === 'function') ? getPlans() : {};
   const todayKey = new Date().toISOString().slice(0,10);
   const first = new Date(y, m, 1);
   let startDow = first.getDay(); startDow = (startDow === 0) ? 6 : startDow - 1; // Pzt=0
@@ -1952,13 +1950,11 @@ function renderStudyCalendar() {
   for (let d=1; d<=daysInMonth; d++) {
     const key = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const cls = ['cal-cell'];
-    if (activeDays.has(key)) cls.push('active');
+    if (active.has(key)) cls.push('active');
     if (key === todayKey) cls.push('today');
-    let title;
-    if (dayMap[key]) title = `${dayMap[key].tests} test · ${dayMap[key].questions} soru · ${dayMap[key].correct} doğru`;
-    else if (key > todayKey) title = 'İleride: planlama & not (yakında)';
-    else title = 'Çalışma kaydı yok';
-    html += `<div class="${cls.join(' ')}" title="${title}">${d}</div>`;
+    if (plans[key] && String(plans[key]).trim()) cls.push('planned');
+    if (key === calSelected) cls.push('sel');
+    html += `<div class="${cls.join(' ')}" onclick="calDay('${key}')">${d}</div>`;
   }
   box.innerHTML = html;
 }
@@ -1997,21 +1993,102 @@ function startDailyReview() {
    ============================================================ */
 function renderProgressChart() {
   const box = document.getElementById('progress-chart'); if (!box) return;
-  const saved = (typeof savedWords !== 'undefined') ? savedWords.size : 0;
-  const learned = (typeof learnedWords !== 'undefined') ? learnedWords.size : 0;
-  const res = (typeof getTestResults === 'function') ? getTestResults() : [];
-  const tests = res.length;
-  const questions = res.reduce((a,r) => a + (r.total||0), 0);
-  const correct = res.reduce((a,r) => a + (r.score||0), 0);
-  const avg = tests ? Math.round(res.reduce((a,r) => a + (r.total ? r.score/r.total*100 : 0), 0) / tests) : 0;
-  const metrics = [
-    { lab:'Kayıtlı Kelime', val:saved,     col:'var(--gold)' },
-    { lab:'Öğrenilen',      val:learned,   col:'#3fa97a' },
-    { lab:'Çözülen Test',   val:tests,     col:'var(--blue-light)' },
-    { lab:'Çözülen Soru',   val:questions, col:'#7e6bd0' },
-    { lab:'Doğru Cevap',    val:correct,   col:'#e0852c' }
-  ];
-  const max = Math.max(1, ...metrics.map(m => m.val));
-  const bars = metrics.map(m => `<div class="pg-row"><span class="pg-lab">${m.lab}</span><div class="pg-track"><div class="pg-fill" style="width:${Math.round(m.val/max*100)}%;background:${m.col}"></div></div><span class="pg-val">${m.val}</span></div>`).join('');
-  box.innerHTML = `<div class="pg-top"><div class="pg-avg-ring" style="--p:${avg}"><span>%${avg}</span></div><div class="pg-avg-lab">Ortalama Test Başarısı</div></div><div class="pg-bars">${bars}</div><div class="pg-foot">Seviye ilerlemesi gibi yeni istatistikler eklendikçe burada görünecek.</div>`;
+  const log = (typeof getDailyLog === 'function') ? getDailyLog() : {};
+  const daysSet = new Set(Object.keys(log).filter(k => _dayHasActivity(log[k])));
+  (typeof getTestResults === 'function' ? getTestResults() : []).forEach(r => { const k = (r.date||'').slice(0,10); if (k) daysSet.add(k); });
+  let days = [...daysSet].sort();
+  if (days.length > 21) days = days.slice(-21);
+  if (!days.length) {
+    box.innerHTML = '<div class="profile-empty">Henüz veri yok. Test çöz, kelime öğren ya da pomodoro çalış — gelişimin burada tarih bazlı çizgisel grafikte görünecek.</div>';
+    return;
+  }
+  const qOf = d => { const a = log[d]; if (a && a.questions) return a.questions; const res = (getTestResults()||[]).filter(r => (r.date||'').slice(0,10) === d); return res.reduce((s2,r) => s2 + (r.total||0), 0); };
+  const wOf = d => { const a = log[d]; return (a && a.wordsLearned) ? a.wordsLearned : 0; };
+  const q = days.map(qOf), w = days.map(wOf);
+  const max = Math.max(1, ...q, ...w);
+  const W = 600, H = 240, padL = 34, padR = 14, padT = 16, padB = 42;
+  const plotW = W - padL - padR, plotH = H - padT - padB, n = days.length;
+  const X = i => n === 1 ? padL + plotW/2 : padL + i*(plotW/(n-1));
+  const Y = v => padT + plotH - (v/max)*plotH;
+  const line = (arr, col) => {
+    if (n === 1) return `<circle cx="${X(0)}" cy="${Y(arr[0])}" r="4" fill="${col}"/>`;
+    const pts = arr.map((v,i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+    const dots = arr.map((v,i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3" fill="${col}"/>`).join('');
+    return `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${dots}`;
+  };
+  let grid = '';
+  for (let g = 0; g <= 4; g++) { const yy = padT + plotH*(g/4); const val = Math.round(max*(1-g/4)); grid += `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="var(--light-gray)" stroke-width="1"/><text x="${padL-6}" y="${(yy+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--gray)">${val}</text>`; }
+  let xlab = ''; const step = Math.max(1, Math.ceil(n/5));
+  const addLab = i => { const dd = days[i].slice(5).replace('-','.'); xlab += `<text x="${X(i).toFixed(1)}" y="${H-padB+16}" text-anchor="middle" font-size="9" fill="var(--gray)">${dd}</text>`; };
+  for (let i = 0; i < n; i += step) addLab(i);
+  if ((n-1) % step !== 0) addLab(n-1);
+  box.innerHTML = `<div class="pg-legend"><span class="pg-leg"><i style="background:var(--gold)"></i>Çözülen Soru</span><span class="pg-leg"><i style="background:#3fa97a"></i>Öğrenilen Kelime</span></div>
+  <svg viewBox="0 0 ${W} ${H}" class="pg-svg" preserveAspectRatio="xMidYMid meet">${grid}${line(q,'var(--gold)')}${line(w,'#3fa97a')}${xlab}</svg>
+  <div class="pg-foot">Tarih bazlı günlük gelişim. Seviye ilerlemesi gibi yeni metrikler eklendikçe burada da çizilecek.</div>`;
+}
+
+/* ============================================================
+   GÜNLÜK AKTİVİTE KAYDI + TAKVİM DETAY + PLAN/NOT
+   ============================================================ */
+function getDailyLog() { try { return JSON.parse(localStorage.getItem('ydt_daily_activity') || '{}'); } catch (e) { return {}; } }
+function setDailyLog(o) { try { localStorage.setItem('ydt_daily_activity', JSON.stringify(o)); } catch (e) {} }
+function _emptyDay() { return { focusMin:0, pomodoros:0, questions:0, videos:0, wordsLearned:0 }; }
+function dayActivity(key) { const l = getDailyLog(); return Object.assign(_emptyDay(), l[key] || {}); }
+function _dayHasActivity(a) { return !!(a && (a.focusMin || a.pomodoros || a.questions || a.videos || a.wordsLearned)); }
+function logActivity(field, amount) {
+  if (!amount) return;
+  const l = getDailyLog(); const k = new Date().toISOString().slice(0,10);
+  const day = Object.assign(_emptyDay(), l[k] || {});
+  day[field] = (day[field] || 0) + amount;
+  l[k] = day; setDailyLog(l);
+}
+if (typeof window !== 'undefined') window.logActivity = logActivity; // extras.js (pomodoro) için
+function activeDaySet() {
+  const s = new Set(); const l = getDailyLog();
+  Object.keys(l).forEach(k => { if (_dayHasActivity(l[k])) s.add(k); });
+  (typeof _resultDays === 'function' ? _resultDays() : []).forEach(d => s.add(d));
+  return s;
+}
+function getPlans() { try { return JSON.parse(localStorage.getItem('ydt_plans') || '{}'); } catch (e) { return {}; } }
+function setPlans(o) { try { localStorage.setItem('ydt_plans', JSON.stringify(o)); } catch (e) {} }
+
+function calDay(key) {
+  calSelected = key;
+  renderStudyCalendar();
+  const box = document.getElementById('cal-detail'); if (!box) return;
+  const todayKey = new Date().toISOString().slice(0,10);
+  const [yy,mm,dd] = key.split('-');
+  const pretty = `${dd}.${mm}.${yy}`;
+  if (key > todayKey) {
+    const plans = getPlans();
+    box.innerHTML = `<div class="cal-det-head">📅 ${pretty} — Plan & Not</div>
+      <textarea id="cal-plan-input" class="cal-plan-input" placeholder="Bu gün için planını ya da notunu yaz...">${_escHtml(plans[key] || '')}</textarea>
+      <button class="cal-plan-save" onclick="savePlan('${key}')">Kaydet</button>`;
+  } else {
+    const a = dayActivity(key);
+    let inner;
+    if (!_dayHasActivity(a)) {
+      inner = `<div class="cal-det-empty">Bu gün için çalışma kaydı yok.</div>`;
+    } else {
+      inner = `<div class="cal-det-grid">
+        <div class="cal-det-item"><b>${a.focusMin}</b><span>dk odak</span></div>
+        <div class="cal-det-item"><b>${a.pomodoros}</b><span>pomodoro</span></div>
+        <div class="cal-det-item"><b>${a.questions}</b><span>soru</span></div>
+        <div class="cal-det-item"><b>${a.videos}</b><span>video</span></div>
+        <div class="cal-det-item"><b>${a.wordsLearned}</b><span>kelime öğrenildi</span></div>
+      </div>`;
+    }
+    const plans = getPlans();
+    const note = (plans[key] && plans[key].trim()) ? `<div class="cal-det-note">📝 ${_escHtml(plans[key])}</div>` : '';
+    box.innerHTML = `<div class="cal-det-head">${pretty} — Günün Özeti</div>${inner}${note}`;
+  }
+}
+function savePlan(key) {
+  const inp = document.getElementById('cal-plan-input'); if (!inp) return;
+  const plans = getPlans();
+  const v = (inp.value || '').trim();
+  if (v) plans[key] = v; else delete plans[key];
+  setPlans(plans);
+  renderStudyCalendar();
+  if (typeof toast === 'function') toast('Plan kaydedildi.');
 }
