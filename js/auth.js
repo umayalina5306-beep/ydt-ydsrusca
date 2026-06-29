@@ -38,16 +38,32 @@ async function handleSession(session) {
   }
   updateAuthUI();
   if (typeof loadSavedWords === "function") loadSavedWords();
+  const _bell = document.getElementById("notif-bell");
+  if (currentUser) {
+    if (_bell) _bell.style.display = "inline-flex";
+    if (typeof loadNotifications === "function") loadNotifications();
+  } else {
+    if (_bell) _bell.style.display = "none";
+    myNotifications = [];
+  }
 }
 
 async function loadProfile() {
   try {
     const { data, error } = await sb
       .from("profiles")
-      .select("display_name, plan, is_admin, level, streak_count, created_at, avatar_seed")
+      .select("display_name, plan, is_admin, level, streak_count, created_at, avatar_seed, status")
       .eq("id", currentUser.id)
       .single();
     if (!error) currentProfile = data;
+    if (currentProfile && currentProfile.status === "frozen") {
+      const _reac = (typeof window.uiConfirm === "function") ? await window.uiConfirm("Hesabın dondurulmuş durumda. Yeniden aktifleştirmek ister misin?", "Hesap Donduruldu") : confirm("Hesabın dondurulmuş durumda. Yeniden aktifleştirmek ister misin?");
+      if (_reac) {
+        try { await sb.from("profiles").update({ status: "active" }).eq("id", currentUser.id); currentProfile.status = "active"; } catch (e2) {}
+      } else {
+        await sb.auth.signOut();
+      }
+    }
   } catch (e) {
     console.error("Profil yüklenemedi:", e);
   }
