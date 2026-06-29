@@ -2060,3 +2060,38 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .lvl-C1 { --frame:#C9A84C; }
 .lvl-badge { position:absolute; bottom:-3px; right:-3px; background:var(--frame); color:#fff; font-size:.62rem; font-weight:800; padding:2px 6px; border-radius:10px; border:2px solid var(--white); line-height:1; }
 .psb-avatar .lvl-badge { font-size:.55rem; padding:1px 4px; }
+
+/* ============ AYARLAR FORMLARI ============ */
+.set-panel { margin-bottom:16px; }
+.set-h3 { font-size:1.02rem; color:var(--blue); margin:0 0 8px; }
+.set-h3.danger { color:var(--red); }
+.set-sub { color:var(--gray); font-size:.86rem; margin:0 0 12px; line-height:1.5; }
+.set-input { width:100%; box-sizing:border-box; border:1px solid var(--light-gray); border-radius:10px; padding:11px 13px; font:inherit; font-size:.92rem; margin-bottom:10px; }
+.set-input:focus { outline:none; border-color:var(--gold); }
+.set-btn { background:var(--blue); color:#fff; border:none; padding:11px 22px; border-radius:10px; font-weight:700; font-size:.92rem; cursor:pointer; transition:.16s; }
+.set-btn:hover { background:var(--blue-light); transform:translateY(-1px); }
+.set-btn.ghost { background:var(--off-white); color:var(--blue); border:1px solid var(--light-gray); }
+.set-btn.ghost:hover { background:var(--gold-light); }
+.set-btn.warn { background:#e8902c; }
+.set-btn.warn:hover { background:#cf7c1c; }
+.set-btn.danger { background:var(--red); margin-left:10px; }
+.set-btn.danger:hover { background:#a30000; }
+.set-note { margin-top:10px; font-size:.78rem; color:var(--gray); font-style:italic; }
+.set-switch-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.set-switch { position:relative; display:inline-block; width:50px; height:28px; flex-shrink:0; margin-top:4px; }
+.set-switch input { opacity:0; width:0; height:0; }
+.set-slider { position:absolute; inset:0; background:var(--light-gray); border-radius:28px; transition:.2s; cursor:pointer; }
+.set-slider::before { content:""; position:absolute; height:22px; width:22px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; }
+.set-switch input:checked + .set-slider { background:var(--gold); }
+.set-switch input:checked + .set-slider::before { transform:translateX(22px); }
+.danger-zone { border:1px solid #f0c4c4; background:#fdf6f6; }
+
+/* ============ GRAFİK SEVİYE ÇİPİ + AVATAR KIRPMA ============ */
+.pg-level { margin-left:auto; background:var(--off-white); padding:3px 10px; border-radius:12px; }
+.pg-level-none { color:var(--gray); }
+.psb-avatar.has-lvl-frame { overflow:visible; }
+
+/* Avatar nötr çerçeve (seviye yokken) + grafik seviye çipi */
+.lvl-none { --frame:#9aa3ad; }
+.profile-avatar.has-lvl-frame { overflow:visible; }
+.pg-lvl { background:var(--off-white); padding:2px 10px; border-radius:12px; color:var(--blue); }
