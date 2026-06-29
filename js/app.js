@@ -1044,9 +1044,9 @@ function jumpToQ(i){ if (i<0 || i>=qList.length) return; qIdx = i; renderQ(); wi
 function quizAdvance(){ if (qIdx >= qList.length-1) return finishQuizNow(); qIdx++; renderQ(); window.scrollTo(0,0); }
 function nextQ(){ quizAdvance(); }
 
-function finishQuizNow(){
+async function finishQuizNow(){
   const blanks = qList.reduce((n,_,i)=> n + ((qAnswers[i] && qAnswers[i].answered) ? 0 : 1), 0);
-  if (blanks > 0 && !confirm(blanks + ' soru boş kaldı. Testi bitirmek istiyor musun?')) return;
+  if (blanks > 0 && !(await uiConfirm(blanks + ' soru boş kaldı. Testi bitirmek istiyor musun?', 'Testi Bitir'))) return;
   showResult();
 }
 
@@ -1596,8 +1596,8 @@ function tbDefaultName() {
   return `${sl[tb.source]}${extra} · ${tl[tb.type]} · ${tb.count} soru`;
 }
 
-function tbSave() {
-  const name = prompt('Teste bir isim ver:', tbDefaultName());
+async function tbSave() {
+  const name = await uiPrompt('Teste bir isim ver:', { title: 'Testi Kaydet', placeholder: tbDefaultName() });
   if (name === null) return;
   const list = tbGetSaved();
   list.unshift({ id: 't' + Date.now(), name: (name.trim() || tbDefaultName()), type: tb.type, source: tb.source, level: tb.level, cat: tb.cat, count: tb.count });
@@ -1754,9 +1754,9 @@ function toggleTestResult(id) {
   det.innerHTML = _qrevItemsHTML(r.items);
   det.style.display = 'block';
 }
-function clearTestHistory() { if (confirm('Tüm test geçmişi silinsin mi?')) { setTestResults([]); renderTestHistory(); } }
+async function clearTestHistory() { if (await uiConfirm('Tüm test geçmişi silinsin mi?', 'Geçmişi Temizle', { danger: true })) { setTestResults([]); renderTestHistory(); } }
 async function deleteTestResult(id) {
-  if (!confirm('Bu test kaydı silinsin mi?')) return;
+  if (!(await uiConfirm('Bu test kaydı silinsin mi?', 'Kaydı Sil', { danger: true }))) return;
   setTestResults(getTestResults().filter(x => x.id !== id));
   renderTestHistory();
   if (typeof renderStatsView === 'function') { const sb2 = document.getElementById('stats-body'); if (sb2 && sb2.innerHTML) renderStatsView(); }
@@ -2011,11 +2011,12 @@ function renderProgressChart() {
   const plotW = W - padL - padR, plotH = H - padT - padB, n = days.length;
   const X = i => n === 1 ? padL + plotW/2 : padL + i*(plotW/(n-1));
   const Y = v => padT + plotH - (v/max)*plotH;
-  const line = (arr, col) => {
-    if (n === 1) return `<circle cx="${X(0)}" cy="${Y(arr[0])}" r="4" fill="${col}"/>`;
+  const line = (arr, col, wd) => {
+    wd = wd || 2.5;
+    if (n === 1) return `<circle cx="${X(0)}" cy="${Y(arr[0])}" r="5" fill="${col}"/>`;
     const pts = arr.map((v,i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
-    const dots = arr.map((v,i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3" fill="${col}"/>`).join('');
-    return `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${dots}`;
+    const dots = arr.map((v,i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3.4" fill="${col}"/>`).join('');
+    return `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="${wd}" stroke-linejoin="round" stroke-linecap="round"/>${dots}`;
   };
   let grid = '';
   for (let g = 0; g <= 4; g++) { const yy = padT + plotH*(g/4); const val = Math.round(max*(1-g/4)); grid += `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="var(--light-gray)" stroke-width="1"/><text x="${padL-6}" y="${(yy+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--gray)">${val}</text>`; }
@@ -2220,8 +2221,8 @@ async function setMyLevel(lvl) {
   } catch (e) { toast('Seviye güncellenemedi (yetki kısıtı olabilir).'); }
 }
 async function freezeAccount() {
-  if (!confirm('Hesabını dondurmak istediğine emin misin? Verilerin korunur; tekrar giriş yapana kadar pasif olur.')) return;
-  if (!confirm('Son onay: Hesabın DONDURULSUN mu?')) return;
+  if (!(await uiConfirm('Hesabını dondurmak istediğine emin misin? Verilerin korunur; tekrar giriş yapana kadar pasif olur.', 'Hesabı Dondur'))) return;
+  if (!(await uiConfirm('Son onay: Hesabın DONDURULSUN mu?', 'Hesabı Dondur', { danger: true }))) return;
   if (!sb || !currentUser) return;
   try {
     const { error } = await sb.from('profiles').update({ status: 'frozen' }).eq('id', currentUser.id);
@@ -2231,16 +2232,174 @@ async function freezeAccount() {
   } catch (e) { toast('İşlem başarısız: ' + (e.message || '')); }
 }
 async function deleteAccount() {
-  if (!confirm('Hesabını ve tüm verilerini silmek istediğine emin misin? Bu işlem geri alınamaz.')) return;
-  const typed = prompt('Onaylamak için büyük harflerle  SİL  yaz:');
+  if (!(await uiConfirm('Hesabını ve tüm verilerini silmek istediğine emin misin? Bu işlem geri alınamaz.', 'Hesabı Sil', { danger: true }))) return;
+  const typed = await uiPrompt('Onaylamak için büyük harflerle  SİL  yaz:', { title: 'Hesabı Sil', placeholder: 'SİL' });
   if (typed !== 'SİL') { toast('İşlem iptal edildi.'); return; }
   if (!sb || !currentUser) return;
+  function _wipeLocal() { try { localStorage.removeItem('ydt_test_results'); localStorage.removeItem('ydt_daily_activity'); localStorage.removeItem('ydt_plans'); localStorage.removeItem('ydt_badges_earned'); } catch (e2) {} }
+  function _bye() { setTimeout(() => { if (typeof authLogout === 'function') authLogout(); else sb.auth.signOut(); }, 1600); }
   try {
-    await sb.from('saved_words').delete().eq('user_id', currentUser.id);
-    await sb.from('test_results').delete().eq('user_id', currentUser.id);
-    await sb.from('profiles').update({ status: 'deletion_requested' }).eq('id', currentUser.id);
-    try { localStorage.removeItem('ydt_test_results'); localStorage.removeItem('ydt_daily_activity'); localStorage.removeItem('ydt_plans'); localStorage.removeItem('ydt_badges_earned'); } catch (e2) {}
-    toast('Verilerin silindi, hesap kapatma talebin alındı. Çıkış yapılıyor...');
-    setTimeout(() => { if (typeof authLogout === 'function') authLogout(); else sb.auth.signOut(); }, 1600);
-  } catch (e) { toast('Silme başarısız: ' + (e.message || '')); }
+    // Önce gerçek silme (Edge Function): auth hesabını da kalıcı siler
+    const { error } = await sb.functions.invoke('delete-account');
+    if (error) throw error;
+    _wipeLocal();
+    toast('Hesabın kalıcı olarak silindi. Çıkış yapılıyor...');
+    _bye();
+  } catch (e) {
+    // Edge Function kurulu değilse/başarısızsa: verileri sil + talep işaretle
+    try {
+      await sb.from('saved_words').delete().eq('user_id', currentUser.id);
+      await sb.from('test_results').delete().eq('user_id', currentUser.id);
+      await sb.from('profiles').update({ status: 'deletion_requested' }).eq('id', currentUser.id);
+      _wipeLocal();
+      toast('Verilerin silindi, hesap kapatma talebin alındı. Çıkış yapılıyor...');
+      _bye();
+    } catch (e3) { toast('Silme başarısız: ' + (e3.message || '')); }
+  }
+}
+
+/* ============================================================
+   SİTE-İÇİ MODAL (alert/confirm/prompt yerine)
+   ============================================================ */
+function _ensureModalRoot() {
+  let r = document.getElementById('ui-modal-root');
+  if (!r) { r = document.createElement('div'); r.id = 'ui-modal-root'; document.body.appendChild(r); }
+  return r;
+}
+function uiModal(o) {
+  return new Promise(resolve => {
+    const root = _ensureModalRoot();
+    const wrap = document.createElement('div');
+    wrap.className = 'ui-modal-overlay';
+    const promptHtml = o.prompt ? `<input id="ui-modal-input" class="ui-modal-input" placeholder="${(o.placeholder||'').replace(/"/g,'&quot;')}">` : '';
+    const cancelBtn = o.cancel ? `<button class="ui-modal-btn ghost" data-act="cancel">${_escHtml(o.cancelText||'Vazgeç')}</button>` : '';
+    const danger = o.danger ? ' danger' : '';
+    wrap.innerHTML = `<div class="ui-modal">
+      <div class="ui-modal-title">${_escHtml(o.title||'')}</div>
+      <div class="ui-modal-msg">${_escHtml(o.message||'').replace(/\n/g,'<br>')}</div>
+      ${promptHtml}
+      <div class="ui-modal-btns">${cancelBtn}<button class="ui-modal-btn primary${danger}" data-act="ok">${_escHtml(o.confirmText||'Tamam')}</button></div>
+    </div>`;
+    root.appendChild(wrap);
+    requestAnimationFrame(() => wrap.classList.add('show'));
+    const inp = wrap.querySelector('#ui-modal-input');
+    if (inp) setTimeout(() => inp.focus(), 60);
+    function done(val) { wrap.classList.remove('show'); setTimeout(() => wrap.remove(), 160); resolve(val); }
+    wrap.addEventListener('click', e => {
+      const act = e.target.getAttribute && e.target.getAttribute('data-act');
+      if (act === 'ok') done(o.prompt ? (inp ? inp.value : '') : true);
+      else if (act === 'cancel') done(o.prompt ? null : false);
+      else if (e.target === wrap && o.cancel) done(o.prompt ? null : false);
+    });
+    if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') done(inp.value); });
+  });
+}
+function uiAlert(message, title) { return uiModal({ title: title || 'Bilgi', message: message, confirmText: 'Tamam', cancel: false }); }
+function uiConfirm(message, title, opts) { opts = opts || {}; return uiModal({ title: title || 'Onay', message: message, confirmText: opts.confirmText || 'Evet', cancelText: opts.cancelText || 'Vazgeç', cancel: true, danger: opts.danger }); }
+function uiPrompt(message, opts) { opts = opts || {}; return uiModal({ title: opts.title || 'Giriş', message: message, prompt: true, placeholder: opts.placeholder || '', confirmText: 'Tamam', cancelText: 'Vazgeç', cancel: true }); }
+if (typeof window !== 'undefined') { window.uiAlert = uiAlert; window.uiConfirm = uiConfirm; window.uiPrompt = uiPrompt; }
+
+/* ============================================================
+   BİLDİRİM SİSTEMİ
+   ============================================================ */
+let myNotifications = [];
+async function loadNotifications() {
+  if (typeof sb === 'undefined' || !sb || typeof currentUser === 'undefined' || !currentUser) return;
+  try {
+    const { data } = await sb.from('notifications').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(30);
+    myNotifications = data || [];
+  } catch (e) { myNotifications = []; }
+  updateNotifBadge(); renderNotifPanel();
+}
+function notifUnread() { return myNotifications.filter(n => !n.is_read).length; }
+function updateNotifBadge() {
+  const c = document.getElementById('notif-count'); if (!c) return;
+  const u = notifUnread();
+  if (u > 0) { c.textContent = u > 9 ? '9+' : String(u); c.style.display = 'flex'; } else { c.style.display = 'none'; }
+}
+function toggleNotifPanel(ev) {
+  if (ev) ev.stopPropagation();
+  const p = document.getElementById('notif-panel'); if (!p) return;
+  if (p.style.display === 'block') { p.style.display = 'none'; return; }
+  renderNotifPanel(); p.style.display = 'block';
+  setTimeout(() => document.addEventListener('click', _notifOutside), 0);
+}
+function _notifOutside(e) {
+  const bell = document.getElementById('notif-bell');
+  if (bell && !bell.contains(e.target)) { const p = document.getElementById('notif-panel'); if (p) p.style.display = 'none'; document.removeEventListener('click', _notifOutside); }
+}
+function renderNotifPanel() {
+  const p = document.getElementById('notif-panel'); if (!p) return;
+  const head = `<div class="notif-head"><span>Bildirimler</span>${myNotifications.length ? `<button class="notif-allread" onclick="markAllNotifRead(event)">Tümünü okundu yap</button>` : ''}</div>`;
+  if (!myNotifications.length) { p.innerHTML = head + `<div class="notif-empty">Henüz bildirim yok.</div>`; return; }
+  const items = myNotifications.map(n => {
+    const d = new Date(n.created_at);
+    const icon = n.type === 'success' ? '✅' : (n.type === 'warning' ? '⚠️' : (n.type === 'admin' ? '📢' : '🔔'));
+    return `<div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="markNotifRead('${n.id}', event)">
+      <div class="notif-ic">${icon}</div>
+      <div class="notif-body"><div class="notif-t">${_escHtml(n.title||'')}</div>${n.body ? `<div class="notif-d">${_escHtml(n.body)}</div>` : ''}<div class="notif-time">${d.toLocaleDateString('tr-TR')} ${d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}</div></div>
+      <button class="notif-x" title="Sil" onclick="deleteNotif('${n.id}', event)">×</button>
+    </div>`;
+  }).join('');
+  p.innerHTML = head + `<div class="notif-list">${items}</div>`;
+}
+async function markNotifRead(id, ev) {
+  if (ev) ev.stopPropagation();
+  const n = myNotifications.find(x => x.id === id); if (!n || n.is_read) return;
+  n.is_read = true; updateNotifBadge(); renderNotifPanel();
+  try { await sb.from('notifications').update({ is_read: true }).eq('id', id); } catch (e) {}
+}
+async function markAllNotifRead(ev) {
+  if (ev) ev.stopPropagation();
+  myNotifications.forEach(n => n.is_read = true); updateNotifBadge(); renderNotifPanel();
+  try { await sb.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id).eq('is_read', false); } catch (e) {}
+}
+async function deleteNotif(id, ev) {
+  if (ev) ev.stopPropagation();
+  myNotifications = myNotifications.filter(x => x.id !== id); updateNotifBadge(); renderNotifPanel();
+  try { await sb.from('notifications').delete().eq('id', id); } catch (e) {}
+}
+async function createNotification(title, body, type) {
+  if (typeof sb === 'undefined' || !sb || typeof currentUser === 'undefined' || !currentUser) return;
+  try { await sb.from('notifications').insert({ user_id: currentUser.id, title: title, body: body || null, type: type || 'system' }); } catch (e) {}
+}
+if (typeof window !== 'undefined') { window.loadNotifications = loadNotifications; window.createNotification = createNotification; }
+
+/* Yönetici: bildirim gönderme */
+function anTargetChange() {
+  const sel = document.querySelector('input[name="an-tgt"]:checked');
+  const box = document.getElementById('an-userlist'); if (!box) return;
+  if (sel && sel.value === 'sel') { box.style.display = 'block'; anLoadUserList(); } else { box.style.display = 'none'; }
+}
+async function anLoadUserList() {
+  const box = document.getElementById('an-userlist'); if (!box) return;
+  box.innerHTML = '<div class="an-loading">Yükleniyor...</div>';
+  try {
+    const { data } = await sb.from('profiles').select('id, display_name').order('display_name');
+    if (!data || !data.length) { box.innerHTML = '<div class="an-loading">Kullanıcı bulunamadı.</div>'; return; }
+    box.innerHTML = data.map(u => `<label class="an-user"><input type="checkbox" value="${u.id}"> ${_escHtml(u.display_name || u.id.slice(0,8))}</label>`).join('');
+  } catch (e) { box.innerHTML = '<div class="an-loading">Liste alınamadı (yönetici yetkisi gerekli).</div>'; }
+}
+async function adminSendNotification() {
+  const tEl = document.getElementById('an-title'), bEl = document.getElementById('an-body');
+  const t = (tEl && tEl.value || '').trim(), b = (bEl && bEl.value || '').trim();
+  if (!t) { uiAlert('Lütfen bir başlık gir.'); return; }
+  const sel = document.querySelector('input[name="an-tgt"]:checked');
+  try {
+    let targets = [];
+    if (sel && sel.value === 'sel') {
+      targets = [...document.querySelectorAll('#an-userlist input:checked')].map(c => c.value);
+      if (!targets.length) { uiAlert('En az bir kullanıcı seç.'); return; }
+    } else {
+      const { data } = await sb.from('profiles').select('id');
+      targets = (data || []).map(u => u.id);
+    }
+    if (!targets.length) { uiAlert('Hedef kullanıcı bulunamadı.'); return; }
+    const rows = targets.map(uid => ({ user_id: uid, title: t, body: b || null, type: 'admin' }));
+    const { error } = await sb.from('notifications').insert(rows);
+    if (error) throw error;
+    await uiAlert(targets.length + ' kullanıcıya bildirim gönderildi.', 'Gönderildi');
+    if (tEl) tEl.value = ''; if (bEl) bEl.value = '';
+    if (typeof currentUser !== 'undefined' && currentUser) loadNotifications();
+  } catch (e) { uiAlert('Gönderilemedi: ' + (e.message || '')); }
 }
