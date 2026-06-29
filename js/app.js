@@ -1853,3 +1853,87 @@ function veriYonetimiHTML() {
     <div class="vy-note">Verilerin hesabına bağlıdır; premium süresi dolsa dahi silinmez. Silme yalnızca senin isteğinle olur.</div>
   </div>`;
 }
+
+/* ============================================================
+   PROFİL — Inline Kelime Kasam / Öğrenilen görünümü
+   ============================================================ */
+const kasaViewState = { saved: { page:1, level:'all' }, learned: { page:1, level:'all' } };
+
+function renderKasaView(status) {
+  const box = document.getElementById(status === 'learned' ? 'kasa-learned-body' : 'kasa-saved-body');
+  if (!box) return;
+  const set = status === 'learned' ? (typeof learnedWords !== 'undefined' ? learnedWords : new Set())
+                                   : (typeof savedWords !== 'undefined' ? savedWords : new Set());
+  const st = kasaViewState[status];
+  let items = [];
+  set.forEach(ru => { const w = (typeof wordsByRu !== 'undefined' && wordsByRu[ru]) || { ru, tr:'', level:'' }; items.push(w); });
+  if (st.level !== 'all') items = items.filter(w => w.level === st.level);
+  items.sort((a,b) => (a.ru || '').localeCompare(b.ru || '', 'ru'));
+  const total = items.length;
+  const PAGE = 24;
+  const pages = Math.max(1, Math.ceil(total / PAGE));
+  if (st.page > pages) st.page = pages;
+  const slice = items.slice((st.page-1)*PAGE, st.page*PAGE);
+
+  const levels = ['all','A1','A2','B1','B2','C1'];
+  const pills = levels.map(l => `<button class="kv-pill ${st.level===l?'active':''}" onclick="kasaViewSetLevel('${status}','${l}')">${l==='all'?'Tümü':l}</button>`).join('');
+
+  if (!total) {
+    box.innerHTML = `<div class="kv-filter">${pills}</div><div class="profile-panel"><div class="profile-empty">${status==='learned'?'Henüz öğrenilen kelime yok. Kelime Kasanda bir kelimeyi ✓ ile öğrenildi işaretleyebilirsin.':'Henüz kayıtlı kelime yok. Kelimeler sayfasından ☆ ile kaydet.'}</div></div>`;
+    return;
+  }
+  const cards = slice.map(w => {
+    const ru = _escAttr(w.ru);
+    const rem = status === 'learned'
+      ? `<button class="kv-x" title="Öğrenilenlerden çıkar" onclick="kasaRemoveLearned('${ru}')">×</button>` : '';
+    return `<div class="kv-card">
+      <div class="kv-top"><span class="kv-ru">${_escHtml(w.ru)}</span><span class="kv-lvl">${w.level||''}</span></div>
+      <div class="kv-tr">${_escHtml(w.tr||'')}</div>
+      <div class="kv-foot"><button class="kv-speak" onclick="speak('${ru}')">🔊 Dinle</button>${rem}</div>
+    </div>`;
+  }).join('');
+  let pager = '';
+  if (pages > 1) {
+    pager = '<div class="kv-pager">';
+    if (st.page > 1) pager += `<button class="kv-pg" onclick="kasaViewGoPage('${status}',${st.page-1})">‹</button>`;
+    for (let i=1;i<=pages;i++) pager += `<button class="kv-pg ${i===st.page?'active':''}" onclick="kasaViewGoPage('${status}',${i})">${i}</button>`;
+    if (st.page < pages) pager += `<button class="kv-pg" onclick="kasaViewGoPage('${status}',${st.page+1})">›</button>`;
+    pager += '</div>';
+  }
+  box.innerHTML = `<div class="kv-filter">${pills}<span class="kv-count">${total} kelime</span></div><div class="kv-grid">${cards}</div>${pager}`;
+}
+function kasaViewSetLevel(status, l) { kasaViewState[status].level = l; kasaViewState[status].page = 1; renderKasaView(status); }
+function kasaViewGoPage(status, p) { kasaViewState[status].page = p; renderKasaView(status); }
+async function kasaRemoveLearned(ru) {
+  if (typeof toggleLearned === 'function') { try { await toggleLearned(null, ru); } catch (e) {} }
+  renderKasaView('learned');
+}
+
+/* ============================================================
+   PROFİL — Çalışma Takvimi (aktivite günleri işaretli)
+   ============================================================ */
+let calRef = new Date(); calRef.setDate(1);
+function calMove(delta) { calRef.setMonth(calRef.getMonth() + delta); renderStudyCalendar(); }
+function renderStudyCalendar() {
+  const box = document.getElementById('study-calendar'); if (!box) return;
+  const titleEl = document.getElementById('cal-title');
+  const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  const y = calRef.getFullYear(), m = calRef.getMonth();
+  if (titleEl) titleEl.textContent = `${months[m]} ${y}`;
+  const activeDays = new Set((typeof _resultDays === 'function' ? _resultDays() : []));
+  const todayKey = new Date().toISOString().slice(0,10);
+  const first = new Date(y, m, 1);
+  let startDow = first.getDay(); startDow = (startDow === 0) ? 6 : startDow - 1; // Pzt=0
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const dows = ['Pt','Sa','Ça','Pe','Cu','Ct','Pz'];
+  let html = dows.map(d => `<div class="cal-dow">${d}</div>`).join('');
+  for (let i=0;i<startDow;i++) html += `<div class="cal-cell empty"></div>`;
+  for (let d=1; d<=daysInMonth; d++) {
+    const key = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const cls = ['cal-cell'];
+    if (activeDays.has(key)) cls.push('active');
+    if (key === todayKey) cls.push('today');
+    html += `<div class="${cls.join(' ')}">${d}</div>`;
+  }
+  box.innerHTML = html;
+}
