@@ -98,6 +98,7 @@ async function openProfile() {
   const un = document.getElementById("settings-username"); if (un) un.value = email.split("@")[0];
   const se = document.getElementById("settings-email"); if (se) se.value = email;
   const sj = document.getElementById("settings-joined"); if (sj) sj.value = joinedStr === "—" ? "" : joinedStr;
+  const asv = document.getElementById("set-autosave"); if (asv && typeof autoSaveOn === "function") asv.checked = autoSaveOn();
 
   // Çalışma serisi (aktivite tarihlerinden)
   if (typeof syncTestResultsFromDB === "function") { try { await syncTestResultsFromDB(); } catch (e) {} }
