@@ -2028,3 +2028,35 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .kv-filter-type { margin-top:-8px; }
 .kv-pill-type { font-size:.8rem; padding:6px 13px; }
 .th-main .th-info { flex:1 1 auto; min-width:0; }
+
+/* ============ GELİŞİM ÇİZGİ GRAFİĞİ ============ */
+.pg-legend { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:6px; }
+.pg-leg { display:flex; align-items:center; gap:6px; font-size:.8rem; color:var(--text); font-weight:600; }
+.pg-leg i { width:14px; height:4px; border-radius:2px; display:inline-block; }
+.pg-svg { width:100%; height:auto; display:block; }
+
+/* ============ TAKVİM — tıklanabilir + detay + plan ============ */
+.cal-cell { cursor:pointer; transition:.12s; position:relative; }
+.cal-cell:not(.empty):hover { background:var(--gold-light); }
+.cal-cell.sel { outline:2px solid var(--gold); outline-offset:-2px; }
+.cal-cell.planned::after { content:""; position:absolute; bottom:3px; left:50%; transform:translateX(-50%); width:5px; height:5px; border-radius:50%; background:var(--blue-light); }
+.cal-detail { margin-top:14px; }
+.cal-det-head { font-weight:700; color:var(--blue); font-size:.9rem; margin-bottom:10px; }
+.cal-det-empty { color:var(--gray); font-size:.86rem; padding:8px 0; }
+.cal-det-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(78px,1fr)); gap:8px; }
+.cal-det-item { background:var(--off-white); border-radius:10px; padding:10px 6px; text-align:center; }
+.cal-det-item b { display:block; font-size:1.15rem; color:var(--blue); font-weight:800; }
+.cal-det-item span { font-size:.68rem; color:var(--gray); }
+.cal-det-note { margin-top:10px; background:var(--off-white); border-left:3px solid var(--gold); border-radius:8px; padding:10px 12px; font-size:.85rem; color:var(--text); }
+.cal-plan-input { width:100%; min-height:76px; border:1px solid var(--light-gray); border-radius:10px; padding:10px; font:inherit; font-size:.88rem; resize:vertical; box-sizing:border-box; }
+.cal-plan-input:focus { outline:none; border-color:var(--gold); }
+.cal-plan-save { margin-top:8px; background:var(--blue); color:#fff; border:none; padding:8px 18px; border-radius:9px; font-weight:700; cursor:pointer; }
+.cal-plan-save:hover { background:var(--blue-light); }
+
+/* ============ AVATAR SEVİYE ÇERÇEVESİ ============ */
+.has-lvl-frame { position:relative; box-shadow:0 0 0 3px var(--frame); }
+.lvl-A1 { --frame:#7CB342; } .lvl-A2 { --frame:#43A047; }
+.lvl-B1 { --frame:#1E88E5; } .lvl-B2 { --frame:#3949AB; }
+.lvl-C1 { --frame:#C9A84C; }
+.lvl-badge { position:absolute; bottom:-3px; right:-3px; background:var(--frame); color:#fff; font-size:.62rem; font-weight:800; padding:2px 6px; border-radius:10px; border:2px solid var(--white); line-height:1; }
+.psb-avatar .lvl-badge { font-size:.55rem; padding:1px 4px; }
