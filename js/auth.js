@@ -44,7 +44,7 @@ async function loadProfile() {
   try {
     const { data, error } = await sb
       .from("profiles")
-      .select("display_name, plan, is_admin, level, streak_count, created_at")
+      .select("display_name, plan, is_admin, level, streak_count, created_at, avatar_seed")
       .eq("id", currentUser.id)
       .single();
     if (!error) currentProfile = data;
