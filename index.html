@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=30">
+<link rel="stylesheet" href="css/style.css?v=31">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -800,8 +800,8 @@
 
       <div class="psb-menu">
         <button class="psb-item active" id="psb-overview" onclick="profileNav('overview',this)"><span class="psb-ic">👤</span> Profil Özeti</button>
-        <button class="psb-item" onclick="profileGoKasa('saved')"><span class="psb-ic">📦</span> Kelime Kasam</button>
-        <button class="psb-item" onclick="profileGoKasa('learned')"><span class="psb-ic">✓</span> Öğrenilen Kelimeler</button>
+        <button class="psb-item" id="psb-saved" onclick="profileNav('saved')"><span class="psb-ic">📦</span> Kelime Kasam</button>
+        <button class="psb-item" id="psb-learned" onclick="profileNav('learned')"><span class="psb-ic">✓</span> Öğrenilen Kelimeler</button>
         <button class="psb-item" id="psb-tests" onclick="profileNav('tests',this)"><span class="psb-ic">📋</span> Test Geçmişim</button>
         <button class="psb-item" id="psb-videos" onclick="profileNav('videos',this)"><span class="psb-ic">▶️</span> Video İzleme Geçmişim</button>
         <button class="psb-item" id="psb-stats" onclick="profileNav('stats',this)"><span class="psb-ic">📊</span> İstatistikler</button>
@@ -836,13 +836,13 @@
             <div class="pstat-ic blue">📘</div>
             <div class="pstat-num" id="profile-words">0</div>
             <div class="pstat-lbl">Kayıtlı Kelime</div>
-            <span class="pstat-link" onclick="profileGoKasa('saved')">Kelime Kasam →</span>
+            <span class="pstat-link" onclick="profileNav('saved')">Kelime Kasam →</span>
           </div>
           <div class="pstat">
             <div class="pstat-ic green">✓</div>
             <div class="pstat-num" id="profile-learned">0</div>
             <div class="pstat-lbl">Öğrenilen Kelime</div>
-            <span class="pstat-link" onclick="profileGoKasa('learned')">Detayları Gör →</span>
+            <span class="pstat-link" onclick="profileNav('learned')">Detayları Gör →</span>
           </div>
           <div class="pstat">
             <div class="pstat-ic purple">📋</div>
@@ -862,11 +862,11 @@
           <div class="profile-panel">
             <div class="panel-head">
               <div class="panel-title">📦 Kelime Kasam</div>
-              <button class="panel-cta" onclick="profileGoKasa('saved')">Tüm Kelime Kasama Git →</button>
+              <button class="panel-cta" onclick="profileNav('saved')">Tüm Kelime Kasama Git →</button>
             </div>
             <div class="panel-sub">Kayıtlı kelimelerinizi tekrar edin ve pekiştirin.</div>
             <div id="profile-kasa-preview" class="kasa-preview"></div>
-            <button class="kasa-preview-all" id="profile-kasa-all" onclick="profileGoKasa('saved')">Tümünü Gör →</button>
+            <button class="kasa-preview-all" id="profile-kasa-all" onclick="profileNav('saved')">Tümünü Gör →</button>
           </div>
 
           <div class="profile-side">
@@ -876,6 +876,14 @@
               <div class="streak-num"><span id="profile-streak">0</span> <small>Gün</small></div>
               <div class="streak-foot">En uzun seri: <span id="profile-streak-max">0</span> gün</div>
               <div class="streak-dots" id="streak-dots"></div>
+            </div>
+            <div class="profile-panel cal-panel">
+              <div class="cal-head">
+                <div class="panel-title">📅 Çalışma Takvimi</div>
+                <div class="cal-nav"><button onclick="calMove(-1)" aria-label="Önceki ay">‹</button><span id="cal-title"></span><button onclick="calMove(1)" aria-label="Sonraki ay">›</button></div>
+              </div>
+              <div id="study-calendar" class="study-cal"></div>
+              <div class="cal-legend"><span class="cal-leg-dot active"></span> Çalıştığın gün <span class="cal-leg-dot today"></span> Bugün</div>
             </div>
             <div class="profile-panel">
               <div class="panel-title">Hızlı İşlemler</div>
@@ -893,6 +901,20 @@
           <div class="panel-sub">Çalıştıkça yeni rozetler kazanırsın.</div>
           <div id="profile-badges" class="badge-grid"></div>
         </div>
+      </div>
+
+      <!-- KELİME KASAM (inline) -->
+      <div id="pv-saved" class="profile-view" style="display:none;">
+        <h2 class="profile-h2">Kelime Kasam</h2>
+        <p class="profile-sub">Kaydettiğin tüm kelimeler burada.</p>
+        <div id="kasa-saved-body"></div>
+      </div>
+
+      <!-- ÖĞRENİLEN KELİMELER (inline) -->
+      <div id="pv-learned" class="profile-view" style="display:none;">
+        <h2 class="profile-h2">Öğrenilen Kelimeler</h2>
+        <p class="profile-sub">Öğrendin olarak işaretlediğin kelimeler.</p>
+        <div id="kasa-learned-body"></div>
       </div>
 
       <!-- TEST GEÇMİŞİM -->
@@ -1062,11 +1084,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=30"></script>
-<script defer src="js/auth.js?v=30"></script>
-<script defer src="js/admin.js?v=30"></script>
-<script defer src="js/profile.js?v=30"></script>
-<script defer src="js/extras.js?v=30"></script>
-<script defer src="js/app.js?v=30"></script>
+<script defer src="js/supabase-config.js?v=31"></script>
+<script defer src="js/auth.js?v=31"></script>
+<script defer src="js/admin.js?v=31"></script>
+<script defer src="js/profile.js?v=31"></script>
+<script defer src="js/extras.js?v=31"></script>
+<script defer src="js/app.js?v=31"></script>
 </body>
 </html>
