@@ -1696,14 +1696,36 @@ function getTestResults() { try { return JSON.parse(localStorage.getItem('ydt_te
 function setTestResults(l) { try { localStorage.setItem('ydt_test_results', JSON.stringify(l.slice(0,50))); } catch (e) {} }
 function quizTypeLabel(t) { return {'ru-tr':'Rusça → Türkçe','tr-ru':'Türkçe → Rusça','fill':'Yazmalı','tf':'Doğru / Yanlış','paragraf':'Paragraf','mix':'Karışık'}[t] || t; }
 function saveTestResult() {
-  const list = getTestResults();
-  list.unshift({
+  const rec = {
     id: 'r' + Date.now(), date: new Date().toISOString(),
     type: quizSettings.type, name: quizTypeLabel(quizSettings.type),
     score: qScore, total: qList.length,
     items: (qReviewItems && qReviewItems.length ? qReviewItems : qAnswers).map(a => ({ n:a.n, st:a.st||(a.ok?'ok':'wrong'), ok:a.ok, your:a.your, correct:a.correct, ru:a.ru, tr:a.tr }))
-  });
-  setTestResults(list);
+  };
+  const list = getTestResults(); list.unshift(rec); setTestResults(list);
+  saveTestResultToDB(rec);
+}
+
+async function saveTestResultToDB(rec) {
+  if (typeof sb === 'undefined' || !sb || typeof currentUser === 'undefined' || !currentUser) return;
+  try {
+    await sb.from('test_results').insert({
+      user_id: currentUser.id, type: rec.type, name: rec.name,
+      score: rec.score, total: rec.total, items: rec.items
+    });
+  } catch (e) { /* sessiz: localStorage yedeği var */ }
+}
+
+// Yeni cihazda yereli boşsa DB'den çek (kalıcı senkron)
+async function syncTestResultsFromDB() {
+  if (typeof sb === 'undefined' || !sb || typeof currentUser === 'undefined' || !currentUser) return;
+  if (getTestResults().length > 0) return;
+  try {
+    const { data } = await sb.from('test_results').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(50);
+    if (data && data.length) {
+      setTestResults(data.map(r => ({ id:r.id, date:r.created_at, type:r.type, name:r.name, score:r.score, total:r.total, items:r.items || [] })));
+    }
+  } catch (e) {}
 }
 function renderTestHistory() {
   const box = document.getElementById('test-history'); if (!box) return;
@@ -1730,3 +1752,104 @@ function toggleTestResult(id) {
   det.style.display = 'block';
 }
 function clearTestHistory() { if (confirm('Tüm test geçmişi silinsin mi?')) { setTestResults([]); renderTestHistory(); } }
+
+/* ============================================================
+   VERİ & İSTATİSTİK — streak, istatistik görünümü, veri indirme
+   ============================================================ */
+function _resultDays() {
+  return [...new Set(getTestResults().map(r => (r.date || '').slice(0,10)).filter(Boolean))];
+}
+function computeStreakFromResults() {
+  const days = new Set(_resultDays());
+  if (!days.size) return 0;
+  const iso = d => d.toISOString().slice(0,10);
+  let streak = 0, d = new Date();
+  while (days.has(iso(d))) { streak++; d.setDate(d.getDate()-1); }
+  if (streak === 0) { // bugün yoksa dünden devam eden seriyi göster
+    d = new Date(); d.setDate(d.getDate()-1);
+    while (days.has(iso(d))) { streak++; d.setDate(d.getDate()-1); }
+  }
+  return streak;
+}
+function longestStreakFromResults() {
+  const days = _resultDays().sort();
+  let best = 0, cur = 0, prev = null;
+  for (const k of days) {
+    if (prev) { const diff = (new Date(k) - new Date(prev)) / 86400000; cur = (diff === 1) ? cur+1 : 1; }
+    else cur = 1;
+    best = Math.max(best, cur); prev = k;
+  }
+  return best;
+}
+
+function renderStatsView() {
+  const box = document.getElementById('stats-body'); if (!box) return;
+  const saved = (typeof savedWords !== 'undefined' ? savedWords.size : 0);
+  const learned = (typeof learnedWords !== 'undefined' ? learnedWords.size : 0);
+  const lvl = { A1:0, A2:0, B1:0, B2:0, C1:0 };
+  if (typeof savedWords !== 'undefined') savedWords.forEach(ru => { const w = wordsByRu[ru]; if (w && lvl[w.level] !== undefined) lvl[w.level]++; });
+  const res = getTestResults();
+  const tests = res.length;
+  const avg = tests ? Math.round(res.reduce((a,r) => a + (r.total ? r.score/r.total*100 : 0), 0) / tests) : 0;
+  const best = res.reduce((m,r) => Math.max(m, r.total ? Math.round(r.score/r.total*100) : 0), 0);
+  const streak = computeStreakFromResults();
+  const maxLvl = Math.max(1, ...Object.values(lvl));
+  const bars = Object.keys(lvl).map(k => `
+    <div class="st-bar-row"><span class="st-bar-lab">${k}</span>
+      <div class="st-bar-track"><div class="st-bar-fill" style="width:${Math.round(lvl[k]/maxLvl*100)}%"></div></div>
+      <span class="st-bar-val">${lvl[k]}</span></div>`).join('');
+  const recent = res.slice(0,5).map(r => {
+    const pct = r.total ? Math.round(r.score/r.total*100) : 0;
+    const d = new Date(r.date);
+    return `<div class="st-recent-row"><span>${_escHtml(r.name)}</span><span class="st-recent-meta">${d.toLocaleDateString('tr-TR')} · ${r.score}/${r.total} · %${pct}</span></div>`;
+  }).join('') || '<div class="profile-empty">Henüz test çözülmedi.</div>';
+
+  box.innerHTML = `
+    <div class="st-cards">
+      <div class="st-card"><div class="st-card-num">${saved}</div><div class="st-card-lab">Kayıtlı Kelime</div></div>
+      <div class="st-card"><div class="st-card-num">${learned}</div><div class="st-card-lab">Öğrenilen</div></div>
+      <div class="st-card"><div class="st-card-num">${tests}</div><div class="st-card-lab">Çözülen Test</div></div>
+      <div class="st-card"><div class="st-card-num">%${avg}</div><div class="st-card-lab">Ortalama Başarı</div></div>
+      <div class="st-card"><div class="st-card-num">%${best}</div><div class="st-card-lab">En İyi Test</div></div>
+      <div class="st-card"><div class="st-card-num">${streak}</div><div class="st-card-lab">Gün Serisi</div></div>
+    </div>
+    <div class="profile-panel">
+      <h3 class="st-h3">Kayıtlı Kelimeler — Seviyeye Göre</h3>
+      ${bars}
+    </div>
+    <div class="profile-panel">
+      <h3 class="st-h3">Son Etkinlikler</h3>
+      <div class="st-recent">${recent}</div>
+    </div>`;
+}
+
+/* Veri indirme (her plan için çalışır) */
+function _wordsFromSet(set) {
+  const out = [];
+  if (set && typeof set.forEach === 'function') set.forEach(ru => { const w = (typeof wordsByRu !== 'undefined' && wordsByRu[ru]) || { ru }; out.push({ ru: w.ru, tr: w.tr || '', level: w.level || '', cat: w.cat || '' }); });
+  return out;
+}
+function exportMyData() {
+  const data = {
+    exportedAt: new Date().toISOString(),
+    user: (typeof currentUser !== 'undefined' && currentUser && currentUser.email) || '',
+    savedWords: _wordsFromSet(typeof savedWords !== 'undefined' ? savedWords : null),
+    learnedWords: _wordsFromSet(typeof learnedWords !== 'undefined' ? learnedWords : null),
+    testResults: getTestResults()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'ydt-yds-verilerim.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+  if (typeof toast === 'function') toast('Verilerin indiriliyor.');
+}
+function veriYonetimiHTML() {
+  return `<div class="profile-panel vy-panel">
+    <h3 class="vy-title">Verilerimi İndir</h3>
+    <p class="vy-sub">Kayıtlı kelimelerin, öğrendiklerin ve test geçmişin tek dosyada iner. Ücretsiz hesaba dönsen bile verilerin saklanır ve istediğin zaman indirebilirsin.</p>
+    <button class="vy-btn" onclick="exportMyData()">⬇️ Verilerimi İndir (JSON)</button>
+    <div class="vy-note">Verilerin hesabına bağlıdır; premium süresi dolsa dahi silinmez. Silme yalnızca senin isteğinle olur.</div>
+  </div>`;
+}
