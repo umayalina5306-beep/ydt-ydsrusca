@@ -93,6 +93,6 @@ async function togglePremium(userId, currentPlan) {
     filterAdminUsers(search ? search.value : "");
   } catch (e) {
     console.error("Plan değiştirilemedi:", e);
-    alert("Plan değiştirilemedi. Yönetici yetkisi ve SQL kuralları gerekli.");
+    if (typeof window.uiAlert === "function") window.uiAlert("Plan değiştirilemedi. Yönetici yetkisi ve SQL kuralları gerekli.", "Hata"); else alert("Plan değiştirilemedi.");
   }
 }
