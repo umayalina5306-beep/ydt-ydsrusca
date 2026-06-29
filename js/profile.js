@@ -107,6 +107,7 @@ async function openProfile() {
   renderKasaPreview();
   renderBadges();
   if (typeof renderStudyCalendar === "function") renderStudyCalendar();
+  if (typeof renderProgressChart === "function") renderProgressChart();
   loadProfileStats();
   profileNav("overview");
 }
@@ -121,6 +122,7 @@ function profileNav(view, btn) {
   if (view === "saved" && typeof renderKasaView === "function") renderKasaView("saved");
   if (view === "learned" && typeof renderKasaView === "function") renderKasaView("learned");
   if (view === "overview" && typeof renderStudyCalendar === "function") renderStudyCalendar();
+  if (view === "overview" && typeof renderProgressChart === "function") renderProgressChart();
   document.querySelectorAll(".psb-item").forEach(b => b.classList.remove("active"));
   const map = { overview: "psb-overview", saved: "psb-saved", learned: "psb-learned", tests: "psb-tests", videos: "psb-videos", stats: "psb-stats", settings: "psb-settings" };
   if (btn && btn.classList) btn.classList.add("active");
@@ -243,8 +245,17 @@ const BADGES = [
   { e: "🎓", t: "Disiplinli", d: "30 test çöz", chk: s => s.tests >= 30 },
   { e: "💯", t: "Kusursuz", d: "Bir testte %100 yap", chk: s => s.bestPct >= 100 },
   { e: "🔥", t: "İstikrarlı", d: "7 gün üst üste çalış", chk: s => s.streak >= 7 },
-  { e: "⚡", t: "Azim Şampiyonu", d: "30 gün seri yap", chk: s => s.streak >= 30 }
+  { e: "⚡", t: "Azim Şampiyonu", d: "30 gün seri yap", chk: s => s.streak >= 30 },
+  { e: "👑", t: "Kelime Kralı", d: "250 kelime kaydet", chk: s => s.saved >= 250 },
+  { e: "🧩", t: "Hafıza Uzmanı", d: "100 kelime öğren", chk: s => s.learned >= 100 },
+  { e: "🏅", t: "Test Şampiyonu", d: "50 test çöz", chk: s => s.tests >= 50 },
+  { e: "🗓️", t: "Kararlı", d: "14 gün üst üste çalış", chk: s => s.streak >= 14 },
+  { e: "🔁", t: "Günlük Tekrarcı", d: "7 günlük tekrar yap", chk: s => s.dailyReviews >= 7 },
+  { e: "🚀", t: "Maratoncu", d: "100 günlük tekrar yap", chk: s => s.dailyReviews >= 100 }
 ];
+
+function _getEarnedBadges() { try { return JSON.parse(localStorage.getItem("ydt_badges_earned") || "[]"); } catch (e) { return []; } }
+function _saveEarnedBadges(arr) { try { localStorage.setItem("ydt_badges_earned", JSON.stringify(arr)); } catch (e) {} }
 function renderBadges() {
   const box = document.getElementById("profile-badges");
   if (!box) return;
@@ -252,15 +263,23 @@ function renderBadges() {
   const res = (typeof getTestResults === "function") ? getTestResults() : [];
   const bestPct = res.reduce((m, r) => Math.max(m, r.total ? Math.round(r.score / r.total * 100) : 0), 0);
   const streak = (typeof computeStreakFromResults === "function") ? computeStreakFromResults() : 0;
+  const dailyReviews = parseInt((typeof localStorage !== "undefined" && localStorage.getItem("ydt_daily_reviews")) || "0", 10) || 0;
   const stats = {
     saved: (typeof savedWords !== "undefined" ? savedWords.size : 0),
     learned: (typeof learnedWords !== "undefined" ? learnedWords.size : 0),
     tests: tEl ? (parseInt(tEl.textContent, 10) || 0) : 0,
     bestPct: bestPct,
-    streak: streak
+    streak: streak,
+    dailyReviews: dailyReviews
   };
-  box.innerHTML = BADGES.map(b => {
-    const on = b.chk(stats);
+  const earned = _getEarnedBadges();
+  let changed = false;
+  const html = BADGES.map(b => {
+    let on = b.chk(stats);
+    if (on && earned.indexOf(b.t) === -1) { earned.push(b.t); changed = true; }
+    if (earned.indexOf(b.t) !== -1) on = true; // kazanılan rozet kalıcı
     return `<div class="badge ${on ? "on" : "off"}"><div class="badge-ic">${b.e}</div><div class="badge-t">${b.t}</div><div class="badge-d">${b.d}</div></div>`;
   }).join("");
+  if (changed) _saveEarnedBadges(earned);
+  box.innerHTML = html;
 }
