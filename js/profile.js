@@ -33,12 +33,8 @@ function applyAvatar() {
     el.classList.remove("has-lvl-frame", "lvl-A1", "lvl-A2", "lvl-B1", "lvl-B2", "lvl-C1", "lvl-none");
     let badge = "";
     el.classList.add("has-lvl-frame");
-    if (hasLevel) {
-      el.classList.add("lvl-" + level);
-      if (id !== "account-avatar") badge = `<span class="lvl-badge">${level}</span>`;
-    } else {
-      el.classList.add("lvl-none");
-    }
+    el.classList.add(hasLevel ? ("lvl-" + level) : "lvl-none");
+    if (id !== "account-avatar") badge = `<span class="lvl-badge">${hasLevel ? level : "?"}</span>`;
     el.innerHTML = inner + badge;
   });
 }
@@ -285,13 +281,18 @@ function renderBadges() {
     dailyReviews: dailyReviews
   };
   const earned = _getEarnedBadges();
+  const firstInit = earned.length === 0;
   let changed = false;
+  const newly = [];
   const html = BADGES.map(b => {
     let on = b.chk(stats);
-    if (on && earned.indexOf(b.t) === -1) { earned.push(b.t); changed = true; }
+    if (on && earned.indexOf(b.t) === -1) { earned.push(b.t); changed = true; newly.push(b); }
     if (earned.indexOf(b.t) !== -1) on = true; // kazanılan rozet kalıcı
     return `<div class="badge ${on ? "on" : "off"}"><div class="badge-ic">${b.e}</div><div class="badge-t">${b.t}</div><div class="badge-d">${b.d}</div></div>`;
   }).join("");
-  if (changed) _saveEarnedBadges(earned);
+  if (changed) {
+    _saveEarnedBadges(earned);
+    if (!firstInit && typeof createNotification === "function") newly.forEach(b => createNotification("🏅 Yeni rozet: " + b.t, b.d, "success"));
+  }
   box.innerHTML = html;
 }
