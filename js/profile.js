@@ -24,11 +24,19 @@ function applyAvatar() {
   const seed = _avatarSeed();
   const name = (typeof bestName === "function") ? bestName() : ((currentUser && currentUser.email) || "");
   const letter = (name || "?").charAt(0).toUpperCase();
+  const level = (typeof currentProfile !== "undefined" && currentProfile && currentProfile.level) ? String(currentProfile.level).toUpperCase() : "";
+  const hasLevel = /^(A1|A2|B1|B2|C1)$/.test(level);
   ["profile-initial", "sidebar-avatar", "account-avatar"].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    if (seed) el.innerHTML = `<img src="${avatarUrl(seed)}" alt="avatar" class="avatar-img">`;
-    else { el.textContent = letter; el.innerHTML = letter; }
+    const inner = seed ? `<img src="${avatarUrl(seed)}" alt="avatar" class="avatar-img">` : letter;
+    el.classList.remove("has-lvl-frame", "lvl-A1", "lvl-A2", "lvl-B1", "lvl-B2", "lvl-C1");
+    let badge = "";
+    if (hasLevel) {
+      el.classList.add("has-lvl-frame", "lvl-" + level);
+      if (id !== "account-avatar") badge = `<span class="lvl-badge">${level}</span>`;
+    }
+    el.innerHTML = inner + badge;
   });
 }
 
