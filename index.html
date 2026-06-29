@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=31">
+<link rel="stylesheet" href="css/style.css?v=32">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -859,6 +859,7 @@
         </div>
 
         <div class="profile-cols">
+          <div class="profile-main-col">
           <div class="profile-panel">
             <div class="panel-head">
               <div class="panel-title">📦 Kelime Kasam</div>
@@ -867,6 +868,13 @@
             <div class="panel-sub">Kayıtlı kelimelerinizi tekrar edin ve pekiştirin.</div>
             <div id="profile-kasa-preview" class="kasa-preview"></div>
             <button class="kasa-preview-all" id="profile-kasa-all" onclick="profileNav('saved')">Tümünü Gör →</button>
+          </div>
+
+          <div class="profile-panel progress-panel">
+            <div class="panel-title">📈 Gelişim Grafiği</div>
+            <div class="panel-sub">Tüm istatistiklerinle ilerlemeni takip et.</div>
+            <div id="progress-chart"></div>
+          </div>
           </div>
 
           <div class="profile-side">
@@ -887,6 +895,7 @@
             </div>
             <div class="profile-panel">
               <div class="panel-title">Hızlı İşlemler</div>
+              <div class="quick-row daily-review-row" onclick="startDailyReview()"><span class="quick-ic gold">🔁</span><span class="quick-txt">Günlük Tekrar <small>20 kelime</small></span><span class="quick-arrow">›</span></div>
               <div class="quick-row" onclick="openReview('profile')"><span class="quick-ic green">🔁</span><span class="quick-txt">Tekrar Et</span><span class="quick-arrow">›</span></div>
               <div class="quick-row" onclick="showPage('quiz')"><span class="quick-ic blue">📋</span><span class="quick-txt">Test Çöz</span><span class="quick-arrow">›</span></div>
               <div class="quick-row" onclick="openTestBuilder()"><span class="quick-ic gold">🛠️</span><span class="quick-txt">Test Oluştur</span><span class="quick-arrow">›</span></div>
@@ -1084,11 +1093,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=31"></script>
-<script defer src="js/auth.js?v=31"></script>
-<script defer src="js/admin.js?v=31"></script>
-<script defer src="js/profile.js?v=31"></script>
-<script defer src="js/extras.js?v=31"></script>
-<script defer src="js/app.js?v=31"></script>
+<script defer src="js/supabase-config.js?v=32"></script>
+<script defer src="js/auth.js?v=32"></script>
+<script defer src="js/admin.js?v=32"></script>
+<script defer src="js/profile.js?v=32"></script>
+<script defer src="js/extras.js?v=32"></script>
+<script defer src="js/app.js?v=32"></script>
 </body>
 </html>
