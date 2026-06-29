@@ -151,6 +151,7 @@ function settingsTab(key, btn) {
     if (key === "Güvenlik" && typeof guvenlikHTML === "function") oth.innerHTML = guvenlikHTML();
     else if (key === "Çalışma Ayarları" && typeof calismaAyarlariHTML === "function") oth.innerHTML = calismaAyarlariHTML();
     else if (key === "Üyelik Yönetimi" && typeof uyelikHTML === "function") oth.innerHTML = uyelikHTML();
+    else if (key === "Bildirimler" && typeof bildirimAyarlariHTML === "function") oth.innerHTML = bildirimAyarlariHTML();
     else if (key === "Veri Yönetimi" && typeof veriYonetimiHTML === "function") oth.innerHTML = veriYonetimiHTML();
     else oth.innerHTML = '<div class="profile-panel"><div class="profile-empty">' + key + ' bölümü yakında eklenecek.</div></div>';
   }
@@ -292,7 +293,7 @@ function renderBadges() {
   }).join("");
   if (changed) {
     _saveEarnedBadges(earned);
-    if (!firstInit && typeof createNotification === "function") newly.forEach(b => createNotification("🏅 Yeni rozet: " + b.t, b.d, "success"));
+    if (!firstInit && typeof createNotification === "function" && (typeof notifPref !== "function" || notifPref("badges"))) newly.forEach(b => createNotification("🏅 Yeni rozet: " + b.t, b.d, "success"));
   }
   box.innerHTML = html;
 }

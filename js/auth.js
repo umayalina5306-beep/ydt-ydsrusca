@@ -45,6 +45,8 @@ async function handleSession(session) {
   } else {
     if (_bell) _bell.style.display = "none";
     myNotifications = [];
+    const _ap = document.querySelector(".page.active");
+    if (_ap && (_ap.id === "page-profile" || _ap.id === "page-admin") && typeof showPage === "function") showPage("home");
   }
 }
 
@@ -205,7 +207,7 @@ function cevirHata(msg) {
 function authHata(error) {
   const raw = (error && error.message) || "bilinmeyen hata";
   console.error("Auth hatası:", error);
-  authMsg(cevirHata(raw) + "  —  (orijinal: " + raw + ")");
+  authMsg(cevirHata(raw));
 }
 
 // Başlat

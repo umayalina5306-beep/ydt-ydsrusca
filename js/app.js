@@ -2006,7 +2006,11 @@ function renderProgressChart() {
   const wOf = d => { const a = log[d]; return (a && a.wordsLearned) ? a.wordsLearned : 0; };
   const vOf = d => { const a = log[d]; return (a && a.videos) ? a.videos : 0; };
   const q = days.map(qOf), w = days.map(wOf), v = days.map(vOf);
-  const max = Math.max(1, ...q, ...w, ...v);
+  const allRes = (typeof getTestResults === 'function') ? getTestResults() : [];
+  const onDay = d => allRes.filter(r => (r.date||'').slice(0,10) === d);
+  const c = days.map(d => onDay(d).reduce((s2,r) => s2 + (r.score||0), 0));
+  const x = days.map(d => onDay(d).reduce((s2,r) => s2 + ((r.total||0)-(r.score||0)), 0));
+  const max = Math.max(1, ...q, ...w, ...v, ...c, ...x);
   const W = 600, H = 240, padL = 34, padR = 14, padT = 16, padB = 42;
   const plotW = W - padL - padR, plotH = H - padT - padB, n = days.length;
   const X = i => n === 1 ? padL + plotW/2 : padL + i*(plotW/(n-1));
@@ -2026,9 +2030,15 @@ function renderProgressChart() {
   if ((n-1) % step !== 0) addLab(n-1);
   const lvl = (typeof currentProfile !== 'undefined' && currentProfile && currentProfile.level) ? String(currentProfile.level).toUpperCase() : '';
   const lvlChip = lvl ? `<span class="pg-leg pg-level">Seviye: <b>${lvl}</b></span>` : `<span class="pg-leg pg-level pg-level-none">Seviye: belirsiz</span>`;
-  box.innerHTML = `<div class="pg-legend"><span class="pg-leg"><i style="background:var(--gold)"></i>Çözülen Soru</span><span class="pg-leg"><i style="background:#3fa97a"></i>Öğrenilen Kelime</span><span class="pg-leg"><i style="background:#cc4b4b"></i>İzlenen Video</span>${lvlChip}</div>
-  <svg viewBox="0 0 ${W} ${H}" class="pg-svg" preserveAspectRatio="xMidYMid meet">${grid}${line(q,'var(--gold)')}${line(w,'#3fa97a')}${line(v,'#cc4b4b')}${xlab}</svg>
-  <div class="pg-foot">Tarih bazlı günlük gelişim: çözülen soru, öğrenilen kelime, izlenen video. Seviye, tespit sınavı sonrası tarih bazlı çizilecek.</div>`;
+  box.innerHTML = `<div class="pg-legend">`
+    + `<span class="pg-leg"><i style="background:#7e6bd0"></i>Çözülen Soru</span>`
+    + `<span class="pg-leg"><i style="background:#2e9e5b"></i>Doğru</span>`
+    + `<span class="pg-leg"><i style="background:#cc4b4b"></i>Yanlış</span>`
+    + `<span class="pg-leg"><i style="background:var(--gold)"></i>Öğrenilen Kelime</span>`
+    + `<span class="pg-leg"><i style="background:#1E88E5"></i>İzlenen Video</span>`
+    + lvlChip + `</div>`
+    + `<svg viewBox="0 0 ${W} ${H}" class="pg-svg" preserveAspectRatio="xMidYMid meet">${grid}${line(q,'#7e6bd0')}${line(w,'var(--gold)')}${line(v,'#1E88E5')}${line(c,'#2e9e5b',3)}${line(x,'#cc4b4b',3)}${xlab}</svg>`
+    + `<div class="pg-foot">Tarih bazlı günlük gelişim. Doğru/Yanlış çizgileri yukarıdaki renklerle gösterilir. Seviye, tespit sınavı sonrası eklenecek (çizgi değil, durum olarak gösterilir).</div>`;
 }
 
 /* ============================================================
@@ -2171,7 +2181,7 @@ function uyelikHTML() {
   return `<div class="profile-panel set-panel">
     <h3 class="set-h3">👑 Üyelik Durumu</h3>
     <p class="set-sub">Mevcut planın: <b>${planLab}</b></p>
-    ${!isPrem ? `<button class="set-btn" onclick="showPage('pricing')">Premium'a Geç</button>` : `<div class="set-note">Premium avantajlarından yararlanıyorsun.</div>`}
+    ${!isPrem ? `<button class="set-btn" onclick="buyPremium()">Premium'a Geç</button>` : `<div class="set-note">Premium avantajlarından yararlanıyorsun.</div>`}
   </div>
   <div class="profile-panel set-panel danger-zone">
     <h3 class="set-h3 danger">⚠️ Tehlikeli Bölge</h3>
@@ -2187,19 +2197,19 @@ async function changePassword() {
   if (p1.length < 6) { toast('Şifre en az 6 karakter olmalı.'); return; }
   if (p1 !== p2) { toast('Şifreler eşleşmiyor.'); return; }
   try { const { error } = await sb.auth.updateUser({ password: p1 }); if (error) throw error; toast('Şifren güncellendi.'); if (a) a.value = ''; if (b) b.value = ''; }
-  catch (e) { toast('Şifre güncellenemedi: ' + (e.message || '')); }
+  catch (e) { toast('Şifre güncellenemedi. Lütfen tekrar dene.'); }
 }
 async function sendPasswordReset() {
   const email = (currentUser && currentUser.email) || '';
   if (!email) { toast('E-posta bulunamadı.'); return; }
   try { const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname }); if (error) throw error; toast('Sıfırlama bağlantısı e-postana gönderildi.'); }
-  catch (e) { toast('Gönderilemedi: ' + (e.message || '')); }
+  catch (e) { toast('Gönderilemedi. Lütfen tekrar dene.'); }
 }
 async function changeEmail() {
   const el = document.getElementById('set-newemail'); const em = ((el && el.value) || '').trim();
   if (!/.+@.+\..+/.test(em)) { toast('Geçerli bir e-posta gir.'); return; }
   try { const { error } = await sb.auth.updateUser({ email: em }); if (error) throw error; toast('Onay maili ' + em + ' adresine gönderildi.'); }
-  catch (e) { toast('E-posta güncellenemedi: ' + (e.message || '')); }
+  catch (e) { toast('E-posta güncellenemedi. Lütfen tekrar dene.'); }
 }
 async function linkGoogle() {
   try {
@@ -2207,7 +2217,7 @@ async function linkGoogle() {
       const { error } = await sb.auth.linkIdentity({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
       if (error) throw error;
     } else { toast('Bu özellik için hesap bağlama ayarının açık olması gerekir.'); }
-  } catch (e) { toast('Google bağlanamadı: ' + (e.message || '')); }
+  } catch (e) { toast('Google bağlanamadı. Lütfen tekrar dene.'); }
 }
 async function setMyLevel(lvl) {
   if (!sb || !currentUser) return;
@@ -2229,13 +2239,19 @@ async function freezeAccount() {
     if (error) throw error;
     toast('Hesabın donduruldu. Çıkış yapılıyor...');
     setTimeout(() => { if (typeof authLogout === 'function') authLogout(); else sb.auth.signOut(); }, 1300);
-  } catch (e) { toast('İşlem başarısız: ' + (e.message || '')); }
+  } catch (e) { toast('İşlem başarısız. Lütfen tekrar dene.'); }
 }
 async function deleteAccount() {
   if (!(await uiConfirm('Hesabını ve tüm verilerini silmek istediğine emin misin? Bu işlem geri alınamaz.', 'Hesabı Sil', { danger: true }))) return;
   const typed = await uiPrompt('Onaylamak için büyük harflerle  SİL  yaz:', { title: 'Hesabı Sil', placeholder: 'SİL' });
   if (typed !== 'SİL') { toast('İşlem iptal edildi.'); return; }
+  const pw = await uiPrompt('Güvenlik için şifreni gir:', { title: 'Hesabı Sil', type: 'password', placeholder: 'Şifren' });
+  if (pw === null || pw === '') { toast('İşlem iptal edildi.'); return; }
   if (!sb || !currentUser) return;
+  try {
+    const { error: pErr } = await sb.auth.signInWithPassword({ email: currentUser.email, password: pw });
+    if (pErr) { toast('Şifre hatalı. İşlem iptal edildi.'); return; }
+  } catch (e) { toast('Şifre doğrulanamadı. İşlem iptal edildi.'); return; }
   function _wipeLocal() { try { localStorage.removeItem('ydt_test_results'); localStorage.removeItem('ydt_daily_activity'); localStorage.removeItem('ydt_plans'); localStorage.removeItem('ydt_badges_earned'); } catch (e2) {} }
   function _bye() { setTimeout(() => { if (typeof authLogout === 'function') authLogout(); else sb.auth.signOut(); }, 1600); }
   try {
@@ -2254,7 +2270,7 @@ async function deleteAccount() {
       _wipeLocal();
       toast('Verilerin silindi, hesap kapatma talebin alındı. Çıkış yapılıyor...');
       _bye();
-    } catch (e3) { toast('Silme başarısız: ' + (e3.message || '')); }
+    } catch (e3) { toast('Silme başarısız. Lütfen tekrar dene.'); }
   }
 }
 
@@ -2271,7 +2287,7 @@ function uiModal(o) {
     const root = _ensureModalRoot();
     const wrap = document.createElement('div');
     wrap.className = 'ui-modal-overlay';
-    const promptHtml = o.prompt ? `<input id="ui-modal-input" class="ui-modal-input" placeholder="${(o.placeholder||'').replace(/"/g,'&quot;')}">` : '';
+    const promptHtml = o.prompt ? `<input id="ui-modal-input" type="${o.inputType||'text'}" class="ui-modal-input" placeholder="${(o.placeholder||'').replace(/"/g,'&quot;')}">` : '';
     const cancelBtn = o.cancel ? `<button class="ui-modal-btn ghost" data-act="cancel">${_escHtml(o.cancelText||'Vazgeç')}</button>` : '';
     const danger = o.danger ? ' danger' : '';
     wrap.innerHTML = `<div class="ui-modal">
@@ -2296,7 +2312,7 @@ function uiModal(o) {
 }
 function uiAlert(message, title) { return uiModal({ title: title || 'Bilgi', message: message, confirmText: 'Tamam', cancel: false }); }
 function uiConfirm(message, title, opts) { opts = opts || {}; return uiModal({ title: title || 'Onay', message: message, confirmText: opts.confirmText || 'Evet', cancelText: opts.cancelText || 'Vazgeç', cancel: true, danger: opts.danger }); }
-function uiPrompt(message, opts) { opts = opts || {}; return uiModal({ title: opts.title || 'Giriş', message: message, prompt: true, placeholder: opts.placeholder || '', confirmText: 'Tamam', cancelText: 'Vazgeç', cancel: true }); }
+function uiPrompt(message, opts) { opts = opts || {}; return uiModal({ title: opts.title || 'Giriş', message: message, prompt: true, inputType: opts.type || 'text', placeholder: opts.placeholder || '', confirmText: 'Tamam', cancelText: 'Vazgeç', cancel: true }); }
 if (typeof window !== 'undefined') { window.uiAlert = uiAlert; window.uiConfirm = uiConfirm; window.uiPrompt = uiPrompt; }
 
 /* ============================================================
@@ -2401,5 +2417,59 @@ async function adminSendNotification() {
     await uiAlert(targets.length + ' kullanıcıya bildirim gönderildi.', 'Gönderildi');
     if (tEl) tEl.value = ''; if (bEl) bEl.value = '';
     if (typeof currentUser !== 'undefined' && currentUser) loadNotifications();
-  } catch (e) { uiAlert('Gönderilemedi: ' + (e.message || '')); }
+  } catch (e) { uiAlert('Gönderilemedi. Lütfen tekrar dene.'); }
+}
+
+/* ============================================================
+   PREMIUM SATIN ALMA — e-posta doğrulama şartı
+   ============================================================ */
+async function buyPremium() {
+  if (typeof currentUser === 'undefined' || !currentUser) { if (typeof openAuth === 'function') openAuth('register'); return; }
+  const confirmed = !!(currentUser.email_confirmed_at || currentUser.confirmed_at);
+  if (!confirmed) {
+    const r = await uiConfirm('Premium satın almadan önce e-posta adresini doğrulaman gerekiyor. Doğrulama bağlantısını şimdi tekrar gönderelim mi?', 'E-posta Doğrulama Gerekli', { confirmText: 'Tekrar Gönder', cancelText: 'Kapat' });
+    if (r) {
+      try { await sb.auth.resend({ type: 'signup', email: currentUser.email }); uiAlert('Doğrulama e-postası gönderildi. Lütfen gelen kutunu (ve spam klasörünü) kontrol et.', 'Gönderildi'); }
+      catch (e) { uiAlert('E-posta gönderilemedi. Lütfen daha sonra tekrar dene.'); }
+    }
+    return;
+  }
+  uiAlert('E-posta adresin doğrulanmış görünüyor. Ödeme sistemi çok yakında eklenecek; o zaman buradan premiuma geçebileceksin.', 'Premium');
+}
+
+/* ============================================================
+   BİLDİRİM TERCİHLERİ (Ayarlar → Bildirimler)
+   ============================================================ */
+function notifPref(key) { try { return localStorage.getItem('ydt_np_' + key) !== '0'; } catch (e) { return true; } }
+function toggleNotifPref(key, on) { try { localStorage.setItem('ydt_np_' + key, on ? '1' : '0'); } catch (e) {} if (typeof toast === 'function') toast('Tercih kaydedildi.'); }
+async function clearReadNotifs() {
+  const ids = myNotifications.filter(n => n.is_read).map(n => n.id);
+  if (!ids.length) { toast('Okunmuş bildirim yok.'); return; }
+  myNotifications = myNotifications.filter(n => !n.is_read);
+  updateNotifBadge(); renderNotifPanel();
+  try { await sb.from('notifications').delete().in('id', ids); } catch (e) {}
+  toast('Okunmuş bildirimler temizlendi.');
+}
+function bildirimAyarlariHTML() {
+  const badges = notifPref('badges');
+  const reminder = notifPref('reminder');
+  return `<div class="profile-panel set-panel">
+    <h3 class="set-h3">🔔 Bildirim Tercihleri</h3>
+    <div class="set-switch-row">
+      <div><div style="font-weight:700;color:var(--text);">Rozet kazanma bildirimleri</div>
+      <div style="font-size:.8rem;color:var(--gray);margin-top:3px;">Yeni bir rozet kazandığında bildirim al.</div></div>
+      <label class="set-switch"><input type="checkbox" ${badges?'checked':''} onchange="toggleNotifPref('badges', this.checked)"><span class="set-slider"></span></label>
+    </div>
+    <div class="set-switch-row" style="margin-top:14px;">
+      <div><div style="font-weight:700;color:var(--text);">Günlük tekrar hatırlatması</div>
+      <div style="font-size:.8rem;color:var(--gray);margin-top:3px;">Hatırlatma sistemi eklendiğinde bu tercih kullanılacak.</div></div>
+      <label class="set-switch"><input type="checkbox" ${reminder?'checked':''} onchange="toggleNotifPref('reminder', this.checked)"><span class="set-slider"></span></label>
+    </div>
+    <div class="set-note" style="margin-top:14px;">Yönetici duyuruları her zaman alınır.</div>
+  </div>
+  <div class="profile-panel set-panel">
+    <h3 class="set-h3">🧹 Bildirimleri Yönet</h3>
+    <button class="set-btn ghost" onclick="markAllNotifRead()">Tümünü okundu yap</button>
+    <button class="set-btn ghost" onclick="clearReadNotifs()" style="margin-left:8px;">Okunmuşları temizle</button>
+  </div>`;
 }
