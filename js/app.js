@@ -1001,7 +1001,7 @@ function pickChoice(i){
   const ok = (i === prep.correctIndex);
   _scoreAdjustRemove(prev);
   qAnswers[qIdx] = { answered:true, yourIndex:i, your:prep.options[i], ok };
-  if (ok) qScore++; else qWrong++;
+  if (ok) { qScore++; _autoSaveCurrent(); } else qWrong++;
   if (quizReveal === 'instant' && prep.speakRu && typeof speak === 'function') speak(prep.speakRu);
   renderQ();
 }
@@ -1021,7 +1021,7 @@ function pickWrite(){
   const ok = _writeMatch(given, prep.correct);
   _scoreAdjustRemove(prev);
   qAnswers[qIdx] = { answered:true, your: given || '(boş)', ok };
-  if (ok) qScore++; else qWrong++;
+  if (ok) { qScore++; _autoSaveCurrent(); } else qWrong++;
   if (quizReveal === 'instant' && prep.speakRu && typeof speak === 'function') speak(prep.speakRu);
   renderQ();
 }
@@ -2004,8 +2004,9 @@ function renderProgressChart() {
   }
   const qOf = d => { const a = log[d]; if (a && a.questions) return a.questions; const res = (getTestResults()||[]).filter(r => (r.date||'').slice(0,10) === d); return res.reduce((s2,r) => s2 + (r.total||0), 0); };
   const wOf = d => { const a = log[d]; return (a && a.wordsLearned) ? a.wordsLearned : 0; };
-  const q = days.map(qOf), w = days.map(wOf);
-  const max = Math.max(1, ...q, ...w);
+  const vOf = d => { const a = log[d]; return (a && a.videos) ? a.videos : 0; };
+  const q = days.map(qOf), w = days.map(wOf), v = days.map(vOf);
+  const max = Math.max(1, ...q, ...w, ...v);
   const W = 600, H = 240, padL = 34, padR = 14, padT = 16, padB = 42;
   const plotW = W - padL - padR, plotH = H - padT - padB, n = days.length;
   const X = i => n === 1 ? padL + plotW/2 : padL + i*(plotW/(n-1));
@@ -2022,9 +2023,11 @@ function renderProgressChart() {
   const addLab = i => { const dd = days[i].slice(5).replace('-','.'); xlab += `<text x="${X(i).toFixed(1)}" y="${H-padB+16}" text-anchor="middle" font-size="9" fill="var(--gray)">${dd}</text>`; };
   for (let i = 0; i < n; i += step) addLab(i);
   if ((n-1) % step !== 0) addLab(n-1);
-  box.innerHTML = `<div class="pg-legend"><span class="pg-leg"><i style="background:var(--gold)"></i>Çözülen Soru</span><span class="pg-leg"><i style="background:#3fa97a"></i>Öğrenilen Kelime</span></div>
-  <svg viewBox="0 0 ${W} ${H}" class="pg-svg" preserveAspectRatio="xMidYMid meet">${grid}${line(q,'var(--gold)')}${line(w,'#3fa97a')}${xlab}</svg>
-  <div class="pg-foot">Tarih bazlı günlük gelişim. Seviye ilerlemesi gibi yeni metrikler eklendikçe burada da çizilecek.</div>`;
+  const lvl = (typeof currentProfile !== 'undefined' && currentProfile && currentProfile.level) ? String(currentProfile.level).toUpperCase() : '';
+  const lvlChip = lvl ? `<span class="pg-leg pg-level">Seviye: <b>${lvl}</b></span>` : `<span class="pg-leg pg-level pg-level-none">Seviye: belirsiz</span>`;
+  box.innerHTML = `<div class="pg-legend"><span class="pg-leg"><i style="background:var(--gold)"></i>Çözülen Soru</span><span class="pg-leg"><i style="background:#3fa97a"></i>Öğrenilen Kelime</span><span class="pg-leg"><i style="background:#cc4b4b"></i>İzlenen Video</span>${lvlChip}</div>
+  <svg viewBox="0 0 ${W} ${H}" class="pg-svg" preserveAspectRatio="xMidYMid meet">${grid}${line(q,'var(--gold)')}${line(w,'#3fa97a')}${line(v,'#cc4b4b')}${xlab}</svg>
+  <div class="pg-foot">Tarih bazlı günlük gelişim: çözülen soru, öğrenilen kelime, izlenen video. Seviye, tespit sınavı sonrası tarih bazlı çizilecek.</div>`;
 }
 
 /* ============================================================
@@ -2091,4 +2094,153 @@ function savePlan(key) {
   setPlans(plans);
   renderStudyCalendar();
   if (typeof toast === 'function') toast('Plan kaydedildi.');
+}
+
+/* ============================================================
+   AYARLAR — Güvenlik / Çalışma / Üyelik + hesap işlemleri
+   ============================================================ */
+function autoSaveOn() { try { return localStorage.getItem('ydt_autosave') === '1'; } catch (e) { return false; } }
+function toggleAutoSave(on) { try { localStorage.setItem('ydt_autosave', on ? '1' : '0'); } catch (e) {} if (typeof toast === 'function') toast(on ? 'Otomatik kaydetme açık.' : 'Otomatik kaydetme kapalı.'); }
+function _autoSaveCurrent() {
+  try {
+    if (!autoSaveOn()) return;
+    const w = qList[qIdx]; if (!w) return;
+    const isPremium = currentProfile && (currentProfile.plan === 'premium' || currentProfile.is_admin);
+    if (!isPremium) return;
+    if (typeof savedWords === 'undefined') return;
+    if (savedWords.has(w.ru) || learnedWords.has(w.ru)) return;
+    if (typeof sb !== 'undefined' && sb && typeof currentUser !== 'undefined' && currentUser) {
+      sb.from('saved_words').upsert({ user_id: currentUser.id, word_ru: w.ru, word_tr: w.tr, level: w.level || null, status: 'saved' }, { onConflict: 'user_id,word_ru' }).then(function(){}, function(){});
+      savedWords.add(w.ru);
+    }
+  } catch (e) {}
+}
+
+function _settingsBox(html) { return html; }
+
+function guvenlikHTML() {
+  return `<div class="profile-panel set-panel">
+    <h3 class="set-h3">🔑 Şifre Değiştir</h3>
+    <input id="set-newpass" type="password" class="set-input" placeholder="Yeni şifre (en az 6 karakter)" autocomplete="new-password">
+    <input id="set-newpass2" type="password" class="set-input" placeholder="Yeni şifre (tekrar)" autocomplete="new-password">
+    <button class="set-btn" onclick="changePassword()">Şifreyi Güncelle</button>
+  </div>
+  <div class="profile-panel set-panel">
+    <h3 class="set-h3">📧 E-posta Değiştir</h3>
+    <input id="set-newemail" type="email" class="set-input" placeholder="Yeni e-posta adresi">
+    <button class="set-btn" onclick="changeEmail()">E-postayı Güncelle</button>
+    <div class="set-note">Yeni adrese onay maili gönderilir; onayladıktan sonra değişir.</div>
+  </div>
+  <div class="profile-panel set-panel">
+    <h3 class="set-h3">🔗 Google ile Bağla</h3>
+    <p class="set-sub">Hesabını Google ile bağlayıp tek tıkla giriş yapabilirsin.</p>
+    <button class="set-btn ghost" onclick="linkGoogle()">Google Hesabını Bağla</button>
+  </div>
+  <div class="profile-panel set-panel">
+    <h3 class="set-h3">↩️ Şifremi Unuttum</h3>
+    <p class="set-sub">E-postana şifre sıfırlama bağlantısı gönderelim.</p>
+    <button class="set-btn ghost" onclick="sendPasswordReset()">Sıfırlama Bağlantısı Gönder</button>
+  </div>`;
+}
+
+function calismaAyarlariHTML() {
+  const on = autoSaveOn();
+  const lvl = (currentProfile && currentProfile.level) ? String(currentProfile.level).toUpperCase() : '';
+  const opts = ['A1','A2','B1','B2','C1'].map(l => `<option ${lvl===l?'selected':''}>${l}</option>`).join('');
+  return `<div class="profile-panel set-panel">
+    <div class="set-switch-row">
+      <div><h3 class="set-h3">💾 Otomatik Kelime Kaydetme</h3>
+      <p class="set-sub">Açıkken, testte doğru bildiğin kelimeler otomatik olarak Kelime Kasam'a eklenir (Premium).</p></div>
+      <label class="set-switch"><input type="checkbox" id="set-autosave" ${on?'checked':''} onchange="toggleAutoSave(this.checked)"><span class="set-slider"></span></label>
+    </div>
+  </div>
+  <div class="profile-panel set-panel">
+    <h3 class="set-h3">🎚️ Seviyem</h3>
+    <p class="set-sub">Seviye tespit sınavı gelene kadar seviyeni buradan seçebilirsin. Avatarının çerçevesi seviyene göre renklenir.</p>
+    <select id="set-level" class="set-input" onchange="setMyLevel(this.value)">
+      <option value="" ${lvl===''?'selected':''}>Seçilmedi</option>${opts}
+    </select>
+  </div>`;
+}
+
+function uyelikHTML() {
+  const isAdmin = currentProfile && currentProfile.is_admin;
+  const isPrem = currentProfile && (currentProfile.plan === 'premium' || isAdmin);
+  const planLab = isAdmin ? 'Yönetici' : (isPrem ? 'Premium' : 'Ücretsiz');
+  return `<div class="profile-panel set-panel">
+    <h3 class="set-h3">👑 Üyelik Durumu</h3>
+    <p class="set-sub">Mevcut planın: <b>${planLab}</b></p>
+    ${!isPrem ? `<button class="set-btn" onclick="showPage('pricing')">Premium'a Geç</button>` : `<div class="set-note">Premium avantajlarından yararlanıyorsun.</div>`}
+  </div>
+  <div class="profile-panel set-panel danger-zone">
+    <h3 class="set-h3 danger">⚠️ Tehlikeli Bölge</h3>
+    <p class="set-sub">Bu işlemler dikkat gerektirir. Verilerin (kayıtlı/öğrenilen kelimeler) dondurmada korunur.</p>
+    <button class="set-btn warn" onclick="freezeAccount()">Hesabı Dondur</button>
+    <button class="set-btn danger" onclick="deleteAccount()">Hesabı Sil</button>
+  </div>`;
+}
+
+async function changePassword() {
+  const a = document.getElementById('set-newpass'), b = document.getElementById('set-newpass2');
+  const p1 = (a && a.value) || '', p2 = (b && b.value) || '';
+  if (p1.length < 6) { toast('Şifre en az 6 karakter olmalı.'); return; }
+  if (p1 !== p2) { toast('Şifreler eşleşmiyor.'); return; }
+  try { const { error } = await sb.auth.updateUser({ password: p1 }); if (error) throw error; toast('Şifren güncellendi.'); if (a) a.value = ''; if (b) b.value = ''; }
+  catch (e) { toast('Şifre güncellenemedi: ' + (e.message || '')); }
+}
+async function sendPasswordReset() {
+  const email = (currentUser && currentUser.email) || '';
+  if (!email) { toast('E-posta bulunamadı.'); return; }
+  try { const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname }); if (error) throw error; toast('Sıfırlama bağlantısı e-postana gönderildi.'); }
+  catch (e) { toast('Gönderilemedi: ' + (e.message || '')); }
+}
+async function changeEmail() {
+  const el = document.getElementById('set-newemail'); const em = ((el && el.value) || '').trim();
+  if (!/.+@.+\..+/.test(em)) { toast('Geçerli bir e-posta gir.'); return; }
+  try { const { error } = await sb.auth.updateUser({ email: em }); if (error) throw error; toast('Onay maili ' + em + ' adresine gönderildi.'); }
+  catch (e) { toast('E-posta güncellenemedi: ' + (e.message || '')); }
+}
+async function linkGoogle() {
+  try {
+    if (sb.auth && typeof sb.auth.linkIdentity === 'function') {
+      const { error } = await sb.auth.linkIdentity({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
+      if (error) throw error;
+    } else { toast('Bu özellik için hesap bağlama ayarının açık olması gerekir.'); }
+  } catch (e) { toast('Google bağlanamadı: ' + (e.message || '')); }
+}
+async function setMyLevel(lvl) {
+  if (!sb || !currentUser) return;
+  try {
+    const { error } = await sb.from('profiles').update({ level: lvl || null }).eq('id', currentUser.id);
+    if (error) throw error;
+    if (currentProfile) currentProfile.level = lvl || null;
+    if (typeof applyAvatar === 'function') applyAvatar();
+    if (typeof renderProgressChart === 'function') renderProgressChart();
+    toast(lvl ? ('Seviyen ' + lvl + ' olarak ayarlandı.') : 'Seviye temizlendi.');
+  } catch (e) { toast('Seviye güncellenemedi (yetki kısıtı olabilir).'); }
+}
+async function freezeAccount() {
+  if (!confirm('Hesabını dondurmak istediğine emin misin? Verilerin korunur; tekrar giriş yapana kadar pasif olur.')) return;
+  if (!confirm('Son onay: Hesabın DONDURULSUN mu?')) return;
+  if (!sb || !currentUser) return;
+  try {
+    const { error } = await sb.from('profiles').update({ status: 'frozen' }).eq('id', currentUser.id);
+    if (error) throw error;
+    toast('Hesabın donduruldu. Çıkış yapılıyor...');
+    setTimeout(() => { if (typeof authLogout === 'function') authLogout(); else sb.auth.signOut(); }, 1300);
+  } catch (e) { toast('İşlem başarısız: ' + (e.message || '')); }
+}
+async function deleteAccount() {
+  if (!confirm('Hesabını ve tüm verilerini silmek istediğine emin misin? Bu işlem geri alınamaz.')) return;
+  const typed = prompt('Onaylamak için büyük harflerle  SİL  yaz:');
+  if (typed !== 'SİL') { toast('İşlem iptal edildi.'); return; }
+  if (!sb || !currentUser) return;
+  try {
+    await sb.from('saved_words').delete().eq('user_id', currentUser.id);
+    await sb.from('test_results').delete().eq('user_id', currentUser.id);
+    await sb.from('profiles').update({ status: 'deletion_requested' }).eq('id', currentUser.id);
+    try { localStorage.removeItem('ydt_test_results'); localStorage.removeItem('ydt_daily_activity'); localStorage.removeItem('ydt_plans'); localStorage.removeItem('ydt_badges_earned'); } catch (e2) {}
+    toast('Verilerin silindi, hesap kapatma talebin alındı. Çıkış yapılıyor...');
+    setTimeout(() => { if (typeof authLogout === 'function') authLogout(); else sb.auth.signOut(); }, 1600);
+  } catch (e) { toast('Silme başarısız: ' + (e.message || '')); }
 }
