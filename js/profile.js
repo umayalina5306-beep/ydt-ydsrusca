@@ -30,11 +30,14 @@ function applyAvatar() {
     const el = document.getElementById(id);
     if (!el) return;
     const inner = seed ? `<img src="${avatarUrl(seed)}" alt="avatar" class="avatar-img">` : letter;
-    el.classList.remove("has-lvl-frame", "lvl-A1", "lvl-A2", "lvl-B1", "lvl-B2", "lvl-C1");
+    el.classList.remove("has-lvl-frame", "lvl-A1", "lvl-A2", "lvl-B1", "lvl-B2", "lvl-C1", "lvl-none");
     let badge = "";
+    el.classList.add("has-lvl-frame");
     if (hasLevel) {
-      el.classList.add("has-lvl-frame", "lvl-" + level);
+      el.classList.add("lvl-" + level);
       if (id !== "account-avatar") badge = `<span class="lvl-badge">${level}</span>`;
+    } else {
+      el.classList.add("lvl-none");
     }
     el.innerHTML = inner + badge;
   });
@@ -148,11 +151,11 @@ function settingsTab(key, btn) {
   else {
     if (acc) acc.style.display = "none";
     if (oth) oth.style.display = "block";
-    if (key === "Veri Yönetimi" && typeof veriYonetimiHTML === "function") {
-      oth.innerHTML = veriYonetimiHTML();
-    } else {
-      oth.innerHTML = '<div class="profile-panel"><div class="profile-empty">' + key + ' bölümü yakında eklenecek.</div></div>';
-    }
+    if (key === "Güvenlik" && typeof guvenlikHTML === "function") oth.innerHTML = guvenlikHTML();
+    else if (key === "Çalışma Ayarları" && typeof calismaAyarlariHTML === "function") oth.innerHTML = calismaAyarlariHTML();
+    else if (key === "Üyelik Yönetimi" && typeof uyelikHTML === "function") oth.innerHTML = uyelikHTML();
+    else if (key === "Veri Yönetimi" && typeof veriYonetimiHTML === "function") oth.innerHTML = veriYonetimiHTML();
+    else oth.innerHTML = '<div class="profile-panel"><div class="profile-empty">' + key + ' bölümü yakında eklenecek.</div></div>';
   }
 }
 
