@@ -79,16 +79,18 @@ async function openProfile() {
   const se = document.getElementById("settings-email"); if (se) se.value = email;
   const sj = document.getElementById("settings-joined"); if (sj) sj.value = joinedStr === "—" ? "" : joinedStr;
 
-  // Çalışma serisi
-  const streak = (currentProfile && currentProfile.streak_count) || 0;
+  // Çalışma serisi (aktivite tarihlerinden)
+  if (typeof syncTestResultsFromDB === "function") { try { await syncTestResultsFromDB(); } catch (e) {} }
+  const streak = (typeof computeStreakFromResults === "function") ? computeStreakFromResults() : 0;
+  const longest = (typeof longestStreakFromResults === "function") ? longestStreakFromResults() : streak;
   const stEl = document.getElementById("profile-streak"); if (stEl) stEl.textContent = streak;
-  const maxEl = document.getElementById("profile-streak-max"); if (maxEl) maxEl.textContent = streak;
+  const maxEl = document.getElementById("profile-streak-max"); if (maxEl) maxEl.textContent = longest;
   renderStreakDots(streak);
 
   // İstatistik kartları (anında)
   const wEl = document.getElementById("profile-words"); if (wEl) wEl.textContent = (typeof savedWords !== "undefined" ? savedWords.size : 0);
   const lEl = document.getElementById("profile-learned"); if (lEl) lEl.textContent = (typeof learnedWords !== "undefined" ? learnedWords.size : 0);
-  const tEl = document.getElementById("profile-tests"); if (tEl) tEl.textContent = 0;
+  const tEl = document.getElementById("profile-tests"); if (tEl) tEl.textContent = (typeof getTestResults === "function" ? getTestResults().length : 0);
   const vEl = document.getElementById("profile-videos"); if (vEl) vEl.textContent = 0;
 
   applyAvatar();
@@ -105,6 +107,7 @@ function profileNav(view, btn) {
   const target = document.getElementById("pv-" + view);
   if (target) target.style.display = "block";
   if (view === "tests" && typeof renderTestHistory === "function") renderTestHistory();
+  if (view === "stats" && typeof renderStatsView === "function") renderStatsView();
   document.querySelectorAll(".psb-item").forEach(b => b.classList.remove("active"));
   const map = { overview: "psb-overview", tests: "psb-tests", videos: "psb-videos", stats: "psb-stats", settings: "psb-settings" };
   if (btn && btn.classList) btn.classList.add("active");
@@ -122,8 +125,11 @@ function settingsTab(key, btn) {
   else {
     if (acc) acc.style.display = "none";
     if (oth) oth.style.display = "block";
-    const m = document.getElementById("stab-other-msg");
-    if (m) m.textContent = key + " bölümü yakında eklenecek.";
+    if (key === "Veri Yönetimi" && typeof veriYonetimiHTML === "function") {
+      oth.innerHTML = veriYonetimiHTML();
+    } else {
+      oth.innerHTML = '<div class="profile-panel"><div class="profile-empty">' + key + ' bölümü yakında eklenecek.</div></div>';
+    }
   }
 }
 
