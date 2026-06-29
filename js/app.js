@@ -1698,7 +1698,7 @@ function quizTypeLabel(t) { return {'ru-tr':'Rusça → Türkçe','tr-ru':'Türk
 function saveTestResult() {
   const rec = {
     id: 'r' + Date.now(), date: new Date().toISOString(),
-    type: quizSettings.type, name: quizTypeLabel(quizSettings.type),
+    type: quizSettings.type, name: quizSettings.label || quizTypeLabel(quizSettings.type),
     score: qScore, total: qList.length,
     items: (qReviewItems && qReviewItems.length ? qReviewItems : qAnswers).map(a => ({ n:a.n, st:a.st||(a.ok?'ok':'wrong'), ok:a.ok, your:a.your, correct:a.correct, ru:a.ru, tr:a.tr }))
   };
@@ -1739,6 +1739,7 @@ function renderTestHistory() {
       <div class="th-main" onclick="toggleTestResult('${r.id}')">
         <div class="th-info"><div class="th-name">${_escHtml(r.name)}</div><div class="th-meta">${ds} · ${r.total} soru</div></div>
         <div class="th-score ${pct>=70?'good':(pct>=40?'mid':'low')}">${r.score}/${r.total}<span>%${pct}</span></div>
+        <button class="th-del" title="Bu kaydı sil" onclick="event.stopPropagation();deleteTestResult('${r.id}')">×</button>
       </div>
       <div class="th-detail" id="th-detail-${r.id}" style="display:none;"></div>
     </div>`;
@@ -1752,6 +1753,15 @@ function toggleTestResult(id) {
   det.style.display = 'block';
 }
 function clearTestHistory() { if (confirm('Tüm test geçmişi silinsin mi?')) { setTestResults([]); renderTestHistory(); } }
+async function deleteTestResult(id) {
+  if (!confirm('Bu test kaydı silinsin mi?')) return;
+  setTestResults(getTestResults().filter(x => x.id !== id));
+  renderTestHistory();
+  if (typeof renderStatsView === 'function') { const sb2 = document.getElementById('stats-body'); if (sb2 && sb2.innerHTML) renderStatsView(); }
+  if (typeof sb !== 'undefined' && sb && typeof currentUser !== 'undefined' && currentUser && /-/.test(String(id))) {
+    try { await sb.from('test_results').delete().eq('id', id).eq('user_id', currentUser.id); } catch (e) {}
+  }
+}
 
 /* ============================================================
    VERİ & İSTATİSTİK — streak, istatistik görünümü, veri indirme
@@ -1857,7 +1867,8 @@ function veriYonetimiHTML() {
 /* ============================================================
    PROFİL — Inline Kelime Kasam / Öğrenilen görünümü
    ============================================================ */
-const kasaViewState = { saved: { page:1, level:'all' }, learned: { page:1, level:'all' } };
+const KV_CATS = ['all','isim','fiil','sıfat','zarf','zamir','edat','bağlaç'];
+const kasaViewState = { saved: { page:1, level:'all', cat:'all' }, learned: { page:1, level:'all', cat:'all' } };
 
 function renderKasaView(status) {
   const box = document.getElementById(status === 'learned' ? 'kasa-learned-body' : 'kasa-saved-body');
@@ -1868,6 +1879,7 @@ function renderKasaView(status) {
   let items = [];
   set.forEach(ru => { const w = (typeof wordsByRu !== 'undefined' && wordsByRu[ru]) || { ru, tr:'', level:'' }; items.push(w); });
   if (st.level !== 'all') items = items.filter(w => w.level === st.level);
+  if (st.cat !== 'all') items = items.filter(w => w.cat === st.cat);
   items.sort((a,b) => (a.ru || '').localeCompare(b.ru || '', 'ru'));
   const total = items.length;
   const PAGE = 24;
@@ -1877,9 +1889,11 @@ function renderKasaView(status) {
 
   const levels = ['all','A1','A2','B1','B2','C1'];
   const pills = levels.map(l => `<button class="kv-pill ${st.level===l?'active':''}" onclick="kasaViewSetLevel('${status}','${l}')">${l==='all'?'Tümü':l}</button>`).join('');
+  const catLabels = { all:'Tüm Türler', isim:'İsim', fiil:'Fiil', 'sıfat':'Sıfat', zarf:'Zarf', zamir:'Zamir', edat:'Edat', 'bağlaç':'Bağlaç' };
+  const typePills = KV_CATS.map(c => `<button class="kv-pill kv-pill-type ${st.cat===c?'active':''}" onclick="kasaViewSetType('${status}','${c}')">${catLabels[c]}</button>`).join('');
 
   if (!total) {
-    box.innerHTML = `<div class="kv-filter">${pills}</div><div class="profile-panel"><div class="profile-empty">${status==='learned'?'Henüz öğrenilen kelime yok. Kelime Kasanda bir kelimeyi ✓ ile öğrenildi işaretleyebilirsin.':'Henüz kayıtlı kelime yok. Kelimeler sayfasından ☆ ile kaydet.'}</div></div>`;
+    box.innerHTML = `<div class="kv-filter">${pills}</div><div class="kv-filter kv-filter-type">${typePills}</div><div class="profile-panel"><div class="profile-empty">${(st.cat!=='all'||st.level!=='all')?'Bu filtreye uygun kelime yok.':(status==='learned'?'Henüz öğrenilen kelime yok. Kelime Kasanda bir kelimeyi ✓ ile öğrenildi işaretleyebilirsin.':'Henüz kayıtlı kelime yok. Kelimeler sayfasından ☆ ile kaydet.')}</div></div>`;
     return;
   }
   const cards = slice.map(w => {
@@ -1900,9 +1914,10 @@ function renderKasaView(status) {
     if (st.page < pages) pager += `<button class="kv-pg" onclick="kasaViewGoPage('${status}',${st.page+1})">›</button>`;
     pager += '</div>';
   }
-  box.innerHTML = `<div class="kv-filter">${pills}<span class="kv-count">${total} kelime</span></div><div class="kv-grid">${cards}</div>${pager}`;
+  box.innerHTML = `<div class="kv-filter">${pills}<span class="kv-count">${total} kelime</span></div><div class="kv-filter kv-filter-type">${typePills}</div><div class="kv-grid">${cards}</div>${pager}`;
 }
 function kasaViewSetLevel(status, l) { kasaViewState[status].level = l; kasaViewState[status].page = 1; renderKasaView(status); }
+function kasaViewSetType(status, c) { kasaViewState[status].cat = c; kasaViewState[status].page = 1; renderKasaView(status); }
 function kasaViewGoPage(status, p) { kasaViewState[status].page = p; renderKasaView(status); }
 async function kasaRemoveLearned(ru) {
   if (typeof toggleLearned === 'function') { try { await toggleLearned(null, ru); } catch (e) {} }
@@ -1921,6 +1936,12 @@ function renderStudyCalendar() {
   const y = calRef.getFullYear(), m = calRef.getMonth();
   if (titleEl) titleEl.textContent = `${months[m]} ${y}`;
   const activeDays = new Set((typeof _resultDays === 'function' ? _resultDays() : []));
+  const dayMap = {};
+  (typeof getTestResults === 'function' ? getTestResults() : []).forEach(r => {
+    const k = (r.date || '').slice(0,10); if (!k) return;
+    (dayMap[k] = dayMap[k] || { tests:0, questions:0, correct:0 });
+    dayMap[k].tests++; dayMap[k].questions += (r.total||0); dayMap[k].correct += (r.score||0);
+  });
   const todayKey = new Date().toISOString().slice(0,10);
   const first = new Date(y, m, 1);
   let startDow = first.getDay(); startDow = (startDow === 0) ? 6 : startDow - 1; // Pzt=0
@@ -1933,7 +1954,64 @@ function renderStudyCalendar() {
     const cls = ['cal-cell'];
     if (activeDays.has(key)) cls.push('active');
     if (key === todayKey) cls.push('today');
-    html += `<div class="${cls.join(' ')}">${d}</div>`;
+    let title;
+    if (dayMap[key]) title = `${dayMap[key].tests} test · ${dayMap[key].questions} soru · ${dayMap[key].correct} doğru`;
+    else if (key > todayKey) title = 'İleride: planlama & not (yakında)';
+    else title = 'Çalışma kaydı yok';
+    html += `<div class="${cls.join(' ')}" title="${title}">${d}</div>`;
   }
   box.innerHTML = html;
+}
+
+/* ============================================================
+   GÜNLÜK TEKRAR — kayıtlı+öğrenilen havuzdan rastgele 20 kelime
+   ============================================================ */
+function startDailyReview() {
+  if (typeof currentUser === 'undefined' || !currentUser) { if (typeof openAuth === 'function') openAuth('login'); return; }
+  let pool = []; const seen = new Set();
+  const add = set => { if (set && set.forEach) set.forEach(ru => { const w = wordsByRu[ru]; if (w && !seen.has(ru)) { seen.add(ru); pool.push(w); } }); };
+  add(typeof savedWords !== 'undefined' ? savedWords : null);
+  add(typeof learnedWords !== 'undefined' ? learnedWords : null);
+  if (pool.length < 4) { toast('Günlük tekrar için en az 4 kayıtlı/öğrenilmiş kelime gerekli.'); return; }
+  const count = Math.min(20, pool.length);
+  quizReveal = 'instant';
+  qList = shuffle(pool).slice(0, count);
+  quizSettings = { type: 'mix', cat: 'hepsi', count: qList.length, level: 'hepsi', label: 'Günlük Tekrar' };
+  const ts = ['ru-tr','tr-ru','fill','tf'];
+  qTypes = qList.map(() => ts[Math.floor(Math.random() * ts.length)]);
+  qIdx = 0; qScore = 0; qWrong = 0;
+  reviewReturnTo = 'profile';
+  try { localStorage.setItem('ydt_daily_reviews', String((parseInt(localStorage.getItem('ydt_daily_reviews') || '0', 10) || 0) + 1)); } catch (e) {}
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const qp = document.getElementById('page-quiz'); if (qp) qp.classList.add('active');
+  document.getElementById('quiz-setup').style.display = 'none';
+  document.getElementById('quiz-playing').style.display = 'block';
+  document.getElementById('quiz-result').style.display = 'none';
+  document.getElementById('quiz-card').style.display = 'block';
+  window.scrollTo(0, 0);
+  loadQ();
+}
+
+/* ============================================================
+   GELİŞİM GRAFİĞİ — mevcut tüm istatistikler (genişletilebilir)
+   ============================================================ */
+function renderProgressChart() {
+  const box = document.getElementById('progress-chart'); if (!box) return;
+  const saved = (typeof savedWords !== 'undefined') ? savedWords.size : 0;
+  const learned = (typeof learnedWords !== 'undefined') ? learnedWords.size : 0;
+  const res = (typeof getTestResults === 'function') ? getTestResults() : [];
+  const tests = res.length;
+  const questions = res.reduce((a,r) => a + (r.total||0), 0);
+  const correct = res.reduce((a,r) => a + (r.score||0), 0);
+  const avg = tests ? Math.round(res.reduce((a,r) => a + (r.total ? r.score/r.total*100 : 0), 0) / tests) : 0;
+  const metrics = [
+    { lab:'Kayıtlı Kelime', val:saved,     col:'var(--gold)' },
+    { lab:'Öğrenilen',      val:learned,   col:'#3fa97a' },
+    { lab:'Çözülen Test',   val:tests,     col:'var(--blue-light)' },
+    { lab:'Çözülen Soru',   val:questions, col:'#7e6bd0' },
+    { lab:'Doğru Cevap',    val:correct,   col:'#e0852c' }
+  ];
+  const max = Math.max(1, ...metrics.map(m => m.val));
+  const bars = metrics.map(m => `<div class="pg-row"><span class="pg-lab">${m.lab}</span><div class="pg-track"><div class="pg-fill" style="width:${Math.round(m.val/max*100)}%;background:${m.col}"></div></div><span class="pg-val">${m.val}</span></div>`).join('');
+  box.innerHTML = `<div class="pg-top"><div class="pg-avg-ring" style="--p:${avg}"><span>%${avg}</span></div><div class="pg-avg-lab">Ortalama Test Başarısı</div></div><div class="pg-bars">${bars}</div><div class="pg-foot">Seviye ilerlemesi gibi yeni istatistikler eklendikçe burada görünecek.</div>`;
 }
