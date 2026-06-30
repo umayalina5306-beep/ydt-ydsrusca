@@ -2150,3 +2150,35 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .an-user { display:flex; align-items:center; gap:8px; padding:5px 6px; border-radius:7px; cursor:pointer; font-size:.88rem; }
 .an-user:hover { background:var(--off-white); }
 .an-loading { color:var(--gray); font-size:.85rem; padding:8px; }
+
+/* ============ DESTEK / TICKET ============ */
+.an-card-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.sup-h3 { color:var(--blue); margin:0 0 12px; font-size:1.05rem; }
+.sup-input { width:100%; padding:11px 13px; border:1px solid var(--light-gray); border-radius:10px; font:inherit; box-sizing:border-box; margin-bottom:10px; }
+.sup-input:focus, .sup-textarea:focus { outline:none; border-color:var(--gold); }
+.sup-textarea { width:100%; min-height:90px; padding:11px 13px; border:1px solid var(--light-gray); border-radius:10px; font:inherit; font-size:.92rem; resize:vertical; box-sizing:border-box; }
+.sup-send { margin-top:10px; background:var(--blue); color:#fff; border:none; padding:11px 22px; border-radius:10px; font-weight:700; cursor:pointer; }
+.sup-send:hover { background:var(--blue-light); }
+.sup-back { background:none; border:none; color:var(--gold); font-weight:700; cursor:pointer; padding:0; margin-bottom:10px; font-size:.9rem; }
+.sup-back:hover { text-decoration:underline; }
+.sup-ticket { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:13px 15px; border:1px solid var(--light-gray); border-radius:12px; margin-bottom:8px; cursor:pointer; transition:.12s; background:var(--white); }
+.sup-ticket:hover { background:var(--off-white); border-color:var(--gold); }
+.sup-ticket-subj { font-weight:700; color:var(--text); }
+.sup-ticket-date { font-size:.78rem; color:var(--gray); margin-top:3px; }
+.sup-status { font-size:.72rem; font-weight:800; padding:4px 10px; border-radius:10px; white-space:nowrap; }
+.sup-open { background:#fff3d6; color:#a87c12; }
+.sup-answered { background:#d9f2e4; color:#1f7a4d; }
+.sup-closed { background:var(--light-gray); color:var(--gray); }
+.sup-thread { display:flex; flex-direction:column; gap:10px; margin:14px 0; max-height:420px; overflow-y:auto; }
+.sup-msg-row { display:flex; }
+.sup-msg-row.user { justify-content:flex-end; }
+.sup-msg-row.admin { justify-content:flex-start; }
+.sup-bubble { max-width:78%; padding:10px 14px; border-radius:14px; font-size:.9rem; line-height:1.45; }
+.sup-msg-row.user .sup-bubble { background:var(--blue); color:#fff; border-bottom-right-radius:4px; }
+.sup-msg-row.admin .sup-bubble { background:var(--off-white); color:var(--text); border-bottom-left-radius:4px; }
+.sup-bubble-who { font-size:.68rem; font-weight:800; opacity:.75; margin-bottom:3px; }
+.sup-bubble-time { font-size:.64rem; opacity:.6; margin-top:5px; }
+
+/* Üst bar avatar seviye rozeti */
+.nav-avatar.has-lvl-frame { overflow:visible; }
+.nav-avatar .lvl-badge { width:15px; height:15px; font-size:.44rem; bottom:-2px; right:-2px; border-width:1.5px; }
