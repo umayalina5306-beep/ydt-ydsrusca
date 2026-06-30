@@ -2319,6 +2319,7 @@ if (typeof window !== 'undefined') { window.uiAlert = uiAlert; window.uiConfirm 
    BİLDİRİM SİSTEMİ
    ============================================================ */
 let myNotifications = [];
+let notifPollId = null;
 async function loadNotifications() {
   if (typeof sb === 'undefined' || !sb || typeof currentUser === 'undefined' || !currentUser) return;
   try {
@@ -2512,13 +2513,6 @@ function renderSupport() {
     <div class="profile-panel">
       <h3 class="sup-h3">Taleplerim</h3>
       <div id="sup-list"><div class="profile-empty">Yükleniyor...</div></div>
-    </div>
-    <div class="profile-panel">
-      <h3 class="sup-h3">Yöneticiye Hızlı Mesaj (İletişim)</h3>
-      <p class="profile-sub" style="margin:0 0 12px;">Talep açmadan kısa bir mesaj iletmek istersen buradan gönderebilirsin.</p>
-      <input id="sm-subject" class="sup-input" placeholder="Konu" autocomplete="off">
-      <textarea id="sm-body" class="sup-textarea" placeholder="Mesajın..."></textarea>
-      <button class="sup-send" onclick="sendSiteMail()">Mesaj Gönder</button>
     </div>`;
   supportLoadTickets();
 }
@@ -2658,27 +2652,180 @@ async function adminLoadMail() {
   const box = document.getElementById('admin-mail'); if (!box) return;
   box.innerHTML = '<div class="profile-empty">Yükleniyor...</div>';
   try {
-    const { data } = await sb.from('site_mail').select('*').order('created_at', { ascending: false }).limit(100);
-    if (!data || !data.length) { box.innerHTML = '<div class="profile-empty">Gelen mesaj yok.</div>'; return; }
+    const { data } = await sb.from('inbox_mail').select('*').order('created_at', { ascending: false }).limit(100);
+    if (!data || !data.length) { box.innerHTML = '<div class="profile-empty">Gelen e-posta yok. (info@ / destek@ adresine gelen mailler buraya düşer.)</div>'; return; }
+    // üyelik kontrolü: gönderen e-postası kayıtlı mı?
+    const froms = [...new Set(data.map(m => (m.from_email || '').toLowerCase()).filter(Boolean))];
+    let members = new Set();
+    try { if (froms.length) { const { data: profs } = await sb.from('profiles').select('email').in('email', froms); (profs || []).forEach(p => members.add((p.email || '').toLowerCase())); } } catch (e) {}
     box.innerHTML = data.map(m => {
       const d = new Date(m.created_at);
+      const fe = (m.from_email || '').toLowerCase();
+      const isMember = members.has(fe);
+      const badge = isMember ? '<span class="mail-member yes">Üye</span>' : '<span class="mail-member no">Üye değil</span>';
       return `<div class="sm-item ${m.is_read ? '' : 'unread'}">
         <div class="sm-head" onclick="admMailToggle(this, '${m.id}')">
-          <div><div class="sm-subj">${_escHtml(m.subject)}</div><div class="sm-meta">${_escHtml(m.email || m.user_id.slice(0,8))} · ${d.toLocaleString('tr-TR')}</div></div>
+          <div><div class="sm-subj">${_escHtml(m.subject || '(konu yok)')} ${badge}</div><div class="sm-meta">${_escHtml(m.from_name || '')} &lt;${_escHtml(m.from_email || '')}&gt; · ${d.toLocaleString('tr-TR')}</div></div>
           <button class="sup-del" title="Sil" onclick="event.stopPropagation();admMailDelete('${m.id}')">×</button>
         </div>
-        <div class="sm-body">${_escHtml(m.body)}</div>
+        <div class="sm-body">${_escHtml(m.body || '')}
+          <div class="mail-reply"><a class="sup-send" href="mailto:${encodeURIComponent(m.from_email||'')}?subject=${encodeURIComponent('RE: '+(m.subject||''))}">E-posta ile Yanıtla</a></div>
+        </div>
       </div>`;
     }).join('');
-  } catch (e) { box.innerHTML = '<div class="profile-empty">Mesajlar alınamadı (yönetici yetkisi gerekli).</div>'; }
+  } catch (e) { box.innerHTML = '<div class="profile-empty">Gelen kutusu alınamadı. (inbox_mail tablosu kurulu mu?)</div>'; }
 }
 function admMailToggle(headEl, id) {
   const item = headEl.parentNode;
   item.classList.toggle('open');
-  if (item.classList.contains('unread')) { item.classList.remove('unread'); try { sb.from('site_mail').update({ is_read: true }).eq('id', id).then(function(){}, function(){}); } catch (e) {} }
+  if (item.classList.contains('unread')) { item.classList.remove('unread'); try { sb.from('inbox_mail').update({ is_read: true }).eq('id', id).then(function(){}, function(){}); } catch (e) {} }
 }
 async function admMailDelete(id) {
   if (!(await uiConfirm('Bu mesaj silinsin mi?', 'Mesajı Sil', { danger: true }))) return;
-  try { await sb.from('site_mail').delete().eq('id', id); } catch (e) {}
+  try { await sb.from('inbox_mail').delete().eq('id', id); } catch (e) {}
   adminLoadMail();
+}
+
+/* ============================================================
+   SEVİYE TESPİT SINAVI (ayrı soru havuzu: placement_questions)
+   ============================================================ */
+const PLC_LEVELS = ['A1','A2','B1','B2','C1'];
+const PLC_SIZE = 20;
+const PLC_PASS = 70;
+let placementPool = null;        // { A1:[...], ... }
+let plcExam = [], plcAnswers = [], plcIdx = 0;
+
+async function openPlacement() {
+  if (typeof currentUser === 'undefined' || !currentUser) { if (typeof openAuth === 'function') openAuth('login'); return; }
+  if (typeof showPage === 'function') showPage('placement');
+  renderPlacementIntro();
+}
+async function loadPlacementPool() {
+  if (placementPool) return placementPool;
+  const g = { A1:[], A2:[], B1:[], B2:[], C1:[] };
+  try {
+    const { data } = await sb.from('placement_questions').select('*').eq('active', true);
+    (data || []).forEach(q => { if (g[q.level]) g[q.level].push(q); });
+  } catch (e) {}
+  placementPool = g; return g;
+}
+function renderPlacementIntro() {
+  const box = document.getElementById('plc-content'); if (!box) return;
+  const lvl = (currentProfile && currentProfile.level) ? String(currentProfile.level).toUpperCase() : '';
+  box.innerHTML = `<div class="plc-card">
+    <div class="plc-icon">🎚️</div>
+    <h2 class="plc-title">Seviye Tespit Sınavı</h2>
+    <p class="plc-sub">${PLC_SIZE} soruluk bir sınavla Rusça seviyen belirlenir. Sonuç avatarındaki seviye çerçevesine ve gelişim grafiğine işlenir.</p>
+    <div class="plc-level-now">Mevcut seviyen: <b>${lvl || 'henüz belirlenmedi'}</b></div>
+    <ul class="plc-rules">
+      <li>Sorular seviyene göre ağırlıklı olarak havuzdan <b>rastgele</b> seçilir.</li>
+      <li>Geçme barajı <b>%${PLC_PASS}</b>. Geçersen bir üst seviyeye çıkarsın.</li>
+      <li>Geçemezsen <b>farklı sorularla</b> tekrar girebilirsin.</li>
+    </ul>
+    <button class="plc-start" onclick="startPlacement()">Sınava Başla →</button>
+  </div>`;
+}
+function placementCounts(idx, total) {
+  const last = PLC_LEVELS.length - 1;
+  const counts = {};
+  const add = (i, c) => { if (i >= 0 && i <= last && c > 0) counts[i] = (counts[i] || 0) + c; };
+  const hasBelow = idx > 0, hasAbove = idx < last;
+  if (hasBelow && hasAbove) {
+    add(idx, Math.round(total * 0.60));
+    add(idx - 1, Math.round(total * 0.10));
+    add(idx + 1, Math.round(total * 0.20));
+    if (idx + 2 <= last) add(idx + 2, Math.round(total * 0.10)); else add(idx + 1, Math.round(total * 0.10));
+  } else if (!hasBelow) {
+    add(idx, Math.round(total * 0.70));
+    add(idx + 1, Math.round(total * 0.20));
+    if (idx + 2 <= last) add(idx + 2, Math.round(total * 0.10)); else add(idx + 1, Math.round(total * 0.10));
+  } else { // en üst seviye
+    add(idx, Math.round(total * 0.80));
+    let lower = total - (counts[idx] || 0), i = idx - 1;
+    while (lower > 0 && i >= 0) { const c = Math.min(lower, Math.max(1, Math.ceil(lower / 2))); add(i, c); lower -= c; i--; }
+  }
+  let sum = Object.values(counts).reduce((a, b) => a + b, 0);
+  while (sum > total) { counts[idx]--; sum--; }
+  while (sum < total) { counts[idx] = (counts[idx] || 0) + 1; sum++; }
+  return counts;
+}
+function buildPlacementExam() {
+  const curLevel = (currentProfile && currentProfile.level) || 'A1';
+  let idx = PLC_LEVELS.indexOf(String(curLevel).toUpperCase()); if (idx < 0) idx = 0;
+  const counts = placementCounts(idx, PLC_SIZE);
+  let exam = [], deficit = 0;
+  Object.keys(counts).forEach(li => {
+    const lv = PLC_LEVELS[li];
+    const pool = (placementPool[lv] || []).slice(); shuffle(pool);
+    const want = counts[li]; const take = pool.slice(0, want);
+    if (take.length < want) deficit += (want - take.length);
+    exam = exam.concat(take);
+  });
+  if (deficit > 0) {
+    let extra = [];
+    PLC_LEVELS.forEach(lv => (placementPool[lv] || []).forEach(q => { if (exam.indexOf(q) === -1) extra.push(q); }));
+    shuffle(extra); exam = exam.concat(extra.slice(0, deficit));
+  }
+  shuffle(exam);
+  return exam.slice(0, PLC_SIZE);
+}
+async function startPlacement() {
+  const box = document.getElementById('plc-content'); if (box) box.innerHTML = '<div class="plc-card"><div class="profile-empty">Sorular hazırlanıyor...</div></div>';
+  await loadPlacementPool();
+  const totalQ = PLC_LEVELS.reduce((a, lv) => a + (placementPool[lv] ? placementPool[lv].length : 0), 0);
+  if (totalQ < 4) { if (box) box.innerHTML = '<div class="plc-card"><div class="profile-empty">Soru havuzu henüz boş. Lütfen yönetici sorular ekleyince tekrar dene.</div><button class="plc-start" onclick="renderPlacementIntro()">Geri</button></div>'; return; }
+  plcExam = buildPlacementExam();
+  plcAnswers = new Array(plcExam.length).fill(null);
+  plcIdx = 0;
+  renderPlcQ();
+}
+function renderPlcQ() {
+  const box = document.getElementById('plc-content'); if (!box) return;
+  const q = plcExam[plcIdx]; if (!q) { finishPlacement(); return; }
+  const opts = Array.isArray(q.options) ? q.options : (function(){ try { return JSON.parse(q.options); } catch (e) { return []; } })();
+  const pct = Math.round((plcIdx) / plcExam.length * 100);
+  const optsHtml = opts.map((o, i) => `<button class="plc-opt ${plcAnswers[plcIdx] === i ? 'sel' : ''}" onclick="plcPick(${i})">${_escHtml(o)}</button>`).join('');
+  box.innerHTML = `<div class="plc-card plc-quiz">
+    <div class="plc-progress"><div class="plc-progress-bar" style="width:${pct}%"></div></div>
+    <div class="plc-qnum">Soru ${plcIdx + 1} / ${plcExam.length}</div>
+    <div class="plc-q">${_escHtml(q.question)}</div>
+    <div class="plc-opts">${optsHtml}</div>
+    <div class="plc-nav">
+      ${plcIdx > 0 ? `<button class="plc-navbtn ghost" onclick="plcPrev()">‹ Önceki</button>` : '<span></span>'}
+      ${plcIdx < plcExam.length - 1 ? `<button class="plc-navbtn" onclick="plcNext()">Sonraki ›</button>` : `<button class="plc-navbtn gold" onclick="finishPlacement()">Sınavı Bitir</button>`}
+    </div>
+  </div>`;
+}
+function plcPick(i) { plcAnswers[plcIdx] = i; renderPlcQ(); }
+function plcNext() { if (plcIdx < plcExam.length - 1) { plcIdx++; renderPlcQ(); } }
+function plcPrev() { if (plcIdx > 0) { plcIdx--; renderPlcQ(); } }
+async function finishPlacement() {
+  const blanks = plcAnswers.filter(a => a === null).length;
+  if (blanks > 0 && !(await uiConfirm(blanks + ' soru boş. Yine de bitirilsin mi?', 'Sınavı Bitir'))) return;
+  const correct = plcExam.reduce((a, q, i) => a + (plcAnswers[i] === q.correct ? 1 : 0), 0);
+  const total = plcExam.length;
+  const pct = Math.round(correct / total * 100);
+  const passed = pct >= PLC_PASS;
+  const curLevel = (currentProfile && currentProfile.level) || 'A1';
+  let idx = PLC_LEVELS.indexOf(String(curLevel).toUpperCase()); if (idx < 0) idx = 0;
+  const newIdx = passed ? Math.min(PLC_LEVELS.length - 1, idx + 1) : idx;
+  const newLevel = PLC_LEVELS[newIdx];
+  try {
+    if (sb && currentUser) await sb.from('profiles').update({ level: newLevel }).eq('id', currentUser.id);
+    if (currentProfile) currentProfile.level = newLevel;
+    if (typeof applyAvatar === 'function') applyAvatar();
+    if (typeof createNotification === 'function') createNotification('🎚️ Seviyen: ' + newLevel, passed ? 'Tebrikler! Seviye tespit sınavını geçtin.' : 'Seviyen belirlendi.', 'success');
+  } catch (e) {}
+  const box = document.getElementById('plc-content'); if (!box) return;
+  box.innerHTML = `<div class="plc-card plc-result">
+    <div class="plc-icon">${passed ? '🎉' : '📋'}</div>
+    <h2 class="plc-title">${passed ? 'Tebrikler!' : 'Sınav Tamamlandı'}</h2>
+    <div class="plc-score ${passed ? 'pass' : 'fail'}">%${pct}</div>
+    <p class="plc-sub">${correct} / ${total} doğru — ${passed ? 'barajı geçtin.' : 'baraj %' + PLC_PASS + ', tekrar deneyebilirsin.'}</p>
+    <div class="plc-newlevel">Seviyen: <b>${newLevel}</b></div>
+    <div class="plc-result-btns">
+      <button class="plc-start" onclick="startPlacement()">Tekrar Dene (farklı sorular)</button>
+      <button class="plc-navbtn ghost" onclick="showPage('profile')">Profilime Dön</button>
+    </div>
+  </div>`;
 }
