@@ -2182,3 +2182,20 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 /* Üst bar avatar seviye rozeti */
 .nav-avatar.has-lvl-frame { overflow:visible; }
 .nav-avatar .lvl-badge { width:15px; height:15px; font-size:.44rem; bottom:-2px; right:-2px; border-width:1.5px; }
+
+/* Ticket silme + kullanıcı arama e-posta */
+.sup-del { background:transparent; border:none; color:var(--gray); font-size:1.3rem; line-height:1; cursor:pointer; padding:0 4px; flex-shrink:0; }
+.sup-del:hover { color:var(--red); }
+.an-user-mail { margin-left:auto; font-size:.74rem; color:var(--gray); }
+.an-user { justify-content:flex-start; }
+
+/* Site mail gelen kutusu */
+.sm-item { border:1px solid var(--light-gray); border-radius:12px; margin-bottom:8px; overflow:hidden; background:var(--white); }
+.sm-item.unread { border-color:var(--gold); background:rgba(201,168,76,.06); }
+.sm-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:12px 14px; cursor:pointer; }
+.sm-head:hover { background:var(--off-white); }
+.sm-subj { font-weight:700; color:var(--text); }
+.sm-item.unread .sm-subj::before { content:""; display:inline-block; width:7px; height:7px; background:var(--gold); border-radius:50%; margin-right:7px; vertical-align:middle; }
+.sm-meta { font-size:.76rem; color:var(--gray); margin-top:3px; }
+.sm-body { display:none; padding:0 14px 14px; color:var(--text); font-size:.9rem; line-height:1.5; white-space:pre-wrap; }
+.sm-item.open .sm-body { display:block; }
