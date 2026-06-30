@@ -34,7 +34,7 @@ function applyAvatar() {
     let badge = "";
     el.classList.add("has-lvl-frame");
     el.classList.add(hasLevel ? ("lvl-" + level) : "lvl-none");
-    if (id !== "account-avatar") badge = `<span class="lvl-badge">${hasLevel ? level : "?"}</span>`;
+    badge = `<span class="lvl-badge">${hasLevel ? level : "?"}</span>`;
     el.innerHTML = inner + badge;
   });
 }
@@ -131,8 +131,9 @@ function profileNav(view, btn) {
   if (view === "learned" && typeof renderKasaView === "function") renderKasaView("learned");
   if (view === "overview" && typeof renderStudyCalendar === "function") renderStudyCalendar();
   if (view === "overview" && typeof renderProgressChart === "function") renderProgressChart();
+  if (view === "support") { if (typeof supportView !== "undefined") supportView = { mode: "list", ticketId: null }; if (typeof renderSupport === "function") renderSupport(); }
   document.querySelectorAll(".psb-item").forEach(b => b.classList.remove("active"));
-  const map = { overview: "psb-overview", saved: "psb-saved", learned: "psb-learned", tests: "psb-tests", videos: "psb-videos", stats: "psb-stats", settings: "psb-settings" };
+  const map = { overview: "psb-overview", saved: "psb-saved", learned: "psb-learned", tests: "psb-tests", videos: "psb-videos", stats: "psb-stats", support: "psb-support", settings: "psb-settings" };
   if (btn && btn.classList) btn.classList.add("active");
   else { const el = document.getElementById(map[view]); if (el) el.classList.add("active"); }
   window.scrollTo(0, 0);
@@ -293,7 +294,7 @@ function renderBadges() {
   }).join("");
   if (changed) {
     _saveEarnedBadges(earned);
-    if (!firstInit && typeof createNotification === "function" && (typeof notifPref !== "function" || notifPref("badges"))) newly.forEach(b => createNotification("🏅 Yeni rozet: " + b.t, b.d, "success"));
+    if (newly.length && newly.length <= 5 && typeof createNotification === "function" && (typeof notifPref !== "function" || notifPref("badges"))) newly.forEach(b => createNotification("🏅 Yeni rozet: " + b.t, b.d, "success"));
   }
   box.innerHTML = html;
 }
