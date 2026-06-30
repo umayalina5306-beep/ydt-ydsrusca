@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=38">
+<link rel="stylesheet" href="css/style.css?v=39">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -1054,8 +1054,12 @@
       </div>
       <input id="admin-search" class="admin-search" placeholder="🔍 İsim veya e-posta ara..." oninput="filterAdminUsers(this.value)" autocomplete="off">
       <div class="admin-notif-card">
-        <div class="an-card-head"><h3 class="an-h3">💬 Destek Talepleri</h3><button class="set-btn ghost" onclick="adminLoadTickets()">Yenile</button></div>
+        <div class="an-card-head"><h3 class="an-h3">💬 Destek Talepleri</h3><div><button class="set-btn ghost" onclick="adminClearClosedTickets()">Kapanmışları Temizle</button><button class="set-btn ghost" onclick="adminLoadTickets()" style="margin-left:8px;">Yenile</button></div></div>
         <div id="admin-tickets"></div>
+      </div>
+      <div class="admin-notif-card">
+        <div class="an-card-head"><h3 class="an-h3">📨 Gelen Mesajlar (İletişim)</h3><button class="set-btn ghost" onclick="adminLoadMail()">Yenile</button></div>
+        <div id="admin-mail"></div>
       </div>
       <div id="admin-users" class="admin-users"></div>
     </div>
@@ -1114,11 +1118,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=38"></script>
-<script defer src="js/auth.js?v=38"></script>
-<script defer src="js/admin.js?v=38"></script>
-<script defer src="js/profile.js?v=38"></script>
-<script defer src="js/extras.js?v=38"></script>
-<script defer src="js/app.js?v=38"></script>
+<script defer src="js/supabase-config.js?v=39"></script>
+<script defer src="js/auth.js?v=39"></script>
+<script defer src="js/admin.js?v=39"></script>
+<script defer src="js/profile.js?v=39"></script>
+<script defer src="js/extras.js?v=39"></script>
+<script defer src="js/app.js?v=39"></script>
 </body>
 </html>
