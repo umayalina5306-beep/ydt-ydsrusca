@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=39">
+<link rel="stylesheet" href="css/style.css?v=40">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -787,6 +787,11 @@
   </div>
 </div>
 
+<!-- ===== SEVİYE TESPİT SINAVI ===== -->
+<div id="page-placement" class="page">
+  <div class="plc-wrap"><div id="plc-content"></div></div>
+</div>
+
 <!-- ===== PROFİL ===== -->
 <div id="page-profile" class="page">
   <div class="profile-layout">
@@ -899,6 +904,7 @@
             <div class="profile-panel">
               <div class="panel-title">Hızlı İşlemler</div>
               <div class="quick-row daily-review-row" onclick="startDailyReview()"><span class="quick-ic gold">🔁</span><span class="quick-txt">Günlük Tekrar <small>20 kelime</small></span><span class="quick-arrow">›</span></div>
+              <div class="quick-row" onclick="openPlacement()"><span class="quick-ic blue">🎚️</span><span class="quick-txt">Seviye Tespit Sınavı</span><span class="quick-arrow">›</span></div>
               <div class="quick-row" onclick="openReview('profile')"><span class="quick-ic green">🔁</span><span class="quick-txt">Tekrar Et</span><span class="quick-arrow">›</span></div>
               <div class="quick-row" onclick="showPage('quiz')"><span class="quick-ic blue">📋</span><span class="quick-txt">Test Çöz</span><span class="quick-arrow">›</span></div>
               <div class="quick-row" onclick="openTestBuilder()"><span class="quick-ic gold">🛠️</span><span class="quick-txt">Test Oluştur</span><span class="quick-arrow">›</span></div>
@@ -1118,11 +1124,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=39"></script>
-<script defer src="js/auth.js?v=39"></script>
-<script defer src="js/admin.js?v=39"></script>
-<script defer src="js/profile.js?v=39"></script>
-<script defer src="js/extras.js?v=39"></script>
-<script defer src="js/app.js?v=39"></script>
+<script defer src="js/supabase-config.js?v=40"></script>
+<script defer src="js/auth.js?v=40"></script>
+<script defer src="js/admin.js?v=40"></script>
+<script defer src="js/profile.js?v=40"></script>
+<script defer src="js/extras.js?v=40"></script>
+<script defer src="js/app.js?v=40"></script>
 </body>
 </html>
