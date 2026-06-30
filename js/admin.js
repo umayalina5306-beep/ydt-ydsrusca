@@ -18,6 +18,7 @@ async function openAdmin() {
   gate.style.display = "none";
   content.style.display = "block";
   await loadAdminUsers();
+  if (typeof adminLoadTickets === "function") { adminTicketView = { mode: "list", ticketId: null, userId: null }; adminLoadTickets(); }
 }
 
 async function loadAdminUsers() {
