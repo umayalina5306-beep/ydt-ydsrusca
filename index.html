@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=37">
+<link rel="stylesheet" href="css/style.css?v=38">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -806,13 +806,14 @@
         <button class="psb-item" id="psb-tests" onclick="profileNav('tests',this)"><span class="psb-ic">📋</span> Test Geçmişim</button>
         <button class="psb-item" id="psb-videos" onclick="profileNav('videos',this)"><span class="psb-ic">▶️</span> Video İzleme Geçmişim</button>
         <button class="psb-item" id="psb-stats" onclick="profileNav('stats',this)"><span class="psb-ic">📊</span> İstatistikler</button>
+        <button class="psb-item" id="psb-support" onclick="profileNav('support',this)"><span class="psb-ic">💬</span> Destek</button>
         <button class="psb-item" id="psb-settings" onclick="profileNav('settings',this)"><span class="psb-ic">⚙️</span> Ayarlar</button>
       </div>
 
       <div class="psb-premium" id="psb-premium">
         <div class="psb-premium-head">👑 Premium Üyelik</div>
         <div class="psb-premium-sub">Tüm içeriklere erişim, reklamsız deneyim yaşayın.</div>
-        <button class="psb-premium-btn" onclick="showPage('pricing')">Premium'a Geç</button>
+        <button class="psb-premium-btn" onclick="buyPremium()">Premium'a Geç</button>
       </div>
     </aside>
 
@@ -950,6 +951,12 @@
       </div>
 
       <!-- AYARLAR -->
+      <div id="pv-support" class="profile-view" style="display:none;">
+        <h2 class="profile-h2">Destek</h2>
+        <p class="profile-sub">Bir sorun mu var, bir sorun mu yaşıyorsun? Talep oluştur, ekibimiz yanıtlasın.</p>
+        <div id="support-body"></div>
+      </div>
+
       <div id="pv-settings" class="profile-view" style="display:none;">
         <h2 class="profile-h2">Ayarlar</h2>
         <p class="profile-sub">Hesap ve uygulama tercihlerinizi yönetin.</p>
@@ -1046,6 +1053,10 @@
         <button class="set-btn" onclick="adminSendNotification()">Gönder</button>
       </div>
       <input id="admin-search" class="admin-search" placeholder="🔍 İsim veya e-posta ara..." oninput="filterAdminUsers(this.value)" autocomplete="off">
+      <div class="admin-notif-card">
+        <div class="an-card-head"><h3 class="an-h3">💬 Destek Talepleri</h3><button class="set-btn ghost" onclick="adminLoadTickets()">Yenile</button></div>
+        <div id="admin-tickets"></div>
+      </div>
       <div id="admin-users" class="admin-users"></div>
     </div>
   </div>
@@ -1103,11 +1114,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=37"></script>
-<script defer src="js/auth.js?v=37"></script>
-<script defer src="js/admin.js?v=37"></script>
-<script defer src="js/profile.js?v=37"></script>
-<script defer src="js/extras.js?v=37"></script>
-<script defer src="js/app.js?v=37"></script>
+<script defer src="js/supabase-config.js?v=38"></script>
+<script defer src="js/auth.js?v=38"></script>
+<script defer src="js/admin.js?v=38"></script>
+<script defer src="js/profile.js?v=38"></script>
+<script defer src="js/extras.js?v=38"></script>
+<script defer src="js/app.js?v=38"></script>
 </body>
 </html>
