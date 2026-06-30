@@ -2473,3 +2473,135 @@ function bildirimAyarlariHTML() {
     <button class="set-btn ghost" onclick="clearReadNotifs()" style="margin-left:8px;">Okunmuşları temizle</button>
   </div>`;
 }
+
+/* ============================================================
+   DESTEK / TICKET SİSTEMİ
+   ============================================================ */
+function supStatusLabel(s) { return s === 'answered' ? 'Yanıtlandı' : (s === 'closed' ? 'Kapandı' : 'Açık'); }
+async function notifyUser(userId, title, body, type) {
+  if (typeof sb === 'undefined' || !sb || !userId) return;
+  try { await sb.from('notifications').insert({ user_id: userId, title: title, body: body || null, type: type || 'info' }); } catch (e) {}
+}
+
+/* ---- Kullanıcı tarafı ---- */
+let supportView = { mode: 'list', ticketId: null };
+function renderSupport() {
+  const box = document.getElementById('support-body'); if (!box) return;
+  if (typeof currentUser === 'undefined' || !currentUser) { box.innerHTML = '<div class="profile-empty">Destek için giriş yapmalısın.</div>'; return; }
+  if (supportView.mode === 'thread') { supportRenderThread(supportView.ticketId); return; }
+  box.innerHTML = `
+    <div class="profile-panel">
+      <h3 class="sup-h3">Yeni Destek Talebi</h3>
+      <input id="sup-subject" class="sup-input" placeholder="Konu (örn. Giriş yapamıyorum)" autocomplete="off">
+      <textarea id="sup-msg" class="sup-textarea" placeholder="Sorununu detaylı yaz..."></textarea>
+      <button class="sup-send" onclick="supportCreateTicket()">Talep Oluştur</button>
+    </div>
+    <div class="profile-panel">
+      <h3 class="sup-h3">Taleplerim</h3>
+      <div id="sup-list"><div class="profile-empty">Yükleniyor...</div></div>
+    </div>`;
+  supportLoadTickets();
+}
+async function supportLoadTickets() {
+  const box = document.getElementById('sup-list'); if (!box) return;
+  try {
+    const { data } = await sb.from('support_tickets').select('*').eq('user_id', currentUser.id).order('updated_at', { ascending: false });
+    if (!data || !data.length) { box.innerHTML = '<div class="profile-empty">Henüz talebin yok.</div>'; return; }
+    box.innerHTML = data.map(t => {
+      const d = new Date(t.updated_at);
+      return `<div class="sup-ticket" onclick="supportOpenTicket('${t.id}')">
+        <div class="sup-ticket-main"><div class="sup-ticket-subj">${_escHtml(t.subject)}</div><div class="sup-ticket-date">${d.toLocaleDateString('tr-TR')}</div></div>
+        <span class="sup-status sup-${t.status}">${supStatusLabel(t.status)}</span></div>`;
+    }).join('');
+  } catch (e) { box.innerHTML = '<div class="profile-empty">Talepler alınamadı.</div>'; }
+}
+async function supportCreateTicket() {
+  const sEl = document.getElementById('sup-subject'), mEl = document.getElementById('sup-msg');
+  const subj = (sEl && sEl.value || '').trim(), msg = (mEl && mEl.value || '').trim();
+  if (!subj || !msg) { uiAlert('Lütfen konu ve mesaj gir.'); return; }
+  try {
+    const { data, error } = await sb.from('support_tickets').insert({ user_id: currentUser.id, subject: subj, status: 'open' }).select().single();
+    if (error) throw error;
+    await sb.from('ticket_messages').insert({ ticket_id: data.id, user_id: currentUser.id, sender: 'user', body: msg });
+    toast('Talebin oluşturuldu. En kısa sürede yanıtlanacak.');
+    supportView = { mode: 'list', ticketId: null }; renderSupport();
+  } catch (e) { uiAlert('Talep oluşturulamadı. Lütfen tekrar dene.'); }
+}
+function supportOpenTicket(id) { supportView = { mode: 'thread', ticketId: id }; renderSupport(); }
+function supportBack() { supportView = { mode: 'list', ticketId: null }; renderSupport(); }
+async function supportRenderThread(id) {
+  const box = document.getElementById('support-body'); if (!box) return;
+  box.innerHTML = '<div class="profile-panel"><div class="profile-empty">Yükleniyor...</div></div>';
+  try {
+    const { data: t } = await sb.from('support_tickets').select('*').eq('id', id).single();
+    const { data: msgs } = await sb.from('ticket_messages').select('*').eq('ticket_id', id).order('created_at', { ascending: true });
+    const thread = (msgs || []).map(m => `<div class="sup-msg-row ${m.sender === 'admin' ? 'admin' : 'user'}"><div class="sup-bubble"><div class="sup-bubble-who">${m.sender === 'admin' ? 'Destek Ekibi' : 'Sen'}</div>${_escHtml(m.body)}<div class="sup-bubble-time">${new Date(m.created_at).toLocaleString('tr-TR')}</div></div></div>`).join('');
+    const closed = t && t.status === 'closed';
+    box.innerHTML = `<div class="profile-panel">
+      <button class="sup-back" onclick="supportBack()">‹ Taleplerime dön</button>
+      <h3 class="sup-h3">${_escHtml(t ? t.subject : '')} <span class="sup-status sup-${t ? t.status : 'open'}">${supStatusLabel(t ? t.status : 'open')}</span></h3>
+      <div class="sup-thread">${thread || '<div class="profile-empty">Mesaj yok.</div>'}</div>
+      ${closed ? '<div class="profile-empty">Bu talep kapatıldı.</div>' : `<textarea id="sup-reply" class="sup-textarea" placeholder="Yanıtını yaz..."></textarea><button class="sup-send" onclick="supportReply('${id}')">Gönder</button>`}
+    </div>`;
+  } catch (e) { box.innerHTML = '<div class="profile-panel"><div class="profile-empty">Talep yüklenemedi.</div></div>'; }
+}
+async function supportReply(id) {
+  const inp = document.getElementById('sup-reply'); if (!inp) return;
+  const body = (inp.value || '').trim(); if (!body) return;
+  try {
+    await sb.from('ticket_messages').insert({ ticket_id: id, user_id: currentUser.id, sender: 'user', body: body });
+    await sb.from('support_tickets').update({ status: 'open', updated_at: new Date().toISOString() }).eq('id', id);
+    supportRenderThread(id);
+  } catch (e) { uiAlert('Gönderilemedi. Lütfen tekrar dene.'); }
+}
+
+/* ---- Yönetici tarafı ---- */
+let adminTicketView = { mode: 'list', ticketId: null, userId: null };
+async function adminLoadTickets() {
+  const box = document.getElementById('admin-tickets'); if (!box) return;
+  if (adminTicketView.mode === 'thread') { adminRenderThread(adminTicketView.ticketId, adminTicketView.userId); return; }
+  box.innerHTML = '<div class="profile-empty">Yükleniyor...</div>';
+  try {
+    const { data } = await sb.from('support_tickets').select('*').order('updated_at', { ascending: false }).limit(100);
+    if (!data || !data.length) { box.innerHTML = '<div class="profile-empty">Henüz talep yok.</div>'; return; }
+    const ids = [...new Set(data.map(t => t.user_id))];
+    let names = {};
+    try { const { data: profs } = await sb.from('profiles').select('id, display_name').in('id', ids); (profs || []).forEach(p => names[p.id] = p.display_name); } catch (e) {}
+    box.innerHTML = data.map(t => {
+      const d = new Date(t.updated_at);
+      return `<div class="sup-ticket" onclick="adminOpenTicket('${t.id}','${t.user_id}')">
+        <div class="sup-ticket-main"><div class="sup-ticket-subj">${_escHtml(t.subject)}</div><div class="sup-ticket-date">${_escHtml(names[t.user_id] || t.user_id.slice(0,8))} · ${d.toLocaleDateString('tr-TR')}</div></div>
+        <span class="sup-status sup-${t.status}">${supStatusLabel(t.status)}</span></div>`;
+    }).join('');
+  } catch (e) { box.innerHTML = '<div class="profile-empty">Talepler alınamadı (yönetici yetkisi gerekli).</div>'; }
+}
+function adminOpenTicket(id, userId) { adminTicketView = { mode: 'thread', ticketId: id, userId: userId }; adminLoadTickets(); }
+function adminTicketBack() { adminTicketView = { mode: 'list', ticketId: null, userId: null }; adminLoadTickets(); }
+async function adminRenderThread(id, userId) {
+  const box = document.getElementById('admin-tickets'); if (!box) return;
+  box.innerHTML = '<div class="profile-empty">Yükleniyor...</div>';
+  try {
+    const { data: t } = await sb.from('support_tickets').select('*').eq('id', id).single();
+    const { data: msgs } = await sb.from('ticket_messages').select('*').eq('ticket_id', id).order('created_at', { ascending: true });
+    const thread = (msgs || []).map(m => `<div class="sup-msg-row ${m.sender === 'admin' ? 'admin' : 'user'}"><div class="sup-bubble"><div class="sup-bubble-who">${m.sender === 'admin' ? 'Destek Ekibi' : 'Kullanıcı'}</div>${_escHtml(m.body)}<div class="sup-bubble-time">${new Date(m.created_at).toLocaleString('tr-TR')}</div></div></div>`).join('');
+    box.innerHTML = `<button class="sup-back" onclick="adminTicketBack()">‹ Tüm talepler</button>
+      <h4 class="sup-h3">${_escHtml(t ? t.subject : '')} <span class="sup-status sup-${t ? t.status : 'open'}">${supStatusLabel(t ? t.status : 'open')}</span></h4>
+      <div class="sup-thread">${thread}</div>
+      <textarea id="adm-reply" class="sup-textarea" placeholder="Yanıt yaz..."></textarea>
+      <div><button class="sup-send" onclick="adminReply('${id}','${userId}')">Yanıtla</button>
+      <button class="set-btn ghost" onclick="adminCloseTicket('${id}')" style="margin-left:8px;">Talebi Kapat</button></div>`;
+  } catch (e) { box.innerHTML = '<div class="profile-empty">Yüklenemedi.</div>'; }
+}
+async function adminReply(id, userId) {
+  const inp = document.getElementById('adm-reply'); if (!inp) return;
+  const body = (inp.value || '').trim(); if (!body) return;
+  try {
+    await sb.from('ticket_messages').insert({ ticket_id: id, user_id: currentUser.id, sender: 'admin', body: body });
+    await sb.from('support_tickets').update({ status: 'answered', updated_at: new Date().toISOString() }).eq('id', id);
+    notifyUser(userId, 'Destek talebine yanıt geldi', 'Talebine destek ekibi yanıt verdi.', 'info');
+    adminRenderThread(id, userId);
+  } catch (e) { uiAlert('Gönderilemedi. Lütfen tekrar dene.'); }
+}
+async function adminCloseTicket(id) {
+  try { await sb.from('support_tickets').update({ status: 'closed' }).eq('id', id); adminTicketBack(); } catch (e) {}
+}
