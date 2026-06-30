@@ -2287,7 +2287,7 @@ function uiModal(o) {
     const root = _ensureModalRoot();
     const wrap = document.createElement('div');
     wrap.className = 'ui-modal-overlay';
-    const promptHtml = o.prompt ? `<input id="ui-modal-input" type="${o.inputType||'text'}" class="ui-modal-input" placeholder="${(o.placeholder||'').replace(/"/g,'&quot;')}">` : '';
+    const promptHtml = o.prompt ? `<input id="ui-modal-input" type="${o.inputType||'text'}" class="ui-modal-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${(o.placeholder||'').replace(/"/g,'&quot;')}">` : '';
     const cancelBtn = o.cancel ? `<button class="ui-modal-btn ghost" data-act="cancel">${_escHtml(o.cancelText||'Vazgeç')}</button>` : '';
     const danger = o.danger ? ' danger' : '';
     wrap.innerHTML = `<div class="ui-modal">
@@ -2337,7 +2337,8 @@ function toggleNotifPanel(ev) {
   if (ev) ev.stopPropagation();
   const p = document.getElementById('notif-panel'); if (!p) return;
   if (p.style.display === 'block') { p.style.display = 'none'; return; }
-  renderNotifPanel(); p.style.display = 'block';
+  p.style.display = 'block';
+  if (typeof loadNotifications === 'function') loadNotifications(); else renderNotifPanel();
   setTimeout(() => document.addEventListener('click', _notifOutside), 0);
 }
 function _notifOutside(e) {
@@ -2387,15 +2388,27 @@ function anTargetChange() {
   const box = document.getElementById('an-userlist'); if (!box) return;
   if (sel && sel.value === 'sel') { box.style.display = 'block'; anLoadUserList(); } else { box.style.display = 'none'; }
 }
+let _anUsers = [];
+let _anSelected = new Set();
 async function anLoadUserList() {
   const box = document.getElementById('an-userlist'); if (!box) return;
   box.innerHTML = '<div class="an-loading">Yükleniyor...</div>';
   try {
-    const { data } = await sb.from('profiles').select('id, display_name').order('display_name');
-    if (!data || !data.length) { box.innerHTML = '<div class="an-loading">Kullanıcı bulunamadı.</div>'; return; }
-    box.innerHTML = data.map(u => `<label class="an-user"><input type="checkbox" value="${u.id}"> ${_escHtml(u.display_name || u.id.slice(0,8))}</label>`).join('');
+    const { data } = await sb.from('profiles').select('id, email, display_name').order('display_name');
+    _anUsers = data || [];
+    if (!_anUsers.length) { box.innerHTML = '<div class="an-loading">Kullanıcı bulunamadı.</div>'; return; }
+    box.innerHTML = `<input id="an-search" class="admin-search" placeholder="🔍 İsim veya e-posta ara..." autocomplete="off" oninput="anRenderUsers(this.value)"><div id="an-userlist-items"></div>`;
+    anRenderUsers('');
   } catch (e) { box.innerHTML = '<div class="an-loading">Liste alınamadı (yönetici yetkisi gerekli).</div>'; }
 }
+function anRenderUsers(q) {
+  const box = document.getElementById('an-userlist-items'); if (!box) return;
+  q = (q || '').toLowerCase().trim();
+  const list = _anUsers.filter(u => !q || (u.display_name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q));
+  if (!list.length) { box.innerHTML = '<div class="an-loading">Eşleşen kullanıcı yok.</div>'; return; }
+  box.innerHTML = list.map(u => `<label class="an-user"><input type="checkbox" value="${u.id}" ${_anSelected.has(u.id) ? 'checked' : ''} onchange="anToggleUser('${u.id}', this.checked)"> <span>${_escHtml(u.display_name || (u.email||'').split('@')[0] || u.id.slice(0,8))}</span> <span class="an-user-mail">${_escHtml(u.email || '')}</span></label>`).join('');
+}
+function anToggleUser(id, on) { if (on) _anSelected.add(id); else _anSelected.delete(id); }
 async function adminSendNotification() {
   const tEl = document.getElementById('an-title'), bEl = document.getElementById('an-body');
   const t = (tEl && tEl.value || '').trim(), b = (bEl && bEl.value || '').trim();
@@ -2404,7 +2417,7 @@ async function adminSendNotification() {
   try {
     let targets = [];
     if (sel && sel.value === 'sel') {
-      targets = [...document.querySelectorAll('#an-userlist input:checked')].map(c => c.value);
+      targets = [..._anSelected];
       if (!targets.length) { uiAlert('En az bir kullanıcı seç.'); return; }
     } else {
       const { data } = await sb.from('profiles').select('id');
@@ -2415,7 +2428,7 @@ async function adminSendNotification() {
     const { error } = await sb.from('notifications').insert(rows);
     if (error) throw error;
     await uiAlert(targets.length + ' kullanıcıya bildirim gönderildi.', 'Gönderildi');
-    if (tEl) tEl.value = ''; if (bEl) bEl.value = '';
+    if (tEl) tEl.value = ''; if (bEl) bEl.value = ''; _anSelected = new Set();
     if (typeof currentUser !== 'undefined' && currentUser) loadNotifications();
   } catch (e) { uiAlert('Gönderilemedi. Lütfen tekrar dene.'); }
 }
@@ -2499,6 +2512,13 @@ function renderSupport() {
     <div class="profile-panel">
       <h3 class="sup-h3">Taleplerim</h3>
       <div id="sup-list"><div class="profile-empty">Yükleniyor...</div></div>
+    </div>
+    <div class="profile-panel">
+      <h3 class="sup-h3">Yöneticiye Hızlı Mesaj (İletişim)</h3>
+      <p class="profile-sub" style="margin:0 0 12px;">Talep açmadan kısa bir mesaj iletmek istersen buradan gönderebilirsin.</p>
+      <input id="sm-subject" class="sup-input" placeholder="Konu" autocomplete="off">
+      <textarea id="sm-body" class="sup-textarea" placeholder="Mesajın..."></textarea>
+      <button class="sup-send" onclick="sendSiteMail()">Mesaj Gönder</button>
     </div>`;
   supportLoadTickets();
 }
@@ -2571,7 +2591,8 @@ async function adminLoadTickets() {
       const d = new Date(t.updated_at);
       return `<div class="sup-ticket" onclick="adminOpenTicket('${t.id}','${t.user_id}')">
         <div class="sup-ticket-main"><div class="sup-ticket-subj">${_escHtml(t.subject)}</div><div class="sup-ticket-date">${_escHtml(names[t.user_id] || t.user_id.slice(0,8))} · ${d.toLocaleDateString('tr-TR')}</div></div>
-        <span class="sup-status sup-${t.status}">${supStatusLabel(t.status)}</span></div>`;
+        <span class="sup-status sup-${t.status}">${supStatusLabel(t.status)}</span>
+        <button class="sup-del" title="Talebi sil" onclick="event.stopPropagation();adminDeleteTicket('${t.id}')">×</button></div>`;
     }).join('');
   } catch (e) { box.innerHTML = '<div class="profile-empty">Talepler alınamadı (yönetici yetkisi gerekli).</div>'; }
 }
@@ -2604,4 +2625,60 @@ async function adminReply(id, userId) {
 }
 async function adminCloseTicket(id) {
   try { await sb.from('support_tickets').update({ status: 'closed' }).eq('id', id); adminTicketBack(); } catch (e) {}
+}
+
+/* ---- Yönetici: ticket silme ---- */
+async function adminDeleteTicket(id) {
+  if (!(await uiConfirm('Bu destek talebi ve tüm mesajları silinsin mi?', 'Talebi Sil', { danger: true }))) return;
+  try { await sb.from('support_tickets').delete().eq('id', id); } catch (e) {}
+  adminTicketView = { mode: 'list', ticketId: null, userId: null };
+  adminLoadTickets();
+}
+async function adminClearClosedTickets() {
+  if (!(await uiConfirm('Kapanmış tüm talepler kalıcı olarak silinsin mi?', 'Kapanmışları Temizle', { danger: true }))) return;
+  try { await sb.from('support_tickets').delete().eq('status', 'closed'); } catch (e) {}
+  adminLoadTickets();
+}
+
+/* ============================================================
+   SİTE MAİL / İLETİŞİM (kullanıcı → yönetici gelen kutusu)
+   ============================================================ */
+async function sendSiteMail() {
+  if (typeof currentUser === 'undefined' || !currentUser) { uiAlert('Mesaj göndermek için giriş yapmalısın.'); return; }
+  const sEl = document.getElementById('sm-subject'), bEl = document.getElementById('sm-body');
+  const subj = (sEl && sEl.value || '').trim(), body = (bEl && bEl.value || '').trim();
+  if (!subj || !body) { uiAlert('Lütfen konu ve mesaj gir.'); return; }
+  try {
+    await sb.from('site_mail').insert({ user_id: currentUser.id, email: currentUser.email || null, subject: subj, body: body });
+    toast('Mesajın yöneticiye iletildi.');
+    if (sEl) sEl.value = ''; if (bEl) bEl.value = '';
+  } catch (e) { uiAlert('Gönderilemedi. Lütfen tekrar dene.'); }
+}
+async function adminLoadMail() {
+  const box = document.getElementById('admin-mail'); if (!box) return;
+  box.innerHTML = '<div class="profile-empty">Yükleniyor...</div>';
+  try {
+    const { data } = await sb.from('site_mail').select('*').order('created_at', { ascending: false }).limit(100);
+    if (!data || !data.length) { box.innerHTML = '<div class="profile-empty">Gelen mesaj yok.</div>'; return; }
+    box.innerHTML = data.map(m => {
+      const d = new Date(m.created_at);
+      return `<div class="sm-item ${m.is_read ? '' : 'unread'}">
+        <div class="sm-head" onclick="admMailToggle(this, '${m.id}')">
+          <div><div class="sm-subj">${_escHtml(m.subject)}</div><div class="sm-meta">${_escHtml(m.email || m.user_id.slice(0,8))} · ${d.toLocaleString('tr-TR')}</div></div>
+          <button class="sup-del" title="Sil" onclick="event.stopPropagation();admMailDelete('${m.id}')">×</button>
+        </div>
+        <div class="sm-body">${_escHtml(m.body)}</div>
+      </div>`;
+    }).join('');
+  } catch (e) { box.innerHTML = '<div class="profile-empty">Mesajlar alınamadı (yönetici yetkisi gerekli).</div>'; }
+}
+function admMailToggle(headEl, id) {
+  const item = headEl.parentNode;
+  item.classList.toggle('open');
+  if (item.classList.contains('unread')) { item.classList.remove('unread'); try { sb.from('site_mail').update({ is_read: true }).eq('id', id).then(function(){}, function(){}); } catch (e) {} }
+}
+async function admMailDelete(id) {
+  if (!(await uiConfirm('Bu mesaj silinsin mi?', 'Mesajı Sil', { danger: true }))) return;
+  try { await sb.from('site_mail').delete().eq('id', id); } catch (e) {}
+  adminLoadMail();
 }
