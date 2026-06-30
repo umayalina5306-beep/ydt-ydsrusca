@@ -39,9 +39,13 @@ async function handleSession(session) {
   updateAuthUI();
   if (typeof loadSavedWords === "function") loadSavedWords();
   const _bell = document.getElementById("notif-bell");
+  if (typeof notifPollId !== "undefined" && notifPollId) { clearInterval(notifPollId); notifPollId = null; }
   if (currentUser) {
     if (_bell) _bell.style.display = "inline-flex";
-    if (typeof loadNotifications === "function") loadNotifications();
+    if (typeof loadNotifications === "function") {
+      loadNotifications();
+      notifPollId = setInterval(function () { if (currentUser && typeof loadNotifications === "function") loadNotifications(); }, 30000);
+    }
   } else {
     if (_bell) _bell.style.display = "none";
     myNotifications = [];
