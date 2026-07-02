@@ -2657,11 +2657,48 @@ async function sendSiteMail() {
   } catch (e) { uiAlert('Gönderilemedi. Lütfen tekrar dene.'); }
 }
 let adminMailTab = 'inbox';
-function adminMailSetTab(tab) { adminMailTab = tab; adminLoadMail(); }
+let _mailSelected = new Set();
+function admMailToggle(headEl, id) {
+  const item = headEl.closest('.sm-item'); if (!item) return;
+  item.classList.toggle('open');
+  if (item.classList.contains('unread')) {
+    item.classList.remove('unread');
+    try { sb.from('inbox_mail').update({ is_read: true }).eq('id', id).then(function(){}, function(){}); } catch (e) {}
+  }
+}
+function admMailSel(id, on) {
+  if (on) _mailSelected.add(id); else _mailSelected.delete(id);
+  const bar = document.getElementById('mail-selbar-count'); if (bar) bar.textContent = _mailSelected.size;
+  const sel = document.getElementById('mail-selbar'); if (sel) sel.style.display = _mailSelected.size ? 'flex' : 'none';
+}
+function admMailSelectAll() {
+  const cbs = document.querySelectorAll('.mail-cb');
+  const allChecked = _mailSelected.size >= cbs.length && cbs.length > 0;
+  cbs.forEach(cb => { cb.checked = !allChecked; admMailSel(cb.getAttribute('data-id'), !allChecked); });
+}
+async function admMailDeleteSelected() {
+  if (!_mailSelected.size) return;
+  const ids = [..._mailSelected];
+  if (adminMailTab === 'trash') {
+    if (!(await uiConfirm(ids.length + ' mail kalıcı olarak silinsin mi?', 'Kalıcı Sil', { danger: true }))) return;
+    try { await sb.from('inbox_mail').delete().in('id', ids); } catch (e) {}
+  } else {
+    if (!(await uiConfirm(ids.length + ' mail çöp kutusuna taşınsın mı?', 'Seçilenleri Sil', { danger: true }))) return;
+    try { await sb.from('inbox_mail').update({ is_deleted: true }).in('id', ids); } catch (e) {}
+  }
+  _mailSelected = new Set();
+  adminLoadMail();
+}
+function adminMailSetTab(tab) { adminMailTab = tab; _mailSelected = new Set(); adminLoadMail(); }
 async function adminLoadMail() {
   const box = document.getElementById('admin-mail'); if (!box) return;
   const tabs = [['inbox','📥 Gelen'],['spam','🚫 Spam'],['trash','🗑️ Çöp'],['sent','📤 Gönderilen']];
-  const tabsHtml = '<div class="mail-tabs">' + tabs.map(t => `<button class="mail-tab ${adminMailTab===t[0]?'active':''}" onclick="adminMailSetTab('${t[0]}')">${t[1]}</button>`).join('') + (adminMailTab==='trash' ? '<button class="set-btn ghost mail-empty-btn" onclick="adminEmptyTrash()">Çöpü Boşalt</button>' : '') + '</div>';
+  const selLabel = adminMailTab === 'trash' ? 'Seçilenleri Kalıcı Sil' : 'Seçilenleri Sil';
+  const selBar = adminMailTab === 'sent' ? '' : `<div class="mail-selrow">
+    <button class="mail-act" onclick="admMailSelectAll()">☑️ Tümünü Seç / Bırak</button>
+    <div id="mail-selbar" class="mail-selbar" style="display:none;"><span><b id="mail-selbar-count">0</b> seçili</span>
+    <button class="mail-act red" onclick="admMailDeleteSelected()">🗑️ ${selLabel}</button></div></div>`;
+  const tabsHtml = '<div class="mail-tabs">' + tabs.map(t => `<button class="mail-tab ${adminMailTab===t[0]?'active':''}" onclick="adminMailSetTab('${t[0]}')">${t[1]}</button>`).join('') + (adminMailTab==='trash' ? '<button class="set-btn ghost mail-empty-btn" onclick="adminEmptyTrash()">Çöpü Boşalt</button>' : '') + '</div>' + selBar;
   box.innerHTML = tabsHtml + '<div class="profile-empty">Yükleniyor...</div>';
   try {
     if (adminMailTab === 'sent') {
@@ -2702,10 +2739,15 @@ async function adminLoadMail() {
                    <button class="mail-act" onclick="admMailToggleSpam('${m.id}', ${m.is_spam ? 'false' : 'true'})">${m.is_spam ? '✅ Spam Değil' : '🚫 Spam İşaretle'}</button>
                    <button class="mail-act red" onclick="admMailDelete('${m.id}')">🗑️ Sil</button>`;
       }
+      const headBtns = adminMailTab === 'trash'
+        ? `<button class="sup-del" title="Kalıcı sil" onclick="event.stopPropagation();admMailHardDelete('${m.id}')">×</button>`
+        : `<button class="sup-del" title="Çöpe taşı" onclick="event.stopPropagation();admMailDelete('${m.id}')">×</button>`;
       return `<div class="sm-item ${m.is_read ? '' : 'unread'}">
         <div class="sm-head" onclick="admMailToggle(this, '${m.id}')">
-          <div><div class="sm-subj">${_escHtml(m.subject || '(konu yok)')} ${badge} ${spamBadge}</div>
+          <input type="checkbox" class="mail-cb" data-id="${m.id}" onclick="event.stopPropagation()" onchange="admMailSel('${m.id}', this.checked)">
+          <div style="flex:1;min-width:0;"><div class="sm-subj">${_escHtml(m.subject || '(konu yok)')} ${badge} ${spamBadge}</div>
           <div class="sm-meta">${_escHtml(m.from_name || '')} &lt;${_escHtml(m.from_email || '')}&gt; · ${d.toLocaleString('tr-TR')}</div></div>
+          ${headBtns}
         </div>
         <div class="sm-body">${_escHtml(m.body || '')}
           <div class="mail-actions">${actions}</div>
