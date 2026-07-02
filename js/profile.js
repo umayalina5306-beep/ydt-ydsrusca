@@ -131,9 +131,10 @@ function profileNav(view, btn) {
   if (view === "learned" && typeof renderKasaView === "function") renderKasaView("learned");
   if (view === "overview" && typeof renderStudyCalendar === "function") renderStudyCalendar();
   if (view === "overview" && typeof renderProgressChart === "function") renderProgressChart();
+  if (view === "tasks" && typeof renderTasksView === "function") { if (typeof checkTasks === "function") checkTasks(); renderTasksView(); }
   if (view === "support") { if (typeof supportView !== "undefined") supportView = { mode: "list", ticketId: null }; if (typeof renderSupport === "function") renderSupport(); }
   document.querySelectorAll(".psb-item").forEach(b => b.classList.remove("active"));
-  const map = { overview: "psb-overview", saved: "psb-saved", learned: "psb-learned", tests: "psb-tests", videos: "psb-videos", stats: "psb-stats", support: "psb-support", settings: "psb-settings" };
+  const map = { overview: "psb-overview", saved: "psb-saved", learned: "psb-learned", tests: "psb-tests", videos: "psb-videos", stats: "psb-stats", tasks: "psb-tasks", support: "psb-support", settings: "psb-settings" };
   if (btn && btn.classList) btn.classList.add("active");
   else { const el = document.getElementById(map[view]); if (el) el.classList.add("active"); }
   window.scrollTo(0, 0);
