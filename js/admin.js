@@ -20,6 +20,7 @@ async function openAdmin() {
   await loadAdminUsers();
   if (typeof adminLoadTickets === "function") { adminTicketView = { mode: "list", ticketId: null, userId: null }; adminLoadTickets(); }
   if (typeof adminLoadMail === "function") adminLoadMail();
+  if (typeof adminQuestionStats === "function") adminQuestionStats();
 }
 
 async function loadAdminUsers() {
