@@ -430,6 +430,7 @@ async function toggleSaveWord(ev, ru, tr, level) {
       );
       if (error) throw error;
       savedWords.add(ru);
+      if (typeof logActivity === 'function') logActivity('wordsSaved', 1);
       if (btn) { btn.classList.add('active'); btn.textContent = '★'; }
       if (card) {
         card.classList.add('saved', 'has-learn');
@@ -1704,7 +1705,12 @@ function saveTestResult() {
     items: (qReviewItems && qReviewItems.length ? qReviewItems : qAnswers).map(a => ({ n:a.n, st:a.st||(a.ok?'ok':'wrong'), ok:a.ok, your:a.your, correct:a.correct, ru:a.ru, tr:a.tr }))
   };
   const list = getTestResults(); list.unshift(rec); setTestResults(list);
-  if (typeof logActivity === 'function') logActivity('questions', rec.total);
+  if (typeof logActivity === 'function') {
+    logActivity('questions', rec.total);
+    logActivity('testsDone', 1);
+    if (quizSettings && quizSettings.label === 'Günlük Tekrar') logActivity('dailyReviews', 1);
+  }
+  if (typeof checkTasks === 'function') checkTasks();
   saveTestResultToDB(rec);
 }
 
@@ -2055,6 +2061,7 @@ function logActivity(field, amount) {
   const day = Object.assign(_emptyDay(), l[k] || {});
   day[field] = (day[field] || 0) + amount;
   l[k] = day; setDailyLog(l);
+  if (field !== 'questions' && typeof checkTasks === 'function') { try { checkTasks(); } catch (e) {} }
 }
 if (typeof window !== 'undefined') window.logActivity = logActivity; // extras.js (pomodoro) için
 function activeDaySet() {
@@ -2649,43 +2656,102 @@ async function sendSiteMail() {
     if (sEl) sEl.value = ''; if (bEl) bEl.value = '';
   } catch (e) { uiAlert('Gönderilemedi. Lütfen tekrar dene.'); }
 }
+let adminMailTab = 'inbox';
+function adminMailSetTab(tab) { adminMailTab = tab; adminLoadMail(); }
 async function adminLoadMail() {
   const box = document.getElementById('admin-mail'); if (!box) return;
-  box.innerHTML = '<div class="profile-empty">Yükleniyor...</div>';
+  const tabs = [['inbox','📥 Gelen'],['spam','🚫 Spam'],['trash','🗑️ Çöp'],['sent','📤 Gönderilen']];
+  const tabsHtml = '<div class="mail-tabs">' + tabs.map(t => `<button class="mail-tab ${adminMailTab===t[0]?'active':''}" onclick="adminMailSetTab('${t[0]}')">${t[1]}</button>`).join('') + (adminMailTab==='trash' ? '<button class="set-btn ghost mail-empty-btn" onclick="adminEmptyTrash()">Çöpü Boşalt</button>' : '') + '</div>';
+  box.innerHTML = tabsHtml + '<div class="profile-empty">Yükleniyor...</div>';
   try {
-    const { data } = await sb.from('inbox_mail').select('*').order('created_at', { ascending: false }).limit(100);
-    if (!data || !data.length) { box.innerHTML = '<div class="profile-empty">Gelen e-posta yok. (info@ / destek@ adresine gelen mailler buraya düşer.)</div>'; return; }
-    // üyelik kontrolü: gönderen e-postası kayıtlı mı?
+    if (adminMailTab === 'sent') {
+      const { data } = await sb.from('outbox_mail').select('*').order('created_at', { ascending: false }).limit(100);
+      const items = (data && data.length) ? data.map(m => {
+        const d = new Date(m.created_at);
+        return `<div class="sm-item"><div class="sm-head" onclick="this.parentNode.classList.toggle('open')">
+          <div><div class="sm-subj">${_escHtml(m.subject || '(konu yok)')} ${m.status==='failed'?'<span class="mail-member no">İletilemedi</span>':''}</div>
+          <div class="sm-meta">Kime: ${_escHtml(m.to_email)} · ${d.toLocaleString('tr-TR')}</div></div></div>
+          <div class="sm-body">${_escHtml(m.body || '')}</div></div>`;
+      }).join('') : '<div class="profile-empty">Gönderilen mail yok.</div>';
+      box.innerHTML = tabsHtml + items; return;
+    }
+    let q = sb.from('inbox_mail').select('*').order('created_at', { ascending: false }).limit(100);
+    if (adminMailTab === 'inbox') q = q.eq('is_deleted', false).eq('is_spam', false);
+    else if (adminMailTab === 'spam') q = q.eq('is_deleted', false).eq('is_spam', true);
+    else q = q.eq('is_deleted', true);
+    const { data } = await q;
+    if (!data || !data.length) {
+      const empt = { inbox: 'Gelen e-posta yok. (info@ / destek@ / support@ adresine gelenler buraya düşer.)', spam: 'Spam yok.', trash: 'Çöp kutusu boş.' }[adminMailTab];
+      box.innerHTML = tabsHtml + '<div class="profile-empty">' + empt + '</div>'; return;
+    }
     const froms = [...new Set(data.map(m => (m.from_email || '').toLowerCase()).filter(Boolean))];
     let members = new Set();
     try { if (froms.length) { const { data: profs } = await sb.from('profiles').select('email').in('email', froms); (profs || []).forEach(p => members.add((p.email || '').toLowerCase())); } } catch (e) {}
-    box.innerHTML = data.map(m => {
+    box.innerHTML = tabsHtml + data.map(m => {
       const d = new Date(m.created_at);
       const fe = (m.from_email || '').toLowerCase();
-      const isMember = members.has(fe);
-      const badge = isMember ? '<span class="mail-member yes">Üye</span>' : '<span class="mail-member no">Üye değil</span>';
+      const badge = members.has(fe) ? '<span class="mail-member yes">Üye</span>' : '<span class="mail-member no">Üye değil</span>';
+      const spamBadge = m.is_spam ? '<span class="mail-member spam">SPAM</span>' : '';
+      let actions = '';
+      if (adminMailTab === 'trash') {
+        actions = `<button class="mail-act" onclick="admMailRestore('${m.id}')">↩️ Geri Al</button>
+                   <button class="mail-act red" onclick="admMailHardDelete('${m.id}')">Kalıcı Sil</button>`;
+      } else {
+        actions = `<button class="mail-act" onclick="admMailReplyBox('${m.id}')">✉️ Site İçinden Yanıtla</button>
+                   <a class="mail-act" href="mailto:${encodeURIComponent(m.from_email||'')}?subject=${encodeURIComponent('RE: '+(m.subject||''))}">📧 Mail Uygulamasıyla</a>
+                   <button class="mail-act" onclick="admMailToggleSpam('${m.id}', ${m.is_spam ? 'false' : 'true'})">${m.is_spam ? '✅ Spam Değil' : '🚫 Spam İşaretle'}</button>
+                   <button class="mail-act red" onclick="admMailDelete('${m.id}')">🗑️ Sil</button>`;
+      }
       return `<div class="sm-item ${m.is_read ? '' : 'unread'}">
         <div class="sm-head" onclick="admMailToggle(this, '${m.id}')">
-          <div><div class="sm-subj">${_escHtml(m.subject || '(konu yok)')} ${badge}</div><div class="sm-meta">${_escHtml(m.from_name || '')} &lt;${_escHtml(m.from_email || '')}&gt; · ${d.toLocaleString('tr-TR')}</div></div>
-          <button class="sup-del" title="Sil" onclick="event.stopPropagation();admMailDelete('${m.id}')">×</button>
+          <div><div class="sm-subj">${_escHtml(m.subject || '(konu yok)')} ${badge} ${spamBadge}</div>
+          <div class="sm-meta">${_escHtml(m.from_name || '')} &lt;${_escHtml(m.from_email || '')}&gt; · ${d.toLocaleString('tr-TR')}</div></div>
         </div>
         <div class="sm-body">${_escHtml(m.body || '')}
-          <div class="mail-reply"><a class="sup-send" href="mailto:${encodeURIComponent(m.from_email||'')}?subject=${encodeURIComponent('RE: '+(m.subject||''))}">E-posta ile Yanıtla</a></div>
+          <div class="mail-actions">${actions}</div>
+          <div id="reply-${m.id}" class="mail-replybox" style="display:none;">
+            <textarea id="reply-txt-${m.id}" class="sup-textarea" placeholder="Yanıtını yaz..."></textarea>
+            <button class="sup-send" onclick="admMailSendReply('${m.id}','${_escAttr(m.from_email||'')}','${_escAttr(m.subject||'')}')">Gönder</button>
+          </div>
         </div>
       </div>`;
     }).join('');
-  } catch (e) { box.innerHTML = '<div class="profile-empty">Gelen kutusu alınamadı. (inbox_mail tablosu kurulu mu?)</div>'; }
+  } catch (e) { box.innerHTML = tabsHtml + '<div class="profile-empty">Gelen kutusu alınamadı. (inbox_mail_v2.sql çalıştırıldı mı?)</div>'; }
 }
-function admMailToggle(headEl, id) {
-  const item = headEl.parentNode;
-  item.classList.toggle('open');
-  if (item.classList.contains('unread')) { item.classList.remove('unread'); try { sb.from('inbox_mail').update({ is_read: true }).eq('id', id).then(function(){}, function(){}); } catch (e) {} }
+function admMailReplyBox(id) { const b = document.getElementById('reply-' + id); if (b) b.style.display = b.style.display === 'none' ? 'block' : 'none'; }
+async function admMailSendReply(id, to, subject) {
+  const txt = document.getElementById('reply-txt-' + id); if (!txt) return;
+  const body = (txt.value || '').trim(); if (!body) { uiAlert('Yanıt boş olamaz.'); return; }
+  try {
+    const { data, error } = await sb.functions.invoke('send-mail', { body: { to: to, subject: 'RE: ' + (subject || ''), body: body } });
+    if (error || (data && data.error)) throw new Error((data && data.error) || 'hata');
+    toast('Yanıt gönderildi.');
+    txt.value = ''; admMailReplyBox(id);
+  } catch (e) { uiAlert('Gönderilemedi. send-mail fonksiyonu ve Resend kurulumu tamamlanmış olmalı (KURULUM-mail-yanitlama.md).'); }
 }
-async function admMailDelete(id) {
-  if (!(await uiConfirm('Bu mesaj silinsin mi?', 'Mesajı Sil', { danger: true }))) return;
+async function admMailToggleSpam(id, on) {
+  try { await sb.from('inbox_mail').update({ is_spam: on }).eq('id', id); } catch (e) {}
+  adminLoadMail();
+}
+async function admMailRestore(id) {
+  try { await sb.from('inbox_mail').update({ is_deleted: false }).eq('id', id); } catch (e) {}
+  adminLoadMail();
+}
+async function admMailHardDelete(id) {
+  if (!(await uiConfirm('Bu mail kalıcı olarak silinsin mi?', 'Kalıcı Sil', { danger: true }))) return;
   try { await sb.from('inbox_mail').delete().eq('id', id); } catch (e) {}
   adminLoadMail();
 }
+async function adminEmptyTrash() {
+  if (!(await uiConfirm('Çöp kutusundaki tüm mailler kalıcı olarak silinsin mi?', 'Çöpü Boşalt', { danger: true }))) return;
+  try { await sb.from('inbox_mail').delete().eq('is_deleted', true); } catch (e) {}
+  adminLoadMail();
+}
+async function admMailDelete(id) {
+  try { await sb.from('inbox_mail').update({ is_deleted: true }).eq('id', id); } catch (e) {}
+  adminLoadMail();
+}
+
 
 /* ============================================================
    SEVİYE TESPİT SINAVI (ayrı soru havuzu: placement_questions)
@@ -2879,4 +2945,87 @@ async function adminBulkAddQuestions() {
     const ta = document.getElementById('pq-json'); if (ta) ta.value = '';
     placementPool = null; adminQuestionStats();
   } catch (e) { uiAlert('Eklenemedi. Yönetici yetkisi ve placement_questions tablosu gerekli.'); }
+}
+
+/* ============================================================
+   GÖREV / MİSYON SİSTEMİ — günlük + haftalık, XP, bildirim
+   ============================================================ */
+function _todayKey() { return new Date().toISOString().slice(0,10); }
+function _weekId() {
+  const d = new Date(); const day = (d.getDay() + 6) % 7; // Pzt=0
+  const mon = new Date(d); mon.setDate(d.getDate() - day);
+  return 'W' + mon.toISOString().slice(0,10);
+}
+function _weekKeys() {
+  const keys = []; const d = new Date(); const day = (d.getDay() + 6) % 7;
+  const mon = new Date(d); mon.setDate(d.getDate() - day);
+  for (let i = 0; i <= day; i++) { const x = new Date(mon); x.setDate(mon.getDate() + i); keys.push(x.toISOString().slice(0,10)); }
+  return keys;
+}
+function _dayField(key, f) { const l = getDailyLog(); return (l[key] && l[key][f]) || 0; }
+function _weekSum(f) { return _weekKeys().reduce((a, k) => a + _dayField(k, f), 0); }
+function _testsOnDay(key) { return getTestResults().filter(r => (r.date || '').slice(0,10) === key).length; }
+function _testsInWeek() { const ks = new Set(_weekKeys()); return getTestResults().filter(r => ks.has((r.date || '').slice(0,10))).length; }
+function _activeDaysInWeek() { const act = activeDaySet(); return _weekKeys().filter(k => act.has(k)).length; }
+
+const TASKS_DAILY = [
+  { id: 'd_test',   e: '📝', t: '1 test çöz',            target: 1,  xp: 10, val: () => _testsOnDay(_todayKey()) },
+  { id: 'd_learn',  e: '🧠', t: '5 kelime öğren',        target: 5,  xp: 10, val: () => _dayField(_todayKey(), 'wordsLearned') },
+  { id: 'd_review', e: '🔁', t: 'Günlük tekrarı yap',    target: 1,  xp: 10, val: () => _dayField(_todayKey(), 'dailyReviews') },
+  { id: 'd_pomo',   e: '🍅', t: '1 Pomodoro tamamla',    target: 1,  xp: 10, val: () => _dayField(_todayKey(), 'pomodoros') }
+];
+const TASKS_WEEKLY = [
+  { id: 'w_tests', e: '📚', t: '5 test çöz',             target: 5,  xp: 30, val: () => _testsInWeek() },
+  { id: 'w_learn', e: '🌟', t: '25 kelime öğren',        target: 25, xp: 30, val: () => _weekSum('wordsLearned') },
+  { id: 'w_save',  e: '📦', t: '30 kelime kaydet',       target: 30, xp: 30, val: () => _weekSum('wordsSaved') },
+  { id: 'w_days',  e: '🗓️', t: '3 farklı gün çalış',     target: 3,  xp: 30, val: () => _activeDaysInWeek() }
+];
+
+function _tasksDone() { try { return JSON.parse(localStorage.getItem('ydt_tasks_done') || '{}'); } catch (e) { return {}; } }
+function _saveTasksDone(o) { try { localStorage.setItem('ydt_tasks_done', JSON.stringify(o)); } catch (e) {} }
+function getXP() { return parseInt(localStorage.getItem('ydt_xp') || '0', 10) || 0; }
+function _addXP(n) { try { localStorage.setItem('ydt_xp', String(getXP() + n)); } catch (e) {} }
+
+function checkTasks() {
+  const done = _tasksDone(); let changed = false;
+  const scan = (defs, period) => {
+    defs.forEach(t => {
+      const key = period + ':' + t.id;
+      if (done[key]) return;
+      let v = 0; try { v = t.val(); } catch (e) {}
+      if (v >= t.target) {
+        done[key] = true; changed = true; _addXP(t.xp);
+        if (typeof createNotification === 'function') createNotification('🎯 Görev tamamlandı: ' + t.t, '+' + t.xp + ' XP kazandın!', 'success');
+        if (typeof toast === 'function') toast('🎯 Görev tamamlandı: ' + t.t + ' (+' + t.xp + ' XP)');
+      }
+    });
+  };
+  scan(TASKS_DAILY, _todayKey());
+  scan(TASKS_WEEKLY, _weekId());
+  if (changed) { _saveTasksDone(done); const b = document.getElementById('tasks-body'); if (b && b.innerHTML) renderTasksView(); }
+}
+if (typeof window !== 'undefined') window.checkTasks = checkTasks;
+
+function renderTasksView() {
+  const box = document.getElementById('tasks-body'); if (!box) return;
+  const done = _tasksDone();
+  const row = (t, period) => {
+    let v = 0; try { v = t.val(); } catch (e) {}
+    const isDone = !!done[period + ':' + t.id] || v >= t.target;
+    const pct = Math.min(100, Math.round(v / t.target * 100));
+    return `<div class="tsk-row ${isDone ? 'done' : ''}">
+      <div class="tsk-ic">${t.e}</div>
+      <div class="tsk-main"><div class="tsk-t">${t.t}</div>
+        <div class="tsk-track"><div class="tsk-fill" style="width:${pct}%"></div></div></div>
+      <div class="tsk-right">${isDone ? '<span class="tsk-check">✔</span>' : `<span class="tsk-count">${Math.min(v, t.target)}/${t.target}</span>`}<span class="tsk-xp">+${t.xp} XP</span></div>
+    </div>`;
+  };
+  const dDone = TASKS_DAILY.filter(t => done[_todayKey() + ':' + t.id]).length;
+  const wDone = TASKS_WEEKLY.filter(t => done[_weekId() + ':' + t.id]).length;
+  box.innerHTML = `
+    <div class="tsk-xp-card"><div class="tsk-xp-num">⭐ ${getXP()} XP</div><div class="tsk-xp-lab">Toplam puanın — görev tamamladıkça artar</div></div>
+    <div class="profile-panel"><h3 class="st-h3">📅 Günlük Görevler <span class="tsk-badge">${dDone}/${TASKS_DAILY.length}</span></h3>
+      <div class="tsk-sub">Her gece sıfırlanır.</div>${TASKS_DAILY.map(t => row(t, _todayKey())).join('')}</div>
+    <div class="profile-panel"><h3 class="st-h3">🗓️ Haftalık Görevler <span class="tsk-badge">${wDone}/${TASKS_WEEKLY.length}</span></h3>
+      <div class="tsk-sub">Her pazartesi sıfırlanır.</div>${TASKS_WEEKLY.map(t => row(t, _weekId())).join('')}</div>`;
 }
