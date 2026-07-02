@@ -2658,6 +2658,7 @@ async function sendSiteMail() {
 }
 let adminMailTab = 'inbox';
 let _mailSelected = new Set();
+let _mailCache = {};
 function admMailToggle(headEl, id) {
   const item = headEl.closest('.sm-item'); if (!item) return;
   item.classList.toggle('open');
@@ -2724,6 +2725,8 @@ async function adminLoadMail() {
     const froms = [...new Set(data.map(m => (m.from_email || '').toLowerCase()).filter(Boolean))];
     let members = new Set();
     try { if (froms.length) { const { data: profs } = await sb.from('profiles').select('email').in('email', froms); (profs || []).forEach(p => members.add((p.email || '').toLowerCase())); } } catch (e) {}
+    _mailCache = {};
+    data.forEach(m => { _mailCache[m.id] = m; });
     box.innerHTML = tabsHtml + data.map(m => {
       const d = new Date(m.created_at);
       const fe = (m.from_email || '').toLowerCase();
@@ -2746,14 +2749,14 @@ async function adminLoadMail() {
         <div class="sm-head" onclick="admMailToggle(this, '${m.id}')">
           <input type="checkbox" class="mail-cb" data-id="${m.id}" onclick="event.stopPropagation()" onchange="admMailSel('${m.id}', this.checked)">
           <div style="flex:1;min-width:0;"><div class="sm-subj">${_escHtml(m.subject || '(konu yok)')} ${badge} ${spamBadge}</div>
-          <div class="sm-meta">${_escHtml(m.from_name || '')} &lt;${_escHtml(m.from_email || '')}&gt; · ${d.toLocaleString('tr-TR')}</div></div>
+          <div class="sm-meta">${_escHtml(m.from_name || '')} &lt;${_escHtml(m.from_email || '')}&gt;${m.to_email ? ' → <b>' + _escHtml(m.to_email) + '</b>' : ''} · ${d.toLocaleString('tr-TR')}</div></div>
           ${headBtns}
         </div>
         <div class="sm-body">${_escHtml(m.body || '')}
           <div class="mail-actions">${actions}</div>
           <div id="reply-${m.id}" class="mail-replybox" style="display:none;">
             <textarea id="reply-txt-${m.id}" class="sup-textarea" placeholder="Yanıtını yaz..."></textarea>
-            <button class="sup-send" onclick="admMailSendReply('${m.id}','${_escAttr(m.from_email||'')}','${_escAttr(m.subject||'')}')">Gönder</button>
+            <button class="sup-send" onclick="admMailSendReply('${m.id}')">Gönder</button>
           </div>
         </div>
       </div>`;
@@ -2761,15 +2764,22 @@ async function adminLoadMail() {
   } catch (e) { box.innerHTML = tabsHtml + '<div class="profile-empty">Gelen kutusu alınamadı. (inbox_mail_v2.sql çalıştırıldı mı?)</div>'; }
 }
 function admMailReplyBox(id) { const b = document.getElementById('reply-' + id); if (b) b.style.display = b.style.display === 'none' ? 'block' : 'none'; }
-async function admMailSendReply(id, to, subject) {
+async function admMailSendReply(id) {
+  const m = _mailCache[id]; if (!m) return;
   const txt = document.getElementById('reply-txt-' + id); if (!txt) return;
   const body = (txt.value || '').trim(); if (!body) { uiAlert('Yanıt boş olamaz.'); return; }
   try {
-    const { data, error } = await sb.functions.invoke('send-mail', { body: { to: to, subject: 'RE: ' + (subject || ''), body: body } });
+    const { data, error } = await sb.functions.invoke('send-mail', { body: {
+      to: m.from_email,
+      subject: 'RE: ' + (m.subject || ''),
+      body: body,
+      from: (m.to_email || '').toLowerCase(),
+      in_reply_to: m.message_id || null
+    } });
     if (error || (data && data.error)) throw new Error((data && data.error) || 'hata');
-    toast('Yanıt gönderildi.');
+    toast('Yanıt gönderildi (' + ((m.to_email || 'destek@ydt-ydsrusca.com')) + ' adresinden).');
     txt.value = ''; admMailReplyBox(id);
-  } catch (e) { uiAlert('Gönderilemedi. send-mail fonksiyonu ve Resend kurulumu tamamlanmış olmalı (KURULUM-mail-yanitlama.md).'); }
+  } catch (e) { uiAlert('Gönderilemedi. Resend kurulumu (domain doğrulama + RESEND_API_KEY + send-mail) tamam mı? Resend panelindeki Emails sayfasından durumu kontrol edebilirsin.'); }
 }
 async function admMailToggleSpam(id, on) {
   try { await sb.from('inbox_mail').update({ is_spam: on }).eq('id', id); } catch (e) {}
