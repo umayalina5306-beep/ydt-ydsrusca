@@ -2236,3 +2236,52 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .mail-member.no { background:var(--light-gray); color:var(--gray); }
 .mail-reply { margin-top:12px; }
 .mail-reply .sup-send { display:inline-block; text-decoration:none; }
+
+/* ============ YÖNETİCİ — SORU HAVUZU ============ */
+.pq-stats { background:var(--off-white); border-radius:10px; padding:10px 14px; font-size:.85rem; color:var(--text); margin-bottom:14px; }
+.pq-stat { margin-right:10px; }
+.pq-block { border-top:1px solid var(--light-gray); padding-top:14px; margin-top:12px; }
+.pq-h4 { color:var(--blue); margin:0 0 10px; font-size:.95rem; }
+.pq-input { width:100%; padding:9px 12px; border:1px solid var(--light-gray); border-radius:9px; font:inherit; box-sizing:border-box; margin-bottom:8px; }
+.pq-input:focus { outline:none; border-color:var(--gold); }
+.pq-row2 { display:flex; gap:8px; }
+.pq-row2 .pq-level { width:90px; flex-shrink:0; }
+.pq-row2 .pq-input { flex:1; }
+.pq-correct { display:flex; align-items:center; gap:14px; font-size:.88rem; color:var(--text); margin:6px 0 12px; flex-wrap:wrap; }
+.pq-correct label { display:flex; align-items:center; gap:4px; cursor:pointer; }
+.pq-hint { font-size:.78rem; color:var(--gray); margin:0 0 8px; }
+.pq-hint code { background:var(--off-white); padding:2px 5px; border-radius:5px; font-size:.74rem; }
+
+/* ============ MAİL SEKMELERİ + YANIT ============ */
+.mail-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
+.mail-tab { background:var(--off-white); border:1px solid var(--light-gray); padding:7px 14px; border-radius:18px; cursor:pointer; font-weight:700; font-size:.82rem; color:var(--text); }
+.mail-tab:hover { border-color:var(--gold); }
+.mail-tab.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+.mail-empty-btn { margin-left:auto; }
+.mail-member.spam { background:#fde2e2; color:#b02a2a; }
+.mail-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+.mail-act { background:var(--off-white); border:1px solid var(--light-gray); padding:7px 12px; border-radius:9px; cursor:pointer; font-size:.78rem; font-weight:700; color:var(--text); text-decoration:none; display:inline-block; }
+.mail-act:hover { border-color:var(--gold); background:var(--gold-light); }
+.mail-act.red { color:var(--red); }
+.mail-act.red:hover { background:#fdecec; border-color:var(--red); }
+.mail-replybox { margin-top:10px; }
+
+/* ============ GÖREVLER ============ */
+.tsk-xp-card { background:linear-gradient(135deg,var(--blue),var(--blue-light)); border-radius:16px; padding:20px 24px; margin-bottom:16px; color:#fff; }
+.tsk-xp-num { font-size:1.7rem; font-weight:800; color:var(--gold-light); }
+.tsk-xp-lab { font-size:.82rem; opacity:.85; margin-top:4px; }
+.tsk-badge { background:var(--off-white); color:var(--blue); font-size:.72rem; font-weight:800; padding:3px 10px; border-radius:12px; margin-left:8px; vertical-align:middle; }
+.tsk-sub { font-size:.78rem; color:var(--gray); margin-bottom:12px; }
+.tsk-row { display:flex; align-items:center; gap:14px; padding:12px 14px; border:1px solid var(--light-gray); border-radius:13px; margin-bottom:8px; background:var(--white); }
+.tsk-row.done { background:rgba(63,169,122,.07); border-color:#bfe5d2; }
+.tsk-ic { font-size:1.5rem; flex-shrink:0; }
+.tsk-main { flex:1; min-width:0; }
+.tsk-t { font-weight:700; color:var(--text); font-size:.92rem; margin-bottom:6px; }
+.tsk-row.done .tsk-t { color:#1f7a4d; }
+.tsk-track { height:8px; background:var(--off-white); border-radius:5px; overflow:hidden; }
+.tsk-fill { height:100%; background:linear-gradient(90deg,var(--gold),var(--gold-light)); border-radius:5px; transition:width .4s; }
+.tsk-row.done .tsk-fill { background:#3fa97a; }
+.tsk-right { display:flex; flex-direction:column; align-items:flex-end; gap:3px; flex-shrink:0; }
+.tsk-count { font-weight:800; color:var(--blue); font-size:.9rem; }
+.tsk-check { color:#3fa97a; font-size:1.2rem; font-weight:800; }
+.tsk-xp { font-size:.68rem; font-weight:800; color:var(--gold); background:var(--off-white); padding:2px 8px; border-radius:10px; }
