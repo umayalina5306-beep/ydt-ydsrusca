@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=41">
+<link rel="stylesheet" href="css/style.css?v=42">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -811,6 +811,7 @@
         <button class="psb-item" id="psb-tests" onclick="profileNav('tests',this)"><span class="psb-ic">📋</span> Test Geçmişim</button>
         <button class="psb-item" id="psb-videos" onclick="profileNav('videos',this)"><span class="psb-ic">▶️</span> Video İzleme Geçmişim</button>
         <button class="psb-item" id="psb-stats" onclick="profileNav('stats',this)"><span class="psb-ic">📊</span> İstatistikler</button>
+        <button class="psb-item" id="psb-tasks" onclick="profileNav('tasks',this)"><span class="psb-ic">🎯</span> Görevler</button>
         <button class="psb-item" id="psb-support" onclick="profileNav('support',this)"><span class="psb-ic">💬</span> Destek</button>
         <button class="psb-item" id="psb-settings" onclick="profileNav('settings',this)"><span class="psb-ic">⚙️</span> Ayarlar</button>
       </div>
@@ -957,6 +958,12 @@
       </div>
 
       <!-- AYARLAR -->
+      <div id="pv-tasks" class="profile-view" style="display:none;">
+        <h2 class="profile-h2">Görevler</h2>
+        <p class="profile-sub">Günlük ve haftalık görevleri tamamla, XP kazan!</p>
+        <div id="tasks-body"></div>
+      </div>
+
       <div id="pv-support" class="profile-view" style="display:none;">
         <h2 class="profile-h2">Destek</h2>
         <p class="profile-sub">Bir sorun mu var, bir sorun mu yaşıyorsun? Talep oluştur, ekibimiz yanıtlasın.</p>
@@ -1152,11 +1159,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=41"></script>
-<script defer src="js/auth.js?v=41"></script>
-<script defer src="js/admin.js?v=41"></script>
-<script defer src="js/profile.js?v=41"></script>
-<script defer src="js/extras.js?v=41"></script>
-<script defer src="js/app.js?v=41"></script>
+<script defer src="js/supabase-config.js?v=42"></script>
+<script defer src="js/auth.js?v=42"></script>
+<script defer src="js/admin.js?v=42"></script>
+<script defer src="js/profile.js?v=42"></script>
+<script defer src="js/extras.js?v=42"></script>
+<script defer src="js/app.js?v=42"></script>
 </body>
 </html>
