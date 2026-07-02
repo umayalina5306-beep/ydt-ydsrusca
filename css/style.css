@@ -2285,3 +2285,9 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .tsk-count { font-weight:800; color:var(--blue); font-size:.9rem; }
 .tsk-check { color:#3fa97a; font-size:1.2rem; font-weight:800; }
 .tsk-xp { font-size:.68rem; font-weight:800; color:var(--gold); background:var(--off-white); padding:2px 8px; border-radius:10px; }
+
+/* Mail seçim araç çubuğu + checkbox */
+.mail-selrow { display:flex; align-items:center; gap:12px; margin:0 0 12px; flex-wrap:wrap; }
+.mail-selbar { display:flex; align-items:center; gap:12px; background:var(--off-white); border:1px solid var(--gold); border-radius:10px; padding:6px 12px; font-size:.85rem; color:var(--text); }
+.mail-cb { width:17px; height:17px; cursor:pointer; accent-color:var(--blue); flex-shrink:0; }
+.sm-head { align-items:center; }
