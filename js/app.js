@@ -2331,6 +2331,7 @@ async function loadNotifications() {
 function notifUnread() { return myNotifications.filter(n => !n.is_read).length; }
 function updateNotifBadge() {
   const c = document.getElementById('notif-count'); if (!c) return;
+  if (typeof window !== 'undefined' && window.focusActive) { c.style.display = 'none'; return; }
   const u = notifUnread();
   if (u > 0) { c.textContent = u > 9 ? '9+' : String(u); c.style.display = 'flex'; } else { c.style.display = 'none'; }
 }
@@ -2828,4 +2829,54 @@ async function finishPlacement() {
       <button class="plc-navbtn ghost" onclick="showPage('profile')">Profilime Dön</button>
     </div>
   </div>`;
+}
+
+/* ============================================================
+   YÖNETİCİ — Seviye Sınavı soru havuzu (tek + toplu ekleme)
+   ============================================================ */
+async function adminQuestionStats() {
+  const box = document.getElementById('pq-stats'); if (!box) return;
+  box.innerHTML = 'Yükleniyor...';
+  try {
+    const { data } = await sb.from('placement_questions').select('level').eq('active', true);
+    const c = { A1:0, A2:0, B1:0, B2:0, C1:0 };
+    (data || []).forEach(r => { if (c[r.level] !== undefined) c[r.level]++; });
+    box.innerHTML = 'Havuz → ' + Object.keys(c).map(k => `<span class="pq-stat">${k}: <b>${c[k]}</b></span>`).join(' ') + ` · Toplam <b>${(data || []).length}</b>`;
+  } catch (e) { box.innerHTML = '<span class="an-loading">Sayım alınamadı (tablo kurulu mu?).</span>'; }
+}
+function _v(id) { const el = document.getElementById(id); return el ? (el.value || '') : ''; }
+async function adminAddQuestion() {
+  const level = _v('pq-level'), q = _v('pq-q').trim();
+  const opts = [_v('pq-o0'), _v('pq-o1'), _v('pq-o2'), _v('pq-o3')].map(x => x.trim());
+  const cEl = document.querySelector('input[name="pq-correct"]:checked');
+  if (!q || opts.some(o => !o)) { uiAlert('Soru ve 4 şık da dolu olmalı.'); return; }
+  if (!cEl) { uiAlert('Doğru şıkkı seç.'); return; }
+  try {
+    await sb.from('placement_questions').insert({ level: level, question: q, options: opts, correct: parseInt(cEl.value, 10), tag: 'kelime', active: true });
+    toast('Soru eklendi.');
+    ['pq-q','pq-o0','pq-o1','pq-o2','pq-o3'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    if (cEl) cEl.checked = false;
+    placementPool = null; adminQuestionStats();
+  } catch (e) { uiAlert('Eklenemedi. Yönetici yetkisi ve placement_questions tablosu gerekli.'); }
+}
+async function adminBulkAddQuestions() {
+  const raw = _v('pq-json').trim();
+  if (!raw) { uiAlert('Önce JSON gir.'); return; }
+  let arr;
+  try { arr = JSON.parse(raw); } catch (e) { uiAlert('Geçersiz JSON. Biçim: [{"level":"A1","question":"...","options":["a","b","c","d"],"correct":0}]'); return; }
+  if (!Array.isArray(arr) || !arr.length) { uiAlert('JSON bir dizi (liste) olmalı.'); return; }
+  const LV = ['A1','A2','B1','B2','C1']; const valid = [];
+  for (const o of arr) {
+    if (!o || LV.indexOf(o.level) === -1 || !o.question || !Array.isArray(o.options) || o.options.length !== 4) continue;
+    const c = parseInt(o.correct, 10); if (isNaN(c) || c < 0 || c > 3) continue;
+    valid.push({ level: o.level, question: String(o.question), options: o.options.map(String), correct: c, tag: o.tag || 'kelime', active: true });
+  }
+  if (!valid.length) { uiAlert('Geçerli soru yok. Her soruda level (A1-C1), question, 4 options ve correct (0-3) olmalı.'); return; }
+  try {
+    await sb.from('placement_questions').insert(valid);
+    const skipped = arr.length - valid.length;
+    await uiAlert(valid.length + ' soru eklendi' + (skipped > 0 ? ` (${skipped} geçersiz atlandı).` : '.'), 'Toplu Ekleme');
+    const ta = document.getElementById('pq-json'); if (ta) ta.value = '';
+    placementPool = null; adminQuestionStats();
+  } catch (e) { uiAlert('Eklenemedi. Yönetici yetkisi ve placement_questions tablosu gerekli.'); }
 }
