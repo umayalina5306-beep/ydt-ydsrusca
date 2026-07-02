@@ -65,6 +65,10 @@
     document.body.classList.toggle("focus-mode", focusOn);
     const b = document.getElementById("focus-toggle");
     if (b) b.textContent = focusOn ? "Odak modu: AÇIK" : "Odak modu: kapalı";
+    // Odak modunda bildirimler susturulur (zil rozeti gizlenir)
+    window.focusActive = focusOn;
+    if (focusOn) { const c = document.getElementById("notif-count"); if (c) c.style.display = "none"; }
+    else if (typeof window.loadNotifications === "function") { window.loadNotifications(); }
   }
 
   function togglePanel() {
