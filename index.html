@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=40">
+<link rel="stylesheet" href="css/style.css?v=41">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -1067,6 +1067,34 @@
         <div class="an-card-head"><h3 class="an-h3">📨 Gelen Mesajlar (İletişim)</h3><button class="set-btn ghost" onclick="adminLoadMail()">Yenile</button></div>
         <div id="admin-mail"></div>
       </div>
+      <div class="admin-notif-card">
+        <h3 class="an-h3">🧩 Seviye Sınavı Soru Havuzu</h3>
+        <div id="pq-stats" class="pq-stats"></div>
+        <div class="pq-block">
+          <h4 class="pq-h4">Tek Soru Ekle</h4>
+          <div class="pq-row2">
+            <select id="pq-level" class="pq-input pq-level"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
+            <input id="pq-q" class="pq-input" placeholder="Soru metni" autocomplete="off">
+          </div>
+          <input id="pq-o0" class="pq-input" placeholder="Şık 1" autocomplete="off">
+          <input id="pq-o1" class="pq-input" placeholder="Şık 2" autocomplete="off">
+          <input id="pq-o2" class="pq-input" placeholder="Şık 3" autocomplete="off">
+          <input id="pq-o3" class="pq-input" placeholder="Şık 4" autocomplete="off">
+          <div class="pq-correct">Doğru şık:
+            <label><input type="radio" name="pq-correct" value="0">1</label>
+            <label><input type="radio" name="pq-correct" value="1">2</label>
+            <label><input type="radio" name="pq-correct" value="2">3</label>
+            <label><input type="radio" name="pq-correct" value="3">4</label>
+          </div>
+          <button class="set-btn" onclick="adminAddQuestion()">Soru Ekle</button>
+        </div>
+        <div class="pq-block">
+          <h4 class="pq-h4">Toplu Ekle (JSON)</h4>
+          <p class="pq-hint">Biçim: <code>[{"level":"A1","question":"...","options":["a","b","c","d"],"correct":0}]</code> (correct = doğru şık indeksi, 0-3)</p>
+          <textarea id="pq-json" class="an-textarea" placeholder='[ { "level":"A1", "question":"...", "options":["a","b","c","d"], "correct":0 } ]'></textarea>
+          <button class="set-btn" onclick="adminBulkAddQuestions()">Toplu Ekle</button>
+        </div>
+      </div>
       <div id="admin-users" class="admin-users"></div>
     </div>
   </div>
@@ -1124,11 +1152,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=40"></script>
-<script defer src="js/auth.js?v=40"></script>
-<script defer src="js/admin.js?v=40"></script>
-<script defer src="js/profile.js?v=40"></script>
-<script defer src="js/extras.js?v=40"></script>
-<script defer src="js/app.js?v=40"></script>
+<script defer src="js/supabase-config.js?v=41"></script>
+<script defer src="js/auth.js?v=41"></script>
+<script defer src="js/admin.js?v=41"></script>
+<script defer src="js/profile.js?v=41"></script>
+<script defer src="js/extras.js?v=41"></script>
+<script defer src="js/app.js?v=41"></script>
 </body>
 </html>
