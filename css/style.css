@@ -2302,3 +2302,10 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .verify-banner .verify-resend { margin-left:10px; background:var(--blue); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-weight:700; cursor:pointer; font-size:.78rem; }
 .verify-banner .verify-resend:hover { background:var(--blue-light); }
 .turnstile-box { margin:10px 0; display:flex; justify-content:center; }
+
+.setup-btn-plc { border-color:var(--gold) !important; background:linear-gradient(135deg, rgba(201,168,76,.12), rgba(232,201,106,.08)); font-weight:700; }
+.setup-btn-plc:hover { background:var(--gold-light); }
+
+.err-row { border:1px solid var(--light-gray); border-left:3px solid var(--red); border-radius:10px; padding:10px 14px; margin-bottom:8px; background:var(--white); }
+.err-msg { font-size:.86rem; color:var(--text); font-weight:600; word-break:break-word; }
+.err-meta { font-size:.72rem; color:var(--gray); margin-top:4px; }
