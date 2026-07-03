@@ -3199,3 +3199,51 @@ async function admSentDelete(id) {
   try { await sb.from('outbox_mail').delete().eq('id', id); } catch (e) {}
   adminLoadMail();
 }
+
+
+
+/* ============================================================
+   HATA YÖNETİM SİSTEMİ (Y7) — otomatik kayıt + panel görüntüleme
+   ============================================================ */
+let _errLogged = 0;
+async function logError(message, source) {
+  try {
+    if (_errLogged >= 5) return; // oturum başına en fazla 5 kayıt (spam önleme)
+    if (typeof sb === 'undefined' || !sb || typeof currentUser === 'undefined' || !currentUser) return;
+    _errLogged++;
+    await sb.from('error_log').insert({
+      user_id: currentUser.id,
+      message: String(message || '').slice(0, 600),
+      source: String(source || '').slice(0, 200),
+      url: (location.pathname + location.hash).slice(0, 200)
+    });
+  } catch (e) {}
+}
+if (typeof window !== 'undefined') {
+  window.logError = logError;
+  window.addEventListener('error', function (ev) {
+    logError(ev.message || 'script error', (ev.filename || '') + ':' + (ev.lineno || ''));
+  });
+  window.addEventListener('unhandledrejection', function (ev) {
+    var r = ev.reason; logError((r && (r.message || String(r))) || 'promise error', 'unhandledrejection');
+  });
+}
+
+async function adminLoadErrors() {
+  const box = document.getElementById('admin-errors'); if (!box) return;
+  box.innerHTML = '<div class="profile-empty">Yükleniyor...</div>';
+  try {
+    const { data } = await sb.from('error_log').select('*').order('created_at', { ascending: false }).limit(50);
+    if (!data || !data.length) { box.innerHTML = '<div class="profile-empty">Kayıtlı hata yok. 🎉</div>'; return; }
+    box.innerHTML = data.map(e => {
+      const d = new Date(e.created_at);
+      return `<div class="err-row"><div class="err-msg">${_escHtml(e.message)}</div>
+        <div class="err-meta">${_escHtml(e.source || '')} · ${_escHtml((e.user_id || '').slice(0,8))} · ${d.toLocaleString('tr-TR')}</div></div>`;
+    }).join('');
+  } catch (e) { box.innerHTML = '<div class="profile-empty">Hata kayıtları alınamadı (error_log.sql çalıştırıldı mı?).</div>'; }
+}
+async function adminClearErrors() {
+  if (!(await uiConfirm('Tüm hata kayıtları silinsin mi?', 'Kayıtları Temizle', { danger: true }))) return;
+  try { await sb.from('error_log').delete().gte('created_at', '1970-01-01'); } catch (e) {}
+  adminLoadErrors();
+}
