@@ -403,6 +403,10 @@ async function loadSavedWords() {
 async function toggleSaveWord(ev, ru, tr, level) {
   if (ev) ev.stopPropagation();
   if (typeof currentUser === 'undefined' || !currentUser) { if (typeof openAuth === 'function') openAuth('login'); return; }
+  if (typeof emailVerified === 'function' && !emailVerified()) {
+    toast('Bu özellik için önce e-posta adresini doğrulaman gerekiyor. Üstteki banttan doğrulama mailini tekrar gönderebilirsin.');
+    return;
+  }
   const isPremium = currentProfile && (currentProfile.plan === 'premium' || currentProfile.is_admin);
   if (!isPremium) {
     toast('Kelime kaydetme Premium özelliğidir. Premium ile öğrendiğin kelimeleri kaydedip her gün tekrar edebilirsin.');
@@ -1124,6 +1128,7 @@ function showPage(id){
 function openAuth(tab){
   document.getElementById('auth-modal').classList.add('active');
   switchTab(tab);
+  if (typeof renderTurnstile === "function") setTimeout(renderTurnstile, 80);
 }
 function closeAuth(){
   document.getElementById('auth-modal').classList.remove('active');
@@ -2541,6 +2546,7 @@ async function supportCreateTicket() {
   const sEl = document.getElementById('sup-subject'), mEl = document.getElementById('sup-msg');
   const subj = (sEl && sEl.value || '').trim(), msg = (mEl && mEl.value || '').trim();
   if (!subj || !msg) { uiAlert('Lütfen konu ve mesaj gir.'); return; }
+  if (typeof emailVerified === 'function' && !emailVerified()) { uiAlert('Destek talebi açmak için önce e-posta adresini doğrulamalısın. Üstteki banttan doğrulama mailini tekrar gönderebilirsin.'); return; }
   try {
     const { data, error } = await sb.from('support_tickets').insert({ user_id: currentUser.id, subject: subj, status: 'open' }).select().single();
     if (error) throw error;
