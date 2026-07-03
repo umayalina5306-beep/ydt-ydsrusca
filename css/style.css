@@ -2310,3 +2310,18 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .err-msg { font-size:.86rem; color:var(--text); font-weight:600; word-break:break-word; }
 .err-meta { font-size:.72rem; color:var(--gray); margin-top:4px; }
 .err-foot { font-size:.8rem; color:var(--gray); margin-bottom:10px; display:flex; align-items:center; gap:10px; }
+
+/* Yönetim sekmeleri + ziyaret + seo */
+.admin-view { animation:fadeIn .15s ease; }
+#page-admin .profile-sidebar { position:sticky; top:90px; }
+.vis-total { font-size:.9rem; color:var(--text); margin-bottom:12px; }
+.vis-bars { display:flex; align-items:flex-end; gap:8px; height:96px; }
+.vis-col { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:4px; }
+.vis-bar { width:100%; max-width:38px; background:linear-gradient(180deg,var(--gold-light),var(--gold)); border-radius:6px 6px 0 0; }
+.vis-col span { font-size:.66rem; color:var(--gray); }
+.seo-row { display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-bottom:1px solid var(--off-white); font-size:.88rem; }
+.seo-row.no b { color:var(--red); }
+.seo-note { font-size:.76rem; color:var(--gray); margin-top:2px; }
+.auth-forgot { text-align:center; margin-top:10px; }
+.auth-forgot a { color:var(--gold); font-size:.84rem; font-weight:600; text-decoration:none; }
+.auth-forgot a:hover { text-decoration:underline; }
