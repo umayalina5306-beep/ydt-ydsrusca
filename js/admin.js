@@ -36,7 +36,7 @@ async function loadAdminUsers() {
     renderAdminStats();
     renderAdminUsers(_adminUsers);
   } catch (e) {
-    console.error("Kullanıcılar yüklenemedi:", e);
+    _logDev("Kullanıcılar yüklenemedi:", e);
     box.innerHTML = '<div class="admin-loading">Kullanıcılar yüklenemedi. (admin-rls.sql kurallarını çalıştırdın mı?)</div>';
   }
 }
@@ -95,7 +95,7 @@ async function togglePremium(userId, currentPlan) {
     const search = document.getElementById("admin-search");
     filterAdminUsers(search ? search.value : "");
   } catch (e) {
-    console.error("Plan değiştirilemedi:", e);
+    _logDev("Plan değiştirilemedi:", e);
     if (typeof window.uiAlert === "function") window.uiAlert("Plan değiştirilemedi. Yönetici yetkisi ve SQL kuralları gerekli.", "Hata"); else alert("Plan değiştirilemedi.");
   }
 }
