@@ -2309,3 +2309,4 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .err-row { border:1px solid var(--light-gray); border-left:3px solid var(--red); border-radius:10px; padding:10px 14px; margin-bottom:8px; background:var(--white); }
 .err-msg { font-size:.86rem; color:var(--text); font-weight:600; word-break:break-word; }
 .err-meta { font-size:.72rem; color:var(--gray); margin-top:4px; }
+.err-foot { font-size:.8rem; color:var(--gray); margin-bottom:10px; display:flex; align-items:center; gap:10px; }
