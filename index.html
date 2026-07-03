@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=49">
+<link rel="stylesheet" href="css/style.css?v=50">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -1104,6 +1104,10 @@
           <button class="set-btn" onclick="adminBulkAddQuestions()">Toplu Ekle</button>
         </div>
       </div>
+      <div class="admin-notif-card">
+        <div class="an-card-head"><h3 class="an-h3">🛠️ Hata Kayıtları</h3><div><button class="set-btn ghost" onclick="adminClearErrors()">Temizle</button><button class="set-btn ghost" onclick="adminLoadErrors()" style="margin-left:8px;">Yenile</button></div></div>
+        <div id="admin-errors"></div>
+      </div>
       <div id="admin-users" class="admin-users"></div>
     </div>
   </div>
@@ -1162,11 +1166,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=49"></script>
-<script defer src="js/auth.js?v=49"></script>
-<script defer src="js/admin.js?v=49"></script>
-<script defer src="js/profile.js?v=49"></script>
-<script defer src="js/extras.js?v=49"></script>
-<script defer src="js/app.js?v=49"></script>
+<script defer src="js/supabase-config.js?v=50"></script>
+<script defer src="js/auth.js?v=50"></script>
+<script defer src="js/admin.js?v=50"></script>
+<script defer src="js/profile.js?v=50"></script>
+<script defer src="js/extras.js?v=50"></script>
+<script defer src="js/app.js?v=50"></script>
 </body>
 </html>
