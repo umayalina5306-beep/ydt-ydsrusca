@@ -1121,6 +1121,7 @@ function showPage(id){
   window.scrollTo(0,0);
   if(id==='quiz') showSetup();
   if(id==='admin' && typeof openAdmin==='function') openAdmin();
+  if (typeof trackPageView === 'function') trackPageView(id);
   if(id==='profile' && typeof openProfile==='function') openProfile();
 }
 
@@ -3266,3 +3267,93 @@ async function adminClearErrors() {
   try { await sb.from('error_log').delete().gte('created_at', '1970-01-01'); } catch (e) {}
   adminLoadErrors();
 }
+
+/* ============================================================
+   ZİYARET TAKİBİ (page_views) + SEO DENETİMİ
+   ============================================================ */
+let _pvLogged = new Set();
+function trackPageView(pageId) {
+  try {
+    if (typeof sb === 'undefined' || !sb) return;
+    const key = pageId + ':' + new Date().toISOString().slice(0,13); // saat başına aynı sayfayı 1 kez
+    if (_pvLogged.has(key)) return;
+    _pvLogged.add(key);
+    sb.from('page_views').insert({
+      path: String(pageId || 'home').slice(0, 60),
+      user_id: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null,
+      referrer: (document.referrer || '').slice(0, 200),
+      ua: (navigator.userAgent || '').slice(0, 200)
+    }).then(function(){}, function(){});
+  } catch (e) {}
+}
+
+async function _visitData(days) {
+  const since = new Date(); since.setDate(since.getDate() - days);
+  const { data } = await sb.from('page_views').select('path, created_at')
+    .gte('created_at', since.toISOString()).order('created_at', { ascending: false }).limit(5000);
+  return data || [];
+}
+function _visitAggregate(rows) {
+  const byDay = {}, byPage = {};
+  rows.forEach(r => {
+    const d = (r.created_at || '').slice(0, 10);
+    byDay[d] = (byDay[d] || 0) + 1;
+    byPage[r.path] = (byPage[r.path] || 0) + 1;
+  });
+  return { byDay, byPage, total: rows.length };
+}
+async function renderVisitsMini() {
+  const box = document.getElementById('admin-visits-mini'); if (!box) return;
+  box.innerHTML = '<div class="profile-empty">Yükleniyor...</div>';
+  try {
+    const rows = await _visitData(7);
+    const { byDay, total } = _visitAggregate(rows);
+    const days = [];
+    for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d.toISOString().slice(0,10)); }
+    const max = Math.max(1, ...days.map(k => byDay[k] || 0));
+    box.innerHTML = `<div class="vis-total">Son 7 gün: <b>${total}</b> sayfa görüntüleme</div>
+      <div class="vis-bars">${days.map(k => `<div class="vis-col"><div class="vis-bar" style="height:${Math.round((byDay[k]||0)/max*70)+4}px" title="${k}: ${byDay[k]||0}"></div><span>${k.slice(8)}</span></div>`).join('')}</div>`;
+  } catch (e) { box.innerHTML = '<div class="profile-empty">Ziyaret verisi alınamadı (page_views.sql çalıştırıldı mı?)</div>'; }
+}
+async function renderVisitsFull() {
+  const box = document.getElementById('admin-visits'); if (!box) return;
+  box.innerHTML = '<div class="profile-empty">Yükleniyor...</div>';
+  try {
+    const rows = await _visitData(30);
+    const { byDay, byPage, total } = _visitAggregate(rows);
+    const today = new Date().toISOString().slice(0,10);
+    const week = Object.keys(byDay).filter(k => k >= new Date(Date.now() - 7*86400000).toISOString().slice(0,10)).reduce((a,k) => a + byDay[k], 0);
+    const pageNames = { home:'Ana Sayfa', words:'Kelimeler', quiz:'Testler', review:'Tekrar', testbuilder:'Test Oluştur', video:'Videolar', pricing:'Fiyatlar', profile:'Profil', admin:'Yönetim', placement:'Seviye Sınavı' };
+    const top = Object.entries(byPage).sort((a,b) => b[1]-a[1]).slice(0,8);
+    const maxP = Math.max(1, ...(top.map(t => t[1])));
+    box.innerHTML = `<div class="st-cards">
+      <div class="st-card"><div class="st-card-num">${byDay[today]||0}</div><div class="st-card-lab">Bugün</div></div>
+      <div class="st-card"><div class="st-card-num">${week}</div><div class="st-card-lab">Son 7 Gün</div></div>
+      <div class="st-card"><div class="st-card-num">${total}</div><div class="st-card-lab">Son 30 Gün</div></div>
+    </div>
+    <h4 class="st-h3">En Çok Ziyaret Edilen Sayfalar (30 gün)</h4>
+    ${top.map(t => `<div class="st-bar-row"><span class="st-bar-lab" style="width:110px">${pageNames[t[0]]||t[0]}</span><div class="st-bar-track"><div class="st-bar-fill" style="width:${Math.round(t[1]/maxP*100)}%"></div></div><span class="st-bar-val">${t[1]}</span></div>`).join('') || '<div class="profile-empty">Henüz veri yok.</div>'}
+    <div class="pg-foot">Not: Kayıtlar tarayıcıdan toplanır (saat başına sayfa başı 1 kayıt). Derin analiz (ülke, cihaz, gerçek benzersiz ziyaretçi) için Cloudflare panelindeki <b>Analytics</b> sekmesi de kullanılabilir.</div>`;
+  } catch (e) { box.innerHTML = '<div class="profile-empty">Ziyaret verisi alınamadı (page_views.sql çalıştırıldı mı?)</div>'; }
+}
+function renderSeoCheck() {
+  const box = document.getElementById('admin-seo'); if (!box) return;
+  const checks = [];
+  const t = document.title || '';
+  checks.push([t.length >= 25 && t.length <= 65, 'Sayfa başlığı (title) 25-65 karakter', t ? `"${t}" (${t.length})` : 'YOK']);
+  const md = document.querySelector('meta[name="description"]');
+  checks.push([!!md && (md.content||'').length >= 60, 'Meta açıklama (description) 60+ karakter', md ? (md.content||'').slice(0,80) : 'YOK — eklenmeli']);
+  checks.push([!!document.querySelector('link[rel*="icon"]'), 'Favicon tanımlı', '']);
+  checks.push([!!document.querySelector('meta[property="og:title"]'), 'Open Graph başlık (link paylaşım kartı)', 'YOK ise WhatsApp/Telegram önizlemesi çıkmaz']);
+  checks.push([!!document.querySelector('meta[property="og:image"]'), 'Open Graph görsel', 'Paylaşımda görünen resim']);
+  checks.push([!!document.documentElement.lang, 'HTML dil etiketi (lang)', document.documentElement.lang || 'YOK']);
+  checks.push([document.querySelectorAll('h1').length === 1, 'Tek H1 başlığı', document.querySelectorAll('h1').length + ' adet bulundu']);
+  checks.push([location.protocol === 'https:', 'HTTPS aktif', '']);
+  const ok = checks.filter(c => c[0]).length;
+  box.innerHTML = `<div class="vis-total">SEO puanı: <b>${ok}/${checks.length}</b></div>` +
+    checks.map(c => `<div class="seo-row ${c[0] ? 'ok' : 'no'}"><span>${c[0] ? '✅' : '❌'}</span><div><b>${c[1]}</b>${c[2] ? `<div class="seo-note">${_escHtml(String(c[2]))}</div>` : ''}</div></div>`).join('') +
+    `<div class="pg-foot">Eksikler (OG etiketleri, meta description, logo) yol haritasındaki H4 adımında birlikte eklenecek. Arama sonuç metrikleri için ücretsiz <b>Google Search Console</b> kurulumunu da o adımda yaparız.</div>`;
+}
+
+// İlk açılış ziyareti (giriş beklemeden, anonim de sayılır)
+setTimeout(function () { try { trackPageView('home'); } catch (e) {} }, 2500);
