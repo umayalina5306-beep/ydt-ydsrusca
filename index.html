@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=54">
+<link rel="stylesheet" href="css/style.css?v=55">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -1071,6 +1071,7 @@
           <button class="psb-item" id="asb-support" onclick="adminNav('support')"><span class="psb-ic">💬</span> Destek Talepleri</button>
           <button class="psb-item" id="asb-mail" onclick="adminNav('mail')"><span class="psb-ic">📨</span> Mail Kutusu</button>
           <button class="psb-item" id="asb-questions" onclick="adminNav('questions')"><span class="psb-ic">🧩</span> Soru Havuzu</button>
+          <button class="psb-item" id="asb-pquest" onclick="adminNav('pquest')"><span class="psb-ic">📖</span> Paragraf Soruları</button>
           <button class="psb-item" id="asb-visits" onclick="adminNav('visits')"><span class="psb-ic">📈</span> Ziyaret & SEO</button>
           <button class="psb-item" id="asb-settings" onclick="adminNav('settings')"><span class="psb-ic">⚙️</span> Site Ayarları</button>
           <button class="psb-item" id="asb-backup" onclick="adminNav('backup')"><span class="psb-ic">💾</span> Yedekleme</button>
@@ -1106,8 +1107,9 @@
             </div>
             <div class="pq-row2">
               <input id="cw-p" class="pq-input" placeholder="Okunuş (opsiyonel)" autocomplete="off">
-              <select id="cw-cat" class="pq-input"><option>isim</option><option>fiil</option><option>sıfat</option><option>zarf</option><option>zamir</option><option>edat</option><option>bağlaç</option></select>
+              <select id="cw-cat" class="pq-input" onchange="cwCatChanged()"><option>isim</option><option>fiil</option><option>sıfat</option><option>zarf</option><option>zamir</option><option>edat</option><option>bağlaç</option></select>
               <select id="cw-lvl" class="pq-input pq-level"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
+              <select id="cw-gram" class="pq-input"></select>
             </div>
             <input id="cw-ornek" class="pq-input" placeholder="Örnek cümle (Rusça, opsiyonel)" autocomplete="off">
             <input id="cw-ornektr" class="pq-input" placeholder="Örnek cümle (Türkçe, opsiyonel)" autocomplete="off">
@@ -1206,6 +1208,48 @@
       </div>
         </div>
 
+        <div id="av-pquest" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Paragraf Soruları</h2>
+          <p class="profile-sub">Okuma-anlama sorularını yönet. Değişiklikler anında yayına girer.</p>
+          <div class="pq-stats" id="cpq-stats">Yükleniyor...</div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">✏️ Soru Ekle / Düzenle</h3>
+            <input type="hidden" id="cpq-id">
+            <div class="pq-row2">
+              <select id="cpq-lvl" class="pq-input pq-level"><option>A1</option><option>A2</option><option selected>B1</option><option>B2</option><option>C1</option></select>
+              <input id="cpq-konu" class="pq-input" placeholder="Konu (örn: Günlük yaşam)" autocomplete="off">
+            </div>
+            <textarea id="cpq-para" class="an-textarea" placeholder="Paragraf (Rusça metin) *"></textarea>
+            <input id="cpq-soru" class="pq-input" placeholder="Soru (Türkçe) *" autocomplete="off">
+            <input id="cpq-o0" class="pq-input" placeholder="Şık 1" autocomplete="off">
+            <input id="cpq-o1" class="pq-input" placeholder="Şık 2" autocomplete="off">
+            <input id="cpq-o2" class="pq-input" placeholder="Şık 3" autocomplete="off">
+            <input id="cpq-o3" class="pq-input" placeholder="Şık 4" autocomplete="off">
+            <div class="pq-correct">Doğru şık:
+              <label><input type="radio" name="cpq-correct" value="0">1</label>
+              <label><input type="radio" name="cpq-correct" value="1">2</label>
+              <label><input type="radio" name="cpq-correct" value="2">3</label>
+              <label><input type="radio" name="cpq-correct" value="3">4</label>
+            </div>
+            <input id="cpq-acik" class="pq-input" placeholder="Açıklama (opsiyonel — cevabın gerekçesi)" autocomplete="off">
+            <div><button class="set-btn" id="cpq-save-btn" onclick="adminPqSave()">Soru Ekle</button>
+            <button class="set-btn ghost" onclick="adminPqFormClear()" style="margin-left:8px;">Temizle</button></div>
+          </div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">📦 Toplu / Göç</h3>
+            <p class="pq-hint">JSON biçimi: <code>[{"level":"B1","konu":"...","paragraf":"...","soru":"...","siklar":["a","b","c","d"],"dogru":1,"aciklama":"..."}]</code></p>
+            <textarea id="cpq-json" class="an-textarea" placeholder='[ { "level":"B1", "paragraf":"...", "soru":"...", "siklar":["a","b","c","d"], "dogru":0 } ]'></textarea>
+            <div class="mail-actions">
+              <button class="set-btn" onclick="adminPqImportJson()">JSON'u İçe Aktar</button>
+              <button class="set-btn ghost" onclick="adminPqMigrate()">⬆️ JSON Dosyasındaki Soruları DB'ye Aktar</button>
+            </div>
+          </div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">📋 Soru Listesi (DB)</h3>
+            <div id="cpq-list"><div class="profile-empty">Yükleniyor...</div></div>
+          </div>
+        </div>
+
         <div id="av-visits" class="admin-view" style="display:none;">
           <h2 class="profile-h2">Ziyaret & SEO</h2>
           <p class="profile-sub">Trafik istatistikleri ve sayfa içi SEO denetimi.</p>
@@ -1221,6 +1265,12 @@
             <p class="pq-hint">Buraya yazılan metin sitenin en üstünde herkese görünen bir bant olarak yayınlanır. Boş bırakıp kaydedersen bant kalkar.</p>
             <textarea id="set-announce" class="an-textarea" placeholder="Örn: 15 Temmuz'a kadar premium %20 indirimli!"></textarea>
             <button class="set-btn" onclick="adminSaveAnnouncement()">Kaydet & Yayınla</button>
+          </div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">🚧 Bakım Modu</h3>
+            <p class="pq-hint">Açıkken ziyaretçiler "Bakımdayız" ekranı görür; <b>yöneticiler siteyi normal kullanmaya devam eder</b>. Büyük güncelleme yaparken aç.</p>
+            <label class="cw-check"><input type="checkbox" id="set-maint"> Bakım modu AÇIK</label>
+            <button class="set-btn" onclick="adminSaveMaintenance()">Kaydet</button>
           </div>
         </div>
 
@@ -1308,11 +1358,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=54"></script>
-<script defer src="js/auth.js?v=54"></script>
-<script defer src="js/admin.js?v=54"></script>
-<script defer src="js/profile.js?v=54"></script>
-<script defer src="js/extras.js?v=54"></script>
-<script defer src="js/app.js?v=54"></script>
+<script defer src="js/supabase-config.js?v=55"></script>
+<script defer src="js/auth.js?v=55"></script>
+<script defer src="js/admin.js?v=55"></script>
+<script defer src="js/profile.js?v=55"></script>
+<script defer src="js/extras.js?v=55"></script>
+<script defer src="js/app.js?v=55"></script>
 </body>
 </html>
