@@ -1165,6 +1165,7 @@ async function loadData() {
   wordsByRu = {};
   words.forEach(w => { wordsByRu[w.ru] = w; });
   synonymGroups = syn; antonymPairs = ant; wordFamilies = fam; videos = vids;
+  _tryLoadDbWords(); // panelden eklenen/düzenlenen kelimeleri bindir
   // Paragraf soruları (dosya yoksa site yine çalışsın diye ayrı try/catch)
   try { paragraphQuestions = await j('data/sorular/paragraf-sorulari.json'); }
   catch (e) { _logDev('Paragraf soruları yüklenemedi:', e); paragraphQuestions = []; }
@@ -3357,3 +3358,224 @@ function renderSeoCheck() {
 
 // İlk açılış ziyareti (giriş beklemeden, anonim de sayılır)
 setTimeout(function () { try { trackPageView('home'); } catch (e) {} }, 2500);
+
+/* ============================================================
+   İÇERİK: DB kelimeleri (content_words) JSON'un üstüne bindirilir
+   ============================================================ */
+function _tryLoadDbWords(attempt) {
+  attempt = attempt || 0;
+  if (typeof sb === 'undefined' || !sb) {
+    if (attempt < 10) setTimeout(function () { _tryLoadDbWords(attempt + 1); }, 800);
+    return;
+  }
+  loadDbWords();
+}
+async function loadDbWords() {
+  try {
+    const { data } = await sb.from('content_words').select('*').limit(10000);
+    if (!data) return;
+    data.forEach(r => {
+      if (r.active === false) {
+        if (wordsByRu[r.ru]) { words = words.filter(x => x.ru !== r.ru); delete wordsByRu[r.ru]; }
+        return;
+      }
+      const w = { ru: r.ru, tr: r.tr, p: r.p || '', cat: r.cat || 'isim', level: r.level || 'A1',
+                  ornek: r.ornek || '', ornekTr: r.ornek_tr || '', cinsiyet: r.cinsiyet || '', premium: !!r.premium };
+      const ex = wordsByRu[r.ru];
+      if (ex) Object.assign(ex, w); else { words.push(w); wordsByRu[w.ru] = w; }
+    });
+  } catch (e) { _logDev('DB kelimeleri yüklenemedi:', e); }
+}
+
+/* ============================================================
+   YÖNETİCİ — İÇERİK YÖNETİMİ (kelimeler): listele/düzenle/sil,
+   tekli ekleme, JSON kutusu, JSON/CSV/Excel dosyası, JSON->DB göçü
+   ============================================================ */
+let _cwRows = [];
+const cwState = { page: 1, q: '', level: 'all' };
+const CW_PAGE = 20;
+
+async function adminContentInit() {
+  await adminCwReload();
+}
+async function adminCwReload() {
+  try {
+    const { data } = await sb.from('content_words').select('*').order('ru').limit(10000);
+    _cwRows = data || [];
+  } catch (e) { _cwRows = []; }
+  renderCwStats(); renderCwList();
+}
+function renderCwStats() {
+  const box = document.getElementById('cw-stats'); if (!box) return;
+  const act = _cwRows.filter(r => r.active !== false);
+  const c = { A1:0, A2:0, B1:0, B2:0, C1:0 };
+  act.forEach(r => { if (c[r.level] !== undefined) c[r.level]++; });
+  const jsonCount = (typeof words !== 'undefined') ? words.length : 0;
+  box.innerHTML = `DB'de <b>${act.length}</b> aktif kelime (${Object.keys(c).map(k => k + ': ' + c[k]).join(' · ')}) · gizlenen: <b>${_cwRows.length - act.length}</b> · sitede toplam görünen: <b>${jsonCount}</b>`;
+}
+function cwSet(k, v) { cwState[k] = v; cwState.page = 1; renderCwList(); }
+function renderCwList() {
+  const box = document.getElementById('cw-list'); if (!box) return;
+  let list = _cwRows;
+  if (cwState.level !== 'all') list = list.filter(r => r.level === cwState.level);
+  const q = cwState.q.toLowerCase();
+  if (q) list = list.filter(r => (r.ru || '').toLowerCase().includes(q) || (r.tr || '').toLowerCase().includes(q));
+  const pages = Math.max(1, Math.ceil(list.length / CW_PAGE));
+  if (cwState.page > pages) cwState.page = pages;
+  const slice = list.slice((cwState.page - 1) * CW_PAGE, cwState.page * CW_PAGE);
+  if (!list.length) { box.innerHTML = '<div class="profile-empty">DB\'de eşleşen kelime yok. (JSON\'dan gelenleri düzenlemek için önce "JSON\'daki kelimeleri DB\'ye aktar" butonunu kullan.)</div>'; return; }
+  let pager = '';
+  if (pages > 1) {
+    pager = '<div class="kv-pager">';
+    if (cwState.page > 1) pager += `<button class="kv-pg" onclick="cwSet('page', ${cwState.page-1}); cwState.page=${cwState.page-1}; renderCwList();">‹</button>`;
+    pager += `<span class="kv-count" style="margin:0 8px;">Sayfa ${cwState.page}/${pages}</span>`;
+    if (cwState.page < pages) pager += `<button class="kv-pg" onclick="cwState.page=${cwState.page+1}; renderCwList();">›</button>`;
+    pager += '</div>';
+  }
+  box.innerHTML = slice.map(r => `
+    <div class="cw-row ${r.active === false ? 'off' : ''}">
+      <div class="cw-main"><b>${_escHtml(r.ru)}</b> — ${_escHtml(r.tr)} <span class="kv-lvl">${r.level || ''}</span> <span class="cw-cat">${_escHtml(r.cat || '')}</span>${r.premium ? ' <span class="mail-member yes">Premium</span>' : ''}${r.active === false ? ' <span class="mail-member no">Gizli</span>' : ''}</div>
+      <div class="cw-acts">
+        <button class="mail-act" onclick="adminWordEdit('${_escAttr(r.ru)}')">✏️ Düzenle</button>
+        ${r.active === false
+          ? `<button class="mail-act" onclick="adminWordRestore('${_escAttr(r.ru)}')">↩️ Göster</button>`
+          : `<button class="mail-act red" onclick="adminWordDelete('${_escAttr(r.ru)}')">🗑️ Gizle/Sil</button>`}
+      </div>
+    </div>`).join('') + pager;
+}
+function _cwVal(id) { const el = document.getElementById(id); return el ? (el.value || '').trim() : ''; }
+function adminWordFormClear() {
+  ['cw-ru','cw-tr','cw-p','cw-ornek','cw-ornektr'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const pr = document.getElementById('cw-premium'); if (pr) pr.checked = false;
+  const ru = document.getElementById('cw-ru'); if (ru) ru.disabled = false;
+  const btn = document.getElementById('cw-save-btn'); if (btn) btn.textContent = 'Kelime Ekle';
+}
+function adminWordEdit(ru) {
+  const r = _cwRows.find(x => x.ru === ru); if (!r) return;
+  document.getElementById('cw-ru').value = r.ru; document.getElementById('cw-ru').disabled = true;
+  document.getElementById('cw-tr').value = r.tr || '';
+  document.getElementById('cw-p').value = r.p || '';
+  document.getElementById('cw-cat').value = r.cat || 'isim';
+  document.getElementById('cw-lvl').value = r.level || 'A1';
+  document.getElementById('cw-ornek').value = r.ornek || '';
+  document.getElementById('cw-ornektr').value = r.ornek_tr || '';
+  document.getElementById('cw-premium').checked = !!r.premium;
+  const btn = document.getElementById('cw-save-btn'); if (btn) btn.textContent = 'Değişiklikleri Kaydet';
+  document.getElementById('cw-ru').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+async function adminWordSave() {
+  const ru = _cwVal('cw-ru'), tr = _cwVal('cw-tr');
+  if (!ru || !tr) { uiAlert('Rusça kelime ve Türkçe anlam zorunlu.'); return; }
+  const row = { ru, tr, p: _cwVal('cw-p') || null, cat: _cwVal('cw-cat'), level: _cwVal('cw-lvl'),
+    ornek: _cwVal('cw-ornek') || null, ornek_tr: _cwVal('cw-ornektr') || null,
+    premium: document.getElementById('cw-premium').checked, active: true, updated_at: new Date().toISOString() };
+  try {
+    const { error } = await sb.from('content_words').upsert(row, { onConflict: 'ru' });
+    if (error) throw error;
+    toast('Kelime kaydedildi.');
+    adminWordFormClear(); await adminCwReload(); loadDbWords();
+  } catch (e) { uiAlert('Kaydedilemedi. content_words.sql çalıştırıldı mı?'); }
+}
+async function adminWordDelete(ru) {
+  if (!(await uiConfirm(`"${ru}" sitede gizlensin mi? (JSON dosyasında da varsa görünmez olur; buradan geri açabilirsin.)`, 'Kelimeyi Gizle', { danger: true }))) return;
+  const r = _cwRows.find(x => x.ru === ru);
+  try {
+    await sb.from('content_words').upsert({ ru, tr: (r && r.tr) || (wordsByRu[ru] && wordsByRu[ru].tr) || '-', active: false, updated_at: new Date().toISOString() }, { onConflict: 'ru' });
+    await adminCwReload();
+    if (wordsByRu[ru]) { words = words.filter(x => x.ru !== ru); delete wordsByRu[ru]; }
+  } catch (e) { uiAlert('İşlem başarısız.'); }
+}
+async function adminWordRestore(ru) {
+  try { await sb.from('content_words').update({ active: true }).eq('ru', ru); await adminCwReload(); loadDbWords(); }
+  catch (e) { uiAlert('İşlem başarısız.'); }
+}
+
+/* ---- İçe aktarma: normalize + parçalı upsert ---- */
+function _cwNormalize(o) {
+  if (!o) return null;
+  const ru = String(o.ru || o.RU || o.rusca || '').trim();
+  const tr = String(o.tr || o.TR || o.turkce || o.anlam || '').trim();
+  if (!ru || !tr) return null;
+  const lvl = String(o.level || o.seviye || 'A1').toUpperCase();
+  return { ru, tr,
+    p: (o.p || o.okunus || '') ? String(o.p || o.okunus).trim() : null,
+    cat: String(o.cat || o.tur || 'isim').toLowerCase(),
+    level: ['A1','A2','B1','B2','C1'].includes(lvl) ? lvl : 'A1',
+    ornek: (o.ornek || '') ? String(o.ornek).trim() : null,
+    ornek_tr: (o.ornekTr || o.ornek_tr || '') ? String(o.ornekTr || o.ornek_tr).trim() : null,
+    cinsiyet: (o.cinsiyet || '') ? String(o.cinsiyet).trim() : null,
+    premium: o.premium === true || o.premium === 'true' || o.premium === 1,
+    active: true };
+}
+async function _cwUpsertAll(rows) {
+  let done = 0;
+  for (let i = 0; i < rows.length; i += 400) {
+    const chunk = rows.slice(i, i + 400);
+    const { error } = await sb.from('content_words').upsert(chunk, { onConflict: 'ru' });
+    if (error) throw error;
+    done += chunk.length;
+  }
+  return done;
+}
+async function adminWordsImportJson() {
+  const ta = document.getElementById('cw-json'); if (!ta) return;
+  let arr;
+  try { arr = JSON.parse(ta.value.trim()); } catch (e) { uiAlert('Geçersiz JSON. Bir dizi bekleniyor: [{"ru":"...","tr":"...","level":"A1"}, ...]'); return; }
+  if (!Array.isArray(arr)) { uiAlert('JSON bir dizi (liste) olmalı.'); return; }
+  await _cwImportArray(arr, 'JSON kutusu');
+  ta.value = '';
+}
+async function _cwImportArray(arr, kaynak) {
+  const rows = arr.map(_cwNormalize).filter(Boolean);
+  if (!rows.length) { uiAlert('Geçerli satır bulunamadı. Her satırda en az "ru" ve "tr" olmalı.'); return; }
+  try {
+    const n = await _cwUpsertAll(rows);
+    await uiAlert(n + ' kelime içe aktarıldı (' + kaynak + ').' + (arr.length - rows.length > 0 ? ' ' + (arr.length - rows.length) + ' geçersiz satır atlandı.' : ''), 'İçe Aktarma');
+    await adminCwReload(); loadDbWords();
+  } catch (e) { uiAlert('İçe aktarılamadı. Yetki ve content_words.sql kontrol et.'); }
+}
+function _parseCsv(text) {
+  const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const parseLine = l => {
+    const out = []; let cur = '', inQ = false;
+    for (let i = 0; i < l.length; i++) {
+      const ch = l[i];
+      if (inQ) { if (ch === '"' && l[i+1] === '"') { cur += '"'; i++; } else if (ch === '"') inQ = false; else cur += ch; }
+      else { if (ch === '"') inQ = true; else if (ch === ',' || ch === ';') { out.push(cur); cur = ''; } else cur += ch; }
+    }
+    out.push(cur); return out;
+  };
+  const head = parseLine(lines[0]).map(h => h.trim());
+  return lines.slice(1).map(l => { const v = parseLine(l); const o = {}; head.forEach((h, i) => o[h] = (v[i] || '').trim()); return o; });
+}
+async function adminWordsImportFile() {
+  const inp = document.getElementById('cw-file');
+  if (!inp || !inp.files || !inp.files[0]) { uiAlert('Önce bir dosya seç (.json, .csv veya .xlsx).'); return; }
+  const f = inp.files[0];
+  const name = f.name.toLowerCase();
+  try {
+    let arr = [];
+    if (name.endsWith('.json')) {
+      arr = JSON.parse(await f.text());
+    } else if (name.endsWith('.csv')) {
+      arr = _parseCsv(await f.text());
+    } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+      if (typeof XLSX === 'undefined') { uiAlert('Excel kütüphanesi yüklenemedi; sayfayı yenileyip tekrar dene.'); return; }
+      const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
+      arr = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+    } else { uiAlert('Desteklenen türler: .json, .csv, .xlsx'); return; }
+    if (!Array.isArray(arr)) { uiAlert('Dosya bir liste içermiyor.'); return; }
+    await _cwImportArray(arr, f.name);
+    inp.value = '';
+  } catch (e) { uiAlert('Dosya okunamadı: biçimi kontrol et. (CSV başlıkları: ru,tr,p,cat,level,ornek,ornekTr)'); }
+}
+async function adminMigrateWords() {
+  if (!(await uiConfirm('Sitedeki JSON kelimelerinin TAMAMI (' + words.length + ' kelime) veritabanına aktarılsın mı? Böylece hepsi panelden düzenlenebilir olur. (Tekrar çalıştırmak güvenlidir; var olanların üzerine yazar.)', "JSON'dan DB'ye Aktar"))) return;
+  try {
+    const rows = words.map(w => _cwNormalize(w)).filter(Boolean);
+    const n = await _cwUpsertAll(rows);
+    await uiAlert(n + ' kelime veritabanına aktarıldı. Artık hepsi listede ve düzenlenebilir.', 'Göç Tamam');
+    await adminCwReload();
+  } catch (e) { uiAlert('Göç başarısız. content_words.sql çalıştırıldı mı?'); }
+}
