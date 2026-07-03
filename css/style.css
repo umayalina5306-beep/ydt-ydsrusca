@@ -2291,3 +2291,8 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .mail-selbar { display:flex; align-items:center; gap:12px; background:var(--off-white); border:1px solid var(--gold); border-radius:10px; padding:6px 12px; font-size:.85rem; color:var(--text); }
 .mail-cb { width:17px; height:17px; cursor:pointer; accent-color:var(--blue); flex-shrink:0; }
 .sm-head { align-items:center; }
+
+/* Mail arama + şablon + imza notu */
+.mail-search { max-width:320px; margin:0 0 0 0; flex:1; min-width:200px; }
+.mail-tpl { margin-bottom:8px; }
+.mail-sign-note { font-size:.72rem; color:var(--gray); font-style:italic; margin:6px 0; }
