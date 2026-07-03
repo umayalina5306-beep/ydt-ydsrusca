@@ -17,11 +17,25 @@ async function openAdmin() {
   }
   gate.style.display = "none";
   content.style.display = "block";
-  await loadAdminUsers();
-  if (typeof adminLoadTickets === "function") { adminTicketView = { mode: "list", ticketId: null, userId: null }; adminLoadTickets(); }
-  if (typeof adminLoadMail === "function") adminLoadMail();
-  if (typeof adminQuestionStats === "function") adminQuestionStats();
-  if (typeof adminLoadErrors === "function") adminLoadErrors();
+  await loadAdminUsers();   // genel bakış sayıları için
+  adminNav("overview");
+}
+
+function adminNav(view) {
+  document.querySelectorAll(".admin-view").forEach(v => { v.style.display = "none"; });
+  const el = document.getElementById("av-" + view);
+  if (el) el.style.display = "block";
+  document.querySelectorAll("#page-admin .psb-item").forEach(b => b.classList.remove("active"));
+  const btn = document.getElementById("asb-" + view);
+  if (btn) btn.classList.add("active");
+  if (view === "overview") { renderAdminStats(); if (typeof renderVisitsMini === "function") renderVisitsMini(); }
+  if (view === "users") loadAdminUsers();
+  if (view === "notify" && typeof anTargetChange === "function") anTargetChange();
+  if (view === "support" && typeof adminLoadTickets === "function") { adminTicketView = { mode: "list", ticketId: null, userId: null }; adminLoadTickets(); }
+  if (view === "mail" && typeof adminLoadMail === "function") adminLoadMail();
+  if (view === "questions" && typeof adminQuestionStats === "function") adminQuestionStats();
+  if (view === "visits") { if (typeof renderVisitsFull === "function") renderVisitsFull(); if (typeof renderSeoCheck === "function") renderSeoCheck(); }
+  if (view === "errors" && typeof adminLoadErrors === "function") adminLoadErrors();
 }
 
 async function loadAdminUsers() {
