@@ -36,6 +36,8 @@ function adminNav(view) {
   if (view === "mail" && typeof adminLoadMail === "function") adminLoadMail();
   if (view === "questions" && typeof adminQuestionStats === "function") adminQuestionStats();
   if (view === "visits") { if (typeof renderVisitsFull === "function") renderVisitsFull(); if (typeof renderSeoCheck === "function") renderSeoCheck(); }
+  if (view === "settings" && typeof adminSettingsInit === "function") adminSettingsInit();
+  if (view === "backup" && typeof renderBackupView === "function") renderBackupView();
   if (view === "errors" && typeof adminLoadErrors === "function") adminLoadErrors();
 }
 
@@ -84,6 +86,11 @@ function renderAdminUsers(list) {
       <div class="admin-user-info">
         <div class="admin-user-name">${ad} ${planBadge}</div>
         <div class="admin-user-meta">${u.email || ""} · ${u.level || "seviye yok"} · ${tarih}</div>
+        <div class="admin-user-acts">
+          <button class="mail-act" onclick="adminUserNotify('${u.id}', '${(u.display_name||'').replace(/'/g,'')}')">🔔 Bildirim</button>
+          <button class="mail-act" onclick="adminUserResetPw('${u.email||''}')">🔑 Şifre Sıfırlama Maili</button>
+          <button class="mail-act" onclick="adminUserChangeEmail('${u.id}', '${u.email||''}')">📧 E-posta Değiştir</button>
+        </div>
       </div>
       ${btn}
     </div>`;
