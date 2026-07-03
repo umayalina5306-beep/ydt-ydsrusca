@@ -2214,7 +2214,9 @@ async function changePassword() {
 async function sendPasswordReset() {
   const email = (currentUser && currentUser.email) || '';
   if (!email) { toast('E-posta bulunamadı.'); return; }
-  try { const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname }); if (error) throw error; toast('Sıfırlama bağlantısı e-postana gönderildi.'); }
+  const _tk = (typeof captchaPrompt === 'function') ? await captchaPrompt() : null;
+  if (typeof TURNSTILE_SITE_KEY !== 'undefined' && TURNSTILE_SITE_KEY && !_tk) { toast('Doğrulama tamamlanmadı, işlem iptal edildi.'); return; }
+  try { const { error } = await sb.auth.resetPasswordForEmail(email, Object.assign({ redirectTo: location.origin + location.pathname }, _tk ? { captchaToken: _tk } : {})); if (error) throw error; toast('Sıfırlama bağlantısı e-postana gönderildi.'); }
   catch (e) { toast('Gönderilemedi. Lütfen tekrar dene.'); }
 }
 async function changeEmail() {
@@ -2456,7 +2458,11 @@ async function buyPremium() {
   if (!confirmed) {
     const r = await uiConfirm('Premium satın almadan önce e-posta adresini doğrulaman gerekiyor. Doğrulama bağlantısını şimdi tekrar gönderelim mi?', 'E-posta Doğrulama Gerekli', { confirmText: 'Tekrar Gönder', cancelText: 'Kapat' });
     if (r) {
-      try { await sb.auth.resend({ type: 'signup', email: currentUser.email }); uiAlert('Doğrulama e-postası gönderildi. Lütfen gelen kutunu (ve spam klasörünü) kontrol et.', 'Gönderildi'); }
+      try {
+        const _tk2 = (typeof captchaPrompt === 'function') ? await captchaPrompt() : null;
+        if (typeof TURNSTILE_SITE_KEY !== 'undefined' && TURNSTILE_SITE_KEY && !_tk2) { toast('Doğrulama tamamlanmadı, işlem iptal edildi.'); return; }
+        await sb.auth.resend({ type: 'signup', email: currentUser.email, options: _tk2 ? { captchaToken: _tk2 } : undefined });
+        uiAlert('Doğrulama e-postası gönderildi. Lütfen gelen kutunu (ve spam klasörünü) kontrol et.', 'Gönderildi'); }
       catch (e) { uiAlert('E-posta gönderilemedi. Lütfen daha sonra tekrar dene.'); }
     }
     return;
@@ -2862,11 +2868,15 @@ function renderPlacementIntro() {
     <div class="plc-icon">🎚️</div>
     <h2 class="plc-title">Seviye Tespit Sınavı</h2>
     <p class="plc-sub">${PLC_SIZE} soruluk bir sınavla Rusça seviyen belirlenir. Sonuç avatarındaki seviye çerçevesine ve gelişim grafiğine işlenir.</p>
-    <div class="plc-level-now">Mevcut seviyen: <b>${lvl || 'henüz belirlenmedi'}</b></div>
+    ${lvl ? `<div class="plc-level-now">Mevcut seviyen: <b>${lvl}</b></div>` : ''}
     <ul class="plc-rules">
-      <li>${lvl ? 'Sorular seviyene göre ağırlıklı olarak havuzdan <b>rastgele</b> seçilir.' : 'Seviyen henüz belirlenmediği için sorular <b>tüm seviyelerden</b> (alt seviyeler ağırlıklı) rastgele seçilir ve sonuca göre seviyen atanır.'}</li>
-      <li>Geçme barajı <b>%${PLC_PASS}</b>. Geçersen bir üst seviyeye çıkarsın.</li>
-      <li>Geçemezsen <b>farklı sorularla</b> tekrar girebilirsin.</li>
+      ${lvl
+        ? `<li>Sorular seviyene göre ağırlıklı olarak havuzdan <b>rastgele</b> seçilir.</li>
+           <li>Geçme barajı <b>%${PLC_PASS}</b>. Geçersen bir üst seviyeye çıkarsın.</li>
+           <li>Geçemezsen <b>farklı sorularla</b> tekrar girebilirsin.</li>`
+        : `<li>Sorular <b>tüm seviyelerden</b> rastgele seçilir.</li>
+           <li>Bu ilk sınavda geçme barajı yoktur; sonucuna göre <b>seviyen belirlenir</b>.</li>
+           <li>Sonrasında istediğin zaman tekrar girip seviyeni yükseltmeyi deneyebilirsin.</li>`}
     </ul>
     <button class="plc-start" onclick="startPlacement()">Sınava Başla →</button>
   </div>`;
@@ -3014,7 +3024,7 @@ function _plcShowResult(correct, total, pct, passed, newLevel, noLevel) {
   box.innerHTML = `<div class="plc-card plc-result">
     <div class="plc-icon">${passed ? '🎉' : '📋'}</div>
     <h2 class="plc-title">${noLevel ? 'Seviyen Belirlendi!' : (passed ? 'Tebrikler!' : 'Sınav Tamamlandı')}</h2>
-    <div class="plc-score ${passed ? 'pass' : 'fail'}">%${pct}</div>
+    <div class="plc-score ${noLevel ? 'pass' : (passed ? 'pass' : 'fail')}">%${pct}</div>
     <p class="plc-sub">${correct} / ${total} doğru${noLevel ? ' — sonuçlar tüm seviyelere göre ağırlıklı değerlendirildi.' : (passed ? ' — barajı geçtin.' : ' — baraj %' + PLC_PASS + ', tekrar deneyebilirsin.')}</p>
     <div class="plc-newlevel">Seviyen: <b>${newLevel}</b></div>
     <div class="plc-result-btns">
@@ -3206,9 +3216,13 @@ async function admSentDelete(id) {
    HATA YÖNETİM SİSTEMİ (Y7) — otomatik kayıt + panel görüntüleme
    ============================================================ */
 let _errLogged = 0;
+let _errLastMsg = '';
 async function logError(message, source) {
   try {
-    if (_errLogged >= 5) return; // oturum başına en fazla 5 kayıt (spam önleme)
+    if (_errLogged >= 25) return; // oturum başına en fazla 25 kayıt (döngüsel hata patlamasına karşı)
+    const _m = String(message || '').slice(0, 600);
+    if (_m && _m === _errLastMsg) return; // aynı hatanın arka arkaya tekrarını yazma
+    _errLastMsg = _m;
     if (typeof sb === 'undefined' || !sb || typeof currentUser === 'undefined' || !currentUser) return;
     _errLogged++;
     await sb.from('error_log').insert({
@@ -3229,13 +3243,18 @@ if (typeof window !== 'undefined') {
   });
 }
 
-async function adminLoadErrors() {
+let _errShowAll = false;
+async function adminLoadErrors(showAll) {
+  if (typeof showAll === 'boolean') _errShowAll = showAll;
   const box = document.getElementById('admin-errors'); if (!box) return;
   box.innerHTML = '<div class="profile-empty">Yükleniyor...</div>';
   try {
-    const { data } = await sb.from('error_log').select('*').order('created_at', { ascending: false }).limit(50);
+    const { data } = await sb.from('error_log').select('*').order('created_at', { ascending: false }).limit(_errShowAll ? 1000 : 50);
     if (!data || !data.length) { box.innerHTML = '<div class="profile-empty">Kayıtlı hata yok. 🎉</div>'; return; }
-    box.innerHTML = data.map(e => {
+    const foot = _errShowAll
+      ? `<div class="err-foot">${data.length} kayıt gösteriliyor. <button class="mail-act" onclick="adminLoadErrors(false)">Son 50'ye dön</button></div>`
+      : `<div class="err-foot">Son ${data.length} kayıt. <button class="mail-act" onclick="adminLoadErrors(true)">Tümünü Gör</button></div>`;
+    box.innerHTML = foot + data.map(e => {
       const d = new Date(e.created_at);
       return `<div class="err-row"><div class="err-msg">${_escHtml(e.message)}</div>
         <div class="err-meta">${_escHtml(e.source || '')} · ${_escHtml((e.user_id || '').slice(0,8))} · ${d.toLocaleString('tr-TR')}</div></div>`;
