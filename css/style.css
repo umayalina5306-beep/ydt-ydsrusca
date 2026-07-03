@@ -2296,3 +2296,9 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .mail-search { max-width:320px; margin:0 0 0 0; flex:1; min-width:200px; }
 .mail-tpl { margin-bottom:8px; }
 .mail-sign-note { font-size:.72rem; color:var(--gray); font-style:italic; margin:6px 0; }
+
+/* E-posta doğrulama bandı + Turnstile */
+.verify-banner { background:#fff3d6; color:#7a5c10; padding:10px 16px; text-align:center; font-size:.86rem; font-weight:600; border-bottom:1px solid #eedFA8; position:relative; z-index:500; }
+.verify-banner .verify-resend { margin-left:10px; background:var(--blue); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-weight:700; cursor:pointer; font-size:.78rem; }
+.verify-banner .verify-resend:hover { background:var(--blue-light); }
+.turnstile-box { margin:10px 0; display:flex; justify-content:center; }
