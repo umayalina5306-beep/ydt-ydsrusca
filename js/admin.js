@@ -35,6 +35,7 @@ function adminNav(view) {
   if (view === "support" && typeof adminLoadTickets === "function") { adminTicketView = { mode: "list", ticketId: null, userId: null }; adminLoadTickets(); }
   if (view === "mail" && typeof adminLoadMail === "function") adminLoadMail();
   if (view === "questions" && typeof adminQuestionStats === "function") adminQuestionStats();
+  if (view === "pquest" && typeof adminPquestInit === "function") adminPquestInit();
   if (view === "visits") { if (typeof renderVisitsFull === "function") renderVisitsFull(); if (typeof renderSeoCheck === "function") renderSeoCheck(); }
   if (view === "settings" && typeof adminSettingsInit === "function") adminSettingsInit();
   if (view === "backup" && typeof renderBackupView === "function") renderBackupView();
