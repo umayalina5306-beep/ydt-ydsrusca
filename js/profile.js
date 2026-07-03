@@ -218,7 +218,7 @@ async function loadProfileStats() {
     if (w && typeof w.count === "number") { const e1 = document.getElementById("profile-words"); if (e1) e1.textContent = Math.max(w.count, localSaved); }
     if (t && typeof t.count === "number") { const e2 = document.getElementById("profile-tests"); if (e2) e2.textContent = Math.max(t.count, localTests); }
     if (typeof renderBadges === "function") renderBadges();
-  } catch (e) { console.error("Profil istatistikleri yüklenemedi:", e); }
+  } catch (e) { _logDev("Profil istatistikleri yüklenemedi:", e); }
 }
 
 // Ayarlar: görünen adı kaydet (Bilgileri Kaydet)
@@ -237,7 +237,7 @@ async function saveProfileName() {
     applyAvatar();
     if (typeof toast === "function") toast("Bilgilerin kaydedildi.");
   } catch (e) {
-    console.error("Ad güncellenemedi:", e);
+    _logDev("Ad güncellenemedi:", e);
     if (typeof toast === "function") toast("Kaydedilemedi. Lütfen tekrar dene.");
   }
 }
