@@ -97,7 +97,8 @@ async function handleSession(session) {
   if (typeof notifPollId !== "undefined" && notifPollId) { clearInterval(notifPollId); notifPollId = null; }
   if (currentUser) {
     if (_bell) _bell.style.display = "inline-flex";
-    if (typeof loadNotifications === "function") {
+    if (typeof window.startNotifPolling === "function") window.startNotifPolling();
+    else if (typeof loadNotifications === "function") {
       loadNotifications();
       notifPollId = setInterval(function () { if (currentUser && typeof loadNotifications === "function") loadNotifications(); }, 30000);
     }
