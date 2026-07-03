@@ -1,5 +1,30 @@
 /* Geliştirici log — üretimde sessiz. Açmak için: localStorage.setItem('ydt_debug','1') */
-function _logDev() { try { if (localStorage.getItem('ydt_debug') === '1' && typeof console !== 'undefined') console.log.apply(console, arguments); } catch (e) {} }
+/* ===== Cloudflare Turnstile (CAPTCHA) =====
+   Kurulum: Cloudflare panel → Turnstile → Add site → Site Key'i aşağıya yapıştır.
+   (Secret Key ise Supabase → Auth → Attack Protection'a girilir.)
+   Boş bırakılırsa CAPTCHA devre dışı kalır, site normal çalışır. */
+var TURNSTILE_SITE_KEY = "0x4AAAAAADuwG7UJkIWquoIL";
+
+var _tsWidgetId = null;
+function renderTurnstile() {
+  if (!TURNSTILE_SITE_KEY) return;
+  var box = document.getElementById("turnstile-box");
+  if (!box || typeof turnstile === "undefined") return;
+  if (_tsWidgetId !== null) { try { turnstile.reset(_tsWidgetId); } catch (e) {} return; }
+  try { _tsWidgetId = turnstile.render(box, { sitekey: TURNSTILE_SITE_KEY }); } catch (e) {}
+}
+function turnstileToken() {
+  if (!TURNSTILE_SITE_KEY || _tsWidgetId === null || typeof turnstile === "undefined") return null;
+  try { return turnstile.getResponse(_tsWidgetId) || null; } catch (e) { return null; }
+}
+function turnstileReset() { if (_tsWidgetId !== null && typeof turnstile !== "undefined") { try { turnstile.reset(_tsWidgetId); } catch (e) {} } }
+
+function _logDev() {
+  try {
+    var isAdmin = (typeof currentProfile !== "undefined" && currentProfile && currentProfile.is_admin);
+    if (isAdmin && typeof console !== "undefined") console.log.apply(console, arguments);
+  } catch (e) {}
+}
 // ============================================================
 //  GİRİŞ / KAYIT SİSTEMİ (Supabase)
 //  - E-posta + şifre ile kayıt ve giriş
@@ -39,6 +64,7 @@ async function handleSession(session) {
     currentProfile = null;
   }
   updateAuthUI();
+  updateVerifyBanner();
   if (typeof loadSavedWords === "function") loadSavedWords();
   const _bell = document.getElementById("notif-bell");
   if (typeof notifPollId !== "undefined" && notifPollId) { clearInterval(notifPollId); notifPollId = null; }
@@ -122,10 +148,12 @@ async function authRegister() {
   const pass = document.getElementById("reg-pass").value || "";
   if (!email || pass.length < 6) { authMsg("Geçerli e-posta ve en az 6 karakter şifre gir."); return; }
   authMsg("Hesap oluşturuluyor...", true);
-  const { data, error } = await sb.auth.signUp({
-    email, password: pass,
-    options: { data: { display_name: name } }
-  });
+  const _ct2 = turnstileToken();
+  if (TURNSTILE_SITE_KEY && !_ct2) { authMsg("Lütfen robot olmadığını doğrula (kutucuğu işaretle)."); return; }
+  const _opts = { data: { display_name: name } };
+  if (_ct2) _opts.captchaToken = _ct2;
+  const { data, error } = await sb.auth.signUp({ email, password: pass, options: _opts });
+  turnstileReset();
   if (error) { authHata(error); return; }       // DEĞİŞTİ: orijinal hatayı da göster
   if (data.user && !data.session) {
     authMsg("Kayıt başarılı! E-postanı kontrol edip hesabını onayla, sonra giriş yap.", true);
@@ -142,7 +170,10 @@ async function authLogin() {
   const pass = document.getElementById("login-pass").value || "";
   if (!email || !pass) { authMsg("E-posta ve şifre gir."); return; }
   authMsg("Giriş yapılıyor...", true);
-  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  const _ct = turnstileToken();
+  if (TURNSTILE_SITE_KEY && !_ct) { authMsg("Lütfen robot olmadığını doğrula (kutucuğu işaretle)."); return; }
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass, options: _ct ? { captchaToken: _ct } : undefined });
+  turnstileReset();
   if (error) { authHata(error); return; }        // DEĞİŞTİ: orijinal hatayı da göster
   authMsg("");
   closeAuth();
@@ -221,4 +252,31 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", authInit);
 } else {
   authInit();
+}
+
+
+/* ===== E-posta doğrulama (Y5) ===== */
+function emailVerified() {
+  return !!(currentUser && (currentUser.email_confirmed_at || currentUser.confirmed_at));
+}
+if (typeof window !== "undefined") window.emailVerified = emailVerified;
+
+function updateVerifyBanner() {
+  var b = document.getElementById("verify-banner");
+  var show = !!(currentUser && !emailVerified());
+  if (show && !b) {
+    b = document.createElement("div");
+    b.id = "verify-banner";
+    b.className = "verify-banner";
+    b.innerHTML = '⚠️ E-posta adresin henüz doğrulanmadı. Bazı özellikler (kelime kaydetme, destek talebi, premium) doğrulama sonrası açılır. ' +
+      '<button class="verify-resend" onclick="resendVerifyMail()">Doğrulama mailini tekrar gönder</button>';
+    document.body.insertBefore(b, document.body.firstChild);
+  } else if (!show && b) { b.remove(); }
+}
+async function resendVerifyMail() {
+  if (!sb || !currentUser) return;
+  try {
+    await sb.auth.resend({ type: "signup", email: currentUser.email });
+    if (typeof toast === "function") toast("Doğrulama e-postası gönderildi. Gelen kutunu (ve spam klasörünü) kontrol et.");
+  } catch (e) { if (typeof toast === "function") toast("Gönderilemedi. Lütfen biraz sonra tekrar dene."); }
 }
