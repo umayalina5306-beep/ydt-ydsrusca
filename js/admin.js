@@ -30,6 +30,7 @@ function adminNav(view) {
   if (btn) btn.classList.add("active");
   if (view === "overview") { renderAdminStats(); if (typeof renderVisitsMini === "function") renderVisitsMini(); }
   if (view === "users") loadAdminUsers();
+  if (view === "content" && typeof adminContentInit === "function") adminContentInit();
   if (view === "notify" && typeof anTargetChange === "function") anTargetChange();
   if (view === "support" && typeof adminLoadTickets === "function") { adminTicketView = { mode: "list", ticketId: null, userId: null }; adminLoadTickets(); }
   if (view === "mail" && typeof adminLoadMail === "function") adminLoadMail();
