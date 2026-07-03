@@ -1,3 +1,5 @@
+/* Geliştirici log — üretimde sessiz. Açmak için: localStorage.setItem('ydt_debug','1') */
+function _logDev() { try { if (localStorage.getItem('ydt_debug') === '1' && typeof console !== 'undefined') console.log.apply(console, arguments); } catch (e) {} }
 // ============================================================
 //  GİRİŞ / KAYIT SİSTEMİ (Supabase)
 //  - E-posta + şifre ile kayıt ve giriş
@@ -12,12 +14,12 @@ let currentProfile = null;
 
 function authInit() {
   if (!window.supabase || SUPABASE_URL.startsWith("BURAYA") || SUPABASE_KEY.startsWith("BURAYA")) {
-    console.warn("Supabase bilgileri henüz girilmemiş (js/supabase-config.js).");
+    _logDev("Supabase bilgileri henüz girilmemiş (js/supabase-config.js).");
     return;
   }
   // URL'i temizle: sadece çıplak adresi kullan (fazla /rest/v1, sondaki / vb. at)
   let url = (SUPABASE_URL || "").trim();
-  try { url = new URL(url).origin; } catch (e) { console.error("SUPABASE_URL geçersiz:", url); }
+  try { url = new URL(url).origin; } catch (e) { _logDev("SUPABASE_URL geçersiz:", url); }
   sb = window.supabase.createClient(url, (SUPABASE_KEY || "").trim());
 
   // Oturum durumu değişince arayüzü güncelle (giriş, çıkış, Google dönüşü dahil)
@@ -71,7 +73,7 @@ async function loadProfile() {
       }
     }
   } catch (e) {
-    console.error("Profil yüklenemedi:", e);
+    _logDev("Profil yüklenemedi:", e);
   }
 }
 
@@ -97,12 +99,12 @@ async function syncName() {
     let idData = {};
     try { idData = (currentUser.identities && currentUser.identities[0] && currentUser.identities[0].identity_data) || {}; } catch (e) {}
     const ad = m.full_name || m.name || idData.full_name || idData.name;
-    console.log("AUTH isim teşhisi -> user_metadata:", m, "| identity_data:", idData);
+    _logDev("AUTH isim teşhisi -> user_metadata:", m, "| identity_data:", idData);
     if (ad && (!currentProfile || currentProfile.display_name !== ad)) {
       await sb.from("profiles").update({ display_name: ad }).eq("id", currentUser.id);
       if (currentProfile) currentProfile.display_name = ad;
     }
-  } catch (e) { console.error("İsim güncellenemedi:", e); }
+  } catch (e) { _logDev("İsim güncellenemedi:", e); }
 }
 
 function authMsg(text, ok) {
@@ -210,7 +212,7 @@ function cevirHata(msg) {
 // YENİ: Türkçe mesaj + orijinal hata metnini birlikte göster
 function authHata(error) {
   const raw = (error && error.message) || "bilinmeyen hata";
-  console.error("Auth hatası:", error);
+  _logDev("Auth hatası:", error);
   authMsg(cevirHata(raw));
 }
 
