@@ -1151,21 +1151,36 @@ document.getElementById('auth-modal').addEventListener('click',function(e){
 // ============================================================
 async function loadData() {
   const j = (p) => fetch(p).then(r => { if(!r.ok) throw new Error('Yüklenemedi: '+p); return r.json(); });
+  const jSafe = u => j(u).catch(() => []);
+  // Önce DB'den dene (İçerik Yönetimi ile taşındıysa dosyalara gerek kalmaz)
+  let dbW = [];
+  try {
+    if (typeof sb !== 'undefined' && sb) {
+      const { data } = await sb.from('content_words').select('*').limit(10000);
+      dbW = (data || []).filter(r => r.active !== false);
+    }
+  } catch (e) {}
   const [a1a2,b1,b2,c1,syn,ant,fam,vids] = await Promise.all([
-    j('data/kelimeler/a1-a2.json'),
-    j('data/kelimeler/b1.json'),
-    j('data/kelimeler/b2.json'),
-    j('data/kelimeler/c1.json'),
+    jSafe('data/kelimeler/a1-a2.json'),
+    jSafe('data/kelimeler/b1.json'),
+    jSafe('data/kelimeler/b2.json'),
+    jSafe('data/kelimeler/c1.json'),
     j('data/es-anlamlilar/es-anlamlilar.json'),
     j('data/zit-anlamlilar/zit-anlamlilar.json'),
     j('data/akraba-kelimeler/akraba-kelimeler.json'),
     j('data/videolar/videolar.json'),
   ]);
-  words = [].concat(a1a2,b1,b2,c1);
+  window.wordsFromDb = dbW.length >= 50;
+  if (window.wordsFromDb) {
+    words = dbW.map(r => ({ ru: r.ru, tr: r.tr, p: r.p || '', cat: r.cat || 'isim', level: r.level || 'A1',
+      ornek: r.ornek || '', ornekTr: r.ornek_tr || '', cinsiyet: r.cinsiyet || '', premium: !!r.premium }));
+  } else {
+    words = [].concat(a1a2,b1,b2,c1);
+  }
   wordsByRu = {};
   words.forEach(w => { wordsByRu[w.ru] = w; });
   synonymGroups = syn; antonymPairs = ant; wordFamilies = fam; videos = vids;
-  _tryLoadDbWords(); // panelden eklenen/düzenlenen kelimeleri bindir
+  if (!window.wordsFromDb) _tryLoadDbWords(); // JSON moddaysa panel eklerini bindir
   // Paragraf soruları (dosya yoksa site yine çalışsın diye ayrı try/catch)
   try { paragraphQuestions = await j('data/sorular/paragraf-sorulari.json'); }
   catch (e) { _logDev('Paragraf soruları yüklenemedi:', e); paragraphQuestions = []; }
@@ -3579,3 +3594,118 @@ async function adminMigrateWords() {
     await adminCwReload();
   } catch (e) { uiAlert('Göç başarısız. content_words.sql çalıştırıldı mı?'); }
 }
+
+/* Bildirim yükleme/polling garantisi (auth app.js'ten önce yüklendiği için buradan başlatılır) */
+function startNotifPolling() {
+  if (typeof currentUser === 'undefined' || !currentUser) return;
+  loadNotifications();
+  if (notifPollId) clearInterval(notifPollId);
+  notifPollId = setInterval(function () { if (typeof currentUser !== 'undefined' && currentUser) loadNotifications(); }, 30000);
+}
+if (typeof window !== 'undefined') window.startNotifPolling = startNotifPolling;
+setTimeout(function () { try { startNotifPolling(); } catch (e) {} }, 2000);
+
+/* ============================================================
+   YÖNETİCİ — kullanıcı işlemleri (bildirim, şifre maili, e-posta)
+   ============================================================ */
+async function adminUserNotify(userId, name) {
+  const t = await uiPrompt('Bildirim başlığı:', { title: (name || 'Kullanıcı') + ' — Bildirim' });
+  if (!t) return;
+  const b = await uiPrompt('Mesaj (opsiyonel):', { title: 'Bildirim mesajı' });
+  try {
+    await sb.from('notifications').insert({ user_id: userId, title: t, body: b || null, type: 'admin' });
+    toast('Bildirim gönderildi.');
+  } catch (e) { uiAlert('Gönderilemedi.'); }
+}
+async function adminUserResetPw(email) {
+  if (!email) { uiAlert('Kullanıcının e-postası yok.'); return; }
+  if (!(await uiConfirm(email + ' adresine şifre sıfırlama bağlantısı gönderilsin mi?', 'Şifre Sıfırlama'))) return;
+  const tk = (typeof captchaPrompt === 'function') ? await captchaPrompt() : null;
+  if (typeof TURNSTILE_SITE_KEY !== 'undefined' && TURNSTILE_SITE_KEY && !tk) { toast('Doğrulama tamamlanmadı.'); return; }
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(email, Object.assign({ redirectTo: location.origin + location.pathname }, tk ? { captchaToken: tk } : {}));
+    if (error) throw error;
+    toast('Sıfırlama maili gönderildi: ' + email);
+  } catch (e) { uiAlert('Gönderilemedi. (Kısa sürede çok istek atıldıysa biraz bekle.)'); }
+}
+async function adminUserChangeEmail(userId, oldEmail) {
+  const yeni = await uiPrompt('Yeni e-posta adresi:', { title: 'E-posta Değiştir', placeholder: oldEmail });
+  if (!yeni || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(yeni)) { if (yeni !== null) uiAlert('Geçerli bir e-posta gir.'); return; }
+  try {
+    const { data, error } = await sb.functions.invoke('admin-user', { body: { action: 'change_email', user_id: userId, email: yeni } });
+    if (error || (data && data.error)) throw new Error((data && data.error) || 'hata');
+    toast('E-posta güncellendi: ' + yeni);
+    if (typeof loadAdminUsers === 'function') loadAdminUsers();
+  } catch (e) { uiAlert('Değiştirilemedi. Bunun için "admin-user" Edge Function kurulmalı (KURULUM notunda).'); }
+}
+
+/* ============================================================
+   YÖNETİCİ — YEDEKLEME (tüm tabloları JSON indir)
+   ============================================================ */
+const BACKUP_TABLES = ['profiles','saved_words','test_results','notifications','support_tickets','ticket_messages','inbox_mail','outbox_mail','placement_questions','placement_results','content_words','error_log','page_views'];
+async function adminBackupAll() {
+  const st = document.getElementById('backup-status');
+  const out = { exportedAt: new Date().toISOString(), tables: {} };
+  for (const t of BACKUP_TABLES) {
+    if (st) st.textContent = 'Alınıyor: ' + t + '...';
+    try {
+      const { data } = await sb.from(t).select('*').limit(10000);
+      out.tables[t] = data || [];
+    } catch (e) { out.tables[t] = { error: 'okunamadı' }; }
+  }
+  if (st) st.textContent = 'Dosya hazırlanıyor...';
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ydt-yedek-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 200);
+  if (st) st.textContent = 'Yedek indirildi ✓ (' + BACKUP_TABLES.length + ' tablo)';
+}
+async function adminBackupTable(t) {
+  try {
+    const { data } = await sb.from(t).select('*').limit(10000);
+    const blob = new Blob([JSON.stringify(data || [], null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'ydt-' + t + '-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 200);
+  } catch (e) { uiAlert(t + ' indirilemedi.'); }
+}
+function renderBackupView() {
+  const box = document.getElementById('backup-tables'); if (!box) return;
+  box.innerHTML = BACKUP_TABLES.map(t => `<button class="mail-act" onclick="adminBackupTable('${t}')">⬇️ ${t}</button>`).join('');
+}
+
+/* ============================================================
+   SİTE AYARLARI — duyuru bandı (site_settings)
+   ============================================================ */
+async function loadSiteSettings() {
+  try {
+    const { data } = await sb.from('site_settings').select('*');
+    const map = {}; (data || []).forEach(r => map[r.key] = r.value);
+    const txt = (map['announcement'] || '').trim();
+    let b = document.getElementById('site-announce');
+    if (txt) {
+      if (!b) {
+        b = document.createElement('div'); b.id = 'site-announce'; b.className = 'site-announce';
+        document.body.insertBefore(b, document.body.firstChild);
+      }
+      b.innerHTML = '📢 ' + _escHtml(txt);
+    } else if (b) b.remove();
+    return map;
+  } catch (e) { return {}; }
+}
+async function adminSettingsInit() {
+  const map = await loadSiteSettings();
+  const inp = document.getElementById('set-announce'); if (inp) inp.value = map['announcement'] || '';
+}
+async function adminSaveAnnouncement() {
+  const inp = document.getElementById('set-announce'); if (!inp) return;
+  try {
+    await sb.from('site_settings').upsert({ key: 'announcement', value: (inp.value || '').trim() }, { onConflict: 'key' });
+    toast('Duyuru kaydedildi.');
+    loadSiteSettings();
+  } catch (e) { uiAlert('Kaydedilemedi. site_settings.sql çalıştırıldı mı?'); }
+}
+setTimeout(function () { try { if (typeof sb !== 'undefined' && sb) loadSiteSettings(); } catch (e) {} }, 1800);
