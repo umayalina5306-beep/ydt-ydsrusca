@@ -19,6 +19,33 @@ function turnstileToken() {
 }
 function turnstileReset() { if (_tsWidgetId !== null && typeof turnstile !== "undefined") { try { turnstile.reset(_tsWidgetId); } catch (e) {} } }
 
+/* Giriş penceresi dışındaki işlemler (şifre sıfırlama, mail tekrar gönderme) için
+   küçük bir doğrulama penceresi açar; kullanıcı doğrulayınca token döner. */
+function captchaPrompt() {
+  return new Promise(function (resolve) {
+    if (!TURNSTILE_SITE_KEY || typeof turnstile === "undefined") { resolve(null); return; }
+    var ov = document.createElement("div");
+    ov.className = "ui-modal-overlay show";
+    ov.style.zIndex = "10000";
+    ov.innerHTML = '<div class="ui-modal" style="max-width:380px;text-align:center;">' +
+      '<div class="ui-modal-title">Güvenlik Doğrulaması</div>' +
+      '<div class="ui-modal-msg">Devam etmek için lütfen doğrulamayı tamamla.</div>' +
+      '<div id="cap-box" style="margin:14px 0;display:flex;justify-content:center;"></div>' +
+      '<div class="ui-modal-btns"><button class="ui-modal-btn ghost" id="cap-cancel">Vazgeç</button></div></div>';
+    document.body.appendChild(ov);
+    var done = false;
+    function finish(t) { if (done) return; done = true; try { ov.remove(); } catch (e) {} resolve(t); }
+    ov.querySelector("#cap-cancel").onclick = function () { finish(null); };
+    try {
+      turnstile.render(ov.querySelector("#cap-box"), {
+        sitekey: TURNSTILE_SITE_KEY,
+        callback: function (t) { setTimeout(function () { finish(t); }, 350); }
+      });
+    } catch (e) { finish(null); }
+  });
+}
+if (typeof window !== "undefined") window.captchaPrompt = captchaPrompt;
+
 function _logDev() {
   try {
     var isAdmin = (typeof currentProfile !== "undefined" && currentProfile && currentProfile.is_admin);
@@ -288,7 +315,9 @@ function updateVerifyBanner() {
 async function resendVerifyMail() {
   if (!sb || !currentUser) return;
   try {
-    await sb.auth.resend({ type: "signup", email: currentUser.email });
+    const _tk = await captchaPrompt();
+    if (TURNSTILE_SITE_KEY && !_tk) { if (typeof toast === "function") toast("Doğrulama tamamlanmadı, işlem iptal edildi."); return; }
+    await sb.auth.resend({ type: "signup", email: currentUser.email, options: _tk ? { captchaToken: _tk } : undefined });
     if (typeof toast === "function") toast("Doğrulama e-postası gönderildi. Gelen kutunu (ve spam klasörünü) kontrol et.");
   } catch (e) { if (typeof toast === "function") toast("Gönderilemedi. Lütfen biraz sonra tekrar dene."); }
 }
