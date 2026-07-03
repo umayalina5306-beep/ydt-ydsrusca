@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=52">
+<link rel="stylesheet" href="css/style.css?v=53">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -22,6 +22,7 @@
   #page-profile .psb-ic, #page-profile .psb-q-ic { position:static !important; }
 </style>
   <script src="https://challenges.cloudflare.com/turnstile/api.js" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 </head>
 <body>
 
@@ -1065,6 +1066,7 @@
         <div class="psb-menu">
           <button class="psb-item" id="asb-overview" onclick="adminNav('overview')"><span class="psb-ic">📊</span> Genel Bakış</button>
           <button class="psb-item" id="asb-users" onclick="adminNav('users')"><span class="psb-ic">👥</span> Kullanıcılar</button>
+          <button class="psb-item" id="asb-content" onclick="adminNav('content')"><span class="psb-ic">📚</span> İçerik (Kelimeler)</button>
           <button class="psb-item" id="asb-notify" onclick="adminNav('notify')"><span class="psb-ic">🔔</span> Bildirim Gönder</button>
           <button class="psb-item" id="asb-support" onclick="adminNav('support')"><span class="psb-ic">💬</span> Destek Talepleri</button>
           <button class="psb-item" id="asb-mail" onclick="adminNav('mail')"><span class="psb-ic">📨</span> Mail Kutusu</button>
@@ -1087,6 +1089,52 @@
           <p class="profile-sub">Üyeleri görüntüle, planlarını yönet.</p>
           <input id="admin-search" class="admin-search" placeholder="🔍 İsim veya e-posta ara..." oninput="filterAdminUsers(this.value)" autocomplete="off">
           <div id="admin-users" class="admin-users"></div>
+        </div>
+
+        <div id="av-content" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">İçerik Yönetimi — Kelimeler</h2>
+          <p class="profile-sub">Kelimeleri tek tek düzenle veya toplu yükle. Değişiklikler anında yayına girer.</p>
+          <div class="pq-stats" id="cw-stats">Yükleniyor...</div>
+
+          <div class="admin-notif-card">
+            <h3 class="an-h3">✏️ Kelime Ekle / Düzenle</h3>
+            <div class="pq-row2">
+              <input id="cw-ru" class="pq-input" placeholder="Rusça kelime *" autocomplete="off">
+              <input id="cw-tr" class="pq-input" placeholder="Türkçe anlam *" autocomplete="off">
+            </div>
+            <div class="pq-row2">
+              <input id="cw-p" class="pq-input" placeholder="Okunuş (opsiyonel)" autocomplete="off">
+              <select id="cw-cat" class="pq-input"><option>isim</option><option>fiil</option><option>sıfat</option><option>zarf</option><option>zamir</option><option>edat</option><option>bağlaç</option></select>
+              <select id="cw-lvl" class="pq-input pq-level"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
+            </div>
+            <input id="cw-ornek" class="pq-input" placeholder="Örnek cümle (Rusça, opsiyonel)" autocomplete="off">
+            <input id="cw-ornektr" class="pq-input" placeholder="Örnek cümle (Türkçe, opsiyonel)" autocomplete="off">
+            <label class="cw-check"><input type="checkbox" id="cw-premium"> Premium içerik (yalnız premium üyeler görür — ileride)</label>
+            <div><button class="set-btn" id="cw-save-btn" onclick="adminWordSave()">Kelime Ekle</button>
+            <button class="set-btn ghost" onclick="adminWordFormClear()" style="margin-left:8px;">Temizle</button></div>
+          </div>
+
+          <div class="admin-notif-card">
+            <h3 class="an-h3">📦 Toplu Yükleme</h3>
+            <p class="pq-hint">Dosya (.json / .csv / .xlsx) yükle veya JSON'u doğrudan yapıştır. Sütun/alan adları: <code>ru, tr, p, cat, level, ornek, ornekTr, premium</code> (ru ve tr zorunlu). Aynı "ru" varsa üzerine yazılır.</p>
+            <div class="pq-row2">
+              <input type="file" id="cw-file" class="pq-input" accept=".json,.csv,.xlsx,.xls">
+              <button class="set-btn" onclick="adminWordsImportFile()">Dosyayı İçe Aktar</button>
+            </div>
+            <textarea id="cw-json" class="an-textarea" placeholder='[ { "ru": "дом", "tr": "ev", "level": "A1", "cat": "isim" } ]'></textarea>
+            <button class="set-btn" onclick="adminWordsImportJson()">JSON'u İçe Aktar</button>
+            <div class="pq-hint" style="margin-top:14px;">İlk kurulum: <b>sitedeki tüm JSON kelimelerini</b> tek tıkla veritabanına aktar — sonra hepsi aşağıdaki listede düzenlenebilir olur.</div>
+            <button class="set-btn ghost" onclick="adminMigrateWords()">⬆️ JSON'daki Kelimeleri DB'ye Aktar</button>
+          </div>
+
+          <div class="admin-notif-card">
+            <h3 class="an-h3">📋 Kelime Listesi (DB)</h3>
+            <div class="pq-row2">
+              <input class="pq-input" placeholder="🔍 Rusça veya Türkçe ara..." oninput="cwSet('q', this.value)" autocomplete="off">
+              <select class="pq-input pq-level" onchange="cwSet('level', this.value)"><option value="all">Tümü</option><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
+            </div>
+            <div id="cw-list"><div class="profile-empty">Yükleniyor...</div></div>
+          </div>
         </div>
 
         <div id="av-notify" class="admin-view" style="display:none;">
@@ -1237,11 +1285,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=52"></script>
-<script defer src="js/auth.js?v=52"></script>
-<script defer src="js/admin.js?v=52"></script>
-<script defer src="js/profile.js?v=52"></script>
-<script defer src="js/extras.js?v=52"></script>
-<script defer src="js/app.js?v=52"></script>
+<script defer src="js/supabase-config.js?v=53"></script>
+<script defer src="js/auth.js?v=53"></script>
+<script defer src="js/admin.js?v=53"></script>
+<script defer src="js/profile.js?v=53"></script>
+<script defer src="js/extras.js?v=53"></script>
+<script defer src="js/app.js?v=53"></script>
 </body>
 </html>
