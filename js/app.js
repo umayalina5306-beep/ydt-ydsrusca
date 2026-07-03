@@ -2839,6 +2839,7 @@ const PLC_SIZE = 20;
 const PLC_PASS = 70;
 let placementPool = null;        // { A1:[...], ... }
 let plcExam = [], plcAnswers = [], plcIdx = 0;
+let plcNoLevel = false;
 
 async function openPlacement() {
   if (typeof currentUser === 'undefined' || !currentUser) { if (typeof openAuth === 'function') openAuth('login'); return; }
@@ -2863,7 +2864,7 @@ function renderPlacementIntro() {
     <p class="plc-sub">${PLC_SIZE} soruluk bir sınavla Rusça seviyen belirlenir. Sonuç avatarındaki seviye çerçevesine ve gelişim grafiğine işlenir.</p>
     <div class="plc-level-now">Mevcut seviyen: <b>${lvl || 'henüz belirlenmedi'}</b></div>
     <ul class="plc-rules">
-      <li>Sorular seviyene göre ağırlıklı olarak havuzdan <b>rastgele</b> seçilir.</li>
+      <li>${lvl ? 'Sorular seviyene göre ağırlıklı olarak havuzdan <b>rastgele</b> seçilir.' : 'Seviyen henüz belirlenmediği için sorular <b>tüm seviyelerden</b> (alt seviyeler ağırlıklı) rastgele seçilir ve sonuca göre seviyen atanır.'}</li>
       <li>Geçme barajı <b>%${PLC_PASS}</b>. Geçersen bir üst seviyeye çıkarsın.</li>
       <li>Geçemezsen <b>farklı sorularla</b> tekrar girebilirsin.</li>
     </ul>
@@ -2895,9 +2896,24 @@ function placementCounts(idx, total) {
   return counts;
 }
 function buildPlacementExam() {
-  const curLevel = (currentProfile && currentProfile.level) || 'A1';
-  let idx = PLC_LEVELS.indexOf(String(curLevel).toUpperCase()); if (idx < 0) idx = 0;
-  const counts = placementCounts(idx, PLC_SIZE);
+  const rawLevel = currentProfile && currentProfile.level;
+  plcNoLevel = !(rawLevel && PLC_LEVELS.indexOf(String(rawLevel).toUpperCase()) >= 0);
+  let counts;
+  if (plcNoLevel) {
+    // Seviyesi hiç belirlenmemiş kullanıcı: tüm seviyelere yayılan tanı dağılımı
+    // A1 %30 · A2 %25 · B1 %20 · B2 %15 · C1 %10
+    const w = [0.30, 0.25, 0.20, 0.15, 0.10];
+    counts = {};
+    let sum = 0;
+    w.forEach((p, i) => { counts[i] = Math.round(PLC_SIZE * p); sum += counts[i]; });
+    while (sum > PLC_SIZE) { counts[0]--; sum--; }
+    while (sum < PLC_SIZE) { counts[0]++; sum++; }
+  } else {
+    const idx0 = PLC_LEVELS.indexOf(String(rawLevel).toUpperCase());
+    counts = placementCounts(idx0, PLC_SIZE);
+  }
+  const curLevel = plcNoLevel ? 'A1' : String(rawLevel).toUpperCase();
+  let idx = PLC_LEVELS.indexOf(curLevel); if (idx < 0) idx = 0;
   let exam = [], deficit = 0;
   Object.keys(counts).forEach(li => {
     const lv = PLC_LEVELS[li];
@@ -2950,11 +2966,25 @@ async function finishPlacement() {
   const correct = plcExam.reduce((a, q, i) => a + (plcAnswers[i] === q.correct ? 1 : 0), 0);
   const total = plcExam.length;
   const pct = Math.round(correct / total * 100);
-  const passed = pct >= PLC_PASS;
-  const curLevel = (currentProfile && currentProfile.level) || 'A1';
-  let idx = PLC_LEVELS.indexOf(String(curLevel).toUpperCase()); if (idx < 0) idx = 0;
-  const newIdx = passed ? Math.min(PLC_LEVELS.length - 1, idx + 1) : idx;
-  const newLevel = PLC_LEVELS[newIdx];
+  let passed, newLevel;
+  if (plcNoLevel) {
+    // Ağırlıklı puan: zor seviyenin doğrusu daha çok puan (A1=1 ... C1=5)
+    let wGot = 0, wMax = 0;
+    plcExam.forEach((q, i) => {
+      const wq = PLC_LEVELS.indexOf(q.level) + 1 || 1;
+      wMax += wq;
+      if (plcAnswers[i] === q.correct) wGot += wq;
+    });
+    const wp = wMax ? (wGot / wMax * 100) : 0;
+    newLevel = wp < 25 ? 'A1' : (wp < 45 ? 'A2' : (wp < 65 ? 'B1' : (wp < 85 ? 'B2' : 'C1')));
+    passed = true; // ilk belirleme: geç/kal yok, seviye atanır
+  } else {
+    passed = pct >= PLC_PASS;
+    const curLevel = (currentProfile && currentProfile.level) || 'A1';
+    let idx = PLC_LEVELS.indexOf(String(curLevel).toUpperCase()); if (idx < 0) idx = 0;
+    const newIdx = passed ? Math.min(PLC_LEVELS.length - 1, idx + 1) : idx;
+    newLevel = PLC_LEVELS[newIdx];
+  }
   try {
     if (sb && currentUser) await sb.from('profiles').update({ level: newLevel }).eq('id', currentUser.id);
     if (currentProfile) currentProfile.level = newLevel;
@@ -2964,9 +2994,9 @@ async function finishPlacement() {
   const box = document.getElementById('plc-content'); if (!box) return;
   box.innerHTML = `<div class="plc-card plc-result">
     <div class="plc-icon">${passed ? '🎉' : '📋'}</div>
-    <h2 class="plc-title">${passed ? 'Tebrikler!' : 'Sınav Tamamlandı'}</h2>
+    <h2 class="plc-title">${plcNoLevel ? 'Seviyen Belirlendi!' : (passed ? 'Tebrikler!' : 'Sınav Tamamlandı')}</h2>
     <div class="plc-score ${passed ? 'pass' : 'fail'}">%${pct}</div>
-    <p class="plc-sub">${correct} / ${total} doğru — ${passed ? 'barajı geçtin.' : 'baraj %' + PLC_PASS + ', tekrar deneyebilirsin.'}</p>
+    <p class="plc-sub">${correct} / ${total} doğru${plcNoLevel ? ' — sonuçlar tüm seviyelere göre ağırlıklı değerlendirildi.' : (passed ? ' — barajı geçtin.' : ' — baraj %' + PLC_PASS + ', tekrar deneyebilirsin.')}</p>
     <div class="plc-newlevel">Seviyen: <b>${newLevel}</b></div>
     <div class="plc-result-btns">
       <button class="plc-start" onclick="startPlacement()">Tekrar Dene (farklı sorular)</button>
