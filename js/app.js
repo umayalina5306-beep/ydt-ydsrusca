@@ -2963,6 +2963,21 @@ function plcPrev() { if (plcIdx > 0) { plcIdx--; renderPlcQ(); } }
 async function finishPlacement() {
   const blanks = plcAnswers.filter(a => a === null).length;
   if (blanks > 0 && !(await uiConfirm(blanks + ' soru boş. Yine de bitirilsin mi?', 'Sınavı Bitir'))) return;
+  // Önce SUNUCU puanlaması dene (manipülasyona kapalı); olmazsa yerel hesap
+  let srv = null;
+  try {
+    const { data, error } = await sb.functions.invoke('grade-placement', { body: {
+      answers: plcExam.map((q, i) => ({ id: q.id, answer: plcAnswers[i] }))
+    } });
+    if (!error && data && data.ok) srv = data;
+  } catch (e) {}
+  if (srv) {
+    if (currentProfile) currentProfile.level = srv.newLevel;
+    if (typeof applyAvatar === 'function') applyAvatar();
+    if (typeof createNotification === 'function') createNotification('🎚️ Seviyen: ' + srv.newLevel, srv.noLevel ? 'Seviyen belirlendi.' : (srv.passed ? 'Tebrikler! Seviye tespit sınavını geçtin.' : 'Bu sefer olmadı; farklı sorularla tekrar deneyebilirsin.'), 'success');
+    _plcShowResult(srv.correct, srv.total, srv.pct, srv.passed, srv.newLevel, srv.noLevel);
+    return;
+  }
   const correct = plcExam.reduce((a, q, i) => a + (plcAnswers[i] === q.correct ? 1 : 0), 0);
   const total = plcExam.length;
   const pct = Math.round(correct / total * 100);
@@ -2991,12 +3006,16 @@ async function finishPlacement() {
     if (typeof applyAvatar === 'function') applyAvatar();
     if (typeof createNotification === 'function') createNotification('🎚️ Seviyen: ' + newLevel, passed ? 'Tebrikler! Seviye tespit sınavını geçtin.' : 'Seviyen belirlendi.', 'success');
   } catch (e) {}
+  _plcShowResult(correct, total, pct, passed, newLevel, plcNoLevel);
+}
+
+function _plcShowResult(correct, total, pct, passed, newLevel, noLevel) {
   const box = document.getElementById('plc-content'); if (!box) return;
   box.innerHTML = `<div class="plc-card plc-result">
     <div class="plc-icon">${passed ? '🎉' : '📋'}</div>
-    <h2 class="plc-title">${plcNoLevel ? 'Seviyen Belirlendi!' : (passed ? 'Tebrikler!' : 'Sınav Tamamlandı')}</h2>
+    <h2 class="plc-title">${noLevel ? 'Seviyen Belirlendi!' : (passed ? 'Tebrikler!' : 'Sınav Tamamlandı')}</h2>
     <div class="plc-score ${passed ? 'pass' : 'fail'}">%${pct}</div>
-    <p class="plc-sub">${correct} / ${total} doğru${plcNoLevel ? ' — sonuçlar tüm seviyelere göre ağırlıklı değerlendirildi.' : (passed ? ' — barajı geçtin.' : ' — baraj %' + PLC_PASS + ', tekrar deneyebilirsin.')}</p>
+    <p class="plc-sub">${correct} / ${total} doğru${noLevel ? ' — sonuçlar tüm seviyelere göre ağırlıklı değerlendirildi.' : (passed ? ' — barajı geçtin.' : ' — baraj %' + PLC_PASS + ', tekrar deneyebilirsin.')}</p>
     <div class="plc-newlevel">Seviyen: <b>${newLevel}</b></div>
     <div class="plc-result-btns">
       <button class="plc-start" onclick="startPlacement()">Tekrar Dene (farklı sorular)</button>
