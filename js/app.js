@@ -2659,6 +2659,7 @@ async function sendSiteMail() {
 let adminMailTab = 'inbox';
 let _mailSelected = new Set();
 let _mailCache = {};
+let _mailMembers = {};
 function admMailToggle(headEl, id) {
   const item = headEl.closest('.sm-item'); if (!item) return;
   item.classList.toggle('open');
@@ -2695,7 +2696,9 @@ async function adminLoadMail() {
   const box = document.getElementById('admin-mail'); if (!box) return;
   const tabs = [['inbox','📥 Gelen'],['spam','🚫 Spam'],['trash','🗑️ Çöp'],['sent','📤 Gönderilen']];
   const selLabel = adminMailTab === 'trash' ? 'Seçilenleri Kalıcı Sil' : 'Seçilenleri Sil';
-  const selBar = adminMailTab === 'sent' ? '' : `<div class="mail-selrow">
+  const searchBox = `<input class="pq-input mail-search" placeholder="🔍 Mail ara (gönderen / konu / içerik)..." oninput="admMailSearch(this.value)" autocomplete="off">`;
+  const selBar = adminMailTab === 'sent' ? searchBox : `<div class="mail-selrow">
+    ${searchBox}
     <button class="mail-act" onclick="admMailSelectAll()">☑️ Tümünü Seç / Bırak</button>
     <div id="mail-selbar" class="mail-selbar" style="display:none;"><span><b id="mail-selbar-count">0</b> seçili</span>
     <button class="mail-act red" onclick="admMailDeleteSelected()">🗑️ ${selLabel}</button></div></div>`;
@@ -2706,8 +2709,10 @@ async function adminLoadMail() {
       const { data } = await sb.from('outbox_mail').select('*').order('created_at', { ascending: false }).limit(100);
       const items = (data && data.length) ? data.map(m => {
         const d = new Date(m.created_at);
+        const stMap = { sent: ['Gönderildi',''], delivered: ['✓ Ulaştı','yes'], bounced: ['Geri döndü','no'], complained: ['Şikayet','no'], failed: ['İletilemedi','no'] };
+        const st = stMap[m.status] || stMap.sent;
         return `<div class="sm-item"><div class="sm-head" onclick="this.parentNode.classList.toggle('open')">
-          <div><div class="sm-subj">${_escHtml(m.subject || '(konu yok)')} ${m.status==='failed'?'<span class="mail-member no">İletilemedi</span>':''}</div>
+          <div><div class="sm-subj">${_escHtml(m.subject || '(konu yok)')} <span class="mail-member ${st[1]}">${st[0]}</span></div>
           <div class="sm-meta">Kime: ${_escHtml(m.to_email)} · ${d.toLocaleString('tr-TR')}</div></div></div>
           <div class="sm-body">${_escHtml(m.body || '')}</div></div>`;
       }).join('') : '<div class="profile-empty">Gönderilen mail yok.</div>';
@@ -2723,14 +2728,15 @@ async function adminLoadMail() {
       box.innerHTML = tabsHtml + '<div class="profile-empty">' + empt + '</div>'; return;
     }
     const froms = [...new Set(data.map(m => (m.from_email || '').toLowerCase()).filter(Boolean))];
-    let members = new Set();
-    try { if (froms.length) { const { data: profs } = await sb.from('profiles').select('email').in('email', froms); (profs || []).forEach(p => members.add((p.email || '').toLowerCase())); } } catch (e) {}
+    let members = {};
+    try { if (froms.length) { const { data: profs } = await sb.from('profiles').select('id, email').in('email', froms); (profs || []).forEach(p => { members[(p.email || '').toLowerCase()] = p.id; }); } } catch (e) {}
+    _mailMembers = members;
     _mailCache = {};
     data.forEach(m => { _mailCache[m.id] = m; });
     box.innerHTML = tabsHtml + data.map(m => {
       const d = new Date(m.created_at);
       const fe = (m.from_email || '').toLowerCase();
-      const badge = members.has(fe) ? '<span class="mail-member yes">Üye</span>' : '<span class="mail-member no">Üye değil</span>';
+      const badge = members[fe] ? '<span class="mail-member yes">Üye</span>' : '<span class="mail-member no">Üye değil</span>';
       const spamBadge = m.is_spam ? '<span class="mail-member spam">SPAM</span>' : '';
       let actions = '';
       if (adminMailTab === 'trash') {
@@ -2738,6 +2744,7 @@ async function adminLoadMail() {
                    <button class="mail-act red" onclick="admMailHardDelete('${m.id}')">Kalıcı Sil</button>`;
       } else {
         actions = `<button class="mail-act" onclick="admMailReplyBox('${m.id}')">✉️ Site İçinden Yanıtla</button>
+                   ${members[fe] ? `<button class="mail-act" onclick="admMailToTicket('${m.id}')">🎫 Ticket'a Dönüştür</button>` : ''}
                    <a class="mail-act" href="mailto:${encodeURIComponent(m.from_email||'')}?subject=${encodeURIComponent('RE: '+(m.subject||''))}">📧 Mail Uygulamasıyla</a>
                    <button class="mail-act" onclick="admMailToggleSpam('${m.id}', ${m.is_spam ? 'false' : 'true'})">${m.is_spam ? '✅ Spam Değil' : '🚫 Spam İşaretle'}</button>
                    <button class="mail-act red" onclick="admMailDelete('${m.id}')">🗑️ Sil</button>`;
@@ -2755,7 +2762,12 @@ async function adminLoadMail() {
         <div class="sm-body">${_escHtml(m.body || '')}
           <div class="mail-actions">${actions}</div>
           <div id="reply-${m.id}" class="mail-replybox" style="display:none;">
+            <select class="pq-input mail-tpl" onchange="admMailTpl('${m.id}', this.value); this.selectedIndex = 0;">
+              <option value="">📋 Hazır şablon ekle...</option>
+              ${MAIL_TEMPLATES.map((t, i) => `<option value="${i}">${t.t}</option>`).join('')}
+            </select>
             <textarea id="reply-txt-${m.id}" class="sup-textarea" placeholder="Yanıtını yaz..."></textarea>
+            <div class="mail-sign-note">Yanıtın sonuna otomatik olarak "YDT-YDS Rusça Ekibi" imzası eklenir.</div>
             <button class="sup-send" onclick="admMailSendReply('${m.id}')">Gönder</button>
           </div>
         </div>
@@ -3080,4 +3092,41 @@ function renderTasksView() {
       <div class="tsk-sub">Her gece sıfırlanır.</div>${TASKS_DAILY.map(t => row(t, _todayKey())).join('')}</div>
     <div class="profile-panel"><h3 class="st-h3">🗓️ Haftalık Görevler <span class="tsk-badge">${wDone}/${TASKS_WEEKLY.length}</span></h3>
       <div class="tsk-sub">Her pazartesi sıfırlanır.</div>${TASKS_WEEKLY.map(t => row(t, _weekId())).join('')}</div>`;
+}
+
+/* ---- Mail: hazır şablonlar, arama, ticket'a dönüştürme ---- */
+const MAIL_TEMPLATES = [
+  { t: '👋 Hoş geldiniz', body: 'Merhaba,\n\nYDT-YDS Rusça platformuna hoş geldiniz! Sorunuz için teşekkür ederiz. Size en kısa sürede yardımcı olacağız.\n\nİyi çalışmalar dileriz.' },
+  { t: '👑 Premium bilgisi', body: 'Merhaba,\n\nPremium üyelik; kelime kaydetme, günlük tekrar, tüm testler ve video derslere tam erişim sağlar. Güncel fiyat ve planları sitemizin Fiyatlar sayfasında bulabilirsiniz: https://ydt-ydsrusca.com\n\nBaşka bir sorunuz olursa yazmaktan çekinmeyin.' },
+  { t: '🔑 Şifre sıfırlama yönlendirmesi', body: 'Merhaba,\n\nŞifrenizi sıfırlamak için giriş penceresindeki "Şifremi Unuttum" bağlantısını kullanabilirsiniz. E-postanıza gelen bağlantıyla yeni şifre belirleyebilirsiniz. Mail gelmezse spam klasörünü kontrol etmenizi öneririz.\n\nSorun devam ederse bize tekrar yazın, birlikte çözelim.' },
+  { t: '🛠️ Sorununuz inceleniyor', body: 'Merhaba,\n\nBildirdiğiniz konu tarafımıza ulaştı ve inceleniyor. En kısa sürede size dönüş yapacağız. Anlayışınız için teşekkür ederiz.' },
+  { t: '🙏 Teşekkür / kapanış', body: 'Merhaba,\n\nGeri bildiriminiz için çok teşekkür ederiz. Başka bir konuda yardımcı olabileceksek her zaman yazabilirsiniz.\n\nİyi çalışmalar dileriz.' }
+];
+function admMailTpl(id, idx) {
+  if (idx === '') return;
+  const t = MAIL_TEMPLATES[parseInt(idx, 10)]; if (!t) return;
+  const txt = document.getElementById('reply-txt-' + id); if (!txt) return;
+  txt.value = txt.value ? (txt.value + '\n\n' + t.body) : t.body;
+  txt.focus();
+}
+function admMailSearch(q) {
+  q = (q || '').toLowerCase().trim();
+  document.querySelectorAll('#admin-mail .sm-item').forEach(it => {
+    it.style.display = (!q || it.textContent.toLowerCase().includes(q)) ? '' : 'none';
+  });
+}
+async function admMailToTicket(id) {
+  const m = _mailCache[id]; if (!m) return;
+  const fe = (m.from_email || '').toLowerCase();
+  const memberId = _mailMembers[fe];
+  if (!memberId) { uiAlert('Bu gönderici üye değil; ticket yalnızca üyeler için açılabilir.'); return; }
+  if (!(await uiConfirm('Bu mail, kullanıcı adına bir destek talebine dönüştürülsün mü? Kullanıcı, talebi Profil → Destek bölümünde görecek ve bildirim alacak.', "Ticket'a Dönüştür"))) return;
+  try {
+    const { data: t, error } = await sb.from('support_tickets').insert({ user_id: memberId, subject: '[Mail] ' + (m.subject || '(konu yok)'), status: 'open' }).select().single();
+    if (error) throw error;
+    await sb.from('ticket_messages').insert({ ticket_id: t.id, user_id: currentUser.id, sender: 'user', body: (m.body || '').slice(0, 5000) });
+    notifyUser(memberId, 'Mailiniz destek talebine dönüştürüldü', 'Konuyu Profil → Destek bölümünden takip edebilirsiniz.', 'info');
+    toast("Ticket oluşturuldu. Destek Talepleri'nde görünecek.");
+    if (typeof adminLoadTickets === 'function') { adminTicketView = { mode: 'list', ticketId: null, userId: null }; adminLoadTickets(); }
+  } catch (e) { uiAlert("Ticket oluşturulamadı. mail_iyilestirmeler.sql çalıştırıldı mı?"); }
 }
