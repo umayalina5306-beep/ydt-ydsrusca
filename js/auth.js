@@ -321,3 +321,19 @@ async function resendVerifyMail() {
     if (typeof toast === "function") toast("Doğrulama e-postası gönderildi. Gelen kutunu (ve spam klasörünü) kontrol et.");
   } catch (e) { if (typeof toast === "function") toast("Gönderilemedi. Lütfen biraz sonra tekrar dene."); }
 }
+
+/* Giriş penceresi: Şifremi Unuttum */
+async function authForgot() {
+  var emailEl = document.getElementById("login-email");
+  var email = (emailEl && emailEl.value || "").trim();
+  if (!email) { authMsg("Önce yukarıya e-posta adresini yaz, sonra 'Şifremi unuttum'a tıkla."); return; }
+  var tk = (typeof captchaPrompt === "function") ? await captchaPrompt() : null;
+  if (TURNSTILE_SITE_KEY && !tk) { authMsg("Doğrulama tamamlanmadı."); return; }
+  try {
+    var opts = { redirectTo: window.location.origin + window.location.pathname };
+    if (tk) opts.captchaToken = tk;
+    var r = await sb.auth.resetPasswordForEmail(email, opts);
+    if (r.error) throw r.error;
+    authMsg("Sıfırlama bağlantısı e-postana gönderildi. Gelen kutunu (ve spam klasörünü) kontrol et.", true);
+  } catch (e) { authMsg("Gönderilemedi. E-posta adresini kontrol edip tekrar dene."); }
+}
