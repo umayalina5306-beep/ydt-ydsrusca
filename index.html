@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=46">
+<link rel="stylesheet" href="css/style.css?v=47">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -21,6 +21,7 @@
   #page-profile .psb-q:hover { background:var(--off-white) !important; }
   #page-profile .psb-ic, #page-profile .psb-q-ic { position:static !important; }
 </style>
+  <script src="https://challenges.cloudflare.com/turnstile/api.js" async defer></script>
 </head>
 <body>
 
@@ -1127,6 +1128,7 @@
         <label class="form-label">Şifre</label>
         <input id="login-pass" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password">
       </div>
+      <div id="turnstile-box" class="turnstile-box"></div>
       <button class="btn-auth" onclick="authLogin()">Giriş Yap</button>
       <div class="auth-divider">veya</div>
       <button class="btn-google" onclick="authGoogle()"><span class="g-icon">G</span> Google ile devam et</button>
@@ -1159,11 +1161,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=46"></script>
-<script defer src="js/auth.js?v=46"></script>
-<script defer src="js/admin.js?v=46"></script>
-<script defer src="js/profile.js?v=46"></script>
-<script defer src="js/extras.js?v=46"></script>
-<script defer src="js/app.js?v=46"></script>
+<script defer src="js/supabase-config.js?v=47"></script>
+<script defer src="js/auth.js?v=47"></script>
+<script defer src="js/admin.js?v=47"></script>
+<script defer src="js/profile.js?v=47"></script>
+<script defer src="js/extras.js?v=47"></script>
+<script defer src="js/app.js?v=47"></script>
 </body>
 </html>
