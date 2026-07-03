@@ -2325,3 +2325,11 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .auth-forgot { text-align:center; margin-top:10px; }
 .auth-forgot a { color:var(--gold); font-size:.84rem; font-weight:600; text-decoration:none; }
 .auth-forgot a:hover { text-decoration:underline; }
+
+/* İçerik yönetimi */
+.cw-check { display:flex; align-items:center; gap:8px; font-size:.86rem; color:var(--text); margin:6px 0 12px; cursor:pointer; }
+.cw-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--light-gray); border-radius:11px; margin-bottom:7px; background:var(--white); flex-wrap:wrap; }
+.cw-row.off { opacity:.55; }
+.cw-main { font-size:.92rem; color:var(--text); }
+.cw-cat { font-size:.72rem; color:var(--gray); background:var(--off-white); padding:2px 8px; border-radius:10px; }
+.cw-acts { display:flex; gap:6px; flex-wrap:wrap; }
