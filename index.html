@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=53">
+<link rel="stylesheet" href="css/style.css?v=54">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -1072,6 +1072,8 @@
           <button class="psb-item" id="asb-mail" onclick="adminNav('mail')"><span class="psb-ic">📨</span> Mail Kutusu</button>
           <button class="psb-item" id="asb-questions" onclick="adminNav('questions')"><span class="psb-ic">🧩</span> Soru Havuzu</button>
           <button class="psb-item" id="asb-visits" onclick="adminNav('visits')"><span class="psb-ic">📈</span> Ziyaret & SEO</button>
+          <button class="psb-item" id="asb-settings" onclick="adminNav('settings')"><span class="psb-ic">⚙️</span> Site Ayarları</button>
+          <button class="psb-item" id="asb-backup" onclick="adminNav('backup')"><span class="psb-ic">💾</span> Yedekleme</button>
           <button class="psb-item" id="asb-errors" onclick="adminNav('errors')"><span class="psb-ic">🛠️</span> Hata Kayıtları</button>
         </div>
       </aside>
@@ -1141,21 +1143,16 @@
           <h2 class="profile-h2">Bildirim Gönder</h2>
           <p class="profile-sub">Tüm kullanıcılara veya seçtiklerine bildirim yolla.</p>
           <div class="admin-notif-card">
-        <h3 class="an-h3">🔔 Bildirim Gönder</h3>
-        <input id="an-title" class="admin-search" placeholder="Bildirim başlığı" autocomplete="off">
-        <textarea id="an-body" class="an-textarea" placeholder="Bildirim mesajı..."></textarea>
-        <div class="an-target">
-          <label><input type="radio" name="an-tgt" value="all" checked onchange="anTargetChange()"> Tüm kullanıcılar</label>
-          <label><input type="radio" name="an-tgt" value="sel" onchange="anTargetChange()"> Seçili kullanıcılar</label>
-        </div>
-        <div id="an-userlist" class="an-userlist" style="display:none;"></div>
-        <button class="set-btn" onclick="adminSendNotification()">Gönder</button>
-      </div>
-      <input id="admin-search" class="admin-search" placeholder="🔍 İsim veya e-posta ara..." oninput="filterAdminUsers(this.value)" autocomplete="off">
-      <div class="admin-notif-card">
-        <div class="an-card-head"><h3 class="an-h3">💬 Destek Talepleri</h3><div><button class="set-btn ghost" onclick="adminClearClosedTickets()">Kapanmışları Temizle</button><button class="set-btn ghost" onclick="adminLoadTickets()" style="margin-left:8px;">Yenile</button></div></div>
-        <div id="admin-tickets"></div>
-      </div>
+            <h3 class="an-h3">🔔 Bildirim Gönder</h3>
+            <input id="an-title" class="admin-search" placeholder="Bildirim başlığı" autocomplete="off">
+            <textarea id="an-body" class="an-textarea" placeholder="Bildirim mesajı..."></textarea>
+            <div class="an-target">
+              <label><input type="radio" name="an-tgt" value="all" checked onchange="anTargetChange()"> Tüm kullanıcılar</label>
+              <label><input type="radio" name="an-tgt" value="sel" onchange="anTargetChange()"> Seçili kullanıcılar</label>
+            </div>
+            <div id="an-userlist" class="an-userlist" style="display:none;"></div>
+            <button class="set-btn" onclick="adminSendNotification()">Gönder</button>
+          </div>
         </div>
 
         <div id="av-support" class="admin-view" style="display:none;">
@@ -1214,6 +1211,32 @@
           <p class="profile-sub">Trafik istatistikleri ve sayfa içi SEO denetimi.</p>
           <div class="profile-panel"><div class="panel-title">📈 Ziyaretler</div><div id="admin-visits"></div></div>
           <div class="profile-panel"><div class="panel-title">🔎 SEO Denetimi</div><div id="admin-seo"></div></div>
+        </div>
+
+        <div id="av-settings" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Site Ayarları</h2>
+          <p class="profile-sub">Site genelini etkileyen ayarlar.</p>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">📢 Duyuru Bandı</h3>
+            <p class="pq-hint">Buraya yazılan metin sitenin en üstünde herkese görünen bir bant olarak yayınlanır. Boş bırakıp kaydedersen bant kalkar.</p>
+            <textarea id="set-announce" class="an-textarea" placeholder="Örn: 15 Temmuz'a kadar premium %20 indirimli!"></textarea>
+            <button class="set-btn" onclick="adminSaveAnnouncement()">Kaydet & Yayınla</button>
+          </div>
+        </div>
+
+        <div id="av-backup" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Yedekleme</h2>
+          <p class="profile-sub">Veritabanındaki tüm tabloları JSON olarak indir.</p>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">💾 Tam Yedek</h3>
+            <p class="pq-hint">Tüm tablolar tek dosyada iner (kullanıcı profilleri, kelimeler, testler, biletler, mailler, sorular...). Düzenli olarak (haftada 1) almanı öneririm.</p>
+            <button class="set-btn" onclick="adminBackupAll()">⬇️ Tüm Veritabanını İndir</button>
+            <div id="backup-status" class="pq-hint" style="margin-top:10px;"></div>
+          </div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">📁 Tablo Bazında İndir</h3>
+            <div id="backup-tables" class="mail-actions"></div>
+          </div>
         </div>
 
         <div id="av-errors" class="admin-view" style="display:none;">
@@ -1285,11 +1308,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=53"></script>
-<script defer src="js/auth.js?v=53"></script>
-<script defer src="js/admin.js?v=53"></script>
-<script defer src="js/profile.js?v=53"></script>
-<script defer src="js/extras.js?v=53"></script>
-<script defer src="js/app.js?v=53"></script>
+<script defer src="js/supabase-config.js?v=54"></script>
+<script defer src="js/auth.js?v=54"></script>
+<script defer src="js/admin.js?v=54"></script>
+<script defer src="js/profile.js?v=54"></script>
+<script defer src="js/extras.js?v=54"></script>
+<script defer src="js/app.js?v=54"></script>
 </body>
 </html>
