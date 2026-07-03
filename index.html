@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=51">
+<link rel="stylesheet" href="css/style.css?v=52">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -1049,14 +1049,50 @@
   <div class="admin-wrap">
     <div class="admin-header">
       <h2>Yönetim <span>Paneli</span></h2>
-      <p>Kullanıcıları görüntüle, planlarını yönet.</p>
+      <p>Sitenin tüm yönetimi tek yerden.</p>
     </div>
     <div id="admin-gate" class="admin-gate" style="display:none;">
       🔒 Bu sayfa yalnızca yöneticilere açıktır.
     </div>
     <div id="admin-content" style="display:none;">
-      <div id="admin-stats" class="admin-stats"></div>
-      <div class="admin-notif-card">
+    <div class="profile-layout">
+      <aside class="profile-sidebar">
+        <div class="psb-card">
+          <div class="psb-avatar">🛡️</div>
+          <div class="psb-name">Yönetim Paneli</div>
+          <div class="psb-mail">Site kontrol merkezi</div>
+        </div>
+        <div class="psb-menu">
+          <button class="psb-item" id="asb-overview" onclick="adminNav('overview')"><span class="psb-ic">📊</span> Genel Bakış</button>
+          <button class="psb-item" id="asb-users" onclick="adminNav('users')"><span class="psb-ic">👥</span> Kullanıcılar</button>
+          <button class="psb-item" id="asb-notify" onclick="adminNav('notify')"><span class="psb-ic">🔔</span> Bildirim Gönder</button>
+          <button class="psb-item" id="asb-support" onclick="adminNav('support')"><span class="psb-ic">💬</span> Destek Talepleri</button>
+          <button class="psb-item" id="asb-mail" onclick="adminNav('mail')"><span class="psb-ic">📨</span> Mail Kutusu</button>
+          <button class="psb-item" id="asb-questions" onclick="adminNav('questions')"><span class="psb-ic">🧩</span> Soru Havuzu</button>
+          <button class="psb-item" id="asb-visits" onclick="adminNav('visits')"><span class="psb-ic">📈</span> Ziyaret & SEO</button>
+          <button class="psb-item" id="asb-errors" onclick="adminNav('errors')"><span class="psb-ic">🛠️</span> Hata Kayıtları</button>
+        </div>
+      </aside>
+      <div class="profile-main">
+
+        <div id="av-overview" class="admin-view">
+          <h2 class="profile-h2">Genel Bakış</h2>
+          <p class="profile-sub">Sitenin genel durumu.</p>
+          <div id="admin-stats" class="admin-stats"></div>
+          <div class="profile-panel"><div class="panel-title">📈 Son 7 Gün Ziyaret</div><div id="admin-visits-mini"></div></div>
+        </div>
+
+        <div id="av-users" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Kullanıcılar</h2>
+          <p class="profile-sub">Üyeleri görüntüle, planlarını yönet.</p>
+          <input id="admin-search" class="admin-search" placeholder="🔍 İsim veya e-posta ara..." oninput="filterAdminUsers(this.value)" autocomplete="off">
+          <div id="admin-users" class="admin-users"></div>
+        </div>
+
+        <div id="av-notify" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Bildirim Gönder</h2>
+          <p class="profile-sub">Tüm kullanıcılara veya seçtiklerine bildirim yolla.</p>
+          <div class="admin-notif-card">
         <h3 class="an-h3">🔔 Bildirim Gönder</h3>
         <input id="an-title" class="admin-search" placeholder="Bildirim başlığı" autocomplete="off">
         <textarea id="an-body" class="an-textarea" placeholder="Bildirim mesajı..."></textarea>
@@ -1072,11 +1108,30 @@
         <div class="an-card-head"><h3 class="an-h3">💬 Destek Talepleri</h3><div><button class="set-btn ghost" onclick="adminClearClosedTickets()">Kapanmışları Temizle</button><button class="set-btn ghost" onclick="adminLoadTickets()" style="margin-left:8px;">Yenile</button></div></div>
         <div id="admin-tickets"></div>
       </div>
-      <div class="admin-notif-card">
+        </div>
+
+        <div id="av-support" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Destek Talepleri</h2>
+          <p class="profile-sub">Kullanıcı taleplerini yanıtla ve yönet.</p>
+          <div class="admin-notif-card">
+        <div class="an-card-head"><h3 class="an-h3">💬 Destek Talepleri</h3><div><button class="set-btn ghost" onclick="adminClearClosedTickets()">Kapanmışları Temizle</button><button class="set-btn ghost" onclick="adminLoadTickets()" style="margin-left:8px;">Yenile</button></div></div>
+        <div id="admin-tickets"></div>
+      </div>
+        </div>
+
+        <div id="av-mail" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Mail Kutusu</h2>
+          <p class="profile-sub">info@ / destek@ / support@ adreslerine gelenler.</p>
+          <div class="admin-notif-card">
         <div class="an-card-head"><h3 class="an-h3">📨 Gelen Mesajlar (İletişim)</h3><button class="set-btn ghost" onclick="adminLoadMail()">Yenile</button></div>
         <div id="admin-mail"></div>
       </div>
-      <div class="admin-notif-card">
+        </div>
+
+        <div id="av-questions" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Soru Havuzu</h2>
+          <p class="profile-sub">Seviye sınavı sorularını yönet.</p>
+          <div class="admin-notif-card">
         <h3 class="an-h3">🧩 Seviye Sınavı Soru Havuzu</h3>
         <div id="pq-stats" class="pq-stats"></div>
         <div class="pq-block">
@@ -1104,11 +1159,26 @@
           <button class="set-btn" onclick="adminBulkAddQuestions()">Toplu Ekle</button>
         </div>
       </div>
-      <div class="admin-notif-card">
+        </div>
+
+        <div id="av-visits" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Ziyaret & SEO</h2>
+          <p class="profile-sub">Trafik istatistikleri ve sayfa içi SEO denetimi.</p>
+          <div class="profile-panel"><div class="panel-title">📈 Ziyaretler</div><div id="admin-visits"></div></div>
+          <div class="profile-panel"><div class="panel-title">🔎 SEO Denetimi</div><div id="admin-seo"></div></div>
+        </div>
+
+        <div id="av-errors" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Hata Kayıtları</h2>
+          <p class="profile-sub">Sitede oluşan hataların zaman damgalı kaydı.</p>
+          <div class="admin-notif-card">
         <div class="an-card-head"><h3 class="an-h3">🛠️ Hata Kayıtları</h3><div><button class="set-btn ghost" onclick="adminClearErrors()">Temizle</button><button class="set-btn ghost" onclick="adminLoadErrors()" style="margin-left:8px;">Yenile</button></div></div>
         <div id="admin-errors"></div>
       </div>
-      <div id="admin-users" class="admin-users"></div>
+        </div>
+
+      </div>
+    </div>
     </div>
   </div>
 </div>
@@ -1135,6 +1205,7 @@
       </div>
       <div id="turnstile-box" class="turnstile-box"></div>
       <button class="btn-auth" onclick="authLogin()">Giriş Yap</button>
+      <div class="auth-forgot"><a href="javascript:void(0)" onclick="authForgot()">Şifremi unuttum</a></div>
       <div class="auth-divider">veya</div>
       <button class="btn-google" onclick="authGoogle()"><span class="g-icon">G</span> Google ile devam et</button>
       <p style="text-align:center; font-size:0.82rem; color:var(--gray); margin-top:10px;">Hesabın yok mu? <a href="#" onclick="switchTab('register')" style="color:var(--red); font-weight:600;">Üye ol</a></p>
@@ -1166,11 +1237,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=51"></script>
-<script defer src="js/auth.js?v=51"></script>
-<script defer src="js/admin.js?v=51"></script>
-<script defer src="js/profile.js?v=51"></script>
-<script defer src="js/extras.js?v=51"></script>
-<script defer src="js/app.js?v=51"></script>
+<script defer src="js/supabase-config.js?v=52"></script>
+<script defer src="js/auth.js?v=52"></script>
+<script defer src="js/admin.js?v=52"></script>
+<script defer src="js/profile.js?v=52"></script>
+<script defer src="js/extras.js?v=52"></script>
+<script defer src="js/app.js?v=52"></script>
 </body>
 </html>
