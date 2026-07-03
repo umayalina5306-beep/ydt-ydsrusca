@@ -355,11 +355,11 @@ function wordCardHTML(w, inBank) {
       ${learnBtn}
       <button class="word-save${isSaved ? ' active' : ''}" onclick="toggleSaveWord(event,'${ruSafe}','${trSafe}','${w.level || ''}')" title="Kaydet">${isSaved ? '★' : '☆'}</button>
       <button class="word-speak" onclick="speak('${ruSafe}')">🔊</button>
-      <div class="word-ru">${w.ru}</div>
+      <div class="word-ru">${_escHtml(w.ru)}</div>
       ${genderHTML}
       ${tipHTML}
       ${padejHTML}
-      <div class="word-tr">${w.tr}</div>
+      <div class="word-tr">${_escHtml(w.tr)}</div>
       <div class="word-pron">[${w.p || ''}]</div>
       ${extraHTML}
       ${w.ornek ? `<div class="word-example"><div class="word-example-ru">${w.ornek}</div><div class="word-example-tr">${w.ornekTr}</div></div>` : ''}
@@ -389,7 +389,7 @@ async function loadSavedWords() {
         else savedWords.add(r.word_ru);
       });
     }
-  } catch (e) { console.error('Kayıtlı kelimeler yüklenemedi:', e); }
+  } catch (e) { _logDev('Kayıtlı kelimeler yüklenemedi:', e); }
   // Görünümleri tazele
   const cs = document.getElementById('words-category-select');
   const normalCats = ['hepsi','isim','fiil','sıfat','zarf','zamir','edat','bağlaç'];
@@ -446,7 +446,7 @@ async function toggleSaveWord(ev, ru, tr, level) {
       }
     }
   } catch (e) {
-    console.error('Kelime kaydedilemedi:', e);
+    _logDev('Kelime kaydedilemedi:', e);
     toast('Kelime kaydedilemedi. Lütfen tekrar dene.');
   }
 }
@@ -468,7 +468,7 @@ async function toggleLearned(ev, ru) {
     // Bankadaysak listeyi tazele (kayıtlı/öğrenilmiş sekmeleri arası taşıma)
     const bank = document.getElementById('words-bank');
     if (bank && bank.style.display === 'block') renderBank();
-  } catch (e) { console.error('Öğrenildi işaretlenemedi:', e); toast('İşlem başarısız oldu. Lütfen tekrar dene.'); }
+  } catch (e) { _logDev('Öğrenildi işaretlenemedi:', e); toast('İşlem başarısız oldu. Lütfen tekrar dene.'); }
 }
 
 // ===== KELİME KASASI =====
@@ -780,7 +780,7 @@ function speak(text) {
   // Fallback: Google TTS
   const audio = new Audio();
   audio.src = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=ru&client=tw-ob`;
-  audio.play().catch(e => console.log('Ses çalınamadı:', e));
+  audio.play().catch(e => _logDev('Ses çalınamadı:', e));
 }
 // Sesleri önceden yükle
 if (window.speechSynthesis) {
@@ -1161,11 +1161,11 @@ async function loadData() {
   synonymGroups = syn; antonymPairs = ant; wordFamilies = fam; videos = vids;
   // Paragraf soruları (dosya yoksa site yine çalışsın diye ayrı try/catch)
   try { paragraphQuestions = await j('data/sorular/paragraf-sorulari.json'); }
-  catch (e) { console.warn('Paragraf soruları yüklenemedi:', e); paragraphQuestions = []; }
+  catch (e) { _logDev('Paragraf soruları yüklenemedi:', e); paragraphQuestions = []; }
 }
 async function init(){
   try { await loadData(); renderVideos(); }
-  catch(e){ console.error('Veri yükleme hatası:', e); toast('İçerik yüklenemedi. Sayfayı yenileyin.'); }
+  catch(e){ _logDev('Veri yükleme hatası:', e); toast('İçerik yüklenemedi. Sayfayı yenileyin.'); }
 }
 init();
 
@@ -2681,6 +2681,11 @@ function admMailSelectAll() {
 async function admMailDeleteSelected() {
   if (!_mailSelected.size) return;
   const ids = [..._mailSelected];
+  if (adminMailTab === 'sent') {
+    if (!(await uiConfirm(ids.length + ' gönderilmiş mail kaydı silinsin mi?', 'Seçilenleri Sil', { danger: true }))) return;
+    try { await sb.from('outbox_mail').delete().in('id', ids); } catch (e) {}
+    _mailSelected = new Set(); adminLoadMail(); return;
+  }
   if (adminMailTab === 'trash') {
     if (!(await uiConfirm(ids.length + ' mail kalıcı olarak silinsin mi?', 'Kalıcı Sil', { danger: true }))) return;
     try { await sb.from('inbox_mail').delete().in('id', ids); } catch (e) {}
@@ -2697,7 +2702,7 @@ async function adminLoadMail() {
   const tabs = [['inbox','📥 Gelen'],['spam','🚫 Spam'],['trash','🗑️ Çöp'],['sent','📤 Gönderilen']];
   const selLabel = adminMailTab === 'trash' ? 'Seçilenleri Kalıcı Sil' : 'Seçilenleri Sil';
   const searchBox = `<input class="pq-input mail-search" placeholder="🔍 Mail ara (gönderen / konu / içerik)..." oninput="admMailSearch(this.value)" autocomplete="off">`;
-  const selBar = adminMailTab === 'sent' ? searchBox : `<div class="mail-selrow">
+  const selBar = `<div class="mail-selrow">
     ${searchBox}
     <button class="mail-act" onclick="admMailSelectAll()">☑️ Tümünü Seç / Bırak</button>
     <div id="mail-selbar" class="mail-selbar" style="display:none;"><span><b id="mail-selbar-count">0</b> seçili</span>
@@ -2707,13 +2712,16 @@ async function adminLoadMail() {
   try {
     if (adminMailTab === 'sent') {
       const { data } = await sb.from('outbox_mail').select('*').order('created_at', { ascending: false }).limit(100);
+      _mailCache = {}; (data || []).forEach(m => { _mailCache[m.id] = m; });
       const items = (data && data.length) ? data.map(m => {
         const d = new Date(m.created_at);
         const stMap = { sent: ['Gönderildi',''], delivered: ['✓ Ulaştı','yes'], bounced: ['Geri döndü','no'], complained: ['Şikayet','no'], failed: ['İletilemedi','no'] };
         const st = stMap[m.status] || stMap.sent;
         return `<div class="sm-item"><div class="sm-head" onclick="this.parentNode.classList.toggle('open')">
-          <div><div class="sm-subj">${_escHtml(m.subject || '(konu yok)')} <span class="mail-member ${st[1]}">${st[0]}</span></div>
-          <div class="sm-meta">Kime: ${_escHtml(m.to_email)} · ${d.toLocaleString('tr-TR')}</div></div></div>
+          <input type="checkbox" class="mail-cb" data-id="${m.id}" onclick="event.stopPropagation()" onchange="admMailSel('${m.id}', this.checked)">
+          <div style="flex:1;min-width:0;"><div class="sm-subj">${_escHtml(m.subject || '(konu yok)')} <span class="mail-member ${st[1]}">${st[0]}</span></div>
+          <div class="sm-meta">Kime: ${_escHtml(m.to_email)} · ${d.toLocaleString('tr-TR')}</div></div>
+          <button class="sup-del" title="Sil" onclick="event.stopPropagation();admSentDelete('${m.id}')">×</button></div>
           <div class="sm-body">${_escHtml(m.body || '')}</div></div>`;
       }).join('') : '<div class="profile-empty">Gönderilen mail yok.</div>';
       box.innerHTML = tabsHtml + items; return;
@@ -3129,4 +3137,10 @@ async function admMailToTicket(id) {
     toast("Ticket oluşturuldu. Destek Talepleri'nde görünecek.");
     if (typeof adminLoadTickets === 'function') { adminTicketView = { mode: 'list', ticketId: null, userId: null }; adminLoadTickets(); }
   } catch (e) { uiAlert("Ticket oluşturulamadı. mail_iyilestirmeler.sql çalıştırıldı mı?"); }
+}
+
+async function admSentDelete(id) {
+  if (!(await uiConfirm('Bu gönderilmiş mail kaydı silinsin mi?', 'Kaydı Sil', { danger: true }))) return;
+  try { await sb.from('outbox_mail').delete().eq('id', id); } catch (e) {}
+  adminLoadMail();
 }
