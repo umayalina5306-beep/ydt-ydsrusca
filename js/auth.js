@@ -90,6 +90,18 @@ async function loadProfile() {
       .eq("id", currentUser.id)
       .single();
     if (!error) currentProfile = data;
+    // ÖZ-ONARIM: auth hesabı var ama profil satırı yoksa (silinip yeniden kayıt vb.) oluştur
+    if (error || !data) {
+      try {
+        await sb.from("profiles").insert({
+          id: currentUser.id,
+          email: currentUser.email || null,
+          display_name: (currentUser.user_metadata && (currentUser.user_metadata.display_name || currentUser.user_metadata.full_name)) || ((currentUser.email || "").split("@")[0]) || null
+        });
+        const r2 = await sb.from("profiles").select("display_name, plan, is_admin, level, streak_count, created_at, avatar_seed, status").eq("id", currentUser.id).single();
+        if (!r2.error) currentProfile = r2.data;
+      } catch (e3) { _logDev("Profil öz-onarım başarısız:", e3); }
+    }
     if (currentProfile && currentProfile.status === "frozen") {
       const _reac = (typeof window.uiConfirm === "function") ? await window.uiConfirm("Hesabın dondurulmuş durumda. Yeniden aktifleştirmek ister misin?", "Hesap Donduruldu") : confirm("Hesabın dondurulmuş durumda. Yeniden aktifleştirmek ister misin?");
       if (_reac) {
