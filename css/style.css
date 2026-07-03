@@ -2333,3 +2333,6 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .cw-main { font-size:.92rem; color:var(--text); }
 .cw-cat { font-size:.72rem; color:var(--gray); background:var(--off-white); padding:2px 8px; border-radius:10px; }
 .cw-acts { display:flex; gap:6px; flex-wrap:wrap; }
+
+.admin-user-acts { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+.site-announce { background:linear-gradient(90deg,var(--gold),var(--gold-light)); color:var(--blue); font-weight:700; text-align:center; padding:9px 16px; font-size:.88rem; position:relative; z-index:600; }
