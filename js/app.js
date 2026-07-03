@@ -1182,7 +1182,17 @@ async function loadData() {
   synonymGroups = syn; antonymPairs = ant; wordFamilies = fam; videos = vids;
   if (!window.wordsFromDb) _tryLoadDbWords(); // JSON moddaysa panel eklerini bindir
   // Paragraf soruları (dosya yoksa site yine çalışsın diye ayrı try/catch)
-  try { paragraphQuestions = await j('data/sorular/paragraf-sorulari.json'); }
+  try {
+    let dbPq = [];
+    try {
+      if (typeof sb !== 'undefined' && sb) {
+        const { data: pq } = await sb.from('content_pquestions').select('*').limit(2000);
+        dbPq = (pq || []).filter(r => r.active !== false);
+      }
+    } catch (e2) {}
+    if (dbPq.length) {
+      paragraphQuestions = dbPq.map(r => ({ id: r.id, level: r.level, konu: r.konu, paragraf: r.paragraf, soru: r.soru, siklar: Array.isArray(r.siklar) ? r.siklar : JSON.parse(r.siklar || '[]'), dogru: r.dogru, aciklama: r.aciklama || '' }));
+    } else paragraphQuestions = await j('data/sorular/paragraf-sorulari.json'); }
   catch (e) { _logDev('Paragraf soruları yüklenemedi:', e); paragraphQuestions = []; }
 }
 async function init(){
@@ -2636,12 +2646,38 @@ async function adminRenderThread(id, userId) {
     const { data: t } = await sb.from('support_tickets').select('*').eq('id', id).single();
     const { data: msgs } = await sb.from('ticket_messages').select('*').eq('ticket_id', id).order('created_at', { ascending: true });
     const thread = (msgs || []).map(m => `<div class="sup-msg-row ${m.sender === 'admin' ? 'admin' : 'user'}"><div class="sup-bubble"><div class="sup-bubble-who">${m.sender === 'admin' ? 'Destek Ekibi' : 'Kullanıcı'}</div>${_escHtml(m.body)}<div class="sup-bubble-time">${new Date(m.created_at).toLocaleString('tr-TR')}</div></div></div>`).join('');
+    // Kullanıcı detay kartı
+    let uCard = '';
+    try {
+      const { data: up } = await sb.from('profiles').select('display_name, email, plan, level, is_admin, created_at, status').eq('id', userId).single();
+      if (up) {
+        _tkUserEmail = up.email || '';
+        uCard = `<div class="tk-user-card">
+          <div class="tk-user-name">👤 ${_escHtml(up.display_name || (up.email || '').split('@')[0] || 'Kullanıcı')}</div>
+          <div class="tk-user-meta">
+            <span>📧 ${_escHtml(up.email || '—')}</span>
+            <span>${up.plan === 'premium' ? '👑 Premium' : '🆓 Ücretsiz'}</span>
+            <span>🎚️ ${up.level || 'seviye yok'}</span>
+            <span>📅 Kayıt: ${up.created_at ? new Date(up.created_at).toLocaleDateString('tr-TR') : '—'}</span>
+            ${up.status === 'frozen' ? '<span>❄️ Dondurulmuş</span>' : ''}
+          </div>
+        </div>`;
+      }
+    } catch (e) { _tkUserEmail = ''; }
     box.innerHTML = `<button class="sup-back" onclick="adminTicketBack()">‹ Tüm talepler</button>
       <h4 class="sup-h3">${_escHtml(t ? t.subject : '')} <span class="sup-status sup-${t ? t.status : 'open'}">${supStatusLabel(t ? t.status : 'open')}</span></h4>
+      ${uCard}
       <div class="sup-thread">${thread}</div>
+      <select class="pq-input mail-tpl" onchange="tkTpl(this.value); this.selectedIndex = 0;">
+        <option value="">📋 Hazır şablon ekle...</option>
+        ${TICKET_TEMPLATES.map((tp, i) => `<option value="${i}">${tp.t}</option>`).join('')}
+      </select>
       <textarea id="adm-reply" class="sup-textarea" placeholder="Yanıt yaz..."></textarea>
-      <div><button class="sup-send" onclick="adminReply('${id}','${userId}')">Yanıtla</button>
-      <button class="set-btn ghost" onclick="adminCloseTicket('${id}')" style="margin-left:8px;">Talebi Kapat</button></div>`;
+      <div class="mail-actions" style="margin-top:8px;">
+        <button class="sup-send" onclick="adminReply('${id}','${userId}')">Yanıtla (site içi)</button>
+        <button class="mail-act" onclick="adminTicketMail('${id}')">📧 destek@ ile Mail Gönder</button>
+        <button class="set-btn ghost" onclick="adminCloseTicket('${id}')">Talebi Kapat</button>
+      </div>`;
   } catch (e) { box.innerHTML = '<div class="profile-empty">Yüklenemedi.</div>'; }
 }
 async function adminReply(id, userId) {
@@ -3411,6 +3447,7 @@ const cwState = { page: 1, q: '', level: 'all' };
 const CW_PAGE = 20;
 
 async function adminContentInit() {
+  cwCatChanged();
   await adminCwReload();
 }
 async function adminCwReload() {
@@ -3464,6 +3501,7 @@ function adminWordFormClear() {
   const pr = document.getElementById('cw-premium'); if (pr) pr.checked = false;
   const ru = document.getElementById('cw-ru'); if (ru) ru.disabled = false;
   const btn = document.getElementById('cw-save-btn'); if (btn) btn.textContent = 'Kelime Ekle';
+  cwCatChanged();
 }
 function adminWordEdit(ru) {
   const r = _cwRows.find(x => x.ru === ru); if (!r) return;
@@ -3471,6 +3509,7 @@ function adminWordEdit(ru) {
   document.getElementById('cw-tr').value = r.tr || '';
   document.getElementById('cw-p').value = r.p || '';
   document.getElementById('cw-cat').value = r.cat || 'isim';
+  cwCatChanged(r.cinsiyet || '');
   document.getElementById('cw-lvl').value = r.level || 'A1';
   document.getElementById('cw-ornek').value = r.ornek || '';
   document.getElementById('cw-ornektr').value = r.ornek_tr || '';
@@ -3482,6 +3521,7 @@ async function adminWordSave() {
   const ru = _cwVal('cw-ru'), tr = _cwVal('cw-tr');
   if (!ru || !tr) { uiAlert('Rusça kelime ve Türkçe anlam zorunlu.'); return; }
   const row = { ru, tr, p: _cwVal('cw-p') || null, cat: _cwVal('cw-cat'), level: _cwVal('cw-lvl'),
+    cinsiyet: _cwVal('cw-gram') || null,
     ornek: _cwVal('cw-ornek') || null, ornek_tr: _cwVal('cw-ornektr') || null,
     premium: document.getElementById('cw-premium').checked, active: true, updated_at: new Date().toISOString() };
   try {
@@ -3523,6 +3563,10 @@ function _cwNormalize(o) {
     active: true };
 }
 async function _cwUpsertAll(rows) {
+  // Aynı "ru" birden fazla kez varsa tek kayda indir (yoksa DB hata verir)
+  const uniq = {};
+  rows.forEach(r => { uniq[r.ru] = r; });
+  rows = Object.values(uniq);
   let done = 0;
   for (let i = 0; i < rows.length; i += 400) {
     const chunk = rows.slice(i, i + 400);
@@ -3547,7 +3591,7 @@ async function _cwImportArray(arr, kaynak) {
     const n = await _cwUpsertAll(rows);
     await uiAlert(n + ' kelime içe aktarıldı (' + kaynak + ').' + (arr.length - rows.length > 0 ? ' ' + (arr.length - rows.length) + ' geçersiz satır atlandı.' : ''), 'İçe Aktarma');
     await adminCwReload(); loadDbWords();
-  } catch (e) { uiAlert('İçe aktarılamadı. Yetki ve content_words.sql kontrol et.'); }
+  } catch (e) { uiAlert('İçe aktarılamadı: ' + ((e && e.message) || e)); }
 }
 function _parseCsv(text) {
   const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim());
@@ -3592,7 +3636,7 @@ async function adminMigrateWords() {
     const n = await _cwUpsertAll(rows);
     await uiAlert(n + ' kelime veritabanına aktarıldı. Artık hepsi listede ve düzenlenebilir.', 'Göç Tamam');
     await adminCwReload();
-  } catch (e) { uiAlert('Göç başarısız. content_words.sql çalıştırıldı mı?'); }
+  } catch (e) { uiAlert('Göç başarısız: ' + ((e && e.message) || e) + ' — content_words.sql çalıştırıldığından emin ol.'); }
 }
 
 /* Bildirim yükleme/polling garantisi (auth app.js'ten önce yüklendiği için buradan başlatılır) */
@@ -3693,12 +3737,18 @@ async function loadSiteSettings() {
       }
       b.innerHTML = '📢 ' + _escHtml(txt);
     } else if (b) b.remove();
+    if ((map['maintenance'] || '') === '1') {
+      setTimeout(function () {
+        if (!(typeof currentProfile !== 'undefined' && currentProfile && currentProfile.is_admin)) _maintOverlay();
+      }, 2600);
+    } else { const mo = document.getElementById('maint-overlay'); if (mo) mo.remove(); }
     return map;
   } catch (e) { return {}; }
 }
 async function adminSettingsInit() {
   const map = await loadSiteSettings();
   const inp = document.getElementById('set-announce'); if (inp) inp.value = map['announcement'] || '';
+  const mc = document.getElementById('set-maint'); if (mc) mc.checked = (map['maintenance'] || '') === '1';
 }
 async function adminSaveAnnouncement() {
   const inp = document.getElementById('set-announce'); if (!inp) return;
@@ -3709,3 +3759,173 @@ async function adminSaveAnnouncement() {
   } catch (e) { uiAlert('Kaydedilemedi. site_settings.sql çalıştırıldı mı?'); }
 }
 setTimeout(function () { try { if (typeof sb !== 'undefined' && sb) loadSiteSettings(); } catch (e) {} }, 1800);
+
+/* ---- Ticket: şablonlar + destek@ üzerinden mail ---- */
+let _tkUserEmail = '';
+const TICKET_TEMPLATES = [
+  { t: '🛠️ İnceleniyor', body: 'Merhaba,\n\nTalebiniz bize ulaştı ve inceleniyor. En kısa sürede dönüş yapacağız. Sabrınız için teşekkürler.' },
+  { t: '🔑 Şifre sıfırlama yönlendirmesi', body: 'Merhaba,\n\nŞifrenizi sıfırlamak için giriş penceresindeki "Şifremi unuttum" bağlantısını kullanabilirsiniz. E-postanıza gelen bağlantıyla yeni şifre belirleyebilirsiniz. Mail gelmezse spam klasörünü kontrol edin.' },
+  { t: '📧 Doğrulama maili', body: 'Merhaba,\n\nHesabınızın e-posta doğrulaması eksik görünüyor. Sitede üst kısımdaki sarı banttan "Doğrulama mailini tekrar gönder" butonunu kullanabilirsiniz. Mail birkaç dakika içinde gelmezse spam klasörünü kontrol edin.' },
+  { t: '✅ Çözüldü', body: 'Merhaba,\n\nBildirdiğiniz sorun çözüldü. Kontrol edip sorun devam ederse bu talep üzerinden tekrar yazabilirsiniz. İyi çalışmalar!' },
+  { t: '🙏 Teşekkür / kapanış', body: 'Merhaba,\n\nGeri bildiriminiz için teşekkür ederiz. Başka bir konuda yardımcı olabileceksek her zaman yazabilirsiniz.' }
+];
+function tkTpl(idx) {
+  if (idx === '') return;
+  const t = TICKET_TEMPLATES[parseInt(idx, 10)]; if (!t) return;
+  const ta = document.getElementById('adm-reply'); if (!ta) return;
+  ta.value = ta.value ? (ta.value + '\n\n' + t.body) : t.body;
+  ta.focus();
+}
+async function adminTicketMail(ticketId) {
+  if (!_tkUserEmail) { uiAlert('Kullanıcının e-posta adresi bulunamadı.'); return; }
+  const ta = document.getElementById('adm-reply');
+  const body = (ta && ta.value || '').trim();
+  if (!body) { uiAlert('Önce yukarıdaki kutuya mesajını yaz (istersen şablon kullan), sonra bu butona bas.'); return; }
+  if (!(await uiConfirm('Bu mesaj ' + _tkUserEmail + ' adresine destek@ydt-ydsrusca.com üzerinden e-posta olarak gönderilsin mi?', 'Mail Gönder'))) return;
+  try {
+    const { data, error } = await sb.functions.invoke('send-mail', { body: {
+      to: _tkUserEmail,
+      subject: 'Destek talebiniz hakkında',
+      body: body,
+      from: 'destek@ydt-ydsrusca.com'
+    } });
+    if (error || (data && data.error)) throw new Error((data && data.error) || 'hata');
+    toast('Mail gönderildi: ' + _tkUserEmail);
+    if (ta) ta.value = '';
+  } catch (e) { uiAlert('Mail gönderilemedi. (send-mail + Resend kurulumunu kontrol et.)'); }
+}
+
+/* ---- Kelime formu: türe göre gramer seçenekleri ---- */
+const CW_GRAM_OPTS = {
+  'isim': [['', 'Cinsiyet seç...'], ['м', 'м — eril'], ['ж', 'ж — dişil'], ['с', 'с — nötr']],
+  'fiil': [['', 'Görünüş seç...'], ['нсв', 'НСВ — bitmemiş (HCB)'], ['св', 'СВ — bitmiş (CB)']],
+  'edat': [['', 'Padej seç...'], ['+Род.', '+ Родительный (Gen.)'], ['+Дат.', '+ Дательный (Dat.)'], ['+Вин.', '+ Винительный (Acc.)'], ['+Твор.', '+ Творительный (Instr.)'], ['+Предл.', '+ Предложный (Prep.)']]
+};
+function cwCatChanged(setVal) {
+  const cat = _cwVal('cw-cat');
+  const sel = document.getElementById('cw-gram'); if (!sel) return;
+  const opts = CW_GRAM_OPTS[cat];
+  if (!opts) { sel.innerHTML = ''; sel.style.display = 'none'; return; }
+  sel.style.display = '';
+  sel.innerHTML = opts.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('');
+  if (setVal) sel.value = setVal;
+}
+
+/* ============================================================
+   YÖNETİCİ — Paragraf Soruları yönetimi
+   ============================================================ */
+let _cpqRows = [];
+async function adminPquestInit() { await adminPqReload(); }
+async function adminPqReload() {
+  try { const { data } = await sb.from('content_pquestions').select('*').order('created_at', { ascending: false }).limit(2000); _cpqRows = data || []; }
+  catch (e) { _cpqRows = []; }
+  const st = document.getElementById('cpq-stats');
+  if (st) {
+    const act = _cpqRows.filter(r => r.active !== false);
+    const c = { A1:0, A2:0, B1:0, B2:0, C1:0 };
+    act.forEach(r => { if (c[r.level] !== undefined) c[r.level]++; });
+    st.innerHTML = `DB'de <b>${act.length}</b> aktif soru (${Object.keys(c).map(k => k + ': ' + c[k]).join(' · ')}) · gizli: ${_cpqRows.length - act.length}`;
+  }
+  renderCpqList();
+}
+function renderCpqList() {
+  const box = document.getElementById('cpq-list'); if (!box) return;
+  if (!_cpqRows.length) { box.innerHTML = '<div class="profile-empty">DB\'de soru yok. "JSON Dosyasındaki Soruları DB\'ye Aktar" ile başlayabilirsin.</div>'; return; }
+  box.innerHTML = _cpqRows.map(r => `
+    <div class="cw-row ${r.active === false ? 'off' : ''}">
+      <div class="cw-main"><b>${_escHtml((r.soru || '').slice(0, 70))}</b> <span class="kv-lvl">${r.level || ''}</span> <span class="cw-cat">${_escHtml(r.konu || '')}</span>${r.active === false ? ' <span class="mail-member no">Gizli</span>' : ''}
+        <div class="err-meta">${_escHtml((r.paragraf || '').slice(0, 90))}...</div></div>
+      <div class="cw-acts">
+        <button class="mail-act" onclick="adminPqEdit('${r.id}')">✏️</button>
+        ${r.active === false
+          ? `<button class="mail-act" onclick="adminPqRestore('${r.id}')">↩️</button>`
+          : `<button class="mail-act red" onclick="adminPqHide('${r.id}')">🗑️</button>`}
+      </div>
+    </div>`).join('');
+}
+function adminPqFormClear() {
+  ['cpq-id','cpq-konu','cpq-para','cpq-soru','cpq-o0','cpq-o1','cpq-o2','cpq-o3','cpq-acik'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const c = document.querySelector('input[name="cpq-correct"]:checked'); if (c) c.checked = false;
+  const btn = document.getElementById('cpq-save-btn'); if (btn) btn.textContent = 'Soru Ekle';
+}
+function adminPqEdit(id) {
+  const r = _cpqRows.find(x => x.id === id); if (!r) return;
+  document.getElementById('cpq-id').value = r.id;
+  document.getElementById('cpq-lvl').value = r.level || 'B1';
+  document.getElementById('cpq-konu').value = r.konu || '';
+  document.getElementById('cpq-para').value = r.paragraf || '';
+  document.getElementById('cpq-soru').value = r.soru || '';
+  const sk = Array.isArray(r.siklar) ? r.siklar : [];
+  ['cpq-o0','cpq-o1','cpq-o2','cpq-o3'].forEach((eid, i) => { document.getElementById(eid).value = sk[i] || ''; });
+  const radio = document.querySelector(`input[name="cpq-correct"][value="${r.dogru}"]`); if (radio) radio.checked = true;
+  document.getElementById('cpq-acik').value = r.aciklama || '';
+  const btn = document.getElementById('cpq-save-btn'); if (btn) btn.textContent = 'Değişiklikleri Kaydet';
+  document.getElementById('cpq-para').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+async function adminPqSave() {
+  const para = _cwVal('cpq-para'), soru = _cwVal('cpq-soru');
+  const opts = ['cpq-o0','cpq-o1','cpq-o2','cpq-o3'].map(_cwVal);
+  const cEl = document.querySelector('input[name="cpq-correct"]:checked');
+  if (!para || !soru || opts.some(o => !o)) { uiAlert('Paragraf, soru ve 4 şık zorunlu.'); return; }
+  if (!cEl) { uiAlert('Doğru şıkkı seç.'); return; }
+  const row = { level: _cwVal('cpq-lvl'), konu: _cwVal('cpq-konu') || null, paragraf: para, soru: soru,
+    siklar: opts, dogru: parseInt(cEl.value, 10), aciklama: _cwVal('cpq-acik') || null, active: true };
+  const id = _cwVal('cpq-id');
+  try {
+    if (id) { const { error } = await sb.from('content_pquestions').update(row).eq('id', id); if (error) throw error; }
+    else { const { error } = await sb.from('content_pquestions').insert(row); if (error) throw error; }
+    toast('Soru kaydedildi.'); adminPqFormClear(); adminPqReload();
+  } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e) + ' — content_pquestions.sql çalıştı mı?'); }
+}
+async function adminPqHide(id) {
+  try { await sb.from('content_pquestions').update({ active: false }).eq('id', id); adminPqReload(); } catch (e) {}
+}
+async function adminPqRestore(id) {
+  try { await sb.from('content_pquestions').update({ active: true }).eq('id', id); adminPqReload(); } catch (e) {}
+}
+async function adminPqImportJson() {
+  const ta = document.getElementById('cpq-json'); if (!ta) return;
+  let arr; try { arr = JSON.parse(ta.value.trim()); } catch (e) { uiAlert('Geçersiz JSON.'); return; }
+  if (!Array.isArray(arr)) { uiAlert('JSON bir liste olmalı.'); return; }
+  const rows = arr.map(o => {
+    if (!o || !o.paragraf || !o.soru || !Array.isArray(o.siklar) || o.siklar.length !== 4) return null;
+    const d = parseInt(o.dogru, 10); if (isNaN(d) || d < 0 || d > 3) return null;
+    return { level: o.level || 'B1', konu: o.konu || null, paragraf: String(o.paragraf), soru: String(o.soru),
+      siklar: o.siklar.map(String), dogru: d, aciklama: o.aciklama || null, active: true };
+  }).filter(Boolean);
+  if (!rows.length) { uiAlert('Geçerli soru yok (paragraf, soru, 4 siklar, dogru 0-3 zorunlu).'); return; }
+  try {
+    const { error } = await sb.from('content_pquestions').insert(rows);
+    if (error) throw error;
+    await uiAlert(rows.length + ' soru eklendi.', 'İçe Aktarma'); ta.value = ''; adminPqReload();
+  } catch (e) { uiAlert('Eklenemedi: ' + ((e && e.message) || e)); }
+}
+async function adminPqMigrate() {
+  if (_cpqRows.length && !(await uiConfirm('DB\'de zaten ' + _cpqRows.length + ' soru var. JSON dosyasındakiler YİNE DE eklensin mi? (Kopya oluşabilir.)', 'Göç'))) return;
+  const src = (typeof paragraphQuestions !== 'undefined' && paragraphQuestions) ? paragraphQuestions : [];
+  if (!src.length) { uiAlert('JSON kaynağında soru bulunamadı.'); return; }
+  const rows = src.map(o => ({ level: o.level || 'B1', konu: o.konu || null, paragraf: o.paragraf, soru: o.soru,
+    siklar: o.siklar, dogru: o.dogru, aciklama: o.aciklama || null, active: true }));
+  try {
+    const { error } = await sb.from('content_pquestions').insert(rows);
+    if (error) throw error;
+    await uiAlert(rows.length + ' soru DB\'ye aktarıldı. Artık panelden yönetilir; istersen data/sorular dosyasını silebilirsin.', 'Göç Tamam');
+    adminPqReload();
+  } catch (e) { uiAlert('Göç başarısız: ' + ((e && e.message) || e)); }
+}
+
+/* ---- Bakım modu ---- */
+async function adminSaveMaintenance() {
+  const cb = document.getElementById('set-maint'); if (!cb) return;
+  try {
+    await sb.from('site_settings').upsert({ key: 'maintenance', value: cb.checked ? '1' : '' }, { onConflict: 'key' });
+    toast(cb.checked ? 'Bakım modu AÇILDI (ziyaretçiler bakım ekranı görecek).' : 'Bakım modu kapatıldı.');
+  } catch (e) { uiAlert('Kaydedilemedi.'); }
+}
+function _maintOverlay() {
+  if (document.getElementById('maint-overlay')) return;
+  const d = document.createElement('div');
+  d.id = 'maint-overlay';
+  d.innerHTML = '<div class="maint-box"><div style="font-size:3rem;">🚧</div><h2>Bakımdayız</h2><p>Sitemiz kısa süreliğine bakımda. Birazdan tekrar buradayız — anlayışınız için teşekkürler!</p><div class="maint-brand">YDT-YDS Rusça</div></div>';
+  document.body.appendChild(d);
+}
