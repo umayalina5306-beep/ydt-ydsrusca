@@ -4226,7 +4226,7 @@ async function adminRecoveryZip() {
     try { const d = await sbFetchAll(t); zip.file('veritabani/' + t + '.json', JSON.stringify(d, null, 1)); } catch (e) {}
   }
   // 2) Site kod dosyaları (canlı siteden)
-  const files = ['index.html','js/app.js','js/auth.js','js/admin.js','js/profile.js','js/extras.js','css/style.css','og-kapak.png'];
+  const files = ['index.html','js/app.js','js/auth.js','js/admin.js','js/profile.js','js/extras.js','css/style.css','sitemap.xml','robots.txt','img/site-logo.png','img/site-logo-acik.png','img/favicon.png','img/favicon-32.png','img/apple-touch-icon.png','img/og-kapak.png'];
   for (const f of files) {
     if (st) st.textContent = 'Site dosyası: ' + f + '...';
     try {
