@@ -19,7 +19,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=58">
+<link rel="stylesheet" href="css/style.css?v=59">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -36,6 +36,7 @@
 </style>
   <script src="https://challenges.cloudflare.com/turnstile/api.js" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
 </head>
 <body>
 
@@ -1335,7 +1336,9 @@
           </div>
           <div class="admin-notif-card">
             <h3 class="an-h3">🧰 Tam Kurtarma Paketi (kod + kurulum)</h3>
-            <p class="pq-hint">Veritabanı yedeği yukarıdan alınır. Sitenin <b>kodu</b> zaten GitHub'da yedeklidir (repo sayfasında Code → Download ZIP ile her an indirilebilir). Bunlara ek olarak; tüm SQL komutları, Edge Function kodları, Cloudflare worker kodu ve adım adım yeniden kurulum rehberini içeren <b>kurtarma-paketi.zip</b> dosyasını bilgisayarında sakla — siteye bir şey olursa bu üçüyle (DB yedeği + GitHub ZIP + kurtarma paketi) her şey sıfırdan kurulabilir.</p>
+            <p class="pq-hint">Tek tıkla: <b>tüm veritabanı</b> + <b>sitenin canlı kod dosyaları</b> + yeniden kurulum rehberi tek zip'te iner. Siteye bir şey olursa bu paket + Supabase fonksiyon kodları (sende mevcut kurulum dosyaları) ile her şey ayağa kaldırılır. Haftada bir almanı öneririm.</p>
+            <button class="set-btn" onclick="adminRecoveryZip()">🧰 Kurtarma Paketi Oluştur & İndir</button>
+            <div id="recovery-status" class="pq-hint" style="margin-top:10px;"></div>
           </div>
         </div>
 
@@ -1408,11 +1411,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=58"></script>
-<script defer src="js/auth.js?v=58"></script>
-<script defer src="js/admin.js?v=58"></script>
-<script defer src="js/profile.js?v=58"></script>
-<script defer src="js/extras.js?v=58"></script>
-<script defer src="js/app.js?v=58"></script>
+<script defer src="js/supabase-config.js?v=59"></script>
+<script defer src="js/auth.js?v=59"></script>
+<script defer src="js/admin.js?v=59"></script>
+<script defer src="js/profile.js?v=59"></script>
+<script defer src="js/extras.js?v=59"></script>
+<script defer src="js/app.js?v=59"></script>
 </body>
 </html>
