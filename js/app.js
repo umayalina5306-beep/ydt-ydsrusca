@@ -1187,8 +1187,8 @@ async function loadData() {
   let dbW = [];
   try {
     if (typeof sb !== 'undefined' && sb) {
-      const { data } = await sb.from('content_words').select('*').limit(10000);
-      dbW = (data || []).filter(r => r.active !== false);
+      const all = await sbFetchAll('content_words', 'ru');
+      dbW = all.filter(r => r.active !== false);
     }
   } catch (e) {}
   const [a1a2,b1,b2,c1,syn,ant,fam,vids] = await Promise.all([
@@ -1210,7 +1210,7 @@ async function loadData() {
   try {
     if (typeof sb !== 'undefined' && sb) {
       const [sg, ap, wf, vd] = await Promise.all([
-        sb.from('content_synonyms').select('*').eq('active', true).limit(5000),
+        sbFetchAll('content_synonyms', null, q => q.eq('active', true)).then(d => ({ data: d })),
         sb.from('content_antonyms').select('*').eq('active', true).limit(2000),
         sb.from('content_families').select('*').eq('active', true).limit(2000),
         sb.from('content_videos').select('*').eq('active', true).order('num').limit(1000)
@@ -2133,6 +2133,11 @@ function logActivity(field, amount) {
   const day = Object.assign(_emptyDay(), l[k] || {});
   day[field] = (day[field] || 0) + amount;
   l[k] = day; setDailyLog(l);
+  try {
+    if (typeof sb !== 'undefined' && sb && typeof currentUser !== 'undefined' && currentUser) {
+      sb.from('activity_log').insert({ user_id: currentUser.id, kind: field, amount: amount }).then(function(){}, function(){});
+    }
+  } catch (e) {}
   if (field !== 'questions' && typeof checkTasks === 'function') { try { checkTasks(); } catch (e) {} }
 }
 if (typeof window !== 'undefined') window.logActivity = logActivity; // extras.js (pomodoro) için
@@ -3473,6 +3478,24 @@ function renderSeoCheck() {
 // İlk açılış ziyareti (giriş beklemeden, anonim de sayılır)
 setTimeout(function () { try { trackPageView('home'); } catch (e) {} }, 2500);
 
+
+/* Supabase 1000 satır sınırını aşan sayfalı çekim */
+async function sbFetchAll(table, orderCol, filterFn) {
+  const out = [];
+  let from = 0; const step = 1000;
+  while (true) {
+    let q = sb.from(table).select('*').range(from, from + step - 1);
+    if (orderCol) q = q.order(orderCol);
+    if (filterFn) q = filterFn(q);
+    const { data, error } = await q;
+    if (error) throw error;
+    out.push.apply(out, data || []);
+    if (!data || data.length < step) break;
+    from += step;
+  }
+  return out;
+}
+
 /* ============================================================
    İÇERİK: DB kelimeleri (content_words) JSON'un üstüne bindirilir
    ============================================================ */
@@ -3498,7 +3521,7 @@ function applyDbWords(rows) {
 }
 async function loadDbWords() {
   try {
-    const { data } = await sb.from('content_words').select('*').limit(10000);
+    const data = await sbFetchAll('content_words', 'ru');
     if (!data) return;
     applyDbWords(data);
     wordsByRu = {};
@@ -3769,8 +3792,7 @@ async function adminBackupAll() {
   for (const t of BACKUP_TABLES) {
     if (st) st.textContent = 'Alınıyor: ' + t + '...';
     try {
-      const { data } = await sb.from(t).select('*').limit(10000);
-      out.tables[t] = data || [];
+      out.tables[t] = await sbFetchAll(t);
     } catch (e) { out.tables[t] = { error: 'okunamadı' }; }
   }
   if (st) st.textContent = 'Dosya hazırlanıyor...';
@@ -3784,7 +3806,7 @@ async function adminBackupAll() {
 }
 async function adminBackupTable(t) {
   try {
-    const { data } = await sb.from(t).select('*').limit(10000);
+    const data = await sbFetchAll(t);
     const blob = new Blob([JSON.stringify(data || [], null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'ydt-' + t + '-' + new Date().toISOString().slice(0,10) + '.json';
@@ -4038,10 +4060,19 @@ async function adminCvReload() {
   }
   renderCvList();
 }
+let cvTab = 'active';
+function cvSetTab(t) { cvTab = t; renderCvList(); }
 function renderCvList() {
   const box = document.getElementById('cv-list'); if (!box) return;
-  if (!_cvRows.length) { box.innerHTML = '<div class="profile-empty">DB\'de video yok. (tum_veriler_db.sql çalıştırıldı mı?)</div>'; return; }
-  box.innerHTML = _cvRows.map(r => `
+  const act = _cvRows.filter(r => r.active !== false);
+  const del = _cvRows.filter(r => r.active === false);
+  const tabs = `<div class="mail-tabs" style="margin-bottom:10px;">
+    <button class="mail-tab ${cvTab==='active'?'active':''}" onclick="cvSetTab('active')">🎬 Aktif (${act.length})</button>
+    <button class="mail-tab ${cvTab==='trash'?'active':''}" onclick="cvSetTab('trash')">🗑️ Silinenler (${del.length})</button>
+  </div>`;
+  const list = cvTab === 'active' ? act : del;
+  if (!list.length) { box.innerHTML = tabs + '<div class="profile-empty">' + (cvTab === 'active' ? 'Aktif video yok.' : 'Silinen video yok.') + '</div>'; return; }
+  box.innerHTML = tabs + list.map(r => `
     <div class="cw-row ${r.active === false ? 'off' : ''}">
       <div class="cv-thumbbox">${r.thumb ? `<img src="${_escAttr(r.thumb)}" alt="">` : '🎬'}</div>
       <div class="cw-main" style="flex:1;"><b>#${r.num || '-'} ${_escHtml(r.title)}</b> <span class="kv-lvl">${r.level || ''}</span>
@@ -4051,11 +4082,12 @@ function renderCvList() {
         ${r.active === false ? '<span class="mail-member no">Gizli</span>' : ''}
         <div class="err-meta">${_escHtml(r.descr || '')}</div></div>
       <div class="cw-acts">
-        <button class="mail-act" onclick="adminVidEdit('${r.id}')">✏️</button>
-        <button class="mail-act" onclick="adminVidTogglePremium('${r.id}', ${r.premium ? 'false' : 'true'})">${r.premium ? '🆓 Ücretsiz yap' : '👑 Premium yap'}</button>
         ${r.active === false
-          ? `<button class="mail-act" onclick="adminVidRestore('${r.id}')">↩️</button>`
-          : `<button class="mail-act red" onclick="adminVidHide('${r.id}')">🗑️</button>`}
+          ? `<button class="mail-act" onclick="adminVidRestore('${r.id}')">↩️ Geri Al</button>
+             <button class="mail-act red" onclick="adminVidPurge('${r.id}')">❌ Temelli Sil</button>`
+          : `<button class="mail-act" onclick="adminVidEdit('${r.id}')">✏️</button>
+             <button class="mail-act" onclick="adminVidTogglePremium('${r.id}', ${r.premium ? 'false' : 'true'})">${r.premium ? '🆓 Ücretsiz yap' : '👑 Premium yap'}</button>
+             <button class="mail-act red" onclick="adminVidHide('${r.id}')">🗑️ Sil</button>`}
       </div>
     </div>`).join('');
 }
@@ -4097,6 +4129,10 @@ async function adminVidTogglePremium(id, on) {
 }
 async function adminVidHide(id) { try { await sb.from('content_videos').update({ active: false }).eq('id', id); adminCvReload(); refreshVideosFromDb(); } catch (e) {} }
 async function adminVidRestore(id) { try { await sb.from('content_videos').update({ active: true }).eq('id', id); adminCvReload(); refreshVideosFromDb(); } catch (e) {} }
+async function adminVidPurge(id) {
+  if (!(await uiConfirm('Bu video kaydı TEMELLİ silinsin mi? Geri alınamaz.', 'Temelli Sil', { danger: true }))) return;
+  try { await sb.from('content_videos').delete().eq('id', id); adminCvReload(); } catch (e) { uiAlert('Silinemedi.'); }
+}
 
 /* ============================================================
    ERİŞİM LOGU — parmak izi + oturum başına 1 kayıt
@@ -4121,20 +4157,73 @@ async function logAccessOnce() {
 setTimeout(function () { try { logAccessOnce(); } catch (e) {} }, 3000);
 
 /* Kullanıcı detay görünümü (yönetici) */
-async function adminUserDetail(id) {
+async function adminUserDetail(id, showAll) {
   const box = document.getElementById('udet-' + id);
   if (!box) return;
-  if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+  if (!showAll && box.style.display !== 'none') { box.style.display = 'none'; return; }
   box.style.display = 'block';
   box.innerHTML = '<div class="profile-empty">Yükleniyor...</div>';
   try {
-    const [logs, tests] = await Promise.all([
-      sb.from('access_log').select('*').eq('user_id', id).order('created_at', { ascending: false }).limit(8),
-      sb.from('test_results').select('id', { count: 'exact', head: true }).eq('user_id', id)
+    const logQ = showAll
+      ? sbFetchAll('access_log', null, q => q.eq('user_id', id).order('created_at', { ascending: false })).then(d => ({ data: d }))
+      : sb.from('access_log').select('*').eq('user_id', id).order('created_at', { ascending: false }).limit(8);
+    const [logs, tests, acts] = await Promise.all([
+      logQ,
+      sb.from('test_results').select('id', { count: 'exact', head: true }).eq('user_id', id),
+      sb.from('activity_log').select('kind, amount, created_at').eq('user_id', id).gte('created_at', new Date(Date.now() - 14 * 86400000).toISOString()).limit(1000)
     ]);
     const rows = (logs.data || []).map(l => `<div class="udet-log"><span class="udet-ip">${_escHtml(l.ip || '—')}</span> <span class="cw-cat">${_escHtml(l.country || '')}</span> <span class="cw-cat">${_escHtml(l.fp || '')}</span><div class="err-meta">${_escHtml((l.ua || '').slice(0, 110))} · ${new Date(l.created_at).toLocaleString('tr-TR')}</div></div>`).join('');
+    // Son 14 gün aktivite özeti
+    const AK = { testsDone: '📝 Test', questions: '❓ Soru', wordsLearned: '🧠 Öğrenilen', wordsSaved: '📦 Kaydedilen', dailyReviews: '🔁 Günlük Tekrar', pomodoros: '🍅 Pomodoro', videos: '🎬 Video', focusMin: '⏱️ Odak dk' };
+    const agg = {};
+    (acts.data || []).forEach(a => { agg[a.kind] = (agg[a.kind] || 0) + (a.amount || 0); });
+    const actHtml = Object.keys(agg).length
+      ? '<div class="udet-acts">' + Object.entries(agg).map(([k, v]) => `<span class="cw-cat">${AK[k] || k}: <b>${v}</b></span>`).join(' ') + '</div>'
+      : '<div class="err-meta">Son 14 günde kayıtlı aktivite yok. (activity_log kuruluysa bundan sonra birikir.)</div>';
     box.innerHTML = `<div class="udet-stats">Çözülen test (DB): <b>${tests.count ?? '—'}</b></div>
-      <h5 class="udet-h5">Son Erişimler (IP · ülke · parmak izi · cihaz)</h5>
-      ${rows || '<div class="profile-empty">Henüz erişim kaydı yok. (access_log + log-access kuruldu mu? Kayıtlar bundan sonraki girişlerde birikir.)</div>'}`;
-  } catch (e) { box.innerHTML = '<div class="profile-empty">Detay alınamadı (access_log.sql çalıştırıldı mı?).</div>'; }
+      <h5 class="udet-h5">Son 14 Gün Aktivite</h5>${actHtml}
+      <h5 class="udet-h5">Erişimler (IP · ülke · parmak izi · cihaz) ${showAll ? '— tümü (' + (logs.data || []).length + ')' : '— son 8'}</h5>
+      ${rows || '<div class="profile-empty">Henüz erişim kaydı yok.</div>'}
+      ${showAll ? '' : `<button class="mail-act" style="margin-top:8px;" onclick="adminUserDetail('${id}', true)">📜 Tüm Giriş Kayıtlarını Gör</button>`}`;
+  } catch (e) { box.innerHTML = '<div class="profile-empty">Detay alınamadı (access_log.sql + activity_log.sql çalıştırıldı mı?).</div>'; }
+}
+
+/* ============================================================
+   KURTARMA PAKETİ — panelden tek tıkla (DB + site kodu + rehber)
+   ============================================================ */
+async function adminRecoveryZip() {
+  const st = document.getElementById('recovery-status');
+  if (typeof JSZip === 'undefined') { uiAlert('Zip kütüphanesi yüklenemedi; sayfayı yenileyip tekrar dene.'); return; }
+  const zip = new JSZip();
+  // 1) Veritabanı
+  for (const t of BACKUP_TABLES.concat(['content_videos','content_synonyms','content_antonyms','content_families','content_pquestions','activity_log','access_log','site_settings'])) {
+    if (st) st.textContent = 'Veritabanı: ' + t + '...';
+    try { const d = await sbFetchAll(t); zip.file('veritabani/' + t + '.json', JSON.stringify(d, null, 1)); } catch (e) {}
+  }
+  // 2) Site kod dosyaları (canlı siteden)
+  const files = ['index.html','js/app.js','js/auth.js','js/admin.js','js/profile.js','js/extras.js','css/style.css','og-kapak.png'];
+  for (const f of files) {
+    if (st) st.textContent = 'Site dosyası: ' + f + '...';
+    try {
+      const r = await fetch(f + '?yedek=' + Date.now());
+      if (r.ok) zip.file('site/' + f, await r.blob());
+    } catch (e) {}
+  }
+  zip.file('OKU-BENI.md', `# Kurtarma Paketi (${new Date().toLocaleString('tr-TR')})
+İçerik: veritabani/ (tüm tablolar JSON) + site/ (canlı kod dosyaları).
+Yeniden kurulum sırası:
+1) site/ klasörünü GitHub'a yükle (barındırma: Vercel).
+2) Supabase projesi + SQL kurulum dosyalarını çalıştır (sende mevcut sql/ klasörü).
+3) veritabani/ içindeki JSON'ları Supabase Table Editor -> Import ile ilgili tablolara aktar.
+4) Edge Function'ları deploy et (delete-account, inbound-mail, send-mail, resend-webhook, grade-placement, admin-user, log-access) + Secrets (RESEND_API_KEY, INBOUND_SECRET).
+5) Cloudflare: DNS + Email Routing (worker: gelen-mail) + Turnstile.
+Not: SQL ve Edge Function kaynak kodları bu zip'te DEĞİLDİR (tarayıcı Supabase içindeki kodu okuyamaz) — onlar sana verilen kurulum dosyalarında; onları da aynı klasörde sakla.`);
+  if (st) st.textContent = 'Zip hazırlanıyor...';
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ydt-kurtarma-' + new Date().toISOString().slice(0,10) + '.zip';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 300);
+  if (st) st.textContent = 'Kurtarma paketi indirildi ✓';
 }
