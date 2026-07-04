@@ -1165,10 +1165,10 @@ async function loadData() {
     jSafe('data/kelimeler/b1.json'),
     jSafe('data/kelimeler/b2.json'),
     jSafe('data/kelimeler/c1.json'),
-    j('data/es-anlamlilar/es-anlamlilar.json'),
-    j('data/zit-anlamlilar/zit-anlamlilar.json'),
-    j('data/akraba-kelimeler/akraba-kelimeler.json'),
-    j('data/videolar/videolar.json'),
+    jSafe('data/es-anlamlilar/es-anlamlilar.json'),
+    jSafe('data/zit-anlamlilar/zit-anlamlilar.json'),
+    jSafe('data/akraba-kelimeler/akraba-kelimeler.json'),
+    jSafe('data/videolar/videolar.json'),
   ]);
   // JSON temel + DB üstüne bindirme (kelime kaybı imkânsız; dosyalar silinirse DB tek başına yeter)
   words = [].concat(a1a2,b1,b2,c1);
@@ -1176,6 +1176,20 @@ async function loadData() {
   wordsByRu = {};
   words.forEach(w => { wordsByRu[w.ru] = w; });
   synonymGroups = syn; antonymPairs = ant; wordFamilies = fam; videos = vids;
+  try {
+    if (typeof sb !== 'undefined' && sb) {
+      const [sg, ap, wf, vd] = await Promise.all([
+        sb.from('content_synonyms').select('*').eq('active', true).limit(5000),
+        sb.from('content_antonyms').select('*').eq('active', true).limit(2000),
+        sb.from('content_families').select('*').eq('active', true).limit(2000),
+        sb.from('content_videos').select('*').eq('active', true).order('num').limit(1000)
+      ]);
+      if (sg.data && sg.data.length) synonymGroups = sg.data.map(r => ({ grup: r.grup, kelimeler: Array.isArray(r.kelimeler) ? r.kelimeler : JSON.parse(r.kelimeler || '[]') }));
+      if (ap.data && ap.data.length) antonymPairs = ap.data.map(r => ({ ru1: r.ru1, tr1: r.tr1, p1: r.p1, ru2: r.ru2, tr2: r.tr2, p2: r.p2 }));
+      if (wf.data && wf.data.length) wordFamilies = wf.data.map(r => ({ kok: r.kok, anlam: r.anlam, kelimeler: Array.isArray(r.kelimeler) ? r.kelimeler : JSON.parse(r.kelimeler || '[]') }));
+      if (vd.data && vd.data.length) videos = vd.data.map(r => ({ num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb }));
+    }
+  } catch (e) { _logDev('DB içerikleri yüklenemedi:', e); }
   // Paragraf soruları (dosya yoksa site yine çalışsın diye ayrı try/catch)
   try {
     let dbPq = [];
@@ -3423,6 +3437,7 @@ function applyDbWords(rows) {
     if (r.active === false) { words = words.filter(x => !match(x)); return; }
     const w = { ru: r.ru, tr: r.tr, p: r.p || '', cat: r.cat || 'isim', level: lvl,
                 ornek: r.ornek || '', ornekTr: r.ornek_tr || '', cinsiyet: r.cinsiyet || '', premium: !!r.premium };
+    if (r.padej) w.padej = r.padej;
     const ex = words.find(match);
     if (ex) Object.assign(ex, w); else words.push(w);
   });
@@ -3485,7 +3500,7 @@ function renderCwList() {
   }
   box.innerHTML = slice.map(r => `
     <div class="cw-row ${r.active === false ? 'off' : ''}">
-      <div class="cw-main"><b>${_escHtml(r.ru)}</b> — ${_escHtml(r.tr)} <span class="kv-lvl">${r.level || ''}</span> <span class="cw-cat">${_escHtml(r.cat || '')}</span>${r.premium ? ' <span class="mail-member yes">Premium</span>' : ''}${r.active === false ? ' <span class="mail-member no">Gizli</span>' : ''}</div>
+      <div class="cw-main"><b>${_escHtml(r.ru)}</b> — ${_escHtml(r.tr)} <span class="kv-lvl">${r.level || ''}</span> <span class="cw-cat">${_escHtml(r.cat || '')}</span>${r.cinsiyet ? ` <span class="cw-cat">${_escHtml(r.cinsiyet)}</span>` : ''}${r.padej ? ` <span class="cw-cat">${_escHtml(r.padej)}</span>` : ''}${r.premium ? ' <span class="mail-member yes">Premium</span>' : ''}${r.active === false ? ' <span class="mail-member no">Gizli</span>' : ''}</div>
       <div class="cw-acts">
         <button class="mail-act" onclick="adminWordEdit('${r.id}')">✏️ Düzenle</button>
         ${r.active === false
@@ -3511,7 +3526,7 @@ function adminWordEdit(id) {
   document.getElementById('cw-tr').value = r.tr || '';
   document.getElementById('cw-p').value = r.p || '';
   document.getElementById('cw-cat').value = r.cat || 'isim';
-  cwCatChanged(r.cinsiyet || '');
+  cwCatChanged(r.cat === 'edat' ? (r.padej || '') : (r.cinsiyet || ''));
   document.getElementById('cw-lvl').value = r.level || 'A1';
   document.getElementById('cw-ornek').value = r.ornek || '';
   document.getElementById('cw-ornektr').value = r.ornek_tr || '';
@@ -3523,7 +3538,8 @@ async function adminWordSave() {
   const ru = _cwVal('cw-ru'), tr = _cwVal('cw-tr');
   if (!ru || !tr) { uiAlert('Rusça kelime ve Türkçe anlam zorunlu.'); return; }
   const row = { ru, tr, p: _cwVal('cw-p') || null, cat: _cwVal('cw-cat'), level: _cwVal('cw-lvl'),
-    cinsiyet: _cwVal('cw-gram') || null,
+    cinsiyet: (_cwVal('cw-cat') === 'edat') ? null : (_cwVal('cw-gram') || null),
+    padej: (_cwVal('cw-cat') === 'edat') ? cwPadejValue() : null,
     ornek: _cwVal('cw-ornek') || null, ornek_tr: _cwVal('cw-ornektr') || null,
     premium: document.getElementById('cw-premium').checked, active: true, updated_at: new Date().toISOString() };
   try {
@@ -3564,6 +3580,7 @@ function _cwNormalize(o) {
     ornek: (o.ornek || '') ? String(o.ornek).trim() : null,
     ornek_tr: (o.ornekTr || o.ornek_tr || '') ? String(o.ornekTr || o.ornek_tr).trim() : null,
     cinsiyet: (o.cinsiyet || '') ? String(o.cinsiyet).trim() : null,
+    padej: (o.padej || '') ? String(o.padej).trim() : null,
     premium: o.premium === true || o.premium === 'true' || o.premium === 1,
     active: true };
 }
@@ -3803,17 +3820,34 @@ async function adminTicketMail(ticketId) {
 /* ---- Kelime formu: türe göre gramer seçenekleri ---- */
 const CW_GRAM_OPTS = {
   'isim': [['', 'Cinsiyet seç...'], ['м', 'м — eril'], ['ж', 'ж — dişil'], ['с', 'с — nötr']],
-  'fiil': [['', 'Görünüş seç...'], ['нсв', 'НСВ — bitmemiş (HCB)'], ['св', 'СВ — bitmiş (CB)']],
-  'edat': [['', 'Padej seç...'], ['+Род.', '+ Родительный (Gen.)'], ['+Дат.', '+ Дательный (Dat.)'], ['+Вин.', '+ Винительный (Acc.)'], ['+Твор.', '+ Творительный (Instr.)'], ['+Предл.', '+ Предложный (Prep.)']]
+  'fiil': [['', 'Görünüş seç...'], ['нсв', 'НСВ — bitmemiş (HCB)'], ['св', 'СВ — bitmiş (CB)']]
 };
+const CW_PADEJ = ['Р.п.', 'Д.п.', 'В.п.', 'Т.п.', 'П.п.']; // sitedeki etiket biçimi (örn: "П.п. / В.п.")
 function cwCatChanged(setVal) {
   const cat = _cwVal('cw-cat');
-  const sel = document.getElementById('cw-gram'); if (!sel) return;
+  const sel = document.getElementById('cw-gram');
+  const pd = document.getElementById('cw-padej');
+  if (pd) pd.style.display = 'none';
+  if (!sel) return;
+  if (cat === 'edat') {
+    sel.innerHTML = ''; sel.style.display = 'none';
+    if (pd) {
+      pd.style.display = 'flex';
+      const cur = (setVal || '').split('/').map(x => x.trim());
+      pd.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = cur.indexOf(cb.value) >= 0; });
+    }
+    return;
+  }
   const opts = CW_GRAM_OPTS[cat];
   if (!opts) { sel.innerHTML = ''; sel.style.display = 'none'; return; }
   sel.style.display = '';
   sel.innerHTML = opts.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('');
   if (setVal) sel.value = setVal;
+}
+function cwPadejValue() {
+  const pd = document.getElementById('cw-padej'); if (!pd || pd.style.display === 'none') return null;
+  const v = [...pd.querySelectorAll('input:checked')].map(c => c.value);
+  return v.length ? v.join(' / ') : null;
 }
 
 /* ============================================================
@@ -3934,3 +3968,78 @@ function _maintOverlay() {
   d.innerHTML = '<div class="maint-box"><div style="font-size:3rem;">🚧</div><h2>Bakımdayız</h2><p>Sitemiz kısa süreliğine bakımda. Birazdan tekrar buradayız — anlayışınız için teşekkürler!</p><div class="maint-brand">YDT-YDS Rusça</div></div>';
   document.body.appendChild(d);
 }
+
+/* ============================================================
+   YÖNETİCİ — VİDEO YÖNETİMİ
+   ============================================================ */
+let _cvRows = [];
+async function adminVideosInit() { await adminCvReload(); }
+async function adminCvReload() {
+  try { const { data } = await sb.from('content_videos').select('*').order('num').limit(1000); _cvRows = data || []; }
+  catch (e) { _cvRows = []; }
+  const st = document.getElementById('cv-stats');
+  if (st) {
+    const act = _cvRows.filter(r => r.active !== false);
+    st.innerHTML = `Toplam <b>${act.length}</b> video · 👑 Premium: <b>${act.filter(r => r.premium).length}</b> · 🆓 Ücretsiz: <b>${act.filter(r => !r.premium).length}</b> · gizli: ${_cvRows.length - act.length}`;
+  }
+  renderCvList();
+}
+function renderCvList() {
+  const box = document.getElementById('cv-list'); if (!box) return;
+  if (!_cvRows.length) { box.innerHTML = '<div class="profile-empty">DB\'de video yok. (tum_veriler_db.sql çalıştırıldı mı?)</div>'; return; }
+  box.innerHTML = _cvRows.map(r => `
+    <div class="cw-row ${r.active === false ? 'off' : ''}">
+      <div class="cv-thumbbox">${r.thumb ? `<img src="${_escAttr(r.thumb)}" alt="">` : '🎬'}</div>
+      <div class="cw-main" style="flex:1;"><b>#${r.num || '-'} ${_escHtml(r.title)}</b> <span class="kv-lvl">${r.level || ''}</span>
+        ${r.premium ? '<span class="mail-member yes">👑 Premium</span>' : '<span class="mail-member">🆓 Ücretsiz</span>'}
+        <span class="cw-cat">${r.source === 'stream' ? 'CF Stream' : 'YouTube'}</span>
+        ${!r.video_id ? '<span class="mail-member no">ID eksik</span>' : ''}
+        ${r.active === false ? '<span class="mail-member no">Gizli</span>' : ''}
+        <div class="err-meta">${_escHtml(r.descr || '')}</div></div>
+      <div class="cw-acts">
+        <button class="mail-act" onclick="adminVidEdit('${r.id}')">✏️</button>
+        <button class="mail-act" onclick="adminVidTogglePremium('${r.id}', ${r.premium ? 'false' : 'true'})">${r.premium ? '🆓 Ücretsiz yap' : '👑 Premium yap'}</button>
+        ${r.active === false
+          ? `<button class="mail-act" onclick="adminVidRestore('${r.id}')">↩️</button>`
+          : `<button class="mail-act red" onclick="adminVidHide('${r.id}')">🗑️</button>`}
+      </div>
+    </div>`).join('');
+}
+function adminVidFormClear() {
+  ['cv-id','cv-num','cv-title','cv-desc','cv-vid','cv-thumb'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const pr = document.getElementById('cv-premium'); if (pr) pr.checked = false;
+  const btn = document.getElementById('cv-save-btn'); if (btn) btn.textContent = 'Video Ekle';
+}
+function adminVidEdit(id) {
+  const r = _cvRows.find(x => x.id === id); if (!r) return;
+  document.getElementById('cv-id').value = r.id;
+  document.getElementById('cv-num').value = r.num || '';
+  document.getElementById('cv-lvl').value = r.level || 'A1';
+  document.getElementById('cv-title').value = r.title || '';
+  document.getElementById('cv-desc').value = r.descr || '';
+  document.getElementById('cv-source').value = r.source || 'youtube';
+  document.getElementById('cv-vid').value = r.video_id || '';
+  document.getElementById('cv-thumb').value = r.thumb || '';
+  document.getElementById('cv-premium').checked = !!r.premium;
+  const btn = document.getElementById('cv-save-btn'); if (btn) btn.textContent = 'Değişiklikleri Kaydet';
+  document.getElementById('cv-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+async function adminVidSave() {
+  const title = _cwVal('cv-title'); if (!title) { uiAlert('Video başlığı zorunlu.'); return; }
+  const row = { num: parseInt(_cwVal('cv-num'), 10) || null, level: _cwVal('cv-lvl'), title,
+    descr: _cwVal('cv-desc') || null, source: _cwVal('cv-source'), video_id: _cwVal('cv-vid') || null,
+    thumb: _cwVal('cv-thumb') || null, premium: document.getElementById('cv-premium').checked, active: true };
+  const id = _cwVal('cv-id');
+  try {
+    let error;
+    if (id) ({ error } = await sb.from('content_videos').update(row).eq('id', id));
+    else ({ error } = await sb.from('content_videos').insert(row));
+    if (error) throw error;
+    toast('Video kaydedildi.'); adminVidFormClear(); adminCvReload();
+  } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
+}
+async function adminVidTogglePremium(id, on) {
+  try { await sb.from('content_videos').update({ premium: on }).eq('id', id); adminCvReload(); } catch (e) {}
+}
+async function adminVidHide(id) { try { await sb.from('content_videos').update({ active: false }).eq('id', id); adminCvReload(); } catch (e) {} }
+async function adminVidRestore(id) { try { await sb.from('content_videos').update({ active: true }).eq('id', id); adminCvReload(); } catch (e) {} }
