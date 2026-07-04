@@ -283,18 +283,28 @@ function renderBadges() {
     streak: streak,
     dailyReviews: dailyReviews
   };
-  const earned = _getEarnedBadges();
-  const firstInit = earned.length === 0;
+  // Kazanılanlar = yerel kayıt + HESAPTAKİ (DB) kayıt birleşimi -> cihazlar arası tutarlı
+  const local = _getEarnedBadges();
+  const fromDb = (typeof currentProfile !== "undefined" && currentProfile && Array.isArray(currentProfile.badges)) ? currentProfile.badges : [];
+  const earned = [...new Set([].concat(local, fromDb))];
   let changed = false;
   const newly = [];
   const html = BADGES.map(b => {
     let on = b.chk(stats);
     if (on && earned.indexOf(b.t) === -1) { earned.push(b.t); changed = true; newly.push(b); }
-    if (earned.indexOf(b.t) !== -1) on = true; // kazanılan rozet kalıcı
+    if (earned.indexOf(b.t) !== -1) on = true; // kazanılan rozet kalıcı (tüm cihazlarda)
     return `<div class="badge ${on ? "on" : "off"}"><div class="badge-ic">${b.e}</div><div class="badge-t">${b.t}</div><div class="badge-d">${b.d}</div></div>`;
   }).join("");
+  const localMissing = earned.some(t => local.indexOf(t) === -1);
+  if (changed || localMissing) _saveEarnedBadges(earned);
   if (changed) {
-    _saveEarnedBadges(earned);
+    // Hesaba yaz -> başka cihazda tekrar "yeni" sanılmaz, bildirim tekrarlanmaz
+    try {
+      if (typeof sb !== "undefined" && sb && typeof currentUser !== "undefined" && currentUser) {
+        sb.from("profiles").update({ badges: earned }).eq("id", currentUser.id).then(function(){}, function(){});
+        if (currentProfile) currentProfile.badges = earned;
+      }
+    } catch (e) {}
     if (newly.length && newly.length <= 5 && typeof createNotification === "function" && (typeof notifPref !== "function" || notifPref("badges"))) newly.forEach(b => createNotification("🏅 Yeni rozet: " + b.t, b.d, "success"));
   }
   box.innerHTML = html;
