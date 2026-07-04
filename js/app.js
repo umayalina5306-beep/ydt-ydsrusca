@@ -1170,17 +1170,12 @@ async function loadData() {
     j('data/akraba-kelimeler/akraba-kelimeler.json'),
     j('data/videolar/videolar.json'),
   ]);
-  window.wordsFromDb = dbW.length >= 50;
-  if (window.wordsFromDb) {
-    words = dbW.map(r => ({ ru: r.ru, tr: r.tr, p: r.p || '', cat: r.cat || 'isim', level: r.level || 'A1',
-      ornek: r.ornek || '', ornekTr: r.ornek_tr || '', cinsiyet: r.cinsiyet || '', premium: !!r.premium }));
-  } else {
-    words = [].concat(a1a2,b1,b2,c1);
-  }
+  // JSON temel + DB üstüne bindirme (kelime kaybı imkânsız; dosyalar silinirse DB tek başına yeter)
+  words = [].concat(a1a2,b1,b2,c1);
+  if (dbW.length) applyDbWords(dbW);
   wordsByRu = {};
   words.forEach(w => { wordsByRu[w.ru] = w; });
   synonymGroups = syn; antonymPairs = ant; wordFamilies = fam; videos = vids;
-  if (!window.wordsFromDb) _tryLoadDbWords(); // JSON moddaysa panel eklerini bindir
   // Paragraf soruları (dosya yoksa site yine çalışsın diye ayrı try/catch)
   try {
     let dbPq = [];
@@ -3421,20 +3416,24 @@ function _tryLoadDbWords(attempt) {
   }
   loadDbWords();
 }
+function applyDbWords(rows) {
+  rows.forEach(r => {
+    const lvl = r.level || 'A1';
+    const match = x => x.ru === r.ru && (x.level || 'A1') === lvl;
+    if (r.active === false) { words = words.filter(x => !match(x)); return; }
+    const w = { ru: r.ru, tr: r.tr, p: r.p || '', cat: r.cat || 'isim', level: lvl,
+                ornek: r.ornek || '', ornekTr: r.ornek_tr || '', cinsiyet: r.cinsiyet || '', premium: !!r.premium };
+    const ex = words.find(match);
+    if (ex) Object.assign(ex, w); else words.push(w);
+  });
+}
 async function loadDbWords() {
   try {
     const { data } = await sb.from('content_words').select('*').limit(10000);
     if (!data) return;
-    data.forEach(r => {
-      if (r.active === false) {
-        if (wordsByRu[r.ru]) { words = words.filter(x => x.ru !== r.ru); delete wordsByRu[r.ru]; }
-        return;
-      }
-      const w = { ru: r.ru, tr: r.tr, p: r.p || '', cat: r.cat || 'isim', level: r.level || 'A1',
-                  ornek: r.ornek || '', ornekTr: r.ornek_tr || '', cinsiyet: r.cinsiyet || '', premium: !!r.premium };
-      const ex = wordsByRu[r.ru];
-      if (ex) Object.assign(ex, w); else { words.push(w); wordsByRu[w.ru] = w; }
-    });
+    applyDbWords(data);
+    wordsByRu = {};
+    words.forEach(w => { wordsByRu[w.ru] = w; });
   } catch (e) { _logDev('DB kelimeleri yüklenemedi:', e); }
 }
 
@@ -3488,10 +3487,10 @@ function renderCwList() {
     <div class="cw-row ${r.active === false ? 'off' : ''}">
       <div class="cw-main"><b>${_escHtml(r.ru)}</b> — ${_escHtml(r.tr)} <span class="kv-lvl">${r.level || ''}</span> <span class="cw-cat">${_escHtml(r.cat || '')}</span>${r.premium ? ' <span class="mail-member yes">Premium</span>' : ''}${r.active === false ? ' <span class="mail-member no">Gizli</span>' : ''}</div>
       <div class="cw-acts">
-        <button class="mail-act" onclick="adminWordEdit('${_escAttr(r.ru)}')">✏️ Düzenle</button>
+        <button class="mail-act" onclick="adminWordEdit('${r.id}')">✏️ Düzenle</button>
         ${r.active === false
-          ? `<button class="mail-act" onclick="adminWordRestore('${_escAttr(r.ru)}')">↩️ Göster</button>`
-          : `<button class="mail-act red" onclick="adminWordDelete('${_escAttr(r.ru)}')">🗑️ Gizle/Sil</button>`}
+          ? `<button class="mail-act" onclick="adminWordRestore('${r.id}')">↩️ Göster</button>`
+          : `<button class="mail-act red" onclick="adminWordDelete('${r.id}')">🗑️ Gizle/Sil</button>`}
       </div>
     </div>`).join('') + pager;
 }
@@ -3501,10 +3500,13 @@ function adminWordFormClear() {
   const pr = document.getElementById('cw-premium'); if (pr) pr.checked = false;
   const ru = document.getElementById('cw-ru'); if (ru) ru.disabled = false;
   const btn = document.getElementById('cw-save-btn'); if (btn) btn.textContent = 'Kelime Ekle';
+  _cwEditId = null;
   cwCatChanged();
 }
-function adminWordEdit(ru) {
-  const r = _cwRows.find(x => x.ru === ru); if (!r) return;
+let _cwEditId = null;
+function adminWordEdit(id) {
+  const r = _cwRows.find(x => x.id === id); if (!r) return;
+  _cwEditId = r.id;
   document.getElementById('cw-ru').value = r.ru; document.getElementById('cw-ru').disabled = true;
   document.getElementById('cw-tr').value = r.tr || '';
   document.getElementById('cw-p').value = r.p || '';
@@ -3525,23 +3527,26 @@ async function adminWordSave() {
     ornek: _cwVal('cw-ornek') || null, ornek_tr: _cwVal('cw-ornektr') || null,
     premium: document.getElementById('cw-premium').checked, active: true, updated_at: new Date().toISOString() };
   try {
-    const { error } = await sb.from('content_words').upsert(row, { onConflict: 'ru' });
+    let error;
+    if (_cwEditId) { ({ error } = await sb.from('content_words').update(row).eq('id', _cwEditId)); }
+    else { ({ error } = await sb.from('content_words').upsert(row, { onConflict: 'ru,level' })); }
     if (error) throw error;
     toast('Kelime kaydedildi.');
     adminWordFormClear(); await adminCwReload(); loadDbWords();
   } catch (e) { uiAlert('Kaydedilemedi. content_words.sql çalıştırıldı mı?'); }
 }
-async function adminWordDelete(ru) {
-  if (!(await uiConfirm(`"${ru}" sitede gizlensin mi? (JSON dosyasında da varsa görünmez olur; buradan geri açabilirsin.)`, 'Kelimeyi Gizle', { danger: true }))) return;
-  const r = _cwRows.find(x => x.ru === ru);
+async function adminWordDelete(id) {
+  const r = _cwRows.find(x => x.id === id); if (!r) return;
+  if (!(await uiConfirm(`"${r.ru}" (${r.level}) sitede gizlensin mi? Buradan geri açabilirsin.`, 'Kelimeyi Gizle', { danger: true }))) return;
   try {
-    await sb.from('content_words').upsert({ ru, tr: (r && r.tr) || (wordsByRu[ru] && wordsByRu[ru].tr) || '-', active: false, updated_at: new Date().toISOString() }, { onConflict: 'ru' });
+    await sb.from('content_words').update({ active: false }).eq('id', id);
     await adminCwReload();
-    if (wordsByRu[ru]) { words = words.filter(x => x.ru !== ru); delete wordsByRu[ru]; }
+    words = words.filter(x => !(x.ru === r.ru && (x.level || 'A1') === (r.level || 'A1')));
+    wordsByRu = {}; words.forEach(w => { wordsByRu[w.ru] = w; });
   } catch (e) { uiAlert('İşlem başarısız.'); }
 }
-async function adminWordRestore(ru) {
-  try { await sb.from('content_words').update({ active: true }).eq('ru', ru); await adminCwReload(); loadDbWords(); }
+async function adminWordRestore(id) {
+  try { await sb.from('content_words').update({ active: true }).eq('id', id); await adminCwReload(); loadDbWords(); }
   catch (e) { uiAlert('İşlem başarısız.'); }
 }
 
@@ -3563,14 +3568,14 @@ function _cwNormalize(o) {
     active: true };
 }
 async function _cwUpsertAll(rows) {
-  // Aynı "ru" birden fazla kez varsa tek kayda indir (yoksa DB hata verir)
+  // Aynı (ru, seviye) ikilisi birden fazla kez varsa tek kayda indir (yoksa DB hata verir)
   const uniq = {};
-  rows.forEach(r => { uniq[r.ru] = r; });
+  rows.forEach(r => { uniq[r.ru + '|' + (r.level || 'A1')] = r; });
   rows = Object.values(uniq);
   let done = 0;
   for (let i = 0; i < rows.length; i += 400) {
     const chunk = rows.slice(i, i + 400);
-    const { error } = await sb.from('content_words').upsert(chunk, { onConflict: 'ru' });
+    const { error } = await sb.from('content_words').upsert(chunk, { onConflict: 'ru,level' });
     if (error) throw error;
     done += chunk.length;
   }
