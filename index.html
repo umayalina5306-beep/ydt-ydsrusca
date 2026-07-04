@@ -4,9 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>YDT-YDS Rusça Platformu</title>
+  <meta name="description" content="YDT-YDS Rusça: 2200+ kelime, seviye tespit sınavı, testler, video dersler ve günlük tekrar sistemiyle Rusça sınavlarına eksiksiz hazırlan.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="YDT-YDS Rusça">
+  <meta property="og:title" content="YDT-YDS Rusça — Rusça Sınav Hazırlık Platformu">
+  <meta property="og:description" content="2200+ kelime, seviye tespit sınavı, testler ve video derslerle YDT/YDS Rusça hazırlığı.">
+  <meta property="og:url" content="https://ydt-ydsrusca.com/">
+  <meta property="og:image" content="https://ydt-ydsrusca.com/og-kapak.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="YDT-YDS Rusça — Rusça Sınav Hazırlık Platformu">
+  <meta name="twitter:description" content="2200+ kelime, seviye tespit sınavı, testler ve video derslerle YDT/YDS Rusça hazırlığı.">
+  <meta name="twitter:image" content="https://ydt-ydsrusca.com/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=57">
+<link rel="stylesheet" href="css/style.css?v=58">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -1135,8 +1148,6 @@
             </div>
             <textarea id="cw-json" class="an-textarea" placeholder='[ { "ru": "дом", "tr": "ev", "level": "A1", "cat": "isim" } ]'></textarea>
             <button class="set-btn" onclick="adminWordsImportJson()">JSON'u İçe Aktar</button>
-            <div class="pq-hint" style="margin-top:14px;">İlk kurulum: <b>sitedeki tüm JSON kelimelerini</b> tek tıkla veritabanına aktar — sonra hepsi aşağıdaki listede düzenlenebilir olur.</div>
-            <button class="set-btn ghost" onclick="adminMigrateWords()">⬆️ JSON'daki Kelimeleri DB'ye Aktar</button>
           </div>
 
           <div class="admin-notif-card">
@@ -1249,7 +1260,6 @@
             <textarea id="cpq-json" class="an-textarea" placeholder='[ { "level":"B1", "paragraf":"...", "soru":"...", "siklar":["a","b","c","d"], "dogru":0 } ]'></textarea>
             <div class="mail-actions">
               <button class="set-btn" onclick="adminPqImportJson()">JSON'u İçe Aktar</button>
-              <button class="set-btn ghost" onclick="adminPqMigrate()">⬆️ JSON Dosyasındaki Soruları DB'ye Aktar</button>
             </div>
           </div>
           <div class="admin-notif-card">
@@ -1323,6 +1333,10 @@
             <h3 class="an-h3">📁 Tablo Bazında İndir</h3>
             <div id="backup-tables" class="mail-actions"></div>
           </div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">🧰 Tam Kurtarma Paketi (kod + kurulum)</h3>
+            <p class="pq-hint">Veritabanı yedeği yukarıdan alınır. Sitenin <b>kodu</b> zaten GitHub'da yedeklidir (repo sayfasında Code → Download ZIP ile her an indirilebilir). Bunlara ek olarak; tüm SQL komutları, Edge Function kodları, Cloudflare worker kodu ve adım adım yeniden kurulum rehberini içeren <b>kurtarma-paketi.zip</b> dosyasını bilgisayarında sakla — siteye bir şey olursa bu üçüyle (DB yedeği + GitHub ZIP + kurtarma paketi) her şey sıfırdan kurulabilir.</p>
+          </div>
         </div>
 
         <div id="av-errors" class="admin-view" style="display:none;">
@@ -1394,11 +1408,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=57"></script>
-<script defer src="js/auth.js?v=57"></script>
-<script defer src="js/admin.js?v=57"></script>
-<script defer src="js/profile.js?v=57"></script>
-<script defer src="js/extras.js?v=57"></script>
-<script defer src="js/app.js?v=57"></script>
+<script defer src="js/supabase-config.js?v=58"></script>
+<script defer src="js/auth.js?v=58"></script>
+<script defer src="js/admin.js?v=58"></script>
+<script defer src="js/profile.js?v=58"></script>
+<script defer src="js/extras.js?v=58"></script>
+<script defer src="js/app.js?v=58"></script>
 </body>
 </html>
