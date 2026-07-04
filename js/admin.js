@@ -89,10 +89,12 @@ function renderAdminUsers(list) {
         <div class="admin-user-name">${ad} ${planBadge}</div>
         <div class="admin-user-meta">${u.email || ""} · ${u.level || "seviye yok"} · ${tarih}</div>
         <div class="admin-user-acts">
+          <button class="mail-act" onclick="adminUserDetail('${u.id}')">🔍 Detay</button>
           <button class="mail-act" onclick="adminUserNotify('${u.id}', '${(u.display_name||'').replace(/'/g,'')}')">🔔 Bildirim</button>
           <button class="mail-act" onclick="adminUserResetPw('${u.email||''}')">🔑 Şifre Sıfırlama Maili</button>
           <button class="mail-act" onclick="adminUserChangeEmail('${u.id}', '${u.email||''}')">📧 E-posta Değiştir</button>
         </div>
+        <div id="udet-${u.id}" class="udet-box" style="display:none;"></div>
       </div>
       ${btn}
     </div>`;
