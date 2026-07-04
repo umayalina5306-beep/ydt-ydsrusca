@@ -1061,6 +1061,20 @@ function showResult(){
   document.getElementById('quiz-card').style.display = 'none';
   document.getElementById('quiz-playing').style.display = 'none';
   document.getElementById('quiz-result').style.display = 'block';
+  // Deneme sınavı: YDS puanı (doğru × 1.25; yanlış doğruyu götürmez)
+  try {
+    const old = document.getElementById('mock-yds-score'); if (old) old.remove();
+    if (quizSettings && quizSettings.label === 'Deneme Sınavı') {
+      const puan = Math.round(qScore * (100 / qList.length) * 100) / 100;
+      const box = document.getElementById('quiz-result');
+      const d = document.createElement('div');
+      d.id = 'mock-yds-score';
+      d.className = 'plc-newlevel';
+      d.style.margin = '10px auto 16px';
+      d.innerHTML = '🎯 YDS Puanın: <b>' + puan.toFixed(2) + '</b> / 100 <span style="font-size:.75rem;color:var(--gray);">(doğru sayısı × ' + (100 / qList.length).toFixed(2) + ' — YDS\'de yanlış doğruyu götürmez)</span>';
+      box.insertBefore(d, box.firstChild.nextSibling || box.firstChild);
+    }
+  } catch (e) {}
   // İnceleme öğeleri — durum: ok (doğru) / wrong (yanlış) / blank (boş)
   qReviewItems = qList.map((w,i)=>{
     const prep = qPrep[i], a = qAnswers[i];
@@ -4309,4 +4323,49 @@ async function pqDelete(id) {
     placementPool = null;
     adminPqlReload(); adminQuestionStats();
   } catch (e) { uiAlert('Silinemedi.'); }
+}
+
+/* ============================================================
+   DENEME SINAVI MODU — YDS formatı (80 soru · 180 dk · net/puan)
+   ============================================================ */
+async function startMockExam() {
+  if (typeof currentUser === 'undefined' || !currentUser) { if (typeof openAuth === 'function') openAuth('login'); return; }
+  const wordPool = words.slice();
+  if (wordPool.length < 60) { toast('Deneme sınavı için yeterli içerik yok.'); return; }
+  const paraAll = (paragraphQuestions || []).slice();
+  const TOTAL = 80, MIN = 180;
+  if (!(await uiConfirm('YDS formatında deneme sınavı: ' + TOTAL + ' soru, ' + MIN + ' dakika süre. Cevaplar sınav sonunda gösterilir, süre bitince sınav otomatik kapanır. Başlansın mı?', '📝 Deneme Sınavı'))) return;
+
+  const paraCount = Math.min(paraAll.length, 12);
+  const paras = shuffle(paraAll).slice(0, paraCount);
+  const wordCount = TOTAL - paraCount;
+  const ws = shuffle(wordPool).slice(0, wordCount);
+
+  // Tür dağılımı: RU→TR %40 · TR→RU %30 · boşluk %20 · D/Y %10
+  const wTypes = ws.map((_, i) => {
+    const r = i / wordCount;
+    return r < 0.40 ? 'ru-tr' : (r < 0.70 ? 'tr-ru' : (r < 0.90 ? 'fill' : 'tf'));
+  });
+  shuffle(wTypes);
+
+  qList = []; qTypes = [];
+  ws.forEach((w, i) => { qList.push(w); qTypes.push(wTypes[i]); });
+  paras.forEach(p => { qList.push(p); qTypes.push('paragraf'); });
+  // Soruları ve tiplerini birlikte karıştır
+  const idx = qList.map((_, i) => i); shuffle(idx);
+  qList = idx.map(i => qList[i]); qTypes = idx.map(i => qTypes[i]);
+
+  quizReveal = 'end';
+  quizSettings = { type: 'mix', cat: 'hepsi', count: qList.length, level: 'hepsi', label: 'Deneme Sınavı' };
+  qIdx = 0; qScore = 0; qWrong = 0;
+  reviewReturnTo = null;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-quiz').classList.add('active');
+  document.getElementById('quiz-setup').style.display = 'none';
+  document.getElementById('quiz-playing').style.display = 'block';
+  document.getElementById('quiz-result').style.display = 'none';
+  document.getElementById('quiz-card').style.display = 'block';
+  window.scrollTo(0, 0);
+  loadQ();
+  startQuizTimer(MIN * 60);
 }
