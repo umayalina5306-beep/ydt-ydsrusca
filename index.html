@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>YDT-YDS Rusça Platformu</title>
+  <link rel="canonical" href="https://ydt-ydsrusca.com/">
   <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -22,7 +23,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=61">
+<link rel="stylesheet" href="css/style.css?v=62">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -45,7 +46,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="site-logo.png?v=61" alt="YDT-YDS Rusça Platformu" class="nav-logo-img"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="site-logo.png?v=62" alt="YDT-YDS Rusça Platformu" class="nav-logo-img"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words">Kelimeler</button></li>
@@ -360,6 +361,7 @@
             <button class="setup-btn" data-type="tf" onclick="selectSetup('type','tf',this)">✓✗ Doğru / Yanlış</button>
             <button class="setup-btn" data-type="paragraf" onclick="selectSetup('type','paragraf',this)">📖 Paragraf Soruları</button>
             <button class="setup-btn setup-btn-plc" onclick="openPlacement()">🎚️ Seviye Tespit Sınavı →</button>
+            <button class="setup-btn setup-btn-plc" onclick="startMockExam()">📝 Deneme Sınavı (YDS · 80 soru · 180 dk) →</button>
           </div>
         </div>
 
@@ -1423,11 +1425,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=61"></script>
-<script defer src="js/auth.js?v=61"></script>
-<script defer src="js/admin.js?v=61"></script>
-<script defer src="js/profile.js?v=61"></script>
-<script defer src="js/extras.js?v=61"></script>
-<script defer src="js/app.js?v=61"></script>
+<script defer src="js/supabase-config.js?v=62"></script>
+<script defer src="js/auth.js?v=62"></script>
+<script defer src="js/admin.js?v=62"></script>
+<script defer src="js/profile.js?v=62"></script>
+<script defer src="js/extras.js?v=62"></script>
+<script defer src="js/app.js?v=62"></script>
 </body>
 </html>
