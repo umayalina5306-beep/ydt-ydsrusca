@@ -6,7 +6,7 @@
 <title>YDT-YDS Rusça Platformu</title>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=56">
+<link rel="stylesheet" href="css/style.css?v=57">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -1072,6 +1072,7 @@
           <button class="psb-item" id="asb-mail" onclick="adminNav('mail')"><span class="psb-ic">📨</span> Mail Kutusu</button>
           <button class="psb-item" id="asb-questions" onclick="adminNav('questions')"><span class="psb-ic">🧩</span> Soru Havuzu</button>
           <button class="psb-item" id="asb-pquest" onclick="adminNav('pquest')"><span class="psb-ic">📖</span> Paragraf Soruları</button>
+          <button class="psb-item" id="asb-videos" onclick="adminNav('videos')"><span class="psb-ic">🎬</span> Videolar</button>
           <button class="psb-item" id="asb-visits" onclick="adminNav('visits')"><span class="psb-ic">📈</span> Ziyaret & SEO</button>
           <button class="psb-item" id="asb-settings" onclick="adminNav('settings')"><span class="psb-ic">⚙️</span> Site Ayarları</button>
           <button class="psb-item" id="asb-backup" onclick="adminNav('backup')"><span class="psb-ic">💾</span> Yedekleme</button>
@@ -1110,6 +1111,13 @@
               <select id="cw-cat" class="pq-input" onchange="cwCatChanged()"><option>isim</option><option>fiil</option><option>sıfat</option><option>zarf</option><option>zamir</option><option>edat</option><option>bağlaç</option></select>
               <select id="cw-lvl" class="pq-input pq-level"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
               <select id="cw-gram" class="pq-input"></select>
+            </div>
+            <div id="cw-padej" class="pq-correct" style="display:none;">Padej:
+              <label><input type="checkbox" value="Р.п.">Р.п. (Gen.)</label>
+              <label><input type="checkbox" value="Д.п.">Д.п. (Dat.)</label>
+              <label><input type="checkbox" value="В.п.">В.п. (Acc.)</label>
+              <label><input type="checkbox" value="Т.п.">Т.п. (Instr.)</label>
+              <label><input type="checkbox" value="П.п.">П.п. (Prep.)</label>
             </div>
             <input id="cw-ornek" class="pq-input" placeholder="Örnek cümle (Rusça, opsiyonel)" autocomplete="off">
             <input id="cw-ornektr" class="pq-input" placeholder="Örnek cümle (Türkçe, opsiyonel)" autocomplete="off">
@@ -1250,6 +1258,34 @@
           </div>
         </div>
 
+        <div id="av-videos" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Video Yönetimi</h2>
+          <p class="profile-sub">Ücretsizler YouTube'da, ücretliler Cloudflare Stream'de barınır. Buradan liste, kapak ve premium durumu yönetilir.</p>
+          <div class="pq-stats" id="cv-stats">Yükleniyor...</div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">✏️ Video Ekle / Düzenle</h3>
+            <input type="hidden" id="cv-id">
+            <div class="pq-row2">
+              <input id="cv-num" class="pq-input pq-level" placeholder="Sıra #" autocomplete="off">
+              <select id="cv-lvl" class="pq-input pq-level"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
+              <input id="cv-title" class="pq-input" placeholder="Video başlığı *" autocomplete="off">
+            </div>
+            <input id="cv-desc" class="pq-input" placeholder="Kısa açıklama" autocomplete="off">
+            <div class="pq-row2">
+              <select id="cv-source" class="pq-input"><option value="youtube">YouTube (ücretsiz)</option><option value="stream">Cloudflare Stream (ücretli)</option></select>
+              <input id="cv-vid" class="pq-input" placeholder="Video ID (YouTube ID veya Stream UID)" autocomplete="off">
+            </div>
+            <input id="cv-thumb" class="pq-input" placeholder="Kapak görseli URL (boşsa otomatik/varsayılan)" autocomplete="off">
+            <label class="cw-check"><input type="checkbox" id="cv-premium"> 👑 Premium video (yalnız premium üyeler izler)</label>
+            <div><button class="set-btn" id="cv-save-btn" onclick="adminVidSave()">Video Ekle</button>
+            <button class="set-btn ghost" onclick="adminVidFormClear()" style="margin-left:8px;">Temizle</button></div>
+          </div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">📋 Video Listesi</h3>
+            <div id="cv-list"><div class="profile-empty">Yükleniyor...</div></div>
+          </div>
+        </div>
+
         <div id="av-visits" class="admin-view" style="display:none;">
           <h2 class="profile-h2">Ziyaret & SEO</h2>
           <p class="profile-sub">Trafik istatistikleri ve sayfa içi SEO denetimi.</p>
@@ -1358,11 +1394,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=56"></script>
-<script defer src="js/auth.js?v=56"></script>
-<script defer src="js/admin.js?v=56"></script>
-<script defer src="js/profile.js?v=56"></script>
-<script defer src="js/extras.js?v=56"></script>
-<script defer src="js/app.js?v=56"></script>
+<script defer src="js/supabase-config.js?v=57"></script>
+<script defer src="js/auth.js?v=57"></script>
+<script defer src="js/admin.js?v=57"></script>
+<script defer src="js/profile.js?v=57"></script>
+<script defer src="js/extras.js?v=57"></script>
+<script defer src="js/app.js?v=57"></script>
 </body>
 </html>
