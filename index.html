@@ -19,7 +19,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=59">
+<link rel="stylesheet" href="css/style.css?v=60">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -142,28 +142,28 @@
       <div class="level-card" onclick="selectLevel('a1a2')">
         <div class="level-flag">🟢</div>
         <div class="level-name">A1 — A2</div>
-        <div class="level-count">1.840 kelime</div>
+        <div class="level-count" id="lc-a1a2">— kelime</div>
         <div class="level-desc">Temel seviye. Günlük hayatta kullanılan kelimeler.</div>
         <div class="level-badge">Başlangıç</div>
       </div>
       <div class="level-card" onclick="selectLevel('b1')">
         <div class="level-flag">🟡</div>
         <div class="level-name">B1</div>
-        <div class="level-count">355 kelime</div>
+        <div class="level-count" id="lc-b1">— kelime</div>
         <div class="level-desc">Orta seviye. YDT hazırlık için temel kelimeler.</div>
         <div class="level-badge">Orta</div>
       </div>
       <div class="level-card" onclick="selectLevel('b2')">
         <div class="level-flag">🟠</div>
         <div class="level-name">B2</div>
-        <div class="level-count">41 kelime</div>
+        <div class="level-count" id="lc-b2">— kelime</div>
         <div class="level-desc">Orta üstü seviye. YDT/YDS için kritik kelimeler.</div>
         <div class="level-badge">Orta Üstü</div>
       </div>
       <div class="level-card" onclick="selectLevel('c1')">
         <div class="level-flag">🔴</div>
         <div class="level-name">C1</div>
-        <div class="level-count">36 kelime</div>
+        <div class="level-count" id="lc-c1">— kelime</div>
         <div class="level-desc">İleri seviye. YDS'de yüksek puan için.</div>
         <div class="level-badge">İleri</div>
       </div>
@@ -1217,13 +1217,22 @@
             <label><input type="radio" name="pq-correct" value="2">3</label>
             <label><input type="radio" name="pq-correct" value="3">4</label>
           </div>
-          <button class="set-btn" onclick="adminAddQuestion()">Soru Ekle</button>
+          <button class="set-btn" id="pq-save-btn" onclick="adminAddQuestion()">Soru Ekle</button>
+          <button class="set-btn ghost" onclick="pqFormClear()" style="margin-left:8px;">Temizle</button>
         </div>
         <div class="pq-block">
           <h4 class="pq-h4">Toplu Ekle (JSON)</h4>
           <p class="pq-hint">Biçim: <code>[{"level":"A1","question":"...","options":["a","b","c","d"],"correct":0}]</code> (correct = doğru şık indeksi, 0-3)</p>
           <textarea id="pq-json" class="an-textarea" placeholder='[ { "level":"A1", "question":"...", "options":["a","b","c","d"], "correct":0 } ]'></textarea>
           <button class="set-btn" onclick="adminBulkAddQuestions()">Toplu Ekle</button>
+        </div>
+        <div class="pq-block">
+          <h4 class="pq-h4">Mevcut Sorular</h4>
+          <div class="pq-row2">
+            <input class="pq-input" placeholder="🔍 Soru metninde ara..." oninput="pqlSet('q', this.value)" autocomplete="off">
+            <select class="pq-input pq-level" onchange="pqlSet('level', this.value)"><option value="all">Tümü</option><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
+          </div>
+          <div id="pql-list"><div class="profile-empty">Yükleniyor...</div></div>
         </div>
       </div>
         </div>
@@ -1411,11 +1420,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=59"></script>
-<script defer src="js/auth.js?v=59"></script>
-<script defer src="js/admin.js?v=59"></script>
-<script defer src="js/profile.js?v=59"></script>
-<script defer src="js/extras.js?v=59"></script>
-<script defer src="js/app.js?v=59"></script>
+<script defer src="js/supabase-config.js?v=60"></script>
+<script defer src="js/auth.js?v=60"></script>
+<script defer src="js/admin.js?v=60"></script>
+<script defer src="js/profile.js?v=60"></script>
+<script defer src="js/extras.js?v=60"></script>
+<script defer src="js/app.js?v=60"></script>
 </body>
 </html>
