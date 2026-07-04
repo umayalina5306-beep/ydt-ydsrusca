@@ -1204,8 +1204,10 @@ async function loadData() {
   // JSON temel + DB üstüne bindirme (kelime kaybı imkânsız; dosyalar silinirse DB tek başına yeter)
   words = [].concat(a1a2,b1,b2,c1);
   if (dbW.length) applyDbWords(dbW);
+  shuffle(words); // kelimeler alfabetik değil, karışık gelsin
   wordsByRu = {};
   words.forEach(w => { wordsByRu[w.ru] = w; });
+  updateLevelCards();
   synonymGroups = syn; antonymPairs = ant; wordFamilies = fam; videos = vids;
   try {
     if (typeof sb !== 'undefined' && sb) {
@@ -3153,12 +3155,19 @@ async function adminAddQuestion() {
   if (!q || opts.some(o => !o)) { uiAlert('Soru ve 4 şık da dolu olmalı.'); return; }
   if (!cEl) { uiAlert('Doğru şıkkı seç.'); return; }
   try {
-    await sb.from('placement_questions').insert({ level: level, question: q, options: opts, correct: parseInt(cEl.value, 10), tag: 'kelime', active: true });
-    toast('Soru eklendi.');
-    ['pq-q','pq-o0','pq-o1','pq-o2','pq-o3'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-    if (cEl) cEl.checked = false;
-    placementPool = null; adminQuestionStats();
-  } catch (e) { uiAlert('Eklenemedi. Yönetici yetkisi ve placement_questions tablosu gerekli.'); }
+    const row = { level: level, question: q, options: opts, correct: parseInt(cEl.value, 10), tag: 'kelime', active: true };
+    if (typeof _pqEditId !== 'undefined' && _pqEditId) {
+      const { error } = await sb.from('placement_questions').update(row).eq('id', _pqEditId);
+      if (error) throw error;
+      toast('Soru güncellendi.');
+    } else {
+      const { error } = await sb.from('placement_questions').insert(row);
+      if (error) throw error;
+      toast('Soru eklendi.');
+    }
+    pqFormClear();
+    placementPool = null; adminQuestionStats(); adminPqlReload();
+  } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
 }
 async function adminBulkAddQuestions() {
   const raw = _v('pq-json').trim();
@@ -3524,8 +3533,10 @@ async function loadDbWords() {
     const data = await sbFetchAll('content_words', 'ru');
     if (!data) return;
     applyDbWords(data);
+    shuffle(words);
     wordsByRu = {};
     words.forEach(w => { wordsByRu[w.ru] = w; });
+    updateLevelCards();
   } catch (e) { _logDev('DB kelimeleri yüklenemedi:', e); }
 }
 
@@ -4226,4 +4237,76 @@ Not: SQL ve Edge Function kaynak kodları bu zip'te DEĞİLDİR (tarayıcı Supa
   document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 300);
   if (st) st.textContent = 'Kurtarma paketi indirildi ✓';
+}
+
+/* Seviye kartlarındaki kelime sayıları gerçek veriden */
+function updateLevelCards() {
+  const c = (f) => words.filter(f).length;
+  const set = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n.toLocaleString('tr-TR') + ' kelime'; };
+  set('lc-a1a2', c(w => w.level === 'A1' || w.level === 'A2'));
+  set('lc-b1', c(w => w.level === 'B1'));
+  set('lc-b2', c(w => w.level === 'B2'));
+  set('lc-c1', c(w => w.level === 'C1'));
+}
+
+/* ============================================================
+   SORU HAVUZU — listele / düzenle / sil
+   ============================================================ */
+let _pqRows = [];
+let _pqEditId = null;
+const pqlState = { q: '', level: 'all', page: 1 };
+function pqlSet(k, v) { pqlState[k] = v; pqlState.page = 1; renderPqlList(); }
+async function adminPqlReload() {
+  try { _pqRows = await sbFetchAll('placement_questions', 'created_at'); } catch (e) { _pqRows = []; }
+  renderPqlList();
+}
+function renderPqlList() {
+  const box = document.getElementById('pql-list'); if (!box) return;
+  let list = _pqRows;
+  if (pqlState.level !== 'all') list = list.filter(r => r.level === pqlState.level);
+  const q = pqlState.q.toLowerCase();
+  if (q) list = list.filter(r => (r.question || '').toLowerCase().includes(q));
+  const PER = 15;
+  const pages = Math.max(1, Math.ceil(list.length / PER));
+  if (pqlState.page > pages) pqlState.page = pages;
+  const slice = list.slice((pqlState.page - 1) * PER, pqlState.page * PER);
+  if (!list.length) { box.innerHTML = '<div class="profile-empty">Eşleşen soru yok.</div>'; return; }
+  let pager = '';
+  if (pages > 1) pager = `<div class="kv-pager">${pqlState.page > 1 ? `<button class="kv-pg" onclick="pqlState.page--;renderPqlList();">‹</button>` : ''}<span class="kv-count" style="margin:0 8px;">Sayfa ${pqlState.page}/${pages} · ${list.length} soru</span>${pqlState.page < pages ? `<button class="kv-pg" onclick="pqlState.page++;renderPqlList();">›</button>` : ''}</div>`;
+  box.innerHTML = slice.map(r => {
+    const opts = Array.isArray(r.options) ? r.options : [];
+    return `<div class="cw-row">
+      <div class="cw-main"><b>${_escHtml((r.question || '').slice(0, 80))}</b> <span class="kv-lvl">${r.level || ''}</span> <span class="cw-cat">${_escHtml(r.tag || '')}</span>
+        <div class="err-meta">Doğru: ${_escHtml(String(opts[r.correct] || ''))}</div></div>
+      <div class="cw-acts">
+        <button class="mail-act" onclick="pqEdit('${r.id}')">✏️ Düzenle</button>
+        <button class="mail-act red" onclick="pqDelete('${r.id}')">🗑️ Sil</button>
+      </div>
+    </div>`;
+  }).join('') + pager;
+}
+function pqFormClear() {
+  _pqEditId = null;
+  ['pq-q','pq-o0','pq-o1','pq-o2','pq-o3'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const c = document.querySelector('input[name="pq-correct"]:checked'); if (c) c.checked = false;
+  const btn = document.getElementById('pq-save-btn'); if (btn) btn.textContent = 'Soru Ekle';
+}
+function pqEdit(id) {
+  const r = _pqRows.find(x => x.id === id); if (!r) return;
+  _pqEditId = id;
+  document.getElementById('pq-level').value = r.level || 'A1';
+  document.getElementById('pq-q').value = r.question || '';
+  const opts = Array.isArray(r.options) ? r.options : [];
+  ['pq-o0','pq-o1','pq-o2','pq-o3'].forEach((eid, i) => { document.getElementById(eid).value = opts[i] || ''; });
+  const radio = document.querySelector(`input[name="pq-correct"][value="${r.correct}"]`); if (radio) radio.checked = true;
+  const btn = document.getElementById('pq-save-btn'); if (btn) btn.textContent = 'Değişiklikleri Kaydet';
+  document.getElementById('pq-q').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+async function pqDelete(id) {
+  if (!(await uiConfirm('Bu soru havuzdan kalıcı olarak silinsin mi?', 'Soruyu Sil', { danger: true }))) return;
+  try {
+    await sb.from('placement_questions').delete().eq('id', id);
+    placementPool = null;
+    adminPqlReload(); adminQuestionStats();
+  } catch (e) { uiAlert('Silinemedi.'); }
 }
