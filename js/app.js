@@ -1093,22 +1093,53 @@ function showResult(){
 
 // VIDEO
 function renderVideos(){
-  document.getElementById('video-grid').innerHTML=videos.map(v=>`
+  const grid = document.getElementById('video-grid'); if (!grid) return;
+  grid.innerHTML = videos.map((v, i) => {
+    const thumb = v.thumb ? `background-image:url('${_escAttr(v.thumb)}');background-size:cover;background-position:center;` : `background:${v.locked?'#1a2744':'#003580'};`;
+    const playAct = v.locked ? "showPage('pricing')" : `playVideo(${i})`;
+    return `
     <div class="video-card ${v.locked?'video-locked':''}">
-      <div class="video-thumb" style="background:${v.locked?'#1a2744':'#003580'}">
-        <div class="video-thumb-num">${v.num}</div>
+      <div class="video-thumb" style="${thumb}">
+        <div class="video-thumb-num">${v.num || ''}</div>
         ${v.locked?'<div class="video-lock-icon">🔒</div>':''}
-        <div class="video-play" onclick="${v.locked?'showPage(\'pricing\')':'toast(\'Video yakında eklenecek!\')'}">
+        <div class="video-play" onclick="${playAct}">
           ${v.locked?'🔒':'▶'}
         </div>
       </div>
       <div class="video-info">
-        <div class="video-level">${v.level} Seviye</div>
-        <div class="video-title">${v.title}</div>
-        <div class="video-desc">${v.desc}</div>
+        <div class="video-level">${_escHtml(v.level || '')} Seviye</div>
+        <div class="video-title">${_escHtml(v.title || '')}</div>
+        <div class="video-desc">${_escHtml(v.desc || '')}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
+}
+function playVideo(i) {
+  const v = videos[i]; if (!v) return;
+  if (v.locked) { showPage('pricing'); return; }
+  if (v.source === 'youtube' && v.video_id) {
+    const ov = document.createElement('div');
+    ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9000';
+    ov.innerHTML = `<div class="ui-modal video-modal"><div class="video-modal-head"><b>${_escHtml(v.title||'')}</b><button class="sup-del" onclick="this.closest('.ui-modal-overlay').remove()">×</button></div>
+      <div class="video-frame"><iframe src="https://www.youtube-nocookie.com/embed/${_escAttr(v.video_id)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div></div>`;
+    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+    if (typeof logActivity === 'function') logActivity('videos', 1);
+  } else {
+    toast('Bu videonun bağlantısı henüz eklenmedi.');
+  }
+}
+async function refreshVideosFromDb() {
+  try {
+    const { data } = await sb.from('content_videos').select('*').eq('active', true).order('num').limit(1000);
+    if (data) { videos = data.map(r => ({ num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb })); renderVideos(); }
+  } catch (e) {}
+}
+async function refreshPqFromDb() {
+  try {
+    const { data } = await sb.from('content_pquestions').select('*').eq('active', true).limit(2000);
+    if (data && data.length) paragraphQuestions = data.map(r => ({ id: r.id, level: r.level, konu: r.konu, paragraf: r.paragraf, soru: r.soru, siklar: Array.isArray(r.siklar) ? r.siklar : JSON.parse(r.siklar || '[]'), dogru: r.dogru, aciklama: r.aciklama || '' }));
+  } catch (e) {}
 }
 
 // NAV
@@ -3350,7 +3381,7 @@ function trackPageView(pageId) {
 
 async function _visitData(days) {
   const since = new Date(); since.setDate(since.getDate() - days);
-  const { data } = await sb.from('page_views').select('path, created_at')
+  const { data } = await sb.from('page_views').select('path, created_at, referrer')
     .gte('created_at', since.toISOString()).order('created_at', { ascending: false }).limit(5000);
   return data || [];
 }
@@ -3392,6 +3423,29 @@ async function renderVisitsFull() {
       <div class="st-card"><div class="st-card-num">${week}</div><div class="st-card-lab">Son 7 Gün</div></div>
       <div class="st-card"><div class="st-card-num">${total}</div><div class="st-card-lab">Son 30 Gün</div></div>
     </div>
+    <h4 class="st-h3">Trafik Kaynakları (30 gün)</h4>
+    ${(() => {
+      const src = {};
+      rows.forEach(r => {
+        let k = 'Doğrudan / Uygulama';
+        const ref = (r.referrer || '').toLowerCase();
+        if (ref) {
+          if (ref.includes('google')) k = 'Google';
+          else if (ref.includes('instagram')) k = 'Instagram';
+          else if (ref.includes('facebook')) k = 'Facebook';
+          else if (ref.includes('t.co') || ref.includes('twitter') || ref.includes('x.com')) k = 'X (Twitter)';
+          else if (ref.includes('youtube')) k = 'YouTube';
+          else if (ref.includes('whatsapp')) k = 'WhatsApp';
+          else if (ref.includes('t.me') || ref.includes('telegram')) k = 'Telegram';
+          else if (ref.includes('ydt-ydsrusca')) k = null; // site içi geçiş, sayma
+          else { try { k = new URL(r.referrer).hostname; } catch (e) { k = 'Diğer'; } }
+        }
+        if (k) src[k] = (src[k] || 0) + 1;
+      });
+      const top = Object.entries(src).sort((a, b) => b[1] - a[1]).slice(0, 8);
+      const mx = Math.max(1, ...top.map(t => t[1]));
+      return top.map(t => `<div class="st-bar-row"><span class="st-bar-lab" style="width:130px">${_escHtml(t[0])}</span><div class="st-bar-track"><div class="st-bar-fill" style="width:${Math.round(t[1]/mx*100)}%"></div></div><span class="st-bar-val">${t[1]}</span></div>`).join('') || '<div class="profile-empty">Henüz kaynak verisi yok.</div>';
+    })()}
     <h4 class="st-h3">En Çok Ziyaret Edilen Sayfalar (30 gün)</h4>
     ${top.map(t => `<div class="st-bar-row"><span class="st-bar-lab" style="width:110px">${pageNames[t[0]]||t[0]}</span><div class="st-bar-track"><div class="st-bar-fill" style="width:${Math.round(t[1]/maxP*100)}%"></div></div><span class="st-bar-val">${t[1]}</span></div>`).join('') || '<div class="profile-empty">Henüz veri yok.</div>'}
     <div class="pg-foot">Not: Kayıtlar tarayıcıdan toplanır (saat başına sayfa başı 1 kayıt). Derin analiz (ülke, cihaz, gerçek benzersiz ziyaretçi) için Cloudflare panelindeki <b>Analytics</b> sekmesi de kullanılabilir.</div>`;
@@ -3913,11 +3967,11 @@ async function adminPqSave() {
   try {
     if (id) { const { error } = await sb.from('content_pquestions').update(row).eq('id', id); if (error) throw error; }
     else { const { error } = await sb.from('content_pquestions').insert(row); if (error) throw error; }
-    toast('Soru kaydedildi.'); adminPqFormClear(); adminPqReload();
+    toast('Soru kaydedildi.'); adminPqFormClear(); adminPqReload(); refreshPqFromDb();
   } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e) + ' — content_pquestions.sql çalıştı mı?'); }
 }
 async function adminPqHide(id) {
-  try { await sb.from('content_pquestions').update({ active: false }).eq('id', id); adminPqReload(); } catch (e) {}
+  try { await sb.from('content_pquestions').update({ active: false }).eq('id', id); adminPqReload(); refreshPqFromDb(); } catch (e) {}
 }
 async function adminPqRestore(id) {
   try { await sb.from('content_pquestions').update({ active: true }).eq('id', id); adminPqReload(); } catch (e) {}
@@ -3936,7 +3990,7 @@ async function adminPqImportJson() {
   try {
     const { error } = await sb.from('content_pquestions').insert(rows);
     if (error) throw error;
-    await uiAlert(rows.length + ' soru eklendi.', 'İçe Aktarma'); ta.value = ''; adminPqReload();
+    await uiAlert(rows.length + ' soru eklendi.', 'İçe Aktarma'); ta.value = ''; adminPqReload(); refreshPqFromDb();
   } catch (e) { uiAlert('Eklenemedi: ' + ((e && e.message) || e)); }
 }
 async function adminPqMigrate() {
@@ -3965,7 +4019,7 @@ function _maintOverlay() {
   if (document.getElementById('maint-overlay')) return;
   const d = document.createElement('div');
   d.id = 'maint-overlay';
-  d.innerHTML = '<div class="maint-box"><div style="font-size:3rem;">🚧</div><h2>Bakımdayız</h2><p>Sitemiz kısa süreliğine bakımda. Birazdan tekrar buradayız — anlayışınız için teşekkürler!</p><div class="maint-brand">YDT-YDS Rusça</div></div>';
+  d.innerHTML = '<div class="maint-box"><div style="font-size:3rem;">🚧</div><h2>Kısa Bir Bakımdayız</h2><p>Siteyi sizin için daha iyi hale getiriyoruz. <b>En kısa zamanda</b> yeniden buradayız — anlayışınız için teşekkür ederiz. 💙</p><div class="maint-brand">YDT-YDS Rusça</div></div>';
   document.body.appendChild(d);
 }
 
@@ -4035,11 +4089,52 @@ async function adminVidSave() {
     if (id) ({ error } = await sb.from('content_videos').update(row).eq('id', id));
     else ({ error } = await sb.from('content_videos').insert(row));
     if (error) throw error;
-    toast('Video kaydedildi.'); adminVidFormClear(); adminCvReload();
+    toast('Video kaydedildi.'); adminVidFormClear(); adminCvReload(); refreshVideosFromDb();
   } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
 }
 async function adminVidTogglePremium(id, on) {
-  try { await sb.from('content_videos').update({ premium: on }).eq('id', id); adminCvReload(); } catch (e) {}
+  try { await sb.from('content_videos').update({ premium: on }).eq('id', id); adminCvReload(); refreshVideosFromDb(); } catch (e) {}
 }
-async function adminVidHide(id) { try { await sb.from('content_videos').update({ active: false }).eq('id', id); adminCvReload(); } catch (e) {} }
-async function adminVidRestore(id) { try { await sb.from('content_videos').update({ active: true }).eq('id', id); adminCvReload(); } catch (e) {} }
+async function adminVidHide(id) { try { await sb.from('content_videos').update({ active: false }).eq('id', id); adminCvReload(); refreshVideosFromDb(); } catch (e) {} }
+async function adminVidRestore(id) { try { await sb.from('content_videos').update({ active: true }).eq('id', id); adminCvReload(); refreshVideosFromDb(); } catch (e) {} }
+
+/* ============================================================
+   ERİŞİM LOGU — parmak izi + oturum başına 1 kayıt
+   ============================================================ */
+function _fingerprint() {
+  try {
+    const parts = [navigator.userAgent, navigator.language, screen.width + 'x' + screen.height, screen.colorDepth,
+      Intl.DateTimeFormat().resolvedOptions().timeZone || '', navigator.hardwareConcurrency || '', navigator.platform || ''].join('|');
+    let h = 0;
+    for (let i = 0; i < parts.length; i++) { h = ((h << 5) - h + parts.charCodeAt(i)) | 0; }
+    return 'fp_' + (h >>> 0).toString(16);
+  } catch (e) { return 'fp_unknown'; }
+}
+async function logAccessOnce() {
+  try {
+    if (typeof currentUser === 'undefined' || !currentUser || !sb) return;
+    if (sessionStorage.getItem('ydt_al_done')) return;
+    sessionStorage.setItem('ydt_al_done', '1');
+    await sb.functions.invoke('log-access', { body: { fp: _fingerprint() } });
+  } catch (e) {}
+}
+setTimeout(function () { try { logAccessOnce(); } catch (e) {} }, 3000);
+
+/* Kullanıcı detay görünümü (yönetici) */
+async function adminUserDetail(id) {
+  const box = document.getElementById('udet-' + id);
+  if (!box) return;
+  if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = '<div class="profile-empty">Yükleniyor...</div>';
+  try {
+    const [logs, tests] = await Promise.all([
+      sb.from('access_log').select('*').eq('user_id', id).order('created_at', { ascending: false }).limit(8),
+      sb.from('test_results').select('id', { count: 'exact', head: true }).eq('user_id', id)
+    ]);
+    const rows = (logs.data || []).map(l => `<div class="udet-log"><span class="udet-ip">${_escHtml(l.ip || '—')}</span> <span class="cw-cat">${_escHtml(l.country || '')}</span> <span class="cw-cat">${_escHtml(l.fp || '')}</span><div class="err-meta">${_escHtml((l.ua || '').slice(0, 110))} · ${new Date(l.created_at).toLocaleString('tr-TR')}</div></div>`).join('');
+    box.innerHTML = `<div class="udet-stats">Çözülen test (DB): <b>${tests.count ?? '—'}</b></div>
+      <h5 class="udet-h5">Son Erişimler (IP · ülke · parmak izi · cihaz)</h5>
+      ${rows || '<div class="profile-empty">Henüz erişim kaydı yok. (access_log + log-access kuruldu mu? Kayıtlar bundan sonraki girişlerde birikir.)</div>'}`;
+  } catch (e) { box.innerHTML = '<div class="profile-empty">Detay alınamadı (access_log.sql çalıştırıldı mı?).</div>'; }
+}
