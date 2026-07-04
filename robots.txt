@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ydt-ydsrusca.com/sitemap.xml
