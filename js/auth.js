@@ -302,15 +302,21 @@ function cevirHata(msg) {
   if (m.includes("email not confirmed")) return "Önce e-postanı onaylaman gerekiyor.";
   if (m.includes("database error")) return "Veritabanı hatası: profil oluşturma trigger'ı takıldı.";
   if (m.includes("password")) return "Şifre en az 6 karakter olmalı.";
-  return "Bir hata oluştu.";
+  if (m.includes("captcha")) return "Robot doğrulaması geçersiz — kutucuğu yeniden işaretleyip tekrar dene.";
+  if (m.includes("rate limit") || m.includes("too many")) return "Çok fazla deneme yapıldı. Birkaç dakika bekleyip tekrar dene.";
+  if (m.includes("failed to fetch") || m.includes("network")) return "Bağlantı sorunu: internetini kontrol et ve tekrar dene.";
+  if (m.includes("signups not allowed")) return "Yeni kayıtlar şu anda kapalı.";
+  return null; // bilinmeyen hata: teknik metin gösterilecek
 }
 
-// YENİ: Türkçe mesaj + orijinal hata metnini birlikte göster
+/* Giriş/kayıt hatası: net Türkçe açıklama + teknik detay; ayrıca Hata Kayıtları'na düşer */
 function authHata(error) {
   const raw = (error && error.message) || "bilinmeyen hata";
-  _logDev("Auth hatası:", error);
-  authMsg(cevirHata(raw));
+  const tr = cevirHata(raw);
+  authMsg(tr ? tr + " (teknik: " + raw + ")" : "Beklenmeyen bir hata oluştu — teknik detay: " + raw);
+  try { if (typeof window.logError === "function") window.logError("Giriş/kayıt hatası: " + raw, "auth"); } catch (e) {}
 }
+
 
 // Başlat
 if (document.readyState === "loading") {
