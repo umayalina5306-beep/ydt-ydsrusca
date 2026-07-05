@@ -2425,3 +2425,21 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .tb-secper { width:190px; padding:8px 10px; border:1.5px solid var(--light-gray); border-radius:9px; font-size:.85rem; }
 .tb-time { padding:7px 14px; border:1.5px solid var(--light-gray); border-radius:9px; background:var(--white); cursor:pointer; font-size:.85rem; }
 .tb-time.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+
+/* Öneri filtre çipleri (tasarım düzeltmesi) */
+.rec-chip { padding:8px 16px; border:1.5px solid var(--light-gray); border-radius:20px; background:var(--white); cursor:pointer; font-size:.88rem; font-weight:600; color:var(--text); transition:all .15s; }
+.rec-chip:hover { border-color:var(--gold); }
+.rec-chip.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+
+/* Zengin metin editörü */
+.rte-bar { display:flex; align-items:center; gap:4px; flex-wrap:wrap; background:var(--off-white); border:1.5px solid var(--light-gray); border-bottom:none; border-radius:10px 10px 0 0; padding:6px 8px; }
+.rte-btn { min-width:30px; height:28px; border:1px solid transparent; border-radius:6px; background:transparent; cursor:pointer; font-size:.85rem; color:var(--text); }
+.rte-btn:hover { background:#fff; border-color:var(--light-gray); }
+.rte-sep { width:1px; height:18px; background:var(--light-gray); margin:0 4px; }
+.rte-color { display:inline-flex; align-items:center; gap:2px; cursor:pointer; font-size:.85rem; }
+.rte-color input[type=color] { width:22px; height:22px; border:none; padding:0; background:none; cursor:pointer; }
+.rte-size { border:1px solid var(--light-gray); border-radius:6px; padding:3px 6px; font-size:.8rem; background:#fff; }
+.rte-area { min-height:110px; border:1.5px solid var(--light-gray); border-radius:0 0 10px 10px; padding:10px 12px; font-size:.9rem; background:#fff; outline:none; margin-bottom:12px; }
+.rte-area:focus { border-color:var(--gold); }
+.rte-area:empty::before { content:attr(data-ph); color:var(--gray); }
+.rec-desc ul, .rec-desc ol { padding-left:20px; margin:4px 0; }
