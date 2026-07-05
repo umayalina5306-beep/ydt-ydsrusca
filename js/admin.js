@@ -34,7 +34,7 @@ function adminNav(view) {
   if (view === "notify" && typeof anTargetChange === "function") anTargetChange();
   if (view === "support" && typeof adminLoadTickets === "function") { adminTicketView = { mode: "list", ticketId: null, userId: null }; adminLoadTickets(); }
   if (view === "mail" && typeof adminLoadMail === "function") adminLoadMail();
-  if (view === "questions") { if (typeof adminQuestionStats === "function") adminQuestionStats(); if (typeof adminPqlReload === "function") adminPqlReload(); }
+  if (view === "questions") { if (typeof adminQuestionStats === "function") adminQuestionStats(); if (typeof adminPqlReload === "function") adminPqlReload();  if (typeof plcCfgInit === "function") plcCfgInit(); }
   if (view === "pquest" && typeof adminPquestInit === "function") adminPquestInit();
   if (view === "videos" && typeof adminVideosInit === "function") adminVideosInit();
   if (view === "visits") { if (typeof renderVisitsFull === "function") renderVisitsFull(); if (typeof renderSeoCheck === "function") renderSeoCheck(); }
