@@ -62,16 +62,22 @@ function adminNav(view) {
   if (view === "stafflog" && typeof adminStaffLogLoad === "function") adminStaffLogLoad();
 }
 
+let _auIstek = 0; // yarış kilidi: yalnız en son isteğin sonucu ekrana yazılır
 async function loadAdminUsers() {
   const box = document.getElementById("admin-users");
   box.innerHTML = '<div class="admin-loading">Yükleniyor...</div>';
+  const arama = document.getElementById("admin-search");
+  if (arama && arama.value) { _logDev("Kullanıcı araması temizlendi (eski değer):", arama.value); arama.value = ""; }
+  const benimIstek = ++_auIstek;
   try {
     const { data, error } = await sb
       .from("profiles")
       .select("id, email, display_name, plan, is_admin, role, level, streak_count, created_at, premium_until")
       .order("created_at", { ascending: false });
     if (error) throw error;
+    if (benimIstek !== _auIstek) { _logDev("Eski kullanıcı isteği yok sayıldı."); return; }
     _adminUsers = data || [];
+    _logDev("Kullanıcı listesi yüklendi:", _adminUsers.length, "kişi");
     renderAdminStats();
     renderAdminUsers(_adminUsers);
   } catch (e) {
@@ -91,6 +97,7 @@ function renderAdminStats() {
 }
 
 function renderAdminUsers(list) {
+  _logDev("Kullanıcı listesi çiziliyor:", (list || []).length, "kişi");
   const box = document.getElementById("admin-users");
   if (!list.length) { box.innerHTML = '<div class="admin-loading">Kullanıcı bulunamadı.</div>'; return; }
   box.innerHTML = list.map(u => {
@@ -132,6 +139,7 @@ function renderAdminUsers(list) {
 }
 
 function filterAdminUsers(q) {
+  _logDev("Kullanıcı filtresi tetiklendi:", JSON.stringify(q));
   q = (q || "").trim().toLowerCase();
   if (!q) { renderAdminUsers(_adminUsers); return; }
   const f = _adminUsers.filter(u =>
