@@ -843,6 +843,21 @@ function showSetup() {
 
 function shuffle(a){return[...a].sort(()=>Math.random()-0.5);}
 
+
+/* Soru tipine göre ortalama süre (sn) */
+const TYPE_SEC = { 'ru-tr':25, 'tr-ru':25, 'tf':20, 'fill':40, 'yaz':45, 'mix':30, 'paragraf':90 };
+function selectTime(btn) {
+  document.querySelectorAll('#quiz-setup [data-time]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function _applySetupTimer() {
+  const tbtn = document.querySelector('#quiz-setup [data-time].active');
+  if (tbtn && tbtn.dataset.time === 'on') {
+    const per = TYPE_SEC[quizSettings.type] || 30;
+    startQuizTimer(qList.length * per);
+  } else stopQuizTimer();
+}
+
 function startQuiz(){
   reviewReturnTo = null;
   const _rb = document.querySelector('#quiz-setup [data-reveal].active'); quizReveal = _rb ? _rb.dataset.reveal : 'instant';
@@ -859,6 +874,7 @@ function startQuiz(){
     document.getElementById('quiz-result').style.display = 'none';
     document.getElementById('quiz-card').style.display = 'block';
     loadQ();
+    _applySetupTimer();
     return;
   }
   // Seviye filtresi
@@ -884,6 +900,7 @@ function startQuiz(){
   document.getElementById('quiz-result').style.display = 'none';
   document.getElementById('quiz-card').style.display = 'block';
   loadQ();
+  _applySetupTimer();
 }
 
 /* ===== TEST MOTORU — önceden hazırla + tek soruyu çiz (gezinme/atlama destekli) ===== */
@@ -1544,7 +1561,7 @@ function showReviewDone(title, sub) {
 /* ============================================================
    TEST OLUŞTUR — öğrenci kendi pratik testini kurar
    ============================================================ */
-let tb = { type:'ru-tr', source:'all', level:'hepsi', cat:'hepsi', count:20, reveal:'instant' };
+let tb = { type:'ru-tr', source:'all', level:'hepsi', cat:'hepsi', count:20, reveal:'instant', time:'off' };
 let tbSelected = new Set();
 let tbWordsPage = 1;
 let tbSearchQ = '';
@@ -1566,6 +1583,10 @@ function tbPick(kind, val, btn) {
     if (kind === 'type') { document.querySelectorAll('#page-testbuilder .rev-method').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
     if (kind === 'count') { document.querySelectorAll('#page-testbuilder .tb-count').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
     if (kind === 'reveal') { document.querySelectorAll('#page-testbuilder .tb-reveal').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+    if (kind === 'time') {
+      document.querySelectorAll('#page-testbuilder .tb-time').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+      const sp = document.getElementById('tb-secper'); if (sp) sp.style.display = (val === 'on') ? '' : 'none';
+    }
   }
   if (kind === 'source' || kind === 'level' || kind === 'cat') tbWordsPage = 1;
   renderTbWords();
@@ -4402,6 +4423,14 @@ async function startMockExam() {
    DİL SİSTEMİ (TR/RU) — RU modunda üzerine gelince TR anlamı çıkar
    ============================================================ */
 const I18N_EXTRA = {
+  subWords: { tr: "Önce seviyeni seç, sonra kategoriye göre kelimeleri incele.", ru: "Сначала выбери уровень, затем изучай слова по категориям." },
+  subLevel: { tr: "Kategori seç ve kelimeleri incele.", ru: "Выбери категорию и изучай слова." },
+  subQuiz: { tr: "Test türünü, kategoriyi ve soru sayısını seç.", ru: "Выбери тип теста, категорию и количество вопросов." },
+  subVideo: { tr: "Adım adım Rusça öğrenin. A1'den başlayıp YDT/YDS seviyesine ulaşın.", ru: "Учи русский шаг за шагом: от A1 до уровня YDT/YDS." },
+  hPricing: { tr: "Sana uygun <span>planı seç</span>", ru: "Выбери <span>подходящий план</span>", html: true },
+  subPricing: { tr: "Ücretsiz önizlemeyle başla, istediğin zaman yükselt.", ru: "Начни с бесплатной версии — обнови в любой момент." },
+  hRecs: { tr: "Film & Kitap <span>Önerileri</span>", ru: "Фильмы и книги: <span>рекомендации</span>", html: true },
+  subRecs: { tr: "Rusçanı geliştirecek film, dizi, anime ve kitaplar — seviyene uygun seç.", ru: "Фильмы, сериалы, аниме и книги для прокачки русского — выбирай по уровню." },
   heroSub: { tr: "Türkiye'nin ilk YDT/YDS odaklı Rusça öğrenme platformu. Kelimeler, testler ve video derslerle sınavda fark yarat.",
              ru: "Первая в Турции платформа русского языка для YDT/YDS. Слова, тесты и видеоуроки — добейся успеха на экзамене." },
   ctaStart: { tr: "Hemen Başla →", ru: "Начать сейчас →" },
@@ -4426,6 +4455,7 @@ const I18N = {
   nav_words: { tr: 'Kelimeler', ru: 'Слова' },
   nav_quiz: { tr: 'Testler', ru: 'Тесты' },
   nav_video: { tr: 'Video Dersler', ru: 'Видеоуроки' },
+  nav_recs: { tr: 'Öneriler', ru: 'Рекомендации' },
   nav_pricing: { tr: 'Fiyatlar', ru: 'Цены' },
   btn_login: { tr: 'Giriş Yap', ru: 'Войти' },
   btn_signup: { tr: 'Üye Ol', ru: 'Регистрация' },
@@ -4446,8 +4476,39 @@ function applyLangExtra(lang) {
     const e = I18N_EXTRA[k]; if (!e) return;
     const v = e[lang] || e.tr;
     if (e.html) el.innerHTML = v; else el.textContent = v;
+    // RU modunda üzerine gelince Türkçesi görünsün
+    if (lang === 'ru') el.setAttribute('data-tip', e.tr.replace(/<[^>]*>/g, ''));
+    else el.removeAttribute('data-tip');
   });
 }
+
+/* ---- Akıllı balon: imlecin/öğenin ekrana uzaklığına göre üstte ya da altta ---- */
+let _ruTipBox = null, _ruTipCur = null;
+function _ruTipHide() { if (_ruTipBox) { _ruTipBox.remove(); _ruTipBox = null; } _ruTipCur = null; }
+document.addEventListener('mouseover', function (e) {
+  if (!document.body.classList.contains('lang-ru')) { _ruTipHide(); return; }
+  const t = e.target.closest ? e.target.closest('[data-tip]') : null;
+  if (!t) { _ruTipHide(); return; }
+  if (t === _ruTipCur) return;
+  _ruTipHide();
+  const txt = t.getAttribute('data-tip'); if (!txt) return;
+  _ruTipCur = t;
+  _ruTipBox = document.createElement('div');
+  _ruTipBox.className = 'ru-tip';
+  _ruTipBox.textContent = txt;
+  document.body.appendChild(_ruTipBox);
+  const r = t.getBoundingClientRect();
+  const tw = _ruTipBox.offsetWidth, th = _ruTipBox.offsetHeight;
+  // Üstte yeterli boşluk varsa üste, yoksa alta konumlan
+  const above = r.top >= th + 14;
+  const top = above ? (r.top - th - 9) : (r.bottom + 9);
+  let left = r.left + r.width / 2 - tw / 2;
+  left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
+  _ruTipBox.style.top = top + 'px';
+  _ruTipBox.style.left = left + 'px';
+  _ruTipBox.classList.add(above ? 'above' : 'below');
+});
+window.addEventListener('scroll', _ruTipHide, true);
 function applyLang() {
   const lang = getLang();
   document.body.classList.toggle('lang-ru', lang === 'ru');
@@ -4584,4 +4645,126 @@ function recordTopicStat(item, ok) {
     if (item.level) bump('lvl:' + item.level);
     localStorage.setItem('ydt_topic_stats', JSON.stringify(st));
   } catch (e) {}
+}
+
+/* ============================================================
+   ÖNERİLER — film/dizi/anime/kitap (site + panel)
+   ============================================================ */
+let recsList = [], recsType = 'all';
+const RC_EMO = { film: '🎬', dizi: '📺', anime: '🌸', kitap: '📚' };
+const RC_LAB = { film: 'Film', dizi: 'Dizi', anime: 'Anime', kitap: 'Kitap' };
+async function loadRecs() {
+  try {
+    const { data } = await sb.from('content_recs').select('*').eq('active', true).order('sort').limit(1000);
+    recsList = data || [];
+  } catch (e) { recsList = []; }
+  renderRecs();
+}
+function recsSetType(t, btn) {
+  recsType = t;
+  document.querySelectorAll('.recs-filters .cat-chip').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderRecs();
+}
+function renderRecs() {
+  const grid = document.getElementById('recs-grid'); if (!grid) return;
+  let list = recsList;
+  if (recsType !== 'all') list = list.filter(r => r.rtype === recsType);
+  if (!list.length) { grid.innerHTML = '<div class="profile-empty">Bu kategoride henüz öneri yok — yakında! 🎬</div>'; return; }
+  grid.innerHTML = list.map((r, i) => {
+    const idx = recsList.indexOf(r);
+    const bg = r.thumb ? `background-image:url('${_escAttr(r.thumb)}');background-size:cover;background-position:center;` : '';
+    return `<div class="rec-card">
+      <div class="rec-thumb" style="${bg}">${r.thumb ? '' : `<span class="rec-emoji">${RC_EMO[r.rtype] || '⭐'}</span>`}</div>
+      <div class="rec-body">
+        <div class="rec-chips"><span class="cw-cat">${RC_EMO[r.rtype] || ''} ${RC_LAB[r.rtype] || r.rtype}</span> <span class="kv-lvl">${_escHtml(r.level || '')}+ seviye</span></div>
+        <div class="rec-title">${_escHtml(r.title)}</div>
+        <div class="rec-desc">${_escHtml(r.descr || '')}</div>
+        <div class="rec-acts">
+          ${r.trailer ? `<button class="mail-act" onclick="recTrailer(${idx})">▶ Fragman</button>` : ''}
+          ${r.link ? `<a class="mail-act" href="${_escAttr(r.link)}" target="_blank" rel="noopener">🔗 ${r.rtype === 'kitap' ? 'İncele' : 'Nerede izlenir'}</a>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function recTrailer(i) {
+  const r = recsList[i]; if (!r || !r.trailer) return;
+  const ov = document.createElement('div');
+  ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9000';
+  ov.innerHTML = `<div class="ui-modal video-modal"><div class="video-modal-head"><b>${_escHtml(r.title)} — Fragman</b><button class="sup-del" onclick="this.closest('.ui-modal-overlay').remove()">×</button></div>
+    <div class="video-frame"><iframe src="https://www.youtube-nocookie.com/embed/${_escAttr(r.trailer)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div></div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+setTimeout(function () { try { if (typeof sb !== 'undefined' && sb) loadRecs(); } catch (e) {} }, 1200);
+
+/* ---- Panel: öneri CRUD ---- */
+let _rcRows = [];
+async function adminRecsInit() { await adminRcReload(); }
+async function adminRcReload() {
+  try { const { data } = await sb.from('content_recs').select('*').order('sort').limit(1000); _rcRows = data || []; }
+  catch (e) { _rcRows = []; }
+  const st = document.getElementById('rc-stats');
+  if (st) {
+    const act = _rcRows.filter(r => r.active !== false);
+    st.innerHTML = `Toplam <b>${act.length}</b> öneri (${['film','dizi','anime','kitap'].map(t => RC_EMO[t] + ' ' + act.filter(r => r.rtype === t).length).join(' · ')}) · gizli: ${_rcRows.length - act.length}`;
+  }
+  renderRcList();
+}
+function renderRcList() {
+  const box = document.getElementById('rc-list'); if (!box) return;
+  if (!_rcRows.length) { box.innerHTML = '<div class="profile-empty">Henüz öneri yok. Yukarıdan ilkini ekle! (content_recs.sql çalıştırıldı mı?)</div>'; return; }
+  box.innerHTML = _rcRows.map(r => `
+    <div class="cw-row ${r.active === false ? 'off' : ''}">
+      <div class="cv-thumbbox">${r.thumb ? `<img src="${_escAttr(r.thumb)}" alt="">` : (RC_EMO[r.rtype] || '⭐')}</div>
+      <div class="cw-main" style="flex:1;"><b>${_escHtml(r.title)}</b> <span class="cw-cat">${RC_LAB[r.rtype] || r.rtype}</span> <span class="kv-lvl">${r.level || ''}+</span>
+        ${r.trailer ? '<span class="cw-cat">▶ fragman</span>' : ''}${r.active === false ? ' <span class="mail-member no">Gizli</span>' : ''}
+        <div class="err-meta">${_escHtml((r.descr || '').slice(0, 90))}</div></div>
+      <div class="cw-acts">
+        <button class="mail-act" onclick="adminRcEdit('${r.id}')">✏️</button>
+        ${r.active === false
+          ? `<button class="mail-act" onclick="adminRcRestore('${r.id}')">↩️</button>
+             <button class="mail-act red" onclick="adminRcPurge('${r.id}')">❌</button>`
+          : `<button class="mail-act red" onclick="adminRcHide('${r.id}')">🗑️</button>`}
+      </div>
+    </div>`).join('');
+}
+function adminRcFormClear() {
+  ['rc-id','rc-title','rc-desc','rc-thumb','rc-trailer','rc-link'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const btn = document.getElementById('rc-save-btn'); if (btn) btn.textContent = 'Öneri Ekle';
+}
+function adminRcEdit(id) {
+  const r = _rcRows.find(x => x.id === id); if (!r) return;
+  document.getElementById('rc-id').value = r.id;
+  document.getElementById('rc-type').value = r.rtype || 'film';
+  document.getElementById('rc-title').value = r.title || '';
+  document.getElementById('rc-level').value = r.level || 'A2';
+  document.getElementById('rc-desc').value = r.descr || '';
+  document.getElementById('rc-thumb').value = r.thumb || '';
+  document.getElementById('rc-trailer').value = r.trailer || '';
+  document.getElementById('rc-link').value = r.link || '';
+  const btn = document.getElementById('rc-save-btn'); if (btn) btn.textContent = 'Değişiklikleri Kaydet';
+  document.getElementById('rc-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+async function adminRcSave() {
+  const title = _cwVal('rc-title'); if (!title) { uiAlert('Başlık zorunlu.'); return; }
+  let trailer = _cwVal('rc-trailer');
+  const ym = trailer.match(/(?:youtu\.be\/|v=)([\w-]{6,})/); if (ym) trailer = ym[1]; // tam link yapıştırılırsa ID'yi ayıkla
+  const row = { rtype: _cwVal('rc-type'), title, level: _cwVal('rc-level'), descr: _cwVal('rc-desc') || null,
+    thumb: _cwVal('rc-thumb') || null, trailer: trailer || null, link: _cwVal('rc-link') || null, active: true };
+  const id = _cwVal('rc-id');
+  try {
+    let error;
+    if (id) ({ error } = await sb.from('content_recs').update(row).eq('id', id));
+    else ({ error } = await sb.from('content_recs').insert(row));
+    if (error) throw error;
+    toast('Öneri kaydedildi.'); adminRcFormClear(); adminRcReload(); loadRecs();
+  } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e) + ' — content_recs.sql çalıştı mı?'); }
+}
+async function adminRcHide(id) { try { await sb.from('content_recs').update({ active: false }).eq('id', id); adminRcReload(); loadRecs(); } catch (e) {} }
+async function adminRcRestore(id) { try { await sb.from('content_recs').update({ active: true }).eq('id', id); adminRcReload(); loadRecs(); } catch (e) {} }
+async function adminRcPurge(id) {
+  if (!(await uiConfirm('Bu öneri temelli silinsin mi?', 'Temelli Sil', { danger: true }))) return;
+  try { await sb.from('content_recs').delete().eq('id', id); adminRcReload(); loadRecs(); } catch (e) {}
 }
