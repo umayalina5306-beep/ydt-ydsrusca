@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=81">
+<link rel="stylesheet" href="css/style.css?v=82">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=81" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=82" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words">Kelimeler</button></li>
@@ -69,6 +69,7 @@
       <span id="account-admin" title="Yönetici" style="display:none; color:var(--gold); font-weight:700;">★</span>
       <span id="notif-bell" class="notif-bell" onclick="toggleNotifPanel(event)" title="Bildirimler" style="display:none;">🔔<span id="notif-count" class="notif-count" style="display:none;">0</span><div id="notif-panel" class="notif-panel" style="display:none;"></div></span>
       <button id="nav-profile-link" class="btn-login" onclick="showPage('profile')">Profilim</button>
+      <button id="nav-teacher-link" class="btn-login" style="display:none;" onclick="showPage('teacher')">Öğretmen</button>
       <button id="nav-admin-link" class="btn-login" style="display:none;" onclick="showPage('admin')">Yönetim</button>
       <button class="btn-login" onclick="authLogout()">Çıkış</button>
     </div>
@@ -753,6 +754,16 @@
 </div>
 
 <!-- ===== VIDEO ===== -->
+<div id="page-teacher" class="page">
+  <section class="words-section">
+    <div class="words-header"><div>
+      <h2>Öğretmen <span>Paneli</span></h2>
+      <p>Sana atanan öğrencilerin ilerlemesi burada görünecek. Bu ekranın tam sürümü (öğrenci analizleri, bildirim ve mail gönderme) bir sonraki güncellemede geliyor.</p>
+    </div></div>
+    <div class="profile-empty">🎓 Öğrenci listen ve analiz kartları çok yakında burada.</div>
+  </section>
+</div>
+
 <div id="page-recs" class="page">
   <section class="words-section">
     <div class="words-header">
@@ -1138,6 +1149,7 @@
         <div class="psb-menu">
           <button class="psb-item" id="asb-overview" onclick="adminNav('overview')"><span class="psb-ic">📊</span> Genel Bakış</button>
           <button class="psb-item" id="asb-users" onclick="adminNav('users')"><span class="psb-ic">👥</span> Kullanıcılar</button>
+          <button class="psb-item" id="asb-assign" onclick="adminNav('assign')"><span class="psb-ic">🎓</span> Öğretmen Atama</button>
           <button class="psb-item" id="asb-content" onclick="adminNav('content')"><span class="psb-ic">📚</span> İçerik (Kelimeler)</button>
           <button class="psb-item" id="asb-notify" onclick="adminNav('notify')"><span class="psb-ic">🔔</span> Bildirim Gönder</button>
           <button class="psb-item" id="asb-support" onclick="adminNav('support')"><span class="psb-ic">💬</span> Destek Talepleri</button>
@@ -1149,6 +1161,7 @@
           <button class="psb-item" id="asb-visits" onclick="adminNav('visits')"><span class="psb-ic">📈</span> Ziyaret & SEO</button>
           <button class="psb-item" id="asb-settings" onclick="adminNav('settings')"><span class="psb-ic">⚙️</span> Site Ayarları</button>
           <button class="psb-item" id="asb-backup" onclick="adminNav('backup')"><span class="psb-ic">💾</span> Yedekleme</button>
+          <button class="psb-item" id="asb-stafflog" onclick="adminNav('stafflog')"><span class="psb-ic">🧾</span> İşlem Logları</button>
           <button class="psb-item" id="asb-errors" onclick="adminNav('errors')"><span class="psb-ic">🛠️</span> Hata Kayıtları</button>
         </div>
       </aside>
@@ -1453,6 +1466,33 @@
           </div>
         </div>
 
+        <div id="av-assign" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Öğretmen Atama</h2>
+          <p class="profile-sub">Öğrenciyi öğretmene bağla. Öğretmen, kendi öğrencilerinin ilerlemesini görebilir. Tüm atamalar loglanır.</p>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">➕ Yeni Eşleştirme</h3>
+            <div class="pq-row2">
+              <select id="asg-teacher" class="pq-input"></select>
+              <select id="asg-student" class="pq-input"></select>
+              <button class="set-btn" onclick="adminAssignAdd()">Eşleştir</button>
+            </div>
+            <p class="pq-hint">Öğretmen listesi boşsa: Kullanıcılar sekmesinden bir kullanıcıya "Rol: Öğretmen" ver.</p>
+          </div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">📋 Mevcut Eşleştirmeler</h3>
+            <div id="asg-list"><div class="profile-empty">Yükleniyor...</div></div>
+          </div>
+        </div>
+
+        <div id="av-stafflog" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">İşlem Logları</h2>
+          <p class="profile-sub">Destek ve öğretmen hesaplarının yaptığı işlemler (rol değişimi, atama, premium tanımlama, talep mailleri).</p>
+          <div class="admin-notif-card">
+            <div style="margin-bottom:10px;"><button class="set-btn ghost" onclick="adminStaffLogLoad()">Yenile</button></div>
+            <div id="stafflog-list"><div class="profile-empty">Yükleniyor...</div></div>
+          </div>
+        </div>
+
         <div id="av-visits" class="admin-view" style="display:none;">
           <h2 class="profile-h2">Ziyaret & SEO</h2>
           <p class="profile-sub">Trafik istatistikleri ve sayfa içi SEO denetimi.</p>
@@ -1567,12 +1607,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=81"></script>
-<script defer src="js/auth.js?v=81"></script>
-<script defer src="js/admin.js?v=81"></script>
-<script defer src="js/profile.js?v=81"></script>
-<script defer src="js/extras.js?v=81"></script>
-<script defer src="js/app.js?v=81"></script>
+<script defer src="js/supabase-config.js?v=82"></script>
+<script defer src="js/auth.js?v=82"></script>
+<script defer src="js/admin.js?v=82"></script>
+<script defer src="js/profile.js?v=82"></script>
+<script defer src="js/extras.js?v=82"></script>
+<script defer src="js/app.js?v=82"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
