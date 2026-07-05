@@ -4596,34 +4596,42 @@ const RU_TEXT_MAP = {
   "Başlat →": "Начать →", "Testi Kaydet": "Сохранить тест", "Kayıtlı Testlerim": "Мои тесты",
   "Tekrar hedefi": "Цель повторения", "kelime seçildi": "слов выбрано", "Kayıtlı Kelime": "Сохранено слов", "Öğrenilen Kelime": "Выучено слов", "Çözülen Test": "Решено тестов", "İzlenen Video": "Просмотрено видео"
 };
-const RU_TEXT_MAP_REV = {};
-Object.keys(RU_TEXT_MAP).forEach(k => { RU_TEXT_MAP_REV[RU_TEXT_MAP[k]] = k; });
 function applyRuTextMap(lang) {
-  // Çift yönlü tam tarama: RU'da TR->RU, TR'de RU->TR (kalıntı imkânsız)
-  const dict = (lang === 'ru') ? RU_TEXT_MAP : RU_TEXT_MAP_REV;
+  if (lang === 'tr') {
+    // GERİ YÜKLEME: çeviri değil — çevrilen her öğenin sakladığı ORİJİNAL Türkçe metni geri koy
+    document.querySelectorAll('[data-tip-map]').forEach(el => {
+      const orig = el.getAttribute('data-tip');
+      if (orig) {
+        const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        let n;
+        while ((n = w.nextNode())) {
+          const t = (n.nodeValue || '').trim();
+          if (t && t === (RU_TEXT_MAP[orig] || '')) { n.nodeValue = n.nodeValue.replace(t, orig); break; }
+        }
+      }
+      el.removeAttribute('data-tip'); el.removeAttribute('data-tip-map');
+    });
+    return;
+  }
+  // RU: yalnız sözlükteki BİREBİR Türkçe metinleri çevir; orijinali data-tip'te sakla.
+  // Sitenin öz Rusça içeriğine (kelimeler, örnek cümleler) asla dokunulmaz.
   const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   let n;
   while ((n = w.nextNode())) {
     const raw = n.nodeValue; if (!raw) continue;
     const t = raw.trim(); if (!t) continue;
-    const rep = dict[t]; if (!rep) continue;
+    const rep = RU_TEXT_MAP[t]; if (!rep) continue;
+    const pe = n.parentElement;
+    if (pe && pe.hasAttribute('data-i18n')) continue; // onların kendi sistemi var
     n.nodeValue = raw.replace(t, rep);
-    if (lang === 'ru') {
-      const pe = n.parentElement;
-      if (pe && !pe.hasAttribute('data-i18n') && !pe.hasAttribute('data-tip')) {
-        pe.setAttribute('data-tip', t); pe.setAttribute('data-tip-map', '1');
-      }
-    }
-  }
-  if (lang === 'tr') {
-    document.querySelectorAll('[data-tip-map]').forEach(el => { el.removeAttribute('data-tip'); el.removeAttribute('data-tip-map'); });
+    if (pe && !pe.hasAttribute('data-tip')) { pe.setAttribute('data-tip', t); pe.setAttribute('data-tip-map', '1'); }
   }
 }
 if (typeof window !== 'undefined') window.applyRuTextIn = function () { try { applyRuTextMap(getLang()); } catch (e) {} };
 let _i18nMoT = null;
 try {
   const _i18nMo = new MutationObserver(function () {
-    if (getLang() !== 'ru') return; // TR modunda ekranlar zaten TR üretir
+    if (getLang() !== 'ru') return;
     clearTimeout(_i18nMoT);
     _i18nMoT = setTimeout(function () { try { applyLangExtra('ru'); } catch (e) {} }, 300);
   });
