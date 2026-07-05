@@ -23,7 +23,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=69">
+<link rel="stylesheet" href="css/style.css?v=70">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -46,7 +46,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=69" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=70" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active" data-i18n="nav_home">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words" data-i18n="nav_words">Kelimeler</button></li>
@@ -395,7 +395,7 @@
 
         <!-- Soru sayısı -->
         <div class="setup-section">
-          <div class="setup-label">🔢 Soru Sayısı</div>
+          <div class="setup-label" data-i18n="lblCount">🔢 Soru Sayısı</div>
           <div class="setup-options">
             <button class="setup-btn" data-count="10" onclick="selectSetup('count','10',this)">10 Soru</button>
             <button class="setup-btn active" data-count="20" onclick="selectSetup('count','20',this)">20 Soru</button>
@@ -1545,11 +1545,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=69"></script>
-<script defer src="js/auth.js?v=69"></script>
-<script defer src="js/admin.js?v=69"></script>
-<script defer src="js/profile.js?v=69"></script>
-<script defer src="js/extras.js?v=69"></script>
-<script defer src="js/app.js?v=69"></script>
+<script defer src="js/supabase-config.js?v=70"></script>
+<script defer src="js/auth.js?v=70"></script>
+<script defer src="js/admin.js?v=70"></script>
+<script defer src="js/profile.js?v=70"></script>
+<script defer src="js/extras.js?v=70"></script>
+<script defer src="js/app.js?v=70"></script>
 </body>
 </html>
