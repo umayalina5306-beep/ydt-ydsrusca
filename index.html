@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=76">
+<link rel="stylesheet" href="css/style.css?v=78">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=76" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=78" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active" data-i18n="nav_home">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words" data-i18n="nav_words">Kelimeler</button></li>
@@ -1037,6 +1037,10 @@
 
       <div id="pv-settings" class="profile-view" style="display:none;">
         <h2 class="profile-h2" data-i18n="pvSettings">Ayarlar</h2>
+        <div class="admin-notif-card" style="margin-bottom:14px;">
+          <h3 class="an-h3">🌐 Dil & Balon</h3>
+          <label class="cw-check"><input type="checkbox" id="set-rutip" checked onchange="localStorage.setItem('ydt_rutip', this.checked ? 'on' : 'off'); toast(this.checked ? 'Türkçe balonlar açık.' : 'Türkçe balonlar kapalı.');"> Rusça modda kelimelerin üzerine gelince Türkçe balonu göster</label>
+        </div>
         <p class="profile-sub">Hesap ve uygulama tercihlerinizi yönetin.</p>
 
         <div class="st-tabs">
@@ -1558,14 +1562,15 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=76"></script>
-<script defer src="js/auth.js?v=76"></script>
-<script defer src="js/admin.js?v=76"></script>
-<script defer src="js/profile.js?v=76"></script>
-<script defer src="js/extras.js?v=76"></script>
-<script defer src="js/app.js?v=76"></script>
+<script defer src="js/supabase-config.js?v=78"></script>
+<script defer src="js/auth.js?v=78"></script>
+<script defer src="js/admin.js?v=78"></script>
+<script defer src="js/profile.js?v=78"></script>
+<script defer src="js/extras.js?v=78"></script>
+<script defer src="js/app.js?v=78"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
+<script>try{var _rt=document.getElementById('set-rutip');if(_rt)_rt.checked=localStorage.getItem('ydt_rutip')!=='off';}catch(e){}</script>
 </body>
 </html>
