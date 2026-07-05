@@ -2465,3 +2465,27 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .err-del { float:right; margin-left:8px; }
 .cwb-row { display:grid; grid-template-columns:28px 1.2fr 1.2fr 74px 110px; gap:6px; margin-bottom:6px; align-items:center; }
 .cwb-no { font-size:.78rem; color:var(--gray); text-align:right; }
+
+/* Dil düğmesi v2 + sabit "Site dili" rozeti */
+.lang-btn { min-width:78px; font-weight:800; position:relative; border:1.5px solid var(--gold) !important; }
+.lang-btn.ru-on { background:var(--gold); color:var(--blue) !important; }
+.lang-btn:hover::after {
+  content: attr(data-langlabel);
+  position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%);
+  background:var(--blue); color:#fff; border:1px solid var(--gold);
+  padding:5px 11px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
+  box-shadow:0 6px 16px rgba(13,27,42,.3); z-index:1300; pointer-events:none;
+}
+
+/* Yönetim: sol menü daraltıldı, içerik alanı genişledi */
+#page-admin .profile-layout { grid-template-columns: 200px 1fr; }
+#page-admin .psb-item { font-size: .84rem; padding: 9px 10px; }
+/* Toplu ekleme: kelime başına 2 kompakt satır */
+.cwb-word { border-bottom: 1px dashed var(--light-gray); padding: 6px 0; }
+.cwb-row { display:grid; grid-template-columns: 24px 1fr 1fr 64px 92px 70px 150px 40px; gap:5px; align-items:center; }
+.cwb-row2 { display:grid; grid-template-columns: 24px 1fr 1fr; gap:5px; margin-top:4px; }
+.cwb-row2::before { content:''; }
+.cwb-pd { display:flex; gap:4px; font-size:.72rem; }
+.cwb-pd label { display:flex; align-items:center; gap:1px; cursor:pointer; }
+.cwb-prem { cursor:pointer; text-align:center; }
+.word-gender.gender-v { background:#eef2ff; color:#3730a3; }
