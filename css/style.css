@@ -2449,3 +2449,16 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .recs-filters { justify-content:center; }
 .recs-grid { justify-content:center; }
 @media (min-width: 1100px) { .recs-grid { grid-template-columns:repeat(4, 1fr); } }
+
+/* Öneriler boş durumu ortada */
+.recs-grid .profile-empty { grid-column: 1 / -1; text-align:center; }
+/* Profil & yönetim: sol menü ile içerik başlığı aynı üst hizada */
+.profile-h2 { margin-top: 0 !important; }
+#page-profile .profile-layout, #page-admin .profile-layout { align-items: flex-start; }
+.profile-main { padding-top: 0; }
+/* Tekrar Et: yan bar kaldırıldı, tek sütun */
+.rev-sidebar { display: none !important; }
+.rev-layout { display: block !important; }
+/* Hediye premium */
+.gift-opts { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.admin-toggle-col { display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
