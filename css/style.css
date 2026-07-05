@@ -2443,3 +2443,9 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .rte-area:focus { border-color:var(--gold); }
 .rte-area:empty::before { content:attr(data-ph); color:var(--gray); }
 .rec-desc ul, .rec-desc ol { padding-left:20px; margin:4px 0; }
+
+/* Öneriler: düzen — filtreler ortada, ızgara merkezde */
+#page-recs .words-section { max-width:1180px; margin:0 auto; padding:28px 20px 48px; }
+.recs-filters { justify-content:center; }
+.recs-grid { justify-content:center; }
+@media (min-width: 1100px) { .recs-grid { grid-template-columns:repeat(4, 1fr); } }
