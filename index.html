@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=90">
+<link rel="stylesheet" href="css/style.css?v=91">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=90" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=91" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words">Kelimeler</button></li>
@@ -1284,6 +1284,11 @@
               <input class="pq-input" placeholder="🔍 Rusça veya Türkçe ara..." oninput="cwSet('q', this.value)" autocomplete="off">
               <select class="pq-input pq-level" onchange="cwSet('level', this.value)"><option value="all">Tümü</option><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
             </div>
+            <div class="cw-tabs">
+              <button id="cw-tab-active" class="rec-chip active" onclick="cwTrashMode(false)">Aktif Kelimeler</button>
+              <button id="cw-tab-trash" class="rec-chip" onclick="cwTrashMode(true)">🗑️ Çöp Kutusu (<span id="cw-trash-count">0</span>)</button>
+              <button id="cw-purge-all" class="mail-act red" style="display:none; margin-left:auto;" onclick="adminWordPurgeAll()">🧹 Çöpü Tamamen Boşalt</button>
+            </div>
             <div id="cw-list"><div class="profile-empty">Yükleniyor...</div></div>
           </div>
         </div>
@@ -1653,12 +1658,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=90"></script>
-<script defer src="js/auth.js?v=90"></script>
-<script defer src="js/admin.js?v=90"></script>
-<script defer src="js/profile.js?v=90"></script>
-<script defer src="js/extras.js?v=90"></script>
-<script defer src="js/app.js?v=90"></script>
+<script defer src="js/supabase-config.js?v=91"></script>
+<script defer src="js/auth.js?v=91"></script>
+<script defer src="js/admin.js?v=91"></script>
+<script defer src="js/profile.js?v=91"></script>
+<script defer src="js/extras.js?v=91"></script>
+<script defer src="js/app.js?v=91"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
