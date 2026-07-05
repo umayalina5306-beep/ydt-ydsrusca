@@ -379,19 +379,72 @@ async function renderAnalysis() {
       (actKeys.length ? `<div class="ana-row">${actKeys.map(k => `<span class="ana-stat">${AK[k] || k}: <b>${act7[k]}</b></span>`).join("")}</div>`
                       : `<div class="err-meta">Bu hafta kayıtlı aktivite yok — bugün küçük bir adımla başlayabilirsin.</div>`) + `</div>`;
 
+    // ---- Konu Analizi (kategori & seviye bazlı zayıflıklar) ----
+    let topicHtml = "";
+    try {
+      const ts = (typeof _topicStats === "function") ? _topicStats() : {};
+      const CATL = { isim: "İsimler", fiil: "Fiiller", "sıfat": "Sıfatlar", zarf: "Zarflar", zamir: "Zamirler", edat: "Edatlar", "bağlaç": "Bağlaçlar" };
+      const rows = Object.keys(ts)
+        .map(k => ({ k, t: ts[k].t, w: ts[k].w, pct: Math.round(ts[k].w / ts[k].t * 100) }))
+        .filter(r => r.t >= 5)
+        .sort((a, b) => b.pct - a.pct);
+      const cats = rows.filter(r => r.k.startsWith("cat:")).slice(0, 4);
+      const lvls = rows.filter(r => r.k.startsWith("lvl:")).slice(0, 3);
+      const bar = r => {
+        const name = r.k.startsWith("cat:") ? (CATL[r.k.slice(4)] || r.k.slice(4)) : (r.k.slice(4) + " seviyesi");
+        const cls = r.pct >= 40 ? "no" : (r.pct >= 25 ? "" : "ok");
+        return `<div class="ana-topic"><span class="ana-topic-name">${name}</span>
+          <div class="ana-topic-track"><div class="ana-topic-fill ${cls}" style="width:${Math.min(100, r.pct)}%"></div></div>
+          <span class="ana-topic-val">%${r.pct} hata <i>(${r.w}/${r.t})</i></span></div>`;
+      };
+      if (rows.length) {
+        topicHtml = `<div class="ana-card"><div class="ana-h">🔬 Konu Analizi <span class="err-meta" style="font-weight:400;">(çözdüğün kelime sorularından)</span></div>
+          ${cats.length ? `<div class="ana-sub">Kelime türlerine göre hata oranın:</div>` + cats.map(bar).join("") : ""}
+          ${lvls.length ? `<div class="ana-sub" style="margin-top:8px;">Seviyelere göre:</div>` + lvls.map(bar).join("") : ""}
+        </div>`;
+      } else {
+        topicHtml = `<div class="ana-card"><div class="ana-h">🔬 Konu Analizi</div><div class="err-meta">Veri birikiyor — birkaç test çözünce hangi kelime türlerinde (isim/fiil/edat...) ve seviyelerde zorlandığını burada göreceksin.</div></div>`;
+      }
+      // en zayıf konuyu önerilere taşı
+      if (cats.length && cats[0].pct >= 30) {
+        var _weakCat = CATL[cats[0].k.slice(4)] || cats[0].k.slice(4);
+        var _weakCatKey = cats[0].k.slice(4);
+      }
+    } catch (e) {}
+
+    // ---- Koç mesajı (verilerden sentezlenen kişisel özet) ----
+    let coachHtml = "";
+    try {
+      const ad = (currentProfile && currentProfile.display_name) ? currentProfile.display_name.split(" ")[0] : "";
+      const parts = [];
+      parts.push(ad ? `Merhaba ${_escHtml(ad)}! 👋` : "Merhaba! 👋");
+      if (streak >= 3) parts.push(`${streak} günlük serin harika — zinciri kırma.`);
+      else if (streak === 0) parts.push("Bugün küçük bir çalışmayla yeni bir seri başlatmanın tam günü.");
+      if (last5 !== null && prev5 !== null) {
+        const d = last5 - prev5;
+        if (d > 3) parts.push(`Test ortalaman %${prev5}'ten %${last5}'e çıktı; emek karşılığını veriyor. 📈`);
+        else if (d < -3) parts.push(`Son testlerde küçük bir düşüş var (%${prev5}→%${last5}); yeni konu yerine birkaç gün tekrara ağırlık ver.`);
+        else parts.push(`Ortalaman %${last5} civarında istikrarlı gidiyor.`);
+      } else if (last5 !== null) parts.push(`Test ortalaman şu an %${last5}.`);
+      if (typeof _weakCat !== "undefined") parts.push(`Verilerine göre en çok <b>${_weakCat}</b> konusunda zorlanıyorsun — bu haftanın odağı o olsun.`);
+      if ((act7.dailyReviews || 0) === 0) parts.push("Günlük tekrar bu hafta hiç yapılmamış; 10 dakikalık tekrar bile kalıcılığı ikiye katlar.");
+      coachHtml = `<div class="ana-card ana-coach"><div class="ana-h">🧑‍🏫 Koçun Diyor Ki</div><p class="ana-coach-p">${parts.join(" ")}</p></div>`;
+    } catch (e) {}
+
     // ---- Öneriler (kural tabanlı, dürüst) ----
     const recs = [];
     if (!level) recs.push({ t: "🎚️ Önce seviyeni belirle", d: "Sana doğru içerik önerebilmemiz için seviye tespit sınavına gir.", b: "Sınava Gir", fn: "showPage('placement')" });
     if ((act7.dailyReviews || 0) === 0) recs.push({ t: "🔁 Günlük tekrarı aksatma", d: "Bu hafta hiç günlük tekrar yapılmamış; kalıcı öğrenmenin en güçlü aracı bu.", b: "Günlük Tekrara Git", fn: "showPage('review')" });
     if (last5 !== null && last5 < 60) recs.push({ t: "🧠 Temeli sağlamlaştır", d: `Son testlerin ortalaması %${last5}. Yanlış yaptığın kelimeleri kasana ekleyip tekrar etmen puanı hızlı yükseltir.`, b: "Kelime Kasası", fn: "profileNav('saved')" });
     if (last5 !== null && prev5 !== null && (last5 - prev5) < -3) recs.push({ t: "📉 Küçük bir mola sinyali", d: "Son testlerde düşüş var. Yeni kelime eklemek yerine 2-3 gün sadece tekrar yapmak toparlar.", b: "Teste Başla", fn: "showPage('quiz')" });
+    if (typeof _weakCatKey !== "undefined") recs.push({ t: "🔬 Zayıf konuya odaklan: " + _weakCat, d: "Kelime sorularındaki hata oranın en çok bu türde. Test kurucudan yalnız bu kategoriyle 15 soruluk test çöz.", b: "Test Kur", fn: "showPage('quiz')" });
     if ((act7.videos || 0) === 0) recs.push({ t: "🎬 Video dersle pekiştir", d: "Bu hafta hiç video izlenmemiş; konu anlatımı + kelime birlikte daha kalıcı.", b: "Videolara Git", fn: "showPage('videos')" });
     if ((act7.wordsLearned || 0) < 20) recs.push({ t: "🎯 Haftalık kelime hedefi", d: `Bu hafta ${act7.wordsLearned || 0} kelime öğrenildi. Hedefi 20+ yapmak YDS için ideal tempo.`, b: "Kelimelere Git", fn: "showPage('words')" });
     if (!recs.length) recs.push({ t: "🏆 Harika gidiyorsun!", d: "Tüm göstergeler yolunda. Kendini gerçek sınav koşullarında dene.", b: "📝 Deneme Sınavı", fn: "startMockExam()" });
     const recHtml = `<div class="ana-card"><div class="ana-h">💡 Sana Özel Öneriler</div>` +
       recs.slice(0, 4).map(r => `<div class="ana-rec"><b>${r.t}</b><div class="err-meta">${r.d}</div><button class="mail-act" onclick="${r.fn}">${r.b} →</button></div>`).join("") + `</div>`;
 
-    box.innerHTML = stats + trendHtml + recHtml + actHtml + lvlHtml;
+    box.innerHTML = coachHtml + stats + trendHtml + topicHtml + recHtml + actHtml + lvlHtml;
   } catch (e) {
     box.innerHTML = '<div class="profile-empty">Analiz şu an hazırlanamadı.</div>';
   }
