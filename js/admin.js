@@ -10,19 +10,34 @@ async function openAdmin() {
   const gate = document.getElementById("admin-gate");
   const content = document.getElementById("admin-content");
   if (!gate || !content) return;
-  if (!currentUser || !(currentProfile && currentProfile.is_admin)) {
+  const _rol = (currentProfile && currentProfile.role) || "user";
+  const _girebilir = currentProfile && (currentProfile.is_admin || _rol === "destek");
+  if (!currentUser || !_girebilir) {
     gate.style.display = "block";
     content.style.display = "none";
     return;
   }
   gate.style.display = "none";
   content.style.display = "block";
+  _applyRoleUI();
+  if (_isDestek()) { adminNav("support"); return; }
   await loadAdminUsers();   // genel bakış sayıları için
-  if (typeof adminSyncTranslations === "function") adminSyncTranslations(); // koddaki yeni metinler DB'ye
   adminNav("overview");
 }
 
+const DESTEK_VIEWS = ["support", "mail", "assign"];
+function _isSuper() { return !!(currentProfile && currentProfile.is_admin); }
+function _isDestek() { return !!(currentProfile && !currentProfile.is_admin && currentProfile.role === "destek"); }
+function _applyRoleUI() {
+  const destek = _isDestek();
+  document.querySelectorAll("#page-admin .psb-item").forEach(b => {
+    const v = (b.id || "").replace("asb-", "");
+    if (destek) b.style.display = DESTEK_VIEWS.includes(v) ? "" : "none";
+    else b.style.display = (v === "stafflog" && !_isSuper()) ? "none" : "";
+  });
+}
 function adminNav(view) {
+  if (_isDestek() && !DESTEK_VIEWS.includes(view)) view = "support";
   document.querySelectorAll(".admin-view").forEach(v => { v.style.display = "none"; });
   const el = document.getElementById("av-" + view);
   if (el) el.style.display = "block";
@@ -43,6 +58,8 @@ function adminNav(view) {
   if (view === "settings" && typeof adminSettingsInit === "function") adminSettingsInit();
   if (view === "backup" && typeof renderBackupView === "function") renderBackupView();
   if (view === "errors" && typeof adminLoadErrors === "function") adminLoadErrors();
+  if (view === "assign" && typeof adminAssignInit === "function") adminAssignInit();
+  if (view === "stafflog" && typeof adminStaffLogLoad === "function") adminStaffLogLoad();
 }
 
 async function loadAdminUsers() {
@@ -51,7 +68,7 @@ async function loadAdminUsers() {
   try {
     const { data, error } = await sb
       .from("profiles")
-      .select("id, email, display_name, plan, is_admin, level, streak_count, created_at, premium_until")
+      .select("id, email, display_name, plan, is_admin, role, level, streak_count, created_at, premium_until")
       .order("created_at", { ascending: false });
     if (error) throw error;
     _adminUsers = data || [];
@@ -81,9 +98,11 @@ function renderAdminUsers(list) {
     const isPrem = u.plan === "premium";
     const tarih = u.created_at ? new Date(u.created_at).toLocaleDateString("tr-TR") : "";
     const pUntil = (u.plan === "premium" && u.premium_until) ? " · 👑 " + new Date(u.premium_until).toLocaleDateString("tr-TR") + "'e kadar" : "";
-    const planBadge = u.is_admin
+    const ROL_AD = { destek: "🛟 Destek", ogretmen: "👩‍🏫 Öğretmen" };
+    const rolBadge = (!u.is_admin && ROL_AD[u.role]) ? ` <span class="plan-badge plan-role">${ROL_AD[u.role]}</span>` : "";
+    const planBadge = (u.is_admin
       ? '<span class="plan-badge plan-admin">Yönetici</span>'
-      : `<span class="plan-badge ${isPrem ? "plan-premium" : "plan-free"}">${isPrem ? "Premium" : "Ücretsiz"}</span>`;
+      : `<span class="plan-badge ${isPrem ? "plan-premium" : "plan-free"}">${isPrem ? "Premium" : "Ücretsiz"}</span>`) + rolBadge;
     const btn = u.is_admin
       ? ''
       : `<div class="admin-toggle-col">
@@ -99,6 +118,11 @@ function renderAdminUsers(list) {
           <button class="mail-act" onclick="adminUserNotify('${u.id}', '${(u.display_name||'').replace(/'/g,'')}')">🔔 Bildirim</button>
           <button class="mail-act" onclick="adminUserResetPw('${u.email||''}')">🔑 Şifre Sıfırlama Maili</button>
           <button class="mail-act" onclick="adminUserChangeEmail('${u.id}', '${u.email||''}')">📧 E-posta Değiştir</button>
+          ${(_isSuper() && !u.is_admin) ? `<select class="role-select" onchange="adminSetRole('${u.id}', this.value, '${(u.display_name||'').replace(/'/g,'')}')">
+            <option value="user" ${(!u.role||u.role==='user')?'selected':''}>Rol: Kullanıcı</option>
+            <option value="destek" ${u.role==='destek'?'selected':''}>Rol: Destek</option>
+            <option value="ogretmen" ${u.role==='ogretmen'?'selected':''}>Rol: Öğretmen</option>
+          </select>` : ''}
         </div>
         <div id="udet-${u.id}" class="udet-box" style="display:none;"></div>
       </div>
