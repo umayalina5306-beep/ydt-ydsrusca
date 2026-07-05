@@ -232,9 +232,18 @@ async function authLogin() {
   authMsg("Giriş yapılıyor...", true);
   const _ct = turnstileToken();
   if (TURNSTILE_SITE_KEY && !_ct) { authMsg("Lütfen robot olmadığını doğrula (kutucuğu işaretle)."); return; }
-  const { error } = await sb.auth.signInWithPassword({ email, password: pass, options: _ct ? { captchaToken: _ct } : undefined });
+  let { error } = await sb.auth.signInWithPassword({ email, password: pass, options: _ct ? { captchaToken: _ct } : undefined });
+  // Otomatik teşhis: Supabase token'ı reddederse (yanlış/eksik secret ayarı) token'sız bir kez daha dene
+  if (error && _ct && /captcha/i.test(error.message || "")) {
+    try { if (window.logError) window.logError("Captcha token reddedildi: " + error.message, "auth-captcha"); } catch (e) {}
+    const r2 = await sb.auth.signInWithPassword({ email, password: pass });
+    if (!r2.error) {
+      error = null;
+      try { if (window.logError) window.logError("UYARI: Supabase captcha ayarı sorunlu görünüyor (Turnstile SECRET eksik/yanlış olabilir) — giriş token'sız başarıldı.", "auth-captcha"); } catch (e) {}
+    } else { error = r2.error; }
+  }
   turnstileReset();
-  if (error) { authHata(error); return; }        // DEĞİŞTİ: orijinal hatayı da göster
+  if (error) { authHata(error); return; }
   authMsg("");
   closeAuth();
 }
