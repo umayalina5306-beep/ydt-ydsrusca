@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=82">
+<link rel="stylesheet" href="css/style.css?v=83">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=82" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=83" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words">Kelimeler</button></li>
@@ -1212,18 +1212,49 @@
           </div>
 
           <div class="admin-notif-card">
-            <h3 class="an-h3">⚡ Toplu Manuel Ekleme (dosyasız)</h3>
-            <p class="pq-hint">Kaç kelime ekleyeceğini yaz (en çok 100), satırları doldur, tek tuşla hepsini kaydet. Boş satırlar atlanır.</p>
-            <div class="pq-row2">
+            <h3 class="an-h3">⚡ Toplu Kelime Ekle</h3>
+            <p class="pq-hint">Satırlara kelimeleri yaz. Bir satıra tıklayınca sağdaki <b>Kelime Özellikleri</b> paneli o satırı düzenler; yazdıkların satır değiştirsen bile hafızada tutulur. En sonda tek tuşla hepsi veritabanına kaydedilir.</p>
+            <div class="pq-row2" style="margin-bottom:10px;">
               <input id="cwb-count" class="pq-input pq-level" type="number" min="1" max="100" value="10">
-              <button class="set-btn" onclick="cwBulkBuild()">Satırları Oluştur</button>
+              <button class="set-btn ghost" onclick="cwbBuild()">Satırları Oluştur</button>
             </div>
-            <div id="cwb-rows"></div>
-            <button class="set-btn" id="cwb-save" style="display:none;" onclick="cwBulkSave()">💾 Hepsini Kaydet</button>
+            <div class="cwb-layout">
+              <div class="cwb-left">
+                <div class="cwb-hrow"><span>#</span><span>Rusça Kelime</span><span>Türkçe Kelime</span><span></span></div>
+                <div id="cwb-rows"></div>
+                <div class="cwb-foot">
+                  <button class="set-btn" onclick="cwbAddRow()">➕ Kelime Ekle</button>
+                  <span class="cwb-total">Toplam Kelime: <b id="cwb-total">0</b></span>
+                </div>
+              </div>
+              <div class="cwb-right" id="cwb-props" style="display:none;">
+                <h4 class="cwbp-h">⚙️ Kelime Özellikleri <span id="cwbp-no" class="kv-lvl"></span></h4>
+                <label class="cwbp-lbl">Kelime Türü</label>
+                <select id="cwbp-cat" class="pq-input" onchange="cwbProp('cat', this.value)"><option>isim</option><option>fiil</option><option>sıfat</option><option>zarf</option><option>zamir</option><option>edat</option><option>bağlaç</option></select>
+                <label class="cwbp-lbl">Seviye</label>
+                <select id="cwbp-lvl" class="pq-input" onchange="cwbProp('level', this.value)"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
+                <div id="cwbp-gram-wrap">
+                  <label class="cwbp-lbl" id="cwbp-gram-lbl">Cinsiyet</label>
+                  <select id="cwbp-gram" class="pq-input" onchange="cwbProp('cinsiyet', this.value)"></select>
+                </div>
+                <div id="cwbp-padej-wrap" style="display:none;">
+                  <label class="cwbp-lbl">Padej</label>
+                  <div class="cwbp-pd" id="cwbp-padej"></div>
+                </div>
+                <label class="cwbp-lbl">Durum</label>
+                <select id="cwbp-prem" class="pq-input" onchange="cwbProp('premium', this.value === '1')"><option value="">Normal</option><option value="1">👑 Premium</option></select>
+                <label class="cwbp-lbl">Örnek Cümle (Rusça)</label>
+                <textarea id="cwbp-ornek" class="an-textarea cwbp-ta" oninput="cwbProp('ornek', this.value)" placeholder="Örnek cümle giriniz..."></textarea>
+                <label class="cwbp-lbl">Türkçesi</label>
+                <textarea id="cwbp-ornektr" class="an-textarea cwbp-ta" oninput="cwbProp('ornekTr', this.value)" placeholder="Türkçe anlamını yazınız..."></textarea>
+              </div>
+            </div>
+            <button class="set-btn" id="cwb-save" style="display:none; margin-top:12px;" onclick="cwBulkSave()">💾 Hepsini Kaydet</button>
           </div>
+
           <div class="admin-notif-card">
-            <h3 class="an-h3">📦 Toplu Yükleme</h3>
-            <p class="pq-hint">Dosya (.json / .csv / .xlsx) yükle veya JSON'u doğrudan yapıştır. Sütun/alan adları: <code>ru, tr, p, cat, level, ornek, ornekTr, premium</code> (ru ve tr zorunlu). Aynı "ru" varsa üzerine yazılır.</p>
+            <h3 class="an-h3">📦 Toplu Yükleme (dosya / JSON)</h3>
+            <p class="pq-hint">Dosya (.json / .csv / .xlsx) yükle veya JSON'u doğrudan yapıştır. Sütun/alan adları: ru, tr, level, cat (opsiyonel: cinsiyet, padej, ornek, ornek_tr, premium). Aynı "ru" varsa üzerine yazılır.</p>
             <div class="pq-row2">
               <input type="file" id="cw-file" class="pq-input" accept=".json,.csv,.xlsx,.xls">
               <button class="set-btn" onclick="adminWordsImportFile()">Dosyayı İçe Aktar</button>
@@ -1607,12 +1638,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=82"></script>
-<script defer src="js/auth.js?v=82"></script>
-<script defer src="js/admin.js?v=82"></script>
-<script defer src="js/profile.js?v=82"></script>
-<script defer src="js/extras.js?v=82"></script>
-<script defer src="js/app.js?v=82"></script>
+<script defer src="js/supabase-config.js?v=83"></script>
+<script defer src="js/auth.js?v=83"></script>
+<script defer src="js/admin.js?v=83"></script>
+<script defer src="js/profile.js?v=83"></script>
+<script defer src="js/extras.js?v=83"></script>
+<script defer src="js/app.js?v=83"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
