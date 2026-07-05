@@ -96,6 +96,7 @@ function authInit() {
 
   // Oturum durumu değişince arayüzü güncelle (giriş, çıkış, Google dönüşü dahil)
   sb.auth.onAuthStateChange((_event, session) => {
+    if (_event === "PASSWORD_RECOVERY") { setTimeout(openPwReset, 300); }
     handleSession(session);
   });
   // Sayfa açılışında mevcut oturumu yükle
@@ -377,4 +378,52 @@ async function authForgot() {
     if (r.error) throw r.error;
     authMsg("Sıfırlama bağlantısı e-postana gönderildi. Gelen kutunu (ve spam klasörünü) kontrol et.", true);
   } catch (e) { authMsg("Gönderilemedi. E-posta adresini kontrol edip tekrar dene."); }
+}
+
+
+/* ============================================================
+   ŞİFRE SIFIRLAMA EKRANI
+   Mailden gelen linkle dönüldüğünde otomatik açılır;
+   yeni şifre belirlenir (👁 ile görülebilir), hesaba işlenir.
+   ============================================================ */
+if (typeof location !== "undefined" && (location.hash || "").includes("type=recovery")) {
+  window.addEventListener("load", function () { setTimeout(openPwReset, 800); });
+}
+function openPwReset() {
+  if (document.getElementById("pwr-overlay")) return;
+  const ov = document.createElement("div");
+  ov.id = "pwr-overlay";
+  ov.className = "ui-modal-overlay show";
+  ov.style.zIndex = "10000";
+  ov.innerHTML = '<div class="ui-modal" style="max-width:400px;">' +
+    '<h3 class="ui-modal-title">🔑 Yeni Şifre Belirle</h3>' +
+    '<p class="ui-modal-msg">Sıfırlama bağlantısı doğrulandı. Hesabın için yeni bir şifre seç.</p>' +
+    '<div class="pw-wrap" style="margin-bottom:10px;"><input id="pwr-1" class="form-input" type="password" placeholder="Yeni şifre (en az 6 karakter)" autocomplete="new-password">' +
+    '<button type="button" class="pw-eye" onclick="pwToggle(this, \'pwr-1\')">👁</button></div>' +
+    '<div class="pw-wrap" style="margin-bottom:12px;"><input id="pwr-2" class="form-input" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password">' +
+    '<button type="button" class="pw-eye" onclick="pwToggle(this, \'pwr-2\')">👁</button></div>' +
+    '<div id="pwr-msg" style="font-size:.84rem; color:#b91c1c; min-height:18px; margin-bottom:8px;"></div>' +
+    '<button class="set-btn" style="width:100%;" onclick="pwResetSubmit()">Şifreyi Güncelle</button>' +
+    '</div>';
+  document.body.appendChild(ov);
+}
+async function pwResetSubmit() {
+  const p1 = (document.getElementById("pwr-1") || {}).value || "";
+  const p2 = (document.getElementById("pwr-2") || {}).value || "";
+  const msg = document.getElementById("pwr-msg");
+  if (p1.length < 6) { msg.textContent = "Şifre en az 6 karakter olmalı."; return; }
+  if (p1 !== p2) { msg.textContent = "Şifreler birbirini tutmuyor."; return; }
+  msg.style.color = "var(--gray)"; msg.textContent = "Güncelleniyor...";
+  try {
+    const { error } = await sb.auth.updateUser({ password: p1 });
+    if (error) throw error;
+    const ov = document.getElementById("pwr-overlay"); if (ov) ov.remove();
+    try { history.replaceState(null, "", location.pathname); } catch (e) {}
+    if (typeof uiAlert === "function") uiAlert("Şifren güncellendi ve oturumun açıldı. 🎉\n\nArtık yeni şifrenle giriş yapabilirsin.", "🔑 Şifre Güncellendi");
+    else alert("Şifren güncellendi.");
+    try { if (window.logError) {} } catch (e) {}
+  } catch (e) {
+    msg.style.color = "#b91c1c";
+    msg.textContent = "Güncellenemedi: " + ((e && e.message) || e);
+  }
 }
