@@ -2462,3 +2462,4 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 /* Hediye premium */
 .gift-opts { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .admin-toggle-col { display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+.err-del { float:right; margin-left:8px; }
