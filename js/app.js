@@ -108,7 +108,7 @@ function sozlukAra(query) {
     const ncvHTML = w.ncv ? `<div class="word-cv-pair">⇄ НСВ: <b>${w.ncv}</b></div>` : '';
     const extraHTML = (cvHTML||ncvHTML) ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--light-gray);">${cvHTML}${ncvHTML}</div>` : '';
     const genderClass = w.cinsiyet==='м'?'gender-m':w.cinsiyet==='ж'?'gender-f':(w.cinsiyet==='с'?'gender-n':'gender-v');
-    const genderLabel = w.cinsiyet==='м'?'м (eril)':w.cinsiyet==='ж'?'ж (dişil)':w.cinsiyet==='с'?'с (nötr)':(w.cinsiyet==='нсв'?'НСВ':(w.cinsiyet==='св'?'СВ':''));
+    const genderLabel = w.cinsiyet==='м'?'м (eril)':w.cinsiyet==='ж'?'ж (dişil)':w.cinsiyet==='с'?'с (nötr)':'';
     const genderHTML = w.cinsiyet ? `<span class="word-gender ${genderClass}">${genderLabel}</span>` : '';
     const padejHTML = w.padej ? `<span class="word-padej">${w.padej}</span><br>` : '';
     const lc = levelColor[w.level] || '#6b7280';
@@ -338,7 +338,7 @@ function wordCardHTML(w, inBank) {
     const ncvHTML = w.ncv ? `<div class="word-cv-pair">⇄ НСВ: <b>${w.ncv}</b></div>` : '';
     const extraHTML = (cvHTML||ncvHTML) ? `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--light-gray);">${cvHTML}${ncvHTML}</div>` : '';
     const genderClass = w.cinsiyet === 'м' ? 'gender-m' : w.cinsiyet === 'ж' ? 'gender-f' : 'gender-n';
-    const genderLabel = w.cinsiyet === 'м' ? 'м (eril)' : w.cinsiyet === 'ж' ? 'ж (dişil)' : w.cinsiyet === 'с' ? 'с (nötr)' : (w.cinsiyet==='нсв'?'НСВ':(w.cinsiyet==='св'?'СВ':''));
+    const genderLabel = w.cinsiyet === 'м' ? 'м (eril)' : w.cinsiyet === 'ж' ? 'ж (dişil)' : w.cinsiyet === 'с' ? 'с (nötr)' : '';
     const genderHTML = w.cinsiyet ? `<span class="word-gender ${genderClass}">${genderLabel}</span>` : '';
     const padejHTML = w.padej ? `<span class="word-padej">${w.padej}</span><br>` : '';
     const ruSafe = w.ru.replace(/'/g, "\\'");
@@ -3699,6 +3699,7 @@ async function adminWordSave() {
   if (!ru || !tr) { uiAlert('Rusça kelime ve Türkçe anlam zorunlu.'); return; }
   const row = { ru, tr, p: null, cat: _cwVal('cw-cat'), level: _cwVal('cw-lvl'),
     cinsiyet: (_cwVal('cw-cat') === 'edat') ? null : (_cwVal('cw-gram') || null),
+    tip: (_cwVal('cw-cat') === 'fiil') ? ({ 'нсв': 'НСВ', 'св': 'СВ' }[_cwVal('cw-gram')] || null) : null,
     padej: (_cwVal('cw-cat') === 'edat') ? cwPadejValue() : null,
     ornek: _cwVal('cw-ornek') || null, ornek_tr: _cwVal('cw-ornektr') || null,
     premium: document.getElementById('cw-premium').checked, active: true, updated_at: new Date().toISOString() };
@@ -3830,7 +3831,6 @@ function startNotifPolling() {
 }
 if (typeof window !== 'undefined') window.startNotifPolling = startNotifPolling;
 setTimeout(function () { try { startNotifPolling(); } catch (e) {} }, 2000);
-setTimeout(function () { try { _langBtnPaint(); } catch (e) {} }, 300);
 
 /* ============================================================
    YÖNETİCİ — kullanıcı işlemleri (bildirim, şifre maili, e-posta)
@@ -4316,8 +4316,7 @@ Not: SQL ve Edge Function kaynak kodları bu zip'te DEĞİLDİR (tarayıcı Supa
 /* Seviye kartlarındaki kelime sayıları gerçek veriden */
 function updateLevelCards() {
   const c = (f) => words.filter(f).length;
-  const suf = (typeof getLang === 'function' && getLang() === 'ru') ? ' слов' : ' kelime';
-  const set = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n.toLocaleString('tr-TR') + suf; };
+  const set = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n.toLocaleString('tr-TR') + ' kelime'; };
   set('lc-a1a2', c(w => w.level === 'A1' || w.level === 'A2'));
   set('lc-b1', c(w => w.level === 'B1'));
   set('lc-b2', c(w => w.level === 'B2'));
@@ -4439,343 +4438,6 @@ async function startMockExam() {
 /* ============================================================
    DİL SİSTEMİ (TR/RU) — RU modunda üzerine gelince TR anlamı çıkar
    ============================================================ */
-const I18N_EXTRA = {
-  btnBack2: { tr: "← Geri", ru: "← Назад" },
-  rfAll: { tr: "Tümü", ru: "Все" }, rfFilm: { tr: "🎬 Film", ru: "🎬 Фильмы" }, rfDizi: { tr: "📺 Dizi", ru: "📺 Сериалы" }, rfAnime: { tr: "🌸 Anime", ru: "🌸 Аниме" }, rfKitap: { tr: "📚 Kitap", ru: "📚 Книги" },
-  pvOverview:{tr:"Profil Özeti",ru:"Обзор профиля"}, pvKasa:{tr:"Kelime Kasam",ru:"Копилка слов"}, pvLearned:{tr:"Öğrenilen Kelimeler",ru:"Выученные слова"}, pvTests:{tr:"Test Geçmişim",ru:"История тестов"}, pvVideos:{tr:"Video İzleme Geçmişim",ru:"История просмотров"}, pvStats:{tr:"İstatistikler",ru:"Статистика"}, pvTasks:{tr:"Görevler",ru:"Задания"}, pvAnalysis:{tr:"Analiz & Öneri",ru:"Анализ и советы"}, pvSupport:{tr:"Destek",ru:"Поддержка"}, pvSettings:{tr:"Ayarlar",ru:"Настройки"},
-  avOverview:{tr:"Genel Bakış",ru:"Обзор"}, avUsers:{tr:"Kullanıcılar",ru:"Пользователи"}, avWords:{tr:"İçerik Yönetimi — Kelimeler",ru:"Контент — слова"}, avNotify:{tr:"Bildirim Gönder",ru:"Отправить уведомление"}, avSupport:{tr:"Destek Talepleri",ru:"Обращения"}, avMail:{tr:"Mail Kutusu",ru:"Почта"}, avPool:{tr:"Soru Havuzu",ru:"Банк вопросов"}, avPq:{tr:"Paragraf Soruları",ru:"Вопросы по тексту"}, avVideos:{tr:"Video Yönetimi",ru:"Управление видео"}, avRecs:{tr:"Öneri Yönetimi",ru:"Рекомендации"}, avVisits:{tr:"Ziyaret & SEO",ru:"Посещения и SEO"}, avSettings:{tr:"Site Ayarları",ru:"Настройки сайта"}, avBackup:{tr:"Yedekleme",ru:"Резервные копии"}, avErrors:{tr:"Hata Kayıtları",ru:"Журнал ошибок"},
-  cSyn: { tr: "Eş Anlamlılar", ru: "Синонимы" },
-  cSynD: { tr: "Anlamca yakın kelimeler (tüm seviyeler).", ru: "Слова, близкие по значению (все уровни)." },
-  cAnt: { tr: "Zıt Anlamlılar", ru: "Антонимы" },
-  cAntD: { tr: "Birbirinin tersi kelime çiftleri (tüm seviyeler).", ru: "Пары слов с противоположным значением (все уровни)." },
-  cFam: { tr: "Akraba Kelimeler", ru: "Однокоренные слова" },
-  cFamD: { tr: "Aynı kökten türeyen kelime aileleri (tüm seviyeler).", ru: "Семьи слов от одного корня (все уровни)." },
-  cKasa: { tr: "Kelime Kasası", ru: "Копилка слов" },
-  cKasaC: { tr: "Kaydettiğin kelimeler", ru: "Сохранённые слова" },
-  cKasaD: { tr: "Kaydettiğin ve öğrendiğin kelimeleri seviye ve türe göre gör.", ru: "Смотри сохранённые и выученные слова по уровню и типу." },
-  rngLbl: { tr: "Aralık:", ru: "Диапазон:" },
-  rngList: { tr: "Listele", ru: "Показать" },
-  phLevel: { tr: "Bu seviyede ara... (Rusça veya Türkçe)", ru: "Поиск на этом уровне... (русский или турецкий)" },
-  tbTitle: { tr: "Kendi Testini Oluştur", ru: "Создай свой тест" },
-  tbDesc: { tr: "Tür, kaynak ve soru sayısını sen belirle; istersen kaydet, sonra tek tıkla tekrar çöz.", ru: "Выбери тип, источник и количество вопросов; сохрани и решай снова одним кликом." },
-  tbBtn: { tr: "Test Oluştur →", ru: "Создать тест →" },
-  vipT: { tr: "🔒 Premium İçerik", ru: "🔒 Премиум-контент" },
-  vipD: { tr: "Video derslere erişmek için satın alma yapmanız gerekiyor.", ru: "Для доступа к видеоурокам нужна подписка." },
-  vipB: { tr: "Şimdi Satın Al →", ru: "Купить сейчас →" },
-  ctAll: { tr: "HEPSİ", ru: "ВСЕ" },
-  ctIsim: { tr: "İSİMLER", ru: "СУЩ." },
-  ctFiil: { tr: "FİİLLER", ru: "ГЛАГОЛЫ" },
-  ctSifat: { tr: "SIFATLAR", ru: "ПРИЛАГ." },
-  ctZarf: { tr: "ZARFLAR", ru: "НАРЕЧИЯ" },
-  ctZamir: { tr: "ZAMİRLER", ru: "МЕСТОИМ." },
-  ctEdat: { tr: "EDATLAR", ru: "ПРЕДЛОГИ" },
-  ctBaglac: { tr: "BAĞLAÇLAR", ru: "СОЮЗЫ" },
-  qcAll: { tr: "Hepsi", ru: "Все" },
-  qcAll2: { tr: "Hepsi", ru: "Все" },
-  qcIsim: { tr: "İsimler", ru: "Существительные" },
-  qcFiil: { tr: "Fiiller", ru: "Глаголы" },
-  qcSifat: { tr: "Sıfatlar", ru: "Прилагательные" },
-  btnBack: { tr: "← Geri", ru: "← Назад" },
-  lblType: { tr: "📝 Test Türü", ru: "📝 Тип теста" },
-  lblLevel: { tr: "🎯 Seviye", ru: "🎯 Уровень" },
-  lblCat: { tr: "📚 Kategori", ru: "📚 Категория" },
-  lblTime: { tr: "⏱️ Süre", ru: "⏱️ Время" },
-  lblCount: { tr: "🔢 Soru Sayısı", ru: "🔢 Количество вопросов" },
-  tRuTr: { tr: "🇷🇺 → 🇹🇷 Rusça → Türkçe", ru: "🇷🇺 → 🇹🇷 Русский → турецкий" },
-  tTrRu: { tr: "🇹🇷 → 🇷🇺 Türkçe → Rusça", ru: "🇹🇷 → 🇷🇺 Турецкий → русский" },
-  tYaz: { tr: "✍️ Yaz Bakalım", ru: "✍️ Напиши сам" },
-  tTf: { tr: "✓✗ Doğru / Yanlış", ru: "✓✗ Верно / неверно" },
-  tPara: { tr: "📖 Paragraf Soruları", ru: "📖 Вопросы по тексту" },
-  tPlc: { tr: "🎚️ Seviye Tespit Sınavı →", ru: "🎚️ Тест на уровень →" },
-  tMock: { tr: "📝 Deneme Sınavı (YDS · 80 soru · 180 dk) →", ru: "📝 Пробный экзамен (YDS · 80 вопросов · 180 мин) →" },
-  rvNow: { tr: "Anında göster", ru: "Показывать сразу" },
-  rvEnd: { tr: "Test sonunda göster", ru: "Показать в конце" },
-  tmOff: { tr: "Süresiz", ru: "Без ограничения" },
-  tmOn: { tr: "Süreli (soru tipine göre otomatik)", ru: "На время (автоматически по типу)" },
-  btnStartQuiz: { tr: "Teste Başla →", ru: "Начать тест →" },
-  ldA: { tr: "Temel seviye. Günlük hayatta kullanılan kelimeler.", ru: "Базовый уровень. Слова из повседневной жизни." },
-  ldB1: { tr: "Orta seviye. YDT hazırlık için temel kelimeler.", ru: "Средний уровень. Базовая лексика для YDT." },
-  ldB2: { tr: "Orta üstü seviye. YDT/YDS için kritik kelimeler.", ru: "Выше среднего. Ключевые слова для YDT/YDS." },
-  ldC1: { tr: "İleri seviye. YDS'de yüksek puan için.", ru: "Продвинутый уровень. Для высокого балла на YDS." },
-  lbBeg: { tr: "Başlangıç", ru: "Начальный" },
-  lbMid: { tr: "Orta", ru: "Средний" },
-  lbUpp: { tr: "Orta Üstü", ru: "Выше среднего" },
-  lbAdv: { tr: "İleri", ru: "Продвинутый" },
-  pOverview: { tr: "Profil Özeti", ru: "Обзор профиля" },
-  pKasa: { tr: "Kelime Kasam", ru: "Копилка слов" },
-  pLearned: { tr: "Öğrenilen Kelimeler", ru: "Выученные слова" },
-  pTests: { tr: "Test Geçmişim", ru: "История тестов" },
-  pVideos: { tr: "Video İzleme Geçmişim", ru: "История просмотров" },
-  pStats: { tr: "İstatistikler", ru: "Статистика" },
-  pTasks: { tr: "Görevler", ru: "Задания" },
-  pAnalysis: { tr: "Analiz & Öneri", ru: "Анализ и советы" },
-  pSupport: { tr: "Destek", ru: "Поддержка" },
-  pSettings: { tr: "Ayarlar", ru: "Настройки" },
-  phDict: { tr: "Sözlükte ara... (Rusça veya Türkçe)", ru: "Поиск в словаре... (русский или турецкий)" },
-  footer: { tr: "© 2026 <span>YDT-YDS Rusça Platformu</span> — Tüm hakları saklıdır.", ru: "© 2026 <span>Платформа YDT-YDS Русский</span> — Все права защищены.", html: true },
-  subWords: { tr: "Önce seviyeni seç, sonra kategoriye göre kelimeleri incele.", ru: "Сначала выбери уровень, затем изучай слова по категориям." },
-  subLevel: { tr: "Kategori seç ve kelimeleri incele.", ru: "Выбери категорию и изучай слова." },
-  subQuiz: { tr: "Test türünü, kategoriyi ve soru sayısını seç.", ru: "Выбери тип теста, категорию и количество вопросов." },
-  subVideo: { tr: "Adım adım Rusça öğrenin. A1'den başlayıp YDT/YDS seviyesine ulaşın.", ru: "Учи русский шаг за шагом: от A1 до уровня YDT/YDS." },
-  hPricing: { tr: "Sana uygun <span>planı seç</span>", ru: "Выбери <span>подходящий план</span>", html: true },
-  subPricing: { tr: "Ücretsiz önizlemeyle başla, istediğin zaman yükselt.", ru: "Начни с бесплатной версии — обнови в любой момент." },
-  hRecs: { tr: "Film & Kitap <span>Önerileri</span>", ru: "Фильмы и книги: <span>рекомендации</span>", html: true },
-  subRecs: { tr: "Rusçanı geliştirecek film, dizi, anime ve kitaplar — seviyene uygun seç.", ru: "Фильмы, сериалы, аниме и книги для прокачки русского — выбирай по уровню." },
-  heroSub: { tr: "Türkiye'nin ilk YDT/YDS odaklı Rusça öğrenme platformu. Kelimeler, testler ve video derslerle sınavda fark yarat.",
-             ru: "Первая в Турции платформа русского языка для YDT/YDS. Слова, тесты и видеоуроки — добейся успеха на экзамене." },
-  ctaStart: { tr: "Hemen Başla →", ru: "Начать сейчас →" },
-  ctaFree: { tr: "Ücretsiz Dene", ru: "Попробовать бесплатно" },
-  stWords: { tr: "Kelime", ru: "Слов" },
-  stVideos: { tr: "Video Ders", ru: "Видеоуроков" },
-  stTests: { tr: "Test Sorusu", ru: "Тестовых вопросов" },
-  secOffer: { tr: "Neler Sunuyoruz", ru: "Что мы предлагаем" },
-  secOne: { tr: "Her şey <span>tek platformda</span>", ru: "Всё <span>на одной платформе</span>", html: true },
-  ftKasa: { tr: "Kelime Kasası", ru: "Копилка слов" },
-  ftTests: { tr: "Akıllı Testler", ru: "Умные тесты" },
-  ftVideos: { tr: "Video Dersler", ru: "Видеоуроки" },
-  ftAccess: { tr: "6 Aylık Erişim", ru: "Доступ на 6 месяцев" },
-  hWords: { tr: "Kelime <span>Bankası</span>", ru: "Банк <span>слов</span>", html: true },
-  hDict: { tr: "Sözlükte <span>Ara</span>", ru: "Поиск <span>в словаре</span>", html: true },
-  hKasa: { tr: "Kelime <span>Kasası</span>", ru: "Копилка <span>слов</span>", html: true },
-  hQuiz: { tr: "Test <span>Çöz</span>", ru: "Решай <span>тесты</span>", html: true },
-  hVideo: { tr: "Video <span>Dersler</span>", ru: "Видео<span>уроки</span>", html: true }
-};
-const I18N = {
-  nav_home: { tr: 'Ana Sayfa', ru: 'Главная' },
-  nav_words: { tr: 'Kelimeler', ru: 'Слова' },
-  nav_quiz: { tr: 'Testler', ru: 'Тесты' },
-  nav_video: { tr: 'Video Dersler', ru: 'Видеоуроки' },
-  nav_recs: { tr: 'Öneriler', ru: 'Рекомендации' },
-  nav_pricing: { tr: 'Fiyatlar', ru: 'Цены' },
-  btn_login: { tr: 'Giriş Yap', ru: 'Войти' },
-  btn_signup: { tr: 'Üye Ol', ru: 'Регистрация' },
-  btn_profile: { tr: 'Profilim', ru: 'Мой профиль' },
-  btn_admin: { tr: 'Yönetim', ru: 'Управление' },
-  btn_logout: { tr: 'Çıkış', ru: 'Выйти' }
-};
-function getLang() { try { return localStorage.getItem('ydt_lang') || 'tr'; } catch (e) { return 'tr'; } }
-function _langBtnPaint() {
-  const b = document.querySelector('.lang-btn'); if (!b) return;
-  const ru = getLang() === 'ru';
-  b.textContent = ru ? '🇷🇺 RU' : '🇹🇷 TR';
-  b.setAttribute('data-langlabel', ru ? 'Язык сайта: Русский' : 'Site dili: Türkçe');
-  b.classList.toggle('ru-on', ru);
-}
-function toggleLang() {
-  const next = getLang() === 'tr' ? 'ru' : 'tr';
-  try { localStorage.setItem('ydt_lang', next); } catch (e) {}
-  applyLang();
-  _langBtnPaint();
-  toast(next === 'ru' ? 'Site dili: Русский (üzerine gelince Türkçesi görünür)' : 'Site dili: Türkçe');
-}
-function applyLangExtra(lang) {
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const k = el.getAttribute('data-i18n');
-    const e = I18N_EXTRA[k]; if (!e) return;
-    const v = e[lang] || e.tr;
-    if (e.html) el.innerHTML = v; else el.textContent = v;
-    // RU modunda üzerine gelince Türkçesi görünsün
-    if (lang === 'ru') { const _tt = e.tr.replace(/<[^>]*>/g, ''); _tipStore.set(el, _tt); el.classList.add('ru-t'); }
-    else { _tipStore.delete(el); el.classList.remove('ru-t'); }
-  });
-  applyRuTextMap(lang);
-  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
-    const e = I18N_EXTRA[el.getAttribute('data-i18n-ph')]; if (!e) return;
-    el.placeholder = e[lang] || e.tr;
-  });
-}
-
-const RU_TEXT_MAP = {
-  "← Testlere Dön": "← К тестам", "Tekrar Et": "Повторение",
-  "Bir yöntem seç, tekrar etmek istediğin kelimeleri işaretle ve başla.": "Выбери способ, отметь слова и начинай.",
-  "Yardım": "Помощь", "Sık sorulan sorulara ulaşın.": "Частые вопросы.",
-  "Bildirimler": "Уведомления", "Tümünü okundu işaretle": "Отметить все прочитанными", "Henüz bildirimin yok.": "Пока нет уведомлений.",
-  "HEPSİ": "ВСЕ", "İSİMLER": "СУЩ.", "FİİLLER": "ГЛАГОЛЫ", "SIFATLAR": "ПРИЛАГ.", "ZARFLAR": "НАРЕЧИЯ", "ZAMİRLER": "МЕСТОИМ.", "EDATLAR": "ПРЕДЛОГИ", "BAĞLAÇLAR": "СОЮЗЫ",
-  "Tür:": "Тип:", "Kaynak:": "Источник:", "Soru sayısı:": "Вопросов:", "Cevap gösterimi:": "Показ ответов:", "Süre:": "Время:", "Süresiz": "Без времени", "Süreli": "На время",
-  "Anında göster": "Показывать сразу", "Test sonunda göster": "Показать в конце",
-  "Kelime Kasam": "Копилка слов", "Öğrenilen Kelimeler": "Выученные слова", "Test Geçmişim": "История тестов", "Video İzleme Geçmişim": "История просмотров", "İstatistikler": "Статистика",
-  "Çalışma istatistiklerinize genel bir bakış.": "Общий обзор вашей статистики.",
-  "Profili Düzenle": "Редактировать профиль",
-  "Genel Bakış": "Обзор", "Kullanıcılar": "Пользователи", "İçerik (Kelimeler)": "Контент (слова)", "Bildirim Gönder": "Отправить уведомление",
-  "Destek Talepleri": "Обращения", "Mail Kutusu": "Почта", "Soru Havuzu": "Банк вопросов", "Paragraf Soruları": "Вопросы по тексту",
-  "Videolar": "Видео", "Öneriler": "Рекомендации", "Ziyaret & SEO": "Посещения и SEO", "Site Ayarları": "Настройки сайта",
-  "Yedekleme": "Резервные копии", "Hata Kayıtları": "Журнал ошибок",
-  "« Önceki": "« Назад", "Sonraki »": "Вперёд »", "Tümü": "Все", "Listele": "Показать", "Aralık:": "Диапазон:",
-  "Kelime Kasası": "Копилка слов", "Kaydettiğin kelimeleri tekrar edin ve pekiştirin.": "Повторяй и закрепляй сохранённые слова.",
-  "Tüm Kelime Kasama Git": "Вся копилка слов", "Çalışma Serisi": "Серия занятий", "Günlük çalışmaya devam et!": "Продолжай заниматься каждый день!",
-  "Gün": "дн.", "En uzun seri:": "Рекорд:", "Kayıtlılar": "Сохранённые", "Öğrenilenler": "Выученные", "Hepsi": "Все",
-  "Detayları Gör": "Подробнее", "Geçmişim": "История",
-  "Kelime Ekle": "Добавить слово", "Temizle": "Очистить", "Dosyayı İçe Aktar": "Импортировать файл",
-  "JSON'u İçe Aktar": "Импортировать JSON", "Toplu Ekle": "Добавить пакетом", "Soru Ekle": "Добавить вопрос",
-  "Video Ekle": "Добавить видео", "Öneri Ekle": "Добавить рекомендацию", "Gönder": "Отправить",
-  "Kaydet & Yayınla": "Сохранить и опубликовать", "Bakım modu AÇIK": "Режим обслуживания ВКЛ",
-  "Doğru şık:": "Правильный вариант:", "Hızlı İşlemler": "Быстрые действия",
-  "Aktif": "Активные", "Silinenler": "Удалённые", "Mevcut Sorular": "Существующие вопросы",
-  "Tüm Veritabanını İndir": "Скачать всю базу данных", "Kurtarma Paketi Oluştur & İndir": "Создать и скачать пакет восстановления",
-  "Tümünü Gör": "Показать все", "Yenile": "Обновить", "Tam Yedek": "Полная резервная копия",
-  "Tablo Bazında İndir": "Скачать по таблицам", "Duyuru Bandı": "Лента объявлений", "Bakım Modu": "Режим обслуживания",
-  "Giriş yap": "Войти", "Hesap Oluştur": "Создать аккаунт", "Google ile devam et": "Продолжить с Google",
-  "Hesabın var mı?": "Уже есть аккаунт?", "Hesabın yok mu?": "Нет аккаунта?", "Kullanıcı Adı": "Имя пользователя",
-  "Hesabınıza giriş yapın veya yeni hesap oluşturun": "Войдите в аккаунт или создайте новый",
-  "Kelime Arama": "Поиск слова", "Aramak istediğiniz kelimeyi yukarıya yazın.": "Введите слово в поле выше.",
-  "Rusça → Türkçe": "Русский → турецкий", "Türkçe → Rusça": "Турецкий → русский",
-  "Rusça'yı gör, çevir, Türkçesini hatırla.": "Смотри русское слово и вспоминай турецкое.",
-  "Cevabı klavyeyle yaz.": "Напиши ответ с клавиатуры.", "Eşleştirme": "Сопоставление",
-  "Eşleşme doğru mu yanlış mı?": "Пара верна или нет?", "Eşleşme doğru mu, yanlış mı?": "Пара верна или нет?",
-  "Karışık": "Смешанный", "Rusça kelimenin Türkçesini seç.": "Выбери турецкий перевод русского слова.",
-  "Rusça veya Türkçe kelime yazın.": "Введите слово на русском или турецком.",
-  "Kelimeleri Seç ve Filtrele": "Выбери и отфильтруй слова", "Görünenleri Seç": "Выбрать видимые",
-  "Kelime Kaynağı ve Kapsam": "Источник и охват слов", "Kayıtlı": "Сохранённые", "Günlük Tekrar": "Ежедневное повторение",
-  "Kasaya Dön": "Назад в копилку", "Bugün": "Сегодня", "Soru Sayısı ve Başlat": "Количество вопросов и старт",
-  "Kayıtlı kelimelerinizi tekrar edin ve pekiştirin.": "Повторяй и закрепляй сохранённые слова.",
-  "Kaydettiğin ve öğrendiğin kelimeleri görüntüle, tekrar et ve pekiştir.": "Просматривай, повторяй и закрепляй сохранённые и выученные слова.",
-  "Kayıtlı kelimelerini tekrar sistemiyle çalış ve kalıcı hâle getir.": "Закрепляй сохранённые слова с системой повторения.",
-  "Kelime Kasam →": "Копилка слов →", "Geçmişim →": "История →", "Detayları Gör →": "Подробнее →",
-  "Henüz video izlenmedi.": "Видео ещё не просмотрены.", "Bu bölüm yakında eklenecek.": "Этот раздел скоро появится.",
-  "Fiyatlandırma": "Цены", "En Çok Tercih": "Самый популярный", "Nasıl Çalışır?": "Как это работает?", "Premium'a Geç": "Перейти на премиум",
-  "Kendinizi ifade eden bir avatar seçin.": "Выбери аватар, который тебе подходит.",
-  "Kişisel bilgilerinizi güncelleyebilirsiniz.": "Здесь можно обновить личные данные.",
-  "Otomatik Kelime Kaydetme": "Автосохранение слов", "Hesabınız Güvende": "Ваш аккаунт под защитой",
-  "Hesabı dondurma/silme işlemleri": "Заморозка/удаление аккаунта", "Hızlı İşlemler": "Быстрые действия",
-  "Doğru / Yanlış": "Верно / неверно", "Kelime Kartları": "Карточки слов",
-  "10 Soru": "10 вопросов", "20 Soru": "20 вопросов", "30 Soru": "30 вопросов", "50 Soru": "50 вопросов", "100 Soru": "100 вопросов",
-  "Cevaplar": "Ответы", "CEVAPLAR": "ОТВЕТЫ",
-  "Zarflar": "Наречия", "Zamirler": "Местоимения", "Edatlar": "Предлоги", "Bağlaçlar": "Союзы",
-  "Tüm Türler": "Все типы", "İsim": "Сущ.", "Fiil": "Глагол", "Sıfat": "Прил.", "Zarf": "Нареч.", "Zamir": "Мест.", "Edat": "Предлог", "Bağlaç": "Союз",
-  "Dinle": "Слушать",
-  "Platformu tanımak için ücretsiz başla": "Начни бесплатно, чтобы познакомиться с платформой",
-  "100 kelime bankası": "Банк из 100 слов", "10 test sorusu": "10 тестовых вопросов", "2 ücretsiz video ders": "2 бесплатных видеоурока",
-  "Temel telaffuz rehberi": "Базовый гид по произношению", "Kayıt gerekmez": "Регистрация не нужна",
-  "Ücretsiz Dene →": "Попробовать бесплатно →", "Abone Ol →": "Подписаться →",
-  "YDT/YDS sınavına kadar tam erişim": "Полный доступ до экзамена YDT/YDS",
-  "2.272 kelime bankası": "Банк из 2 272 слов", "500+ test sorusu": "500+ тестовых вопросов", "50+ video ders (A1→C1)": "50+ видеоуроков (A1→C1)",
-  "Gramer dersleri": "Уроки грамматики", "Deneme sınavları": "Пробные экзамены", "Sesli telaffuz sistemi": "Озвучка произношения", "6 ay tam erişim": "Полный доступ на 6 месяцев",
-  "Nasıl çalışır?": "Как это работает?",
-  "Önce ücretsiz ön izlemeyle platformu tanı. Beğenirsen 6 aylık erişim satın al.": "Сначала познакомься с платформой бесплатно. Понравится — купи доступ на 6 месяцев.",
-  "Kaydettiğin tüm kelimeler burada.": "Все сохранённые слова — здесь.",
-  "Öğrendin olarak işaretlediğin kelimeler.": "Слова, отмеченные как выученные.",
-  "Çözdüğün testler ve sonuçların burada görünecek. Bir teste tıklayıp doğru/yanlışlarını inceleyebilirsin.": "Здесь появятся решённые тесты и результаты. Нажми на тест, чтобы разобрать ответы.",
-  "İzlediğin video dersler burada görünecek.": "Здесь появятся просмотренные видеоуроки.",
-  "Çalışma ilerlemenin detaylı görünümü.": "Подробный обзор твоего прогресса.",
-  "Çalışma istatistiklerinize genel bir bakış.": "Общий обзор вашей статистики.",
-  "Günlük ve haftalık görevleri tamamla, XP kazan!": "Выполняй ежедневные и недельные задания — получай XP!",
-  "Çalışma verilerine göre kişisel değerlendirme ve öneriler.": "Личная оценка и советы на основе твоих данных.",
-  "Bir sorun mu var, bir sorun mu yaşıyorsun? Talep oluştur, ekibimiz yanıtlasın.": "Возникла проблема? Создай обращение — команда ответит.",
-  "Hesap ve uygulama tercihlerinizi yönetin.": "Управляй настройками аккаунта и приложения.",
-  "Sitenin genel durumu.": "Общее состояние сайта.",
-  "Üyeleri görüntüle, planlarını yönet.": "Просматривай пользователей и управляй планами.",
-  "Kelimeleri tek tek düzenle veya toplu yükle. Değişiklikler anında yayına girer.": "Редактируй слова по одному или загружай пакетом. Изменения публикуются сразу.",
-  "Tüm kullanıcılara veya seçtiklerine bildirim yolla.": "Отправляй уведомления всем или выбранным пользователям.",
-  "Kullanıcı taleplerini yanıtla ve yönet.": "Отвечай на обращения пользователей и управляй ими.",
-  "info@ / destek@ / support@ adreslerine gelenler.": "Входящие на info@ / destek@ / support@.",
-  "Seviye sınavı sorularını yönet.": "Управляй вопросами теста на уровень.",
-  "Okuma-anlama sorularını yönet. Değişiklikler anında yayına girer.": "Управляй вопросами на понимание текста. Изменения публикуются сразу.",
-  "Ücretsizler YouTube'da, ücretliler Cloudflare Stream'de barınır. Buradan liste, kapak ve premium durumu yönetilir.": "Бесплатные — на YouTube, платные — в Cloudflare Stream. Здесь управляются список, обложки и премиум-статус.",
-  "Film, dizi, anime ve kitap önerileri. Değişiklikler anında yayına girer.": "Рекомендации фильмов, сериалов, аниме и книг. Публикуются сразу.",
-  "Trafik istatistikleri ve sayfa içi SEO denetimi.": "Статистика трафика и SEO-проверка страницы.",
-  "Site genelini etkileyen ayarlar.": "Настройки, влияющие на весь сайт.",
-  "Veritabanındaki tüm tabloları JSON olarak indir.": "Скачай все таблицы базы данных в формате JSON.",
-  "Sitede oluşan hataların zaman damgalı kaydı.": "Журнал ошибок сайта с отметками времени.",
-  "1.719 grup": "1 719 групп", "20 çift": "20 пар", "8 kök": "8 корней",
-  "м (eril)": "м (муж.)", "ж (dişil)": "ж (жен.)", "с (nötr)": "с (ср.)",
-  "Sonraki Soru →": "Следующий вопрос →", "Testi Bitir ✓": "Завершить тест ✓", "Süre doldu!": "Время вышло!",
-  "Doğru": "Верно", "Yanlış": "Неверно", "Boş": "Пусто", "Skor": "Счёт",
-  "👤 Hesap": "👤 Аккаунт", "🔔 Bildirimler": "🔔 Уведомления", "🛡️ Güvenlik": "🛡️ Безопасность",
-  "ÜCRETSİZ": "БЕСПЛАТНО", "Ön İzleme": "Пробный доступ", "EN ÇOK TERCİH": "САМЫЙ ПОПУЛЯРНЫЙ",
-  "6 Aylık Abonelik": "Подписка на 6 месяцев", "FİYATLANDIRMA": "ЦЕНЫ", "ücretsiz": "бесплатно",
-  "Kaydet": "Сохранить", "Vazgeç": "Отмена", "Kapat": "Закрыть", "Kaydet & Başlat": "Сохранить и начать",
-  "Başlat →": "Начать →", "Testi Kaydet": "Сохранить тест", "Kayıtlı Testlerim": "Мои тесты",
-  "Tekrar hedefi": "Цель повторения", "kelime seçildi": "слов выбрано", "Kayıtlı Kelime": "Сохранено слов", "Öğrenilen Kelime": "Выучено слов", "Çözülen Test": "Решено тестов", "İzlenen Video": "Просмотрено видео"
-};
-const _tipStore = new WeakMap();
-const _touchedEls = new Set();
-function applyRuTextMap(lang) {
-  if (lang === 'tr') {
-    if (!applyRuTextMap._rev) { applyRuTextMap._rev = {}; Object.keys(RU_TEXT_MAP).forEach(k => { applyRuTextMap._rev[RU_TEXT_MAP[k]] = k; }); }
-    const REV = applyRuTextMap._rev;
-    _touchedEls.forEach(el => {
-      const w2 = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-      let n2;
-      while ((n2 = w2.nextNode())) {
-        const t2 = (n2.nodeValue || '').trim();
-        if (t2 && REV[t2]) n2.nodeValue = n2.nodeValue.replace(t2, REV[t2]);
-      }
-      _tipStore.delete(el); el.classList.remove('ru-t');
-    });
-    _touchedEls.clear();
-    return;
-  }
-  // Sitenin öz Rusça içeriğine (kelimeler, örnek cümleler) asla dokunulmaz.
-  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-  let n;
-  while ((n = w.nextNode())) {
-    const raw = n.nodeValue; if (!raw) continue;
-    const t = raw.trim(); if (!t) continue;
-    const rep = RU_TEXT_MAP[t]; if (!rep) continue;
-    const pe = n.parentElement;
-    if (pe && pe.hasAttribute('data-i18n')) continue; // onların kendi sistemi var
-    n.nodeValue = raw.replace(t, rep);
-    if (pe && !_tipStore.has(pe)) { _tipStore.set(pe, t); pe.classList.add('ru-t'); _touchedEls.add(pe); }
-  }
-}
-if (typeof window !== 'undefined') window.applyRuTextIn = function () { try { applyRuTextMap(getLang()); } catch (e) {} };
-let _i18nMoT = null;
-try {
-  const _i18nMo = new MutationObserver(function () {
-    if (getLang() !== 'ru') return;
-    clearTimeout(_i18nMoT);
-    _i18nMoT = setTimeout(function () { try { if (getLang() === 'ru') applyLangExtra('ru'); } catch (e) {} }, 300);
-  });
-  _i18nMo.observe(document.body, { childList: true, subtree: true });
-} catch (e) {}
-
-/* ---- Akıllı balon: imlecin/öğenin ekrana uzaklığına göre üstte ya da altta ---- */
-let _ruTipBox = null, _ruTipCur = null;
-function _ruTipHide() { if (_ruTipBox) { _ruTipBox.remove(); _ruTipBox = null; } _ruTipCur = null; }
-document.addEventListener('mouseover', function (e) {
-  if (!document.body.classList.contains('lang-ru')) { _ruTipHide(); return; }
-  if (localStorage.getItem('ydt_rutip') === 'off') { _ruTipHide(); return; }
-  const t = e.target.closest ? e.target.closest('.ru-t') : null;
-  if (!t || t.classList.contains('lang-btn')) { _ruTipHide(); return; }
-  if (t === _ruTipCur) return;
-  _ruTipHide();
-  const txt = _tipStore.get(t);
-  if (!txt || /[А-Яа-яЁё]/.test(txt)) return;
-  _ruTipCur = t;
-  _ruTipBox = document.createElement('div');
-  _ruTipBox.className = 'ru-tip';
-  _ruTipBox.textContent = txt;
-  document.body.appendChild(_ruTipBox);
-  _ruTipMove(e.clientX, e.clientY);
-});
-function _ruTipMove(x, y) {
-  if (!_ruTipBox) return;
-  const tw = _ruTipBox.offsetWidth, th = _ruTipBox.offsetHeight;
-  let top = y + 20, left = x + 14; // imlecin sağ altı
-  if (top + th > window.innerHeight - 8) top = y - th - 12;  // sığmazsa üstü
-  if (left + tw > window.innerWidth - 8) left = x - tw - 12; // sığmazsa solu
-  _ruTipBox.style.top = Math.max(8, top) + 'px';
-  _ruTipBox.style.left = Math.max(8, left) + 'px';
-}
-document.addEventListener('mousemove', function (e) {
-  if (_ruTipBox) _ruTipMove(e.clientX, e.clientY);
-});
-window.addEventListener('scroll', _ruTipHide, true);
-function applyLang() {
-  const lang = getLang();
-  try { clearTimeout(_i18nMoT); } catch (e) {}
-  document.body.classList.toggle('lang-ru', lang === 'ru');
-  applyLangExtra(lang);
-  if (typeof updateLevelCards === 'function') try { updateLevelCards(); } catch (e) {}
-  if (typeof renderRecs === 'function') try { renderRecs(); } catch (e) {}
-  const lb = document.getElementById('lang-toggle'); if (lb) lb.textContent = lang === 'ru' ? 'TR' : 'RU';
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const k = el.getAttribute('data-i18n'); const t = I18N[k]; if (!t) return;
-    el.textContent = t[lang] || t.tr;
-    if (lang === 'ru') { _tipStore.set(el, t.tr); el.classList.add('ru-t'); } else { _tipStore.delete(el); el.classList.remove('ru-t'); }
-  });
-}
-setTimeout(function () { try { applyLang(); } catch (e) {} }, 400);
 
 /* ============================================================
    SINAV AYARLARI — panelden yapılandırılabilir (site_settings)
@@ -4936,8 +4598,8 @@ function renderRecs() {
       <div class="rec-thumb" style="${bg}">${r.thumb ? '' : `<span class="rec-emoji">${RC_EMO[r.rtype] || '⭐'}</span>`}</div>
       <div class="rec-body">
         <div class="rec-chips"><span class="cw-cat">${RC_EMO[r.rtype] || ''} ${RC_LAB[r.rtype] || r.rtype}</span> <span class="kv-lvl">${_escHtml(r.level || '')}+ seviye</span></div>
-        <div class="rec-title">${_escHtml((getLang() === 'ru' && r.title_ru) ? r.title_ru : r.title)}</div>
-        <div class="rec-desc">${_sanitizeRich((getLang() === 'ru' && r.descr_ru) ? r.descr_ru : (r.descr || ''))}</div>
+        <div class="rec-title">${_escHtml(r.title)}</div>
+        <div class="rec-desc">${_sanitizeRich(r.descr || '')}</div>
         <div class="rec-acts">
           ${r.trailer ? `<button class="mail-act" onclick="recTrailer(${idx})">▶ Fragman</button>` : ''}
           ${r.link ? `<a class="mail-act" href="${_escAttr(r.link)}" target="_blank" rel="noopener">🔗 ${r.rtype === 'kitap' ? 'İncele' : 'Nerede izlenir'}</a>` : ''}
@@ -5166,6 +4828,7 @@ async function cwBulkSave() {
       level: r.querySelector('.cwb-lvl').value,
       cat,
       cinsiyet: gram || null,
+      tip: (cat === 'fiil') ? ({ 'нсв': 'НСВ', 'св': 'СВ' }[gram] || null) : null,
       padej: (cat === 'edat' && pd.length) ? pd.join(' / ') : null,
       ornek: r.querySelector('.cwb-ornek').value.trim() || null,
       ornek_tr: r.querySelector('.cwb-ornektr').value.trim() || null,
@@ -5181,42 +4844,4 @@ async function cwBulkSave() {
     document.getElementById('cwb-save').style.display = 'none';
     adminCwReload(); loadDbWords();
   } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
-}
-
-/* ============================================================
-   DİL SÖZLÜĞÜ — VERİTABANI (kaynak: ui_translations)
-   Yükleme: DB'deki çeviriler yerleşik sözlüklerin ÜZERİNE yazılır.
-   Senkron: yönetici paneli açıldığında koddaki yeni metinler DB'ye otomatik itilir.
-   ============================================================ */
-async function loadUiTranslations() {
-  try {
-    const rows = await sbFetchAll('ui_translations');
-    let n = 0;
-    rows.forEach(r => {
-      if (!r || !r.k) return;
-      if (r.k.startsWith('txt:')) { if (r.ru) { RU_TEXT_MAP[r.tr] = r.ru; n++; } }
-      else {
-        const key = r.k.slice(4);
-        const target = (typeof I18N !== 'undefined' && I18N[key]) ? I18N[key] : (I18N_EXTRA[key] = I18N_EXTRA[key] || {});
-        target.tr = r.tr; if (r.ru) target.ru = r.ru; n++;
-      }
-    });
-    if (n && getLang() === 'ru') applyLang();
-  } catch (e) {}
-}
-setTimeout(function () { try { if (typeof sb !== 'undefined' && sb) loadUiTranslations(); } catch (e) {} }, 1600);
-
-async function adminSyncTranslations() {
-  try {
-    if (sessionStorage.getItem('ydt_uisync')) return;
-    sessionStorage.setItem('ydt_uisync', '1');
-    const rows = [];
-    const push = (k, tr, ru) => { if (tr) rows.push({ k, tr, ru: ru || null }); };
-    try { Object.keys(I18N).forEach(k => push('key:' + k, I18N[k].tr, I18N[k].ru)); } catch (e) {}
-    Object.keys(I18N_EXTRA).forEach(k => push('key:' + k, I18N_EXTRA[k].tr, I18N_EXTRA[k].ru));
-    Object.keys(RU_TEXT_MAP).forEach(t => push('txt:' + t, t, RU_TEXT_MAP[t]));
-    for (let i = 0; i < rows.length; i += 400) {
-      await sb.from('ui_translations').upsert(rows.slice(i, i + 400), { onConflict: 'k' });
-    }
-  } catch (e) {}
 }
