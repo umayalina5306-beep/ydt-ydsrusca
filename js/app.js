@@ -3596,6 +3596,9 @@ function applyDbWords(rows) {
     const w = { ru: r.ru, tr: r.tr, p: r.p || '', cat: r.cat || 'isim', level: lvl,
                 ornek: r.ornek || '', ornekTr: r.ornek_tr || '', cinsiyet: r.cinsiyet || '', premium: !!r.premium };
     if (r.padej) w.padej = r.padej;
+    if (r.tip) w.tip = r.tip;
+    if (r.cv) w.cv = r.cv;
+    if (r.ncv) w.ncv = r.ncv;
     const ex = words.find(match);
     if (ex) Object.assign(ex, w); else words.push(w);
   });
