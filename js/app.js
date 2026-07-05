@@ -1216,23 +1216,31 @@ document.getElementById('auth-modal').addEventListener('click',function(e){
 async function loadData() {
   const j = (p) => fetch(p).then(r => { if(!r.ok) throw new Error('Yüklenemedi: '+p); return r.json(); });
   const jSafe = u => j(u).catch(() => []);
-  // Önce DB'den dene (İçerik Yönetimi ile taşındıysa dosyalara gerek kalmaz)
-  let dbW = [];
+  // Önce DB'den dene — DB doluysa JSON dosyalarına hiç istek atılmaz (404 gürültüsü olmaz)
+  let dbW = [], dbSyn = [], dbAnt = [], dbFam = [], dbVid = [];
   try {
     if (typeof sb !== 'undefined' && sb) {
       const all = await sbFetchAll('content_words', 'ru');
       dbW = all.filter(r => r.active !== false);
+      const [s1, s2, s3, s4] = await Promise.all([
+        sbFetchAll('content_synonyms', null, q => q.eq('active', true)),
+        sb.from('content_antonyms').select('*').eq('active', true).limit(2000),
+        sb.from('content_families').select('*').eq('active', true).limit(2000),
+        sb.from('content_videos').select('*').eq('active', true).order('num').limit(1000)
+      ]);
+      dbSyn = s1 || []; dbAnt = s2.data || []; dbFam = s3.data || []; dbVid = s4.data || [];
     }
   } catch (e) {}
+  const _skipW = dbW.length >= 50;
   const [a1a2,b1,b2,c1,syn,ant,fam,vids] = await Promise.all([
-    jSafe('data/kelimeler/a1-a2.json'),
-    jSafe('data/kelimeler/b1.json'),
-    jSafe('data/kelimeler/b2.json'),
-    jSafe('data/kelimeler/c1.json'),
-    jSafe('data/es-anlamlilar/es-anlamlilar.json'),
-    jSafe('data/zit-anlamlilar/zit-anlamlilar.json'),
-    jSafe('data/akraba-kelimeler/akraba-kelimeler.json'),
-    jSafe('data/videolar/videolar.json'),
+    _skipW ? Promise.resolve([]) : jSafe('data/kelimeler/a1-a2.json'),
+    _skipW ? Promise.resolve([]) : jSafe('data/kelimeler/b1.json'),
+    _skipW ? Promise.resolve([]) : jSafe('data/kelimeler/b2.json'),
+    _skipW ? Promise.resolve([]) : jSafe('data/kelimeler/c1.json'),
+    dbSyn.length ? Promise.resolve([]) : jSafe('data/es-anlamlilar/es-anlamlilar.json'),
+    dbAnt.length ? Promise.resolve([]) : jSafe('data/zit-anlamlilar/zit-anlamlilar.json'),
+    dbFam.length ? Promise.resolve([]) : jSafe('data/akraba-kelimeler/akraba-kelimeler.json'),
+    dbVid.length ? Promise.resolve([]) : jSafe('data/videolar/videolar.json'),
   ]);
   // JSON temel + DB üstüne bindirme (kelime kaybı imkânsız; dosyalar silinirse DB tek başına yeter)
   words = [].concat(a1a2,b1,b2,c1);
@@ -1243,19 +1251,11 @@ async function loadData() {
   updateLevelCards();
   synonymGroups = syn; antonymPairs = ant; wordFamilies = fam; videos = vids;
   try {
-    if (typeof sb !== 'undefined' && sb) {
-      const [sg, ap, wf, vd] = await Promise.all([
-        sbFetchAll('content_synonyms', null, q => q.eq('active', true)).then(d => ({ data: d })),
-        sb.from('content_antonyms').select('*').eq('active', true).limit(2000),
-        sb.from('content_families').select('*').eq('active', true).limit(2000),
-        sb.from('content_videos').select('*').eq('active', true).order('num').limit(1000)
-      ]);
-      if (sg.data && sg.data.length) synonymGroups = sg.data.map(r => ({ grup: r.grup, kelimeler: Array.isArray(r.kelimeler) ? r.kelimeler : JSON.parse(r.kelimeler || '[]') }));
-      if (ap.data && ap.data.length) antonymPairs = ap.data.map(r => ({ ru1: r.ru1, tr1: r.tr1, p1: r.p1, ru2: r.ru2, tr2: r.tr2, p2: r.p2 }));
-      if (wf.data && wf.data.length) wordFamilies = wf.data.map(r => ({ kok: r.kok, anlam: r.anlam, kelimeler: Array.isArray(r.kelimeler) ? r.kelimeler : JSON.parse(r.kelimeler || '[]') }));
-      if (vd.data && vd.data.length) videos = vd.data.map(r => ({ num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb }));
-    }
-  } catch (e) { _logDev('DB içerikleri yüklenemedi:', e); }
+    if (dbSyn.length) synonymGroups = dbSyn.map(r => ({ grup: r.grup, kelimeler: Array.isArray(r.kelimeler) ? r.kelimeler : JSON.parse(r.kelimeler || '[]') }));
+    if (dbAnt.length) antonymPairs = dbAnt.map(r => ({ ru1: r.ru1, tr1: r.tr1, p1: r.p1, ru2: r.ru2, tr2: r.tr2, p2: r.p2 }));
+    if (dbFam.length) wordFamilies = dbFam.map(r => ({ kok: r.kok, anlam: r.anlam, kelimeler: Array.isArray(r.kelimeler) ? r.kelimeler : JSON.parse(r.kelimeler || '[]') }));
+    if (dbVid.length) videos = dbVid.map(r => ({ num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb }));
+  } catch (e) { _logDev('DB içerikleri işlenemedi:', e); }
   // Paragraf soruları (dosya yoksa site yine çalışsın diye ayrı try/catch)
   try {
     let dbPq = [];
@@ -4423,6 +4423,10 @@ async function startMockExam() {
    DİL SİSTEMİ (TR/RU) — RU modunda üzerine gelince TR anlamı çıkar
    ============================================================ */
 const I18N_EXTRA = {
+  btnBack2: { tr: "← Geri", ru: "← Назад" },
+  rfAll: { tr: "Tümü", ru: "Все" }, rfFilm: { tr: "🎬 Film", ru: "🎬 Фильмы" }, rfDizi: { tr: "📺 Dizi", ru: "📺 Сериалы" }, rfAnime: { tr: "🌸 Anime", ru: "🌸 Аниме" }, rfKitap: { tr: "📚 Kitap", ru: "📚 Книги" },
+  pvOverview:{tr:"Profil Özeti",ru:"Обзор профиля"}, pvKasa:{tr:"Kelime Kasam",ru:"Копилка слов"}, pvLearned:{tr:"Öğrenilen Kelimeler",ru:"Выученные слова"}, pvTests:{tr:"Test Geçmişim",ru:"История тестов"}, pvVideos:{tr:"Video İzleme Geçmişim",ru:"История просмотров"}, pvStats:{tr:"İstatistikler",ru:"Статистика"}, pvTasks:{tr:"Görevler",ru:"Задания"}, pvAnalysis:{tr:"Analiz & Öneri",ru:"Анализ и советы"}, pvSupport:{tr:"Destek",ru:"Поддержка"}, pvSettings:{tr:"Ayarlar",ru:"Настройки"},
+  avOverview:{tr:"Genel Bakış",ru:"Обзор"}, avUsers:{tr:"Kullanıcılar",ru:"Пользователи"}, avWords:{tr:"İçerik Yönetimi — Kelimeler",ru:"Контент — слова"}, avNotify:{tr:"Bildirim Gönder",ru:"Отправить уведомление"}, avSupport:{tr:"Destek Talepleri",ru:"Обращения"}, avMail:{tr:"Mail Kutusu",ru:"Почта"}, avPool:{tr:"Soru Havuzu",ru:"Банк вопросов"}, avPq:{tr:"Paragraf Soruları",ru:"Вопросы по тексту"}, avVideos:{tr:"Video Yönetimi",ru:"Управление видео"}, avRecs:{tr:"Öneri Yönetimi",ru:"Рекомендации"}, avVisits:{tr:"Ziyaret & SEO",ru:"Посещения и SEO"}, avSettings:{tr:"Site Ayarları",ru:"Настройки сайта"}, avBackup:{tr:"Yedekleme",ru:"Резервные копии"}, avErrors:{tr:"Hata Kayıtları",ru:"Журнал ошибок"},
   cSyn: { tr: "Eş Anlamlılar", ru: "Синонимы" },
   cSynD: { tr: "Anlamca yakın kelimeler (tüm seviyeler).", ru: "Слова, близкие по значению (все уровни)." },
   cAnt: { tr: "Zıt Anlamlılar", ru: "Антонимы" },
@@ -4548,11 +4552,48 @@ function applyLangExtra(lang) {
     if (lang === 'ru') el.setAttribute('data-tip', e.tr.replace(/<[^>]*>/g, ''));
     else el.removeAttribute('data-tip');
   });
+  applyRuTextMap(lang);
   document.querySelectorAll('[data-i18n-ph]').forEach(el => {
     const e = I18N_EXTRA[el.getAttribute('data-i18n-ph')]; if (!e) return;
     el.placeholder = e[lang] || e.tr;
   });
 }
+
+const RU_TEXT_MAP = {
+  "← Testlere Dön": "← К тестам", "Tekrar Et": "Повторение",
+  "Bir yöntem seç, tekrar etmek istediğin kelimeleri işaretle ve başla.": "Выбери способ, отметь слова и начинай.",
+  "Yardım": "Помощь", "Sık sorulan sorulara ulaşın.": "Частые вопросы.",
+  "Bildirimler": "Уведомления", "Tümünü okundu işaretle": "Отметить все прочитанными", "Henüz bildirimin yok.": "Пока нет уведомлений.",
+  "HEPSİ": "ВСЕ", "İSİMLER": "СУЩ.", "FİİLLER": "ГЛАГОЛЫ", "SIFATLAR": "ПРИЛАГ.", "ZARFLAR": "НАРЕЧИЯ", "ZAMİRLER": "МЕСТОИМ.", "EDATLAR": "ПРЕДЛОГИ", "BAĞLAÇLAR": "СОЮЗЫ",
+  "Tür:": "Тип:", "Kaynak:": "Источник:", "Soru sayısı:": "Вопросов:", "Cevap gösterimi:": "Показ ответов:", "Süre:": "Время:", "Süresiz": "Без времени", "Süreli": "На время",
+  "Anında göster": "Показывать сразу", "Test sonunda göster": "Показать в конце",
+  "Kelime Kasam": "Копилка слов", "Öğrenilen Kelimeler": "Выученные слова", "Test Geçmişim": "История тестов", "Video İzleme Geçmişim": "История просмотров", "İstatistikler": "Статистика",
+  "Çalışma istatistiklerinize genel bir bakış.": "Общий обзор вашей статистики.",
+  "Profili Düzenle": "Редактировать профиль", "Kayıtlı Kelime": "Сохранено слов", "Öğrenilen Kelime": "Выучено слов", "Çözülen Test": "Решено тестов", "İzlenen Video": "Просмотрено видео"
+};
+const _ruNodeOrig = new WeakMap();
+const _ruTouched = [];
+function applyRuTextMap(lang) {
+  const roots = document.querySelectorAll('#page-testbuilder, #page-review, .notif-panel, #page-words .cat-tabs, #page-profile .profile-main');
+  if (lang === 'tr') {
+    _ruTouched.forEach(n => { if (_ruNodeOrig.has(n)) n.nodeValue = _ruNodeOrig.get(n); });
+    _ruTouched.length = 0;
+    return;
+  }
+  roots.forEach(root => {
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let n;
+    while ((n = w.nextNode())) {
+      const t = (n.nodeValue || '').trim();
+      if (RU_TEXT_MAP[t]) {
+        if (!_ruNodeOrig.has(n)) _ruNodeOrig.set(n, n.nodeValue);
+        n.nodeValue = n.nodeValue.replace(t, RU_TEXT_MAP[t]);
+        _ruTouched.push(n);
+      }
+    }
+  });
+}
+if (typeof window !== 'undefined') window.applyRuTextIn = function () { try { applyRuTextMap(getLang()); } catch (e) {} };
 
 /* ---- Akıllı balon: imlecin/öğenin ekrana uzaklığına göre üstte ya da altta ---- */
 let _ruTipBox = null, _ruTipCur = null;
@@ -4893,3 +4934,35 @@ async function checkPremiumExpiry() {
   } catch (e) {}
 }
 setTimeout(function () { try { checkPremiumExpiry(); } catch (e) {} }, 2500);
+
+/* ---- 🎁 Premium tanımlama: 1 hafta / 1-3-6 ay (üzerine yazar, bugünden başlar) ---- */
+function adminGiftPremium(userId) {
+  const old = document.getElementById('gift-overlay'); if (old) old.remove();
+  const ov = document.createElement('div');
+  ov.id = 'gift-overlay'; ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9500';
+  ov.innerHTML = `<div class="ui-modal" style="max-width:360px;">
+    <h3 class="ui-modal-title">🎁 Premium Tanımla</h3>
+    <p class="ui-modal-msg">Süre seç — <b>bugünden itibaren</b> başlar. Mevcut premium süresi varsa üstüne EKLENMEZ, yeni süre eskisinin yerine geçer.</p>
+    <div class="gift-opts">
+      <button class="set-btn" onclick="adminGiftSet('${userId}', 7, 'g')">1 Hafta (deneme)</button>
+      <button class="set-btn" onclick="adminGiftSet('${userId}', 1, 'a')">1 Ay</button>
+      <button class="set-btn" onclick="adminGiftSet('${userId}', 3, 'a')">3 Ay</button>
+      <button class="set-btn" onclick="adminGiftSet('${userId}', 6, 'a')">6 Ay</button>
+    </div>
+    <button class="set-btn ghost" style="margin-top:10px;" onclick="document.getElementById('gift-overlay').remove()">Vazgeç</button>
+  </div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+async function adminGiftSet(userId, n, unit) {
+  const d = new Date();
+  if (unit === 'g') d.setDate(d.getDate() + n); else d.setMonth(d.getMonth() + n);
+  d.setHours(23, 59, 59, 0);
+  try {
+    const { error } = await sb.from('profiles').update({ plan: 'premium', premium_until: d.toISOString() }).eq('id', userId);
+    if (error) throw error;
+    const ov = document.getElementById('gift-overlay'); if (ov) ov.remove();
+    toast('👑 Premium tanımlandı — bitiş: ' + d.toLocaleDateString('tr-TR'));
+    if (typeof loadAdminUsers === 'function') loadAdminUsers();
+  } catch (e) { uiAlert('Tanımlanamadı. premium_sure.sql çalıştırıldı mı?'); }
+}
