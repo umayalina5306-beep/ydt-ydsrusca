@@ -1007,6 +1007,7 @@ function pickChoice(i){
   _scoreAdjustRemove(prev);
   qAnswers[qIdx] = { answered:true, yourIndex:i, your:prep.options[i], ok };
   if (ok) { qScore++; _autoSaveCurrent(); } else qWrong++;
+  recordTopicStat(qList[qIdx], ok);
   if (quizReveal === 'instant' && prep.speakRu && typeof speak === 'function') speak(prep.speakRu);
   renderQ();
 }
@@ -1027,6 +1028,7 @@ function pickWrite(){
   _scoreAdjustRemove(prev);
   qAnswers[qIdx] = { answered:true, your: given || '(boş)', ok };
   if (ok) { qScore++; _autoSaveCurrent(); } else qWrong++;
+  recordTopicStat(qList[qIdx], ok);
   if (quizReveal === 'instant' && prep.speakRu && typeof speak === 'function') speak(prep.speakRu);
   renderQ();
 }
@@ -4399,6 +4401,26 @@ async function startMockExam() {
 /* ============================================================
    DİL SİSTEMİ (TR/RU) — RU modunda üzerine gelince TR anlamı çıkar
    ============================================================ */
+const I18N_EXTRA = {
+  heroSub: { tr: "Türkiye'nin ilk YDT/YDS odaklı Rusça öğrenme platformu. Kelimeler, testler ve video derslerle sınavda fark yarat.",
+             ru: "Первая в Турции платформа русского языка для YDT/YDS. Слова, тесты и видеоуроки — добейся успеха на экзамене." },
+  ctaStart: { tr: "Hemen Başla →", ru: "Начать сейчас →" },
+  ctaFree: { tr: "Ücretsiz Dene", ru: "Попробовать бесплатно" },
+  stWords: { tr: "Kelime", ru: "Слов" },
+  stVideos: { tr: "Video Ders", ru: "Видеоуроков" },
+  stTests: { tr: "Test Sorusu", ru: "Тестовых вопросов" },
+  secOffer: { tr: "Neler Sunuyoruz", ru: "Что мы предлагаем" },
+  secOne: { tr: "Her şey <span>tek platformda</span>", ru: "Всё <span>на одной платформе</span>", html: true },
+  ftKasa: { tr: "Kelime Kasası", ru: "Копилка слов" },
+  ftTests: { tr: "Akıllı Testler", ru: "Умные тесты" },
+  ftVideos: { tr: "Video Dersler", ru: "Видеоуроки" },
+  ftAccess: { tr: "6 Aylık Erişim", ru: "Доступ на 6 месяцев" },
+  hWords: { tr: "Kelime <span>Bankası</span>", ru: "Банк <span>слов</span>", html: true },
+  hDict: { tr: "Sözlükte <span>Ara</span>", ru: "Поиск <span>в словаре</span>", html: true },
+  hKasa: { tr: "Kelime <span>Kasası</span>", ru: "Копилка <span>слов</span>", html: true },
+  hQuiz: { tr: "Test <span>Çöz</span>", ru: "Решай <span>тесты</span>", html: true },
+  hVideo: { tr: "Video <span>Dersler</span>", ru: "Видео<span>уроки</span>", html: true }
+};
 const I18N = {
   nav_home: { tr: 'Ana Sayfa', ru: 'Главная' },
   nav_words: { tr: 'Kelimeler', ru: 'Слова' },
@@ -4418,9 +4440,18 @@ function toggleLang() {
   applyLang();
   toast(next === 'ru' ? 'Site dili: Русский (üzerine gelince Türkçesi görünür)' : 'Site dili: Türkçe');
 }
+function applyLangExtra(lang) {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.getAttribute('data-i18n');
+    const e = I18N_EXTRA[k]; if (!e) return;
+    const v = e[lang] || e.tr;
+    if (e.html) el.innerHTML = v; else el.textContent = v;
+  });
+}
 function applyLang() {
   const lang = getLang();
   document.body.classList.toggle('lang-ru', lang === 'ru');
+  applyLangExtra(lang);
   const lb = document.getElementById('lang-toggle'); if (lb) lb.textContent = lang === 'ru' ? 'TR' : 'RU';
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const k = el.getAttribute('data-i18n'); const t = I18N[k]; if (!t) return;
@@ -4537,4 +4568,20 @@ async function mockCfgSave() {
     if (window._siteCfg) window._siteCfg['mock_cfg'] = JSON.stringify(_mockDraft);
     toast('Deneme sınavı ayarları kaydedildi.');
   } catch (e) { uiAlert('Kaydedilemedi.'); }
+}
+
+/* ============================================================
+   KONU İSTATİSTİĞİ — kelime sorularında kategori & seviye bazlı
+   doğru/yanlış birikimi (Analiz sayfasının veri kaynağı)
+   ============================================================ */
+function _topicStats() { try { return JSON.parse(localStorage.getItem('ydt_topic_stats') || '{}'); } catch (e) { return {}; } }
+function recordTopicStat(item, ok) {
+  try {
+    if (!item || !item.ru) return; // paragraf vb. değil, kelime sorusu olmalı
+    const st = _topicStats();
+    const bump = k => { const o = st[k] || { t: 0, w: 0 }; o.t++; if (!ok) o.w++; st[k] = o; };
+    if (item.cat) bump('cat:' + item.cat);
+    if (item.level) bump('lvl:' + item.level);
+    localStorage.setItem('ydt_topic_stats', JSON.stringify(st));
+  } catch (e) {}
 }
