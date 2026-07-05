@@ -4771,73 +4771,120 @@ async function adminGiftSet(userId, n, unit) {
   } catch (e) { uiAlert('Tanımlanamadı. premium_sure.sql çalıştırıldı mı?'); }
 }
 
-/* ---- Toplu manuel kelime ekleme (dosyasız, 100'e kadar) ---- */
-function cwBulkBuild() {
+/* ============================================================
+   TOPLU KELİME EKLEME — satır listesi + sabit özellik paneli
+   Her satırın özellikleri hafızada (_cwbData) tutulur; satır
+   değiştirince kaybolmaz. "Hepsini Kaydet" -> veritabanı.
+   ============================================================ */
+let _cwbData = [], _cwbSel = -1;
+const _CWB_PD = ['Р.п.', 'Д.п.', 'В.п.', 'Т.п.', 'П.п.'];
+function _cwbYeni() {
+  return { ru: '', tr: '', cat: 'isim', level: 'A1', cinsiyet: '', padej: [], premium: false, ornek: '', ornekTr: '' };
+}
+function cwbBuild() {
   const n = Math.min(100, Math.max(1, parseInt((document.getElementById('cwb-count') || {}).value, 10) || 10));
-  const box = document.getElementById('cwb-rows'); if (!box) return;
-  const PD = ['Р.п.','Д.п.','В.п.','Т.п.','П.п.'];
-  box.innerHTML = Array.from({ length: n }, (_, i) => `
-    <div class="cwb-word">
-      <div class="cwb-row">
-        <span class="cwb-no">${i + 1}</span>
-        <input class="pq-input cwb-ru" placeholder="Rusça *" autocomplete="off">
-        <input class="pq-input cwb-tr" placeholder="Türkçe *" autocomplete="off">
-        <select class="pq-input cwb-lvl"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
-        <select class="pq-input cwb-cat" onchange="cwbRowCat(this)"><option>isim</option><option>fiil</option><option>sıfat</option><option>zarf</option><option>zamir</option><option>edat</option><option>bağlaç</option></select>
-        <select class="pq-input cwb-gram"><option value="">—</option><option>м</option><option>ж</option><option>с</option></select>
-        <span class="cwb-pd" style="display:none;">${PD.map(x => `<label><input type="checkbox" value="${x}">${x.slice(0,1)}</label>`).join('')}</span>
-        <label class="cwb-prem"><input type="checkbox" class="cwb-premium">👑</label>
-      </div>
-      <div class="cwb-row2">
-        <input class="pq-input cwb-ornek" placeholder="Örnek cümle (Rusça)" autocomplete="off">
-        <input class="pq-input cwb-ornektr" placeholder="Örnek cümle (Türkçe)" autocomplete="off">
-      </div>
-    </div>`).join('');
+  _cwbData = Array.from({ length: n }, _cwbYeni);
+  _cwbSel = -1;
+  cwbRenderRows();
+  const props = document.getElementById('cwb-props'); if (props) props.style.display = 'none';
   const btn = document.getElementById('cwb-save'); if (btn) btn.style.display = '';
 }
-function cwbRowCat(sel) {
-  const row = sel.closest('.cwb-row');
-  const gram = row.querySelector('.cwb-gram');
-  const pd = row.querySelector('.cwb-pd');
-  const cat = sel.value;
-  if (cat === 'isim') {
-    gram.style.display = ''; pd.style.display = 'none';
-    gram.innerHTML = '<option value="">—</option><option>м</option><option>ж</option><option>с</option>';
-  } else if (cat === 'fiil') {
-    gram.style.display = ''; pd.style.display = 'none';
-    gram.innerHTML = '<option value="">—</option><option value="нсв">НСВ</option><option value="св">СВ</option>';
-  } else if (cat === 'edat') {
-    gram.style.display = 'none'; gram.innerHTML = '<option value=""></option>';
-    pd.style.display = 'flex';
+function cwbAddRow() {
+  if (!_cwbData.length) { cwbBuild(); return; }
+  if (_cwbData.length >= 100) { toast('En fazla 100 kelime.'); return; }
+  _cwbData.push(_cwbYeni());
+  cwbRenderRows();
+  cwbSelect(_cwbData.length - 1);
+}
+function cwbDelRow(i) {
+  _cwbData.splice(i, 1);
+  if (_cwbSel >= _cwbData.length) _cwbSel = _cwbData.length - 1;
+  cwbRenderRows();
+  if (_cwbSel >= 0) cwbSelect(_cwbSel); else { const p = document.getElementById('cwb-props'); if (p) p.style.display = 'none'; }
+}
+function cwbRenderRows() {
+  const box = document.getElementById('cwb-rows'); if (!box) return;
+  box.innerHTML = _cwbData.map((w, i) => `
+    <div class="cwb-line ${i === _cwbSel ? 'sel' : ''}" id="cwb-line-${i}" onclick="cwbSelect(${i})">
+      <span class="cwb-no">${i + 1}</span>
+      <input class="pq-input" value="${_escAttr(w.ru)}" placeholder="Rusça kelime" autocomplete="off"
+             onfocus="cwbSelect(${i})" oninput="_cwbData[${i}].ru = this.value">
+      <input class="pq-input" value="${_escAttr(w.tr)}" placeholder="Türkçe karşılık" autocomplete="off"
+             onfocus="cwbSelect(${i})" oninput="_cwbData[${i}].tr = this.value">
+      <button class="mail-act red" onclick="event.stopPropagation(); cwbDelRow(${i})" title="Satırı sil">🗑️</button>
+    </div>`).join('');
+  const tot = document.getElementById('cwb-total'); if (tot) tot.textContent = _cwbData.length;
+}
+function cwbSelect(i) {
+  if (i < 0 || i >= _cwbData.length) return;
+  if (_cwbSel === i && document.getElementById('cwb-props').style.display !== 'none') { _cwbVurgula(i); return; }
+  _cwbSel = i;
+  _cwbVurgula(i);
+  const w = _cwbData[i];
+  const props = document.getElementById('cwb-props'); if (props) props.style.display = '';
+  const no = document.getElementById('cwbp-no'); if (no) no.textContent = '#' + (i + 1) + (w.ru ? ' · ' + w.ru : '');
+  document.getElementById('cwbp-cat').value = w.cat;
+  document.getElementById('cwbp-lvl').value = w.level;
+  document.getElementById('cwbp-prem').value = w.premium ? '1' : '';
+  document.getElementById('cwbp-ornek').value = w.ornek;
+  document.getElementById('cwbp-ornektr').value = w.ornekTr;
+  _cwbGramUI(w);
+}
+function _cwbVurgula(i) {
+  document.querySelectorAll('#cwb-rows .cwb-line').forEach((el, j) => el.classList.toggle('sel', j === i));
+}
+function _cwbGramUI(w) {
+  const gWrap = document.getElementById('cwbp-gram-wrap');
+  const pWrap = document.getElementById('cwbp-padej-wrap');
+  const gSel = document.getElementById('cwbp-gram');
+  const gLbl = document.getElementById('cwbp-gram-lbl');
+  if (w.cat === 'isim') {
+    gWrap.style.display = ''; pWrap.style.display = 'none';
+    gLbl.textContent = 'Cinsiyet';
+    gSel.innerHTML = '<option value="">Seçiniz</option><option>м</option><option>ж</option><option>с</option>';
+    gSel.value = ['м', 'ж', 'с'].includes(w.cinsiyet) ? w.cinsiyet : '';
+  } else if (w.cat === 'fiil') {
+    gWrap.style.display = ''; pWrap.style.display = 'none';
+    gLbl.textContent = 'Görünüş';
+    gSel.innerHTML = '<option value="">Seçiniz</option><option value="нсв">НСВ</option><option value="св">СВ</option>';
+    gSel.value = ['нсв', 'св'].includes(w.cinsiyet) ? w.cinsiyet : '';
+  } else if (w.cat === 'edat') {
+    gWrap.style.display = 'none'; pWrap.style.display = '';
+    document.getElementById('cwbp-padej').innerHTML = _CWB_PD.map(x =>
+      `<label><input type="checkbox" value="${x}" ${w.padej.includes(x) ? 'checked' : ''} onchange="cwbPadej(this)"> ${x}</label>`).join('');
   } else {
-    gram.style.display = 'none'; gram.innerHTML = '<option value=""></option>';
-    pd.style.display = 'none';
+    gWrap.style.display = 'none'; pWrap.style.display = 'none';
   }
 }
+function cwbProp(field, val) {
+  if (_cwbSel < 0) return;
+  const w = _cwbData[_cwbSel];
+  w[field] = val;
+  if (field === 'cat') { w.cinsiyet = ''; w.padej = []; _cwbGramUI(w); }
+  if (field === 'ru') { const no = document.getElementById('cwbp-no'); if (no) no.textContent = '#' + (_cwbSel + 1) + (val ? ' · ' + val : ''); }
+}
+function cwbPadej(cb) {
+  if (_cwbSel < 0) return;
+  const w = _cwbData[_cwbSel];
+  if (cb.checked) { if (!w.padej.includes(cb.value)) w.padej.push(cb.value); }
+  else w.padej = w.padej.filter(x => x !== cb.value);
+}
 async function cwBulkSave() {
-  const rows = [...document.querySelectorAll('#cwb-rows .cwb-word')].map(r => {
-    const cat = r.querySelector('.cwb-cat').value;
-    const gram = r.querySelector('.cwb-gram').value;
-    const pd = [...r.querySelectorAll('.cwb-pd input:checked')].map(c => c.value);
-    return {
-      ru: r.querySelector('.cwb-ru').value.trim(),
-      tr: r.querySelector('.cwb-tr').value.trim(),
-      level: r.querySelector('.cwb-lvl').value,
-      cat,
-      cinsiyet: gram || null,
-      tip: (cat === 'fiil') ? ({ 'нсв': 'НСВ', 'св': 'СВ' }[gram] || null) : null,
-      padej: (cat === 'edat' && pd.length) ? pd.join(' / ') : null,
-      ornek: r.querySelector('.cwb-ornek').value.trim() || null,
-      ornek_tr: r.querySelector('.cwb-ornektr').value.trim() || null,
-      premium: r.querySelector('.cwb-premium').checked,
-      active: true
-    };
-  }).filter(r => r.ru && r.tr);
+  const rows = _cwbData.filter(w => w.ru.trim() && w.tr.trim()).map(w => ({
+    ru: w.ru.trim(), tr: w.tr.trim(), level: w.level, cat: w.cat,
+    cinsiyet: w.cinsiyet || null,
+    tip: (w.cat === 'fiil') ? ({ 'нсв': 'НСВ', 'св': 'СВ' }[w.cinsiyet] || null) : null,
+    padej: (w.cat === 'edat' && w.padej.length) ? w.padej.join(' / ') : null,
+    ornek: w.ornek.trim() || null, ornek_tr: w.ornekTr.trim() || null,
+    premium: !!w.premium, active: true
+  }));
   if (!rows.length) { uiAlert('En az bir satırda Rusça + Türkçe doldurulmalı.'); return; }
   try {
     const n = await _cwUpsertAll(rows);
     await uiAlert(n + ' kelime kaydedildi. 🎉', 'Toplu Ekleme');
-    document.getElementById('cwb-rows').innerHTML = '';
+    _cwbData = []; _cwbSel = -1;
+    cwbRenderRows();
+    document.getElementById('cwb-props').style.display = 'none';
     document.getElementById('cwb-save').style.display = 'none';
     adminCwReload(); loadDbWords();
   } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
