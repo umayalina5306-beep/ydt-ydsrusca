@@ -18,6 +18,7 @@ async function openAdmin() {
   gate.style.display = "none";
   content.style.display = "block";
   await loadAdminUsers();   // genel bakış sayıları için
+  if (typeof adminSyncTranslations === "function") adminSyncTranslations(); // koddaki yeni metinler DB'ye
   adminNav("overview");
 }
 
