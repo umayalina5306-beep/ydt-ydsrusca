@@ -2491,3 +2491,7 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .cwb-line .pq-input { padding:11px 13px; font-size:.96rem; }
 .cwb-line { padding:8px 6px; }
 .cwbp-empty { text-align:center; color:var(--gray); font-size:.86rem; padding:26px 8px; line-height:1.6; }
+.pw-wrap { position:relative; }
+.pw-wrap .form-input, .pw-wrap input { width:100%; padding-right:44px; }
+.pw-eye { position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.05rem; padding:4px; opacity:.7; }
+.pw-eye:hover { opacity:1; }
