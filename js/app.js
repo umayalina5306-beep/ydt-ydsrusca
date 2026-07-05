@@ -4304,7 +4304,8 @@ Not: SQL ve Edge Function kaynak kodları bu zip'te DEĞİLDİR (tarayıcı Supa
 /* Seviye kartlarındaki kelime sayıları gerçek veriden */
 function updateLevelCards() {
   const c = (f) => words.filter(f).length;
-  const set = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n.toLocaleString('tr-TR') + ' kelime'; };
+  const suf = (typeof getLang === 'function' && getLang() === 'ru') ? ' слов' : ' kelime';
+  const set = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n.toLocaleString('tr-TR') + suf; };
   set('lc-a1a2', c(w => w.level === 'A1' || w.level === 'A2'));
   set('lc-b1', c(w => w.level === 'B1'));
   set('lc-b2', c(w => w.level === 'B2'));
@@ -4583,47 +4584,50 @@ const RU_TEXT_MAP = {
   "Kelime Kasası": "Копилка слов", "Kaydettiğin kelimeleri tekrar edin ve pekiştirin.": "Повторяй и закрепляй сохранённые слова.",
   "Tüm Kelime Kasama Git": "Вся копилка слов", "Çalışma Serisi": "Серия занятий", "Günlük çalışmaya devam et!": "Продолжай заниматься каждый день!",
   "Gün": "дн.", "En uzun seri:": "Рекорд:", "Kayıtlılar": "Сохранённые", "Öğrenilenler": "Выученные", "Hepsi": "Все",
-  "Detayları Gör": "Подробнее", "Geçmişim": "История", "Kayıtlı Kelime": "Сохранено слов", "Öğrenilen Kelime": "Выучено слов", "Çözülen Test": "Решено тестов", "İzlenen Video": "Просмотрено видео"
+  "Detayları Gör": "Подробнее", "Geçmişim": "История",
+  "1.719 grup": "1 719 групп", "20 çift": "20 пар", "8 kök": "8 корней",
+  "м (erkil)": "м (муж.)", "ж (dişil)": "ж (жен.)", "с (nötr)": "с (ср.)",
+  "Sonraki Soru →": "Следующий вопрос →", "Testi Bitir ✓": "Завершить тест ✓", "Süre doldu!": "Время вышло!",
+  "Doğru": "Верно", "Yanlış": "Неверно", "Boş": "Пусто", "Skor": "Счёт",
+  "👤 Hesap": "👤 Аккаунт", "🔔 Bildirimler": "🔔 Уведомления", "🛡️ Güvenlik": "🛡️ Безопасность",
+  "ÜCRETSİZ": "БЕСПЛАТНО", "Ön İzleme": "Пробный доступ", "EN ÇOK TERCİH": "САМЫЙ ПОПУЛЯРНЫЙ",
+  "6 Aylık Abonelik": "Подписка на 6 месяцев", "FİYATLANDIRMA": "ЦЕНЫ", "ücretsiz": "бесплатно",
+  "Kaydet": "Сохранить", "Vazgeç": "Отмена", "Kapat": "Закрыть", "Kaydet & Başlat": "Сохранить и начать",
+  "Başlat →": "Начать →", "Testi Kaydet": "Сохранить тест", "Kayıtlı Testlerim": "Мои тесты",
+  "Tekrar hedefi": "Цель повторения", "kelime seçildi": "слов выбрано", "Kayıtlı Kelime": "Сохранено слов", "Öğrenilen Kelime": "Выучено слов", "Çözülen Test": "Решено тестов", "İzlenen Video": "Просмотрено видео"
 };
-const _ruNodeOrig = new WeakMap();
-const _ruTouched = [];
+const RU_TEXT_MAP_REV = {};
+Object.keys(RU_TEXT_MAP).forEach(k => { RU_TEXT_MAP_REV[RU_TEXT_MAP[k]] = k; });
 function applyRuTextMap(lang) {
-  const roots = document.querySelectorAll('#page-testbuilder, #page-review, .notif-panel, #page-words, #page-profile, #page-admin .profile-sidebar');
-  if (lang === 'tr') {
-    _ruTouched.forEach(n => { if (_ruNodeOrig.has(n)) n.nodeValue = _ruNodeOrig.get(n); });
-    _ruTouched.length = 0;
-    document.querySelectorAll('[data-tip-map]').forEach(el => { el.removeAttribute('data-tip'); el.removeAttribute('data-tip-map'); });
-    return;
-  }
-  roots.forEach(root => {
-    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    let n;
-    while ((n = w.nextNode())) {
-      const t = (n.nodeValue || '').trim();
-      if (RU_TEXT_MAP[t]) {
-        if (!_ruNodeOrig.has(n)) _ruNodeOrig.set(n, n.nodeValue);
-        n.nodeValue = n.nodeValue.replace(t, RU_TEXT_MAP[t]);
-        _ruTouched.push(n);
-        const pe = n.parentElement;
-        if (pe && !pe.hasAttribute('data-i18n') && !pe.hasAttribute('data-tip')) { pe.setAttribute('data-tip', t); pe.setAttribute('data-tip-map', '1'); }
+  // Çift yönlü tam tarama: RU'da TR->RU, TR'de RU->TR (kalıntı imkânsız)
+  const dict = (lang === 'ru') ? RU_TEXT_MAP : RU_TEXT_MAP_REV;
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let n;
+  while ((n = w.nextNode())) {
+    const raw = n.nodeValue; if (!raw) continue;
+    const t = raw.trim(); if (!t) continue;
+    const rep = dict[t]; if (!rep) continue;
+    n.nodeValue = raw.replace(t, rep);
+    if (lang === 'ru') {
+      const pe = n.parentElement;
+      if (pe && !pe.hasAttribute('data-i18n') && !pe.hasAttribute('data-tip')) {
+        pe.setAttribute('data-tip', t); pe.setAttribute('data-tip-map', '1');
       }
     }
-  });
+  }
+  if (lang === 'tr') {
+    document.querySelectorAll('[data-tip-map]').forEach(el => { el.removeAttribute('data-tip'); el.removeAttribute('data-tip-map'); });
+  }
 }
 if (typeof window !== 'undefined') window.applyRuTextIn = function () { try { applyRuTextMap(getLang()); } catch (e) {} };
 let _i18nMoT = null;
 try {
   const _i18nMo = new MutationObserver(function () {
-    if (getLang() !== 'ru') return;
+    if (getLang() !== 'ru') return; // TR modunda ekranlar zaten TR üretir
     clearTimeout(_i18nMoT);
-    _i18nMoT = setTimeout(function () { try { applyLangExtra('ru'); } catch (e) {} }, 250);
+    _i18nMoT = setTimeout(function () { try { applyLangExtra('ru'); } catch (e) {} }, 300);
   });
-  ['page-profile', 'page-admin', 'page-words', 'page-testbuilder', 'page-review'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) _i18nMo.observe(el, { childList: true, subtree: true });
-  });
-  const np = document.getElementById('notif-panel');
-  if (np) _i18nMo.observe(np, { childList: true });
+  _i18nMo.observe(document.body, { childList: true, subtree: true });
 } catch (e) {}
 
 /* ---- Akıllı balon: imlecin/öğenin ekrana uzaklığına göre üstte ya da altta ---- */
@@ -4660,6 +4664,7 @@ function applyLang() {
   const lang = getLang();
   document.body.classList.toggle('lang-ru', lang === 'ru');
   applyLangExtra(lang);
+  if (typeof updateLevelCards === 'function') try { updateLevelCards(); } catch (e) {}
   const lb = document.getElementById('lang-toggle'); if (lb) lb.textContent = lang === 'ru' ? 'TR' : 'RU';
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const k = el.getAttribute('data-i18n'); const t = I18N[k]; if (!t) return;
