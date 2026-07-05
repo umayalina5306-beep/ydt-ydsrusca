@@ -85,7 +85,10 @@ function renderAdminUsers(list) {
       : `<span class="plan-badge ${isPrem ? "plan-premium" : "plan-free"}">${isPrem ? "Premium" : "Ücretsiz"}</span>`;
     const btn = u.is_admin
       ? ''
-      : `<button class="admin-toggle ${isPrem ? "is-prem" : ""}" onclick="togglePremium('${u.id}', '${u.plan}')">${isPrem ? "Ücretsiz yap" : "Premium yap"}</button>`;
+      : `<div class="admin-toggle-col">
+           <button class="admin-toggle" onclick="adminGiftPremium('${u.id}')">🎁 Premium Tanımla</button>
+           ${isPrem ? `<button class="admin-toggle is-prem" onclick="togglePremium('${u.id}', 'premium')">Ücretsiz yap</button>` : ''}
+         </div>`;
     return `<div class="admin-user">
       <div class="admin-user-info">
         <div class="admin-user-name">${ad} ${planBadge}</div>
