@@ -4423,6 +4423,42 @@ async function startMockExam() {
    DİL SİSTEMİ (TR/RU) — RU modunda üzerine gelince TR anlamı çıkar
    ============================================================ */
 const I18N_EXTRA = {
+  lblType: { tr: "📝 Test Türü", ru: "📝 Тип теста" },
+  lblLevel: { tr: "🎯 Seviye", ru: "🎯 Уровень" },
+  lblCat: { tr: "📚 Kategori", ru: "📚 Категория" },
+  lblTime: { tr: "⏱️ Süre", ru: "⏱️ Время" },
+  tRuTr: { tr: "🇷🇺 → 🇹🇷 Rusça → Türkçe", ru: "🇷🇺 → 🇹🇷 Русский → турецкий" },
+  tTrRu: { tr: "🇹🇷 → 🇷🇺 Türkçe → Rusça", ru: "🇹🇷 → 🇷🇺 Турецкий → русский" },
+  tYaz: { tr: "✍️ Yaz Bakalım", ru: "✍️ Напиши сам" },
+  tTf: { tr: "✓✗ Doğru / Yanlış", ru: "✓✗ Верно / неверно" },
+  tPara: { tr: "📖 Paragraf Soruları", ru: "📖 Вопросы по тексту" },
+  tPlc: { tr: "🎚️ Seviye Tespit Sınavı →", ru: "🎚️ Тест на уровень →" },
+  tMock: { tr: "📝 Deneme Sınavı (YDS · 80 soru · 180 dk) →", ru: "📝 Пробный экзамен (YDS · 80 вопросов · 180 мин) →" },
+  rvNow: { tr: "Anında göster", ru: "Показывать сразу" },
+  rvEnd: { tr: "Test sonunda göster", ru: "Показать в конце" },
+  tmOff: { tr: "Süresiz", ru: "Без ограничения" },
+  tmOn: { tr: "Süreli (soru tipine göre otomatik)", ru: "На время (автоматически по типу)" },
+  btnStartQuiz: { tr: "Teste Başla →", ru: "Начать тест →" },
+  ldA: { tr: "Temel seviye. Günlük hayatta kullanılan kelimeler.", ru: "Базовый уровень. Слова из повседневной жизни." },
+  ldB1: { tr: "Orta seviye. YDT hazırlık için temel kelimeler.", ru: "Средний уровень. Базовая лексика для YDT." },
+  ldB2: { tr: "Orta üstü seviye. YDT/YDS için kritik kelimeler.", ru: "Выше среднего. Ключевые слова для YDT/YDS." },
+  ldC1: { tr: "İleri seviye. YDS'de yüksek puan için.", ru: "Продвинутый уровень. Для высокого балла на YDS." },
+  lbBeg: { tr: "Başlangıç", ru: "Начальный" },
+  lbMid: { tr: "Orta", ru: "Средний" },
+  lbUpp: { tr: "Orta Üstü", ru: "Выше среднего" },
+  lbAdv: { tr: "İleri", ru: "Продвинутый" },
+  pOverview: { tr: "Profil Özeti", ru: "Обзор профиля" },
+  pKasa: { tr: "Kelime Kasam", ru: "Копилка слов" },
+  pLearned: { tr: "Öğrenilen Kelimeler", ru: "Выученные слова" },
+  pTests: { tr: "Test Geçmişim", ru: "История тестов" },
+  pVideos: { tr: "Video İzleme Geçmişim", ru: "История просмотров" },
+  pStats: { tr: "İstatistikler", ru: "Статистика" },
+  pTasks: { tr: "Görevler", ru: "Задания" },
+  pAnalysis: { tr: "Analiz & Öneri", ru: "Анализ и советы" },
+  pSupport: { tr: "Destek", ru: "Поддержка" },
+  pSettings: { tr: "Ayarlar", ru: "Настройки" },
+  phDict: { tr: "Sözlükte ara... (Rusça veya Türkçe)", ru: "Поиск в словаре... (русский или турецкий)" },
+  footer: { tr: "© 2026 <span>YDT-YDS Rusça Platformu</span> — Tüm hakları saklıdır.", ru: "© 2026 <span>Платформа YDT-YDS Русский</span> — Все права защищены.", html: true },
   subWords: { tr: "Önce seviyeni seç, sonra kategoriye göre kelimeleri incele.", ru: "Сначала выбери уровень, затем изучай слова по категориям." },
   subLevel: { tr: "Kategori seç ve kelimeleri incele.", ru: "Выбери категорию и изучай слова." },
   subQuiz: { tr: "Test türünü, kategoriyi ve soru sayısını seç.", ru: "Выбери тип теста, категорию и количество вопросов." },
@@ -4479,6 +4515,10 @@ function applyLangExtra(lang) {
     // RU modunda üzerine gelince Türkçesi görünsün
     if (lang === 'ru') el.setAttribute('data-tip', e.tr.replace(/<[^>]*>/g, ''));
     else el.removeAttribute('data-tip');
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    const e = I18N_EXTRA[el.getAttribute('data-i18n-ph')]; if (!e) return;
+    el.placeholder = e[lang] || e.tr;
   });
 }
 
@@ -4679,7 +4719,7 @@ function renderRecs() {
       <div class="rec-body">
         <div class="rec-chips"><span class="cw-cat">${RC_EMO[r.rtype] || ''} ${RC_LAB[r.rtype] || r.rtype}</span> <span class="kv-lvl">${_escHtml(r.level || '')}+ seviye</span></div>
         <div class="rec-title">${_escHtml(r.title)}</div>
-        <div class="rec-desc">${_escHtml(r.descr || '')}</div>
+        <div class="rec-desc">${_sanitizeRich(r.descr || '')}</div>
         <div class="rec-acts">
           ${r.trailer ? `<button class="mail-act" onclick="recTrailer(${idx})">▶ Fragman</button>` : ''}
           ${r.link ? `<a class="mail-act" href="${_escAttr(r.link)}" target="_blank" rel="noopener">🔗 ${r.rtype === 'kitap' ? 'İncele' : 'Nerede izlenir'}</a>` : ''}
@@ -4720,7 +4760,7 @@ function renderRcList() {
       <div class="cv-thumbbox">${r.thumb ? `<img src="${_escAttr(r.thumb)}" alt="">` : (RC_EMO[r.rtype] || '⭐')}</div>
       <div class="cw-main" style="flex:1;"><b>${_escHtml(r.title)}</b> <span class="cw-cat">${RC_LAB[r.rtype] || r.rtype}</span> <span class="kv-lvl">${r.level || ''}+</span>
         ${r.trailer ? '<span class="cw-cat">▶ fragman</span>' : ''}${r.active === false ? ' <span class="mail-member no">Gizli</span>' : ''}
-        <div class="err-meta">${_escHtml((r.descr || '').slice(0, 90))}</div></div>
+        <div class="err-meta">${_escHtml((r.descr || '').replace(/<[^>]*>/g, ' ').slice(0, 90))}</div></div>
       <div class="cw-acts">
         <button class="mail-act" onclick="adminRcEdit('${r.id}')">✏️</button>
         ${r.active === false
@@ -4731,7 +4771,8 @@ function renderRcList() {
     </div>`).join('');
 }
 function adminRcFormClear() {
-  ['rc-id','rc-title','rc-desc','rc-thumb','rc-trailer','rc-link'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['rc-id','rc-title','rc-thumb','rc-trailer','rc-link'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const rd = document.getElementById('rc-desc'); if (rd) rd.innerHTML = '';
   const btn = document.getElementById('rc-save-btn'); if (btn) btn.textContent = 'Öneri Ekle';
 }
 function adminRcEdit(id) {
@@ -4740,7 +4781,7 @@ function adminRcEdit(id) {
   document.getElementById('rc-type').value = r.rtype || 'film';
   document.getElementById('rc-title').value = r.title || '';
   document.getElementById('rc-level').value = r.level || 'A2';
-  document.getElementById('rc-desc').value = r.descr || '';
+  document.getElementById('rc-desc').innerHTML = _sanitizeRich(r.descr || '');
   document.getElementById('rc-thumb').value = r.thumb || '';
   document.getElementById('rc-trailer').value = r.trailer || '';
   document.getElementById('rc-link').value = r.link || '';
@@ -4751,7 +4792,7 @@ async function adminRcSave() {
   const title = _cwVal('rc-title'); if (!title) { uiAlert('Başlık zorunlu.'); return; }
   let trailer = _cwVal('rc-trailer');
   const ym = trailer.match(/(?:youtu\.be\/|v=)([\w-]{6,})/); if (ym) trailer = ym[1]; // tam link yapıştırılırsa ID'yi ayıkla
-  const row = { rtype: _cwVal('rc-type'), title, level: _cwVal('rc-level'), descr: _cwVal('rc-desc') || null,
+  const row = { rtype: _cwVal('rc-type'), title, level: _cwVal('rc-level'), descr: _rcDescHtml(),
     thumb: _cwVal('rc-thumb') || null, trailer: trailer || null, link: _cwVal('rc-link') || null, active: true };
   const id = _cwVal('rc-id');
   try {
@@ -4768,3 +4809,51 @@ async function adminRcPurge(id) {
   if (!(await uiConfirm('Bu öneri temelli silinsin mi?', 'Temelli Sil', { danger: true }))) return;
   try { await sb.from('content_recs').delete().eq('id', id); adminRcReload(); loadRecs(); } catch (e) {}
 }
+
+/* ---- Zengin metin editörü (öneri açıklaması) ---- */
+function rte(cmd, val) {
+  const area = document.getElementById('rc-desc'); if (area) area.focus();
+  try { document.execCommand(cmd, false, val || null); } catch (e) {}
+}
+function _rcDescHtml() {
+  const el = document.getElementById('rc-desc'); if (!el) return null;
+  const txt = (el.textContent || '').trim();
+  return txt ? el.innerHTML : null;
+}
+/* Basit HTML süzgeci: yalnız biçimlendirme etiketleri kalır */
+function _sanitizeRich(html) {
+  const ALLOW = { B:1, STRONG:1, I:1, EM:1, U:1, S:1, STRIKE:1, BR:1, P:1, DIV:1, SPAN:1, UL:1, OL:1, LI:1, FONT:1 };
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html || '';
+  (function walk(node) {
+    [...node.children].forEach(el => {
+      walk(el);
+      if (!ALLOW[el.tagName]) { el.replaceWith(...el.childNodes); return; }
+      [...el.attributes].forEach(a => {
+        const n = a.name.toLowerCase();
+        if (n === 'style') {
+          const keep = (el.getAttribute('style') || '').split(';')
+            .filter(r => /^\s*(color|background-color|text-align|font-size)\s*:/i.test(r)).join(';');
+          if (keep) el.setAttribute('style', keep); else el.removeAttribute('style');
+        } else if (el.tagName === 'FONT' && (n === 'color' || n === 'size')) { /* dur */ }
+        else el.removeAttribute(a.name);
+      });
+    });
+  })(tpl.content);
+  return tpl.innerHTML;
+}
+
+/* ---- Premium süresi dolduysa otomatik ücretsize düşür (girişte) ---- */
+async function checkPremiumExpiry() {
+  try {
+    if (typeof currentProfile === 'undefined' || !currentProfile || !currentUser) return;
+    if (currentProfile.plan === 'premium' && currentProfile.premium_until &&
+        new Date(currentProfile.premium_until) < new Date()) {
+      await sb.from('profiles').update({ plan: 'free' }).eq('id', currentUser.id);
+      currentProfile.plan = 'free';
+      if (typeof applyAvatar === 'function') applyAvatar();
+      if (typeof createNotification === 'function') createNotification('👑 Premium süren doldu', 'Üyeliğin ücretsiz plana geçti. Dilediğin zaman yeniden yükseltebilirsin.', 'info');
+    }
+  } catch (e) {}
+}
+setTimeout(function () { try { checkPremiumExpiry(); } catch (e) {} }, 2500);
