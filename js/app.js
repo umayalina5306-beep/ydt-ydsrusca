@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v89';
+var YDT_SURUM = 'v90';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -2628,7 +2628,7 @@ function bildirimAyarlariHTML() {
 /* ============================================================
    DESTEK / TICKET SİSTEMİ
    ============================================================ */
-function supStatusLabel(s) { return s === 'answered' ? 'Yanıtlandı' : (s === 'closed' ? 'Kapandı' : 'Açık'); }
+function supStatusLabel(s) { return s === 'answered' ? 'Yanıtlandı' : (s === 'closed' ? 'Kapandı' : (s === 'pending' ? 'Beklemede' : 'Açık')); }
 async function notifyUser(userId, title, body, type) {
   if (typeof sb === 'undefined' || !sb || !userId) return;
   try { await sb.from('notifications').insert({ user_id: userId, title: title, body: body || null, type: type || 'info' }); } catch (e) {}
@@ -2741,6 +2741,15 @@ async function adminRenderThread(id, userId) {
     let uCard = '';
     try {
       const { data: up } = await sb.from('profiles').select('display_name, email, plan, level, is_admin, created_at, status').eq('id', userId).single();
+      let sonGiris = '', sonTest = '';
+      try {
+        const { data: acc } = await sb.from('access_log').select('created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(1);
+        if (acc && acc[0]) sonGiris = new Date(acc[0].created_at).toLocaleString('tr-TR');
+      } catch (e2) {}
+      try {
+        const { data: ts } = await sb.from('test_results').select('created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(3);
+        if (ts && ts.length) sonTest = ts.length + ' test (son: ' + new Date(ts[0].created_at).toLocaleDateString('tr-TR') + ')';
+      } catch (e3) {}
       if (up) {
         _tkUserEmail = up.email || '';
         uCard = `<div class="tk-user-card">
@@ -2751,18 +2760,35 @@ async function adminRenderThread(id, userId) {
             <span>🎚️ ${up.level || 'seviye yok'}</span>
             <span>📅 Kayıt: ${up.created_at ? new Date(up.created_at).toLocaleDateString('tr-TR') : '—'}</span>
             ${up.status === 'frozen' ? '<span>❄️ Dondurulmuş</span>' : ''}
+            ${sonGiris ? `<span>🕐 Son giriş: ${sonGiris}</span>` : ''}
+            ${sonTest ? `<span>📋 ${sonTest}</span>` : ''}
+          </div>
+          <div class="tk-user-tools">
+            <button class="mail-act" onclick="tkResetMail('${_escAttr(up.email || '')}')">🔑 Sıfırlama Maili</button>
+            <button class="mail-act" onclick="tkResendVerify('${_escAttr(up.email || '')}')">✉️ Doğrulama Tekrar</button>
+            ${up.plan === 'premium' ? '' : `<button class="mail-act" onclick="tkTrial('${userId}')">🎁 1 Hafta Deneme</button>`}
           </div>
         </div>`;
       }
     } catch (e) { _tkUserEmail = ''; }
     box.innerHTML = `<button class="sup-back" onclick="adminTicketBack()">‹ Tüm talepler</button>
-      <h4 class="sup-h3">${_escHtml(t ? t.subject : '')} <span class="sup-status sup-${t ? t.status : 'open'}">${supStatusLabel(t ? t.status : 'open')}</span></h4>
+      <h4 class="sup-h3">${_escHtml(t ? t.subject : '')}
+        <select class="pq-input tk-status-sel" onchange="tkSetStatus('${id}', this.value)">
+          ${['open','pending','answered','closed'].map(st => `<option value="${st}" ${t && t.status === st ? 'selected' : ''}>${supStatusLabel(st)}</option>`).join('')}
+        </select>
+        ${t && t.assigned_to
+          ? (t.assigned_to === currentUser.id
+              ? '<button id="tk-assign-btn" class="mail-act" disabled>✅ Bende</button>'
+              : '<span class="cw-cat">👤 Üstlenildi</span>')
+          : `<button id="tk-assign-btn" class="mail-act" onclick="tkAssign('${id}')">🙋 Üstlen</button>`}
+      </h4>
       ${uCard}
       <div class="sup-thread">${thread}</div>
       <select class="pq-input mail-tpl" onchange="tkTpl(this.value); this.selectedIndex = 0;">
         <option value="">📋 Hazır şablon ekle...</option>
-        ${TICKET_TEMPLATES.map((tp, i) => `<option value="${i}">${tp.t}</option>`).join('')}
+        ${tkTplList().map((tp, i) => `<option value="${i}">${_escHtml(tp.t)}</option>`).join('')}
       </select>
+      <button class="mail-act" style="margin:4px 0 0;" onclick="tkTplAdd()">➕ Şablon Ekle</button>
       <textarea id="adm-reply" class="sup-textarea" placeholder="Yanıt yaz..."></textarea>
       <div class="mail-actions" style="margin-top:8px;">
         <button class="sup-send" onclick="adminReply('${id}','${userId}')">Yanıtla (site içi)</button>
@@ -3974,7 +4000,7 @@ const TICKET_TEMPLATES = [
 ];
 function tkTpl(idx) {
   if (idx === '') return;
-  const t = TICKET_TEMPLATES[parseInt(idx, 10)]; if (!t) return;
+  const t = tkTplList()[parseInt(idx, 10)]; if (!t) return;
   const ta = document.getElementById('adm-reply'); if (!ta) return;
   ta.value = ta.value ? (ta.value + '\n\n' + t.body) : t.body;
   ta.focus();
@@ -5025,3 +5051,151 @@ try {
   const _tmOrig = adminTicketMail;
   adminTicketMail = async function (ticketId) { await _tmOrig(ticketId); staffLog('ticket_mail', null, { ticket: ticketId }); };
 } catch (e) {}
+
+/* ============================================================
+   ŞİFRE GÜCÜ + ŞİFRE DEĞİŞTİRME (Ayarlar → Güvenlik)
+   ============================================================ */
+function pwStrength(p) {
+  let sc = 0;
+  if (p.length >= 6) sc++;
+  if (p.length >= 10) sc++;
+  if (/[A-ZА-Я]/.test(p) && /[a-zа-я]/.test(p)) sc++;
+  if (/\d/.test(p)) sc++;
+  if (/[^A-Za-zА-Яа-я0-9]/.test(p)) sc++;
+  const L = ['Çok zayıf', 'Zayıf', 'Orta', 'İyi', 'Güçlü', 'Çok güçlü'];
+  const C = ['#dc2626', '#dc2626', '#f59e0b', '#84cc16', '#16a34a', '#15803d'];
+  return { sc, label: L[sc], color: C[sc], pct: Math.max(8, sc * 20) };
+}
+function pwStrengthPaint(val, barId, txtId) {
+  const bar = document.getElementById(barId), txt = document.getElementById(txtId);
+  if (!bar) return;
+  if (!val) { bar.style.width = '0'; if (txt) txt.textContent = ''; return; }
+  const r = pwStrength(val);
+  bar.style.width = r.pct + '%';
+  bar.style.background = r.color;
+  if (txt) { txt.textContent = 'Şifre gücü: ' + r.label; txt.style.color = r.color; }
+}
+async function changePassword() {
+  const eski = (document.getElementById('cpw-old') || {}).value || '';
+  const y1 = (document.getElementById('cpw-new') || {}).value || '';
+  const y2 = (document.getElementById('cpw-new2') || {}).value || '';
+  const msg = document.getElementById('cpw-msg');
+  const de = (t, ok) => { if (msg) { msg.textContent = t; msg.style.color = ok ? '#16a34a' : '#b91c1c'; } };
+  if (!currentUser) { de('Önce giriş yapmalısın.'); return; }
+  if (!eski) { de('Mevcut şifreni gir.'); return; }
+  if (y1.length < 6) { de('Yeni şifre en az 6 karakter olmalı.'); return; }
+  if (pwStrength(y1).sc < 2) { de('Yeni şifre çok zayıf — harf + rakam karışımı kullan.'); return; }
+  if (y1 !== y2) { de('Yeni şifreler birbirini tutmuyor.'); return; }
+  if (y1 === eski) { de('Yeni şifre eskisiyle aynı olamaz.'); return; }
+  de('Mevcut şifre doğrulanıyor...', true);
+  try {
+    const { error: eDogru } = await sb.auth.signInWithPassword({ email: currentUser.email, password: eski });
+    if (eDogru) { de('Mevcut şifre yanlış.'); return; }
+    const { error } = await sb.auth.updateUser({ password: y1 });
+    if (error) throw error;
+    de('✅ Şifren güncellendi.', true);
+    ['cpw-old', 'cpw-new', 'cpw-new2'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    pwStrengthPaint('', 'cpw-bar', 'cpw-bar-t');
+    toast('🔒 Şifre güncellendi.');
+  } catch (e) { de('Güncellenemedi: ' + ((e && e.message) || e)); }
+}
+
+/* ============================================================
+   DESTEK ARAÇLARI — talep ekranındaki kullanıcı kartından
+   ============================================================ */
+async function tkResetMail(email) {
+  if (!email) return;
+  if (!(await uiConfirm(email + ' adresine şifre sıfırlama maili gönderilsin mi?', '🔑 Sıfırlama Maili'))) return;
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+    if (error) throw error;
+    toast('Sıfırlama maili gönderildi.');
+    staffLog('sifre_sifirlama_maili', null, { email });
+  } catch (e) { uiAlert('Gönderilemedi: ' + ((e && e.message) || e)); }
+}
+async function tkResendVerify(email) {
+  if (!email) return;
+  try {
+    const { error } = await sb.auth.resend({ type: 'signup', email });
+    if (error) throw error;
+    toast('Doğrulama maili yeniden gönderildi.');
+    staffLog('dogrulama_maili_tekrar', null, { email });
+  } catch (e) { uiAlert('Gönderilemedi: ' + ((e && e.message) || e) + ' (hesap zaten doğrulanmış olabilir)'); }
+}
+async function tkTrial(userId) {
+  if (!(await uiConfirm('Bu kullanıcıya 1 haftalık deneme premium tanımlansın mı? (Süre sunucuda sabittir: 7 gün)', '🎁 1 Hafta Deneme'))) return;
+  try {
+    const { error } = await sb.rpc('grant_trial', { target: userId });
+    if (error) throw error;
+    toast('🎁 1 haftalık deneme tanımlandı.');
+    staffLog('deneme_premium', userId, { sure: '7 gün' });
+  } catch (e) { uiAlert('Tanımlanamadı: ' + ((e && e.message) || e) + ' — destek_paketi.sql çalıştırıldı mı?'); }
+}
+async function tkSetStatus(id, status) {
+  try {
+    await sb.from('support_tickets').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+    toast('Durum: ' + supStatusLabel(status));
+    staffLog('talep_durum', null, { ticket: id, durum: status });
+  } catch (e) { uiAlert('Durum güncellenemedi.'); }
+}
+async function tkAssign(id) {
+  try {
+    await sb.from('support_tickets').update({ assigned_to: currentUser.id }).eq('id', id);
+    toast('Talep üstlenildi — artık sende.');
+    staffLog('talep_ustlen', null, { ticket: id });
+    const btn = document.getElementById('tk-assign-btn');
+    if (btn) { btn.textContent = '✅ Bende'; btn.disabled = true; }
+  } catch (e) { uiAlert('Üstlenilemedi.'); }
+}
+
+/* ---- Yanıt şablonları: veritabanından (destek kendi, yönetici genel) ---- */
+let _tkTpls = null;
+async function loadTicketTemplates() {
+  try {
+    const { data } = await sb.from('ticket_templates').select('*').order('is_global', { ascending: false }).order('created_at');
+    _tkTpls = (data || []).map(r => ({ id: r.id, t: (r.is_global ? '🌐 ' : '👤 ') + r.title, m: r.body, own: r.owner_id === (currentUser && currentUser.id), glob: r.is_global }));
+    // İlk kurulum: tablo boşsa yerleşik şablonları genel şablon olarak taşı (yalnız yönetici)
+    if (!_tkTpls.length && currentProfile && currentProfile.is_admin && Array.isArray(TICKET_TEMPLATES) && TICKET_TEMPLATES.length) {
+      const seed = TICKET_TEMPLATES.map(tp => ({ owner_id: currentUser.id, title: tp.t, body: tp.m, is_global: true }));
+      await sb.from('ticket_templates').insert(seed);
+      return loadTicketTemplates();
+    }
+  } catch (e) { _tkTpls = null; }
+}
+function tkTplList() {
+  return (_tkTpls && _tkTpls.length) ? _tkTpls : TICKET_TEMPLATES.map(tp => ({ t: tp.t, m: tp.m }));
+}
+function tkTplAdd() {
+  const ov = document.createElement('div');
+  ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9500';
+  const globOpt = (currentProfile && currentProfile.is_admin)
+    ? '<label class="cw-check" style="margin:8px 0;"><input type="checkbox" id="ttpl-glob"> 🌐 Genel şablon (tüm destek ekibi görür)</label>'
+    : '<p class="pq-hint">Bu şablonu yalnız sen görürsün.</p>';
+  ov.innerHTML = `<div class="ui-modal" style="max-width:440px;">
+    <h3 class="ui-modal-title">➕ Yanıt Şablonu Ekle</h3>
+    <input id="ttpl-title" class="pq-input" placeholder="Şablon adı (örn: Hoş geldin)" style="margin-bottom:8px;">
+    <textarea id="ttpl-body" class="an-textarea" placeholder="Şablon metni..."></textarea>
+    ${globOpt}
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button class="set-btn" onclick="tkTplSave()">Kaydet</button>
+      <button class="set-btn ghost" onclick="this.closest('.ui-modal-overlay').remove()">Vazgeç</button>
+    </div></div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+async function tkTplSave() {
+  const title = (document.getElementById('ttpl-title') || {}).value.trim();
+  const body = (document.getElementById('ttpl-body') || {}).value.trim();
+  const glob = !!(document.getElementById('ttpl-glob') || {}).checked;
+  if (!title || !body) { uiAlert('Ad ve metin zorunlu.'); return; }
+  try {
+    const { error } = await sb.from('ticket_templates').insert({ owner_id: currentUser.id, title, body, is_global: glob });
+    if (error) throw error;
+    document.querySelector('.ui-modal-overlay').remove();
+    toast('Şablon eklendi.');
+    staffLog('sablon_ekle', null, { title, genel: glob });
+    await loadTicketTemplates();
+    const sel = document.querySelector('#page-admin .mail-tpl');
+    if (sel) sel.innerHTML = '<option value="">📋 Hazır şablon ekle...</option>' + tkTplList().map((tp, i) => `<option value="${i}">${_escHtml(tp.t)}</option>`).join('');
+  } catch (e) { uiAlert('Eklenemedi: ' + ((e && e.message) || e) + ' — destek_paketi.sql çalıştırıldı mı?'); }
+}
