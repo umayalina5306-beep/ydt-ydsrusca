@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=86">
+<link rel="stylesheet" href="css/style.css?v=87">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=86" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=87" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words">Kelimeler</button></li>
@@ -1576,7 +1576,7 @@
           <h2 class="profile-h2">Hata Kayıtları</h2>
           <p class="profile-sub">Sitede oluşan hataların zaman damgalı kaydı.</p>
           <div class="admin-notif-card">
-        <div class="an-card-head"><h3 class="an-h3">🛠️ Hata Kayıtları</h3><div><button class="set-btn ghost" onclick="adminClearErrors()">Temizle</button><button class="set-btn ghost" onclick="adminLoadErrors()" style="margin-left:8px;">Yenile</button></div></div>
+        <div class="an-card-head"><h3 class="an-h3">🛠️ Hata Kayıtları</h3><div><button class="set-btn ghost" onclick="adminClearErrors()">Temizle</button><button class="set-btn ghost" onclick="adminErrTest()" style="margin-right:8px;">🧪 Sistemi Test Et</button><button class="set-btn ghost" onclick="adminLoadErrors()" style="margin-left:8px;">Yenile</button></div></div>
         <div id="admin-errors"></div>
       </div>
         </div>
@@ -1605,7 +1605,7 @@
       </div>
       <div class="form-group">
         <label class="form-label">Şifre</label>
-        <input id="login-pass" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password">
+        <div class="pw-wrap"><input id="login-pass" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password"><button type="button" class="pw-eye" onclick="pwToggle(this, 'login-pass')" title="Şifreyi göster/gizle">👁</button></div>
       </div>
       <div id="turnstile-box" class="turnstile-box"></div>
       <button class="btn-auth" onclick="authLogin()">Giriş Yap</button>
@@ -1625,7 +1625,7 @@
       </div>
       <div class="form-group">
         <label class="form-label">Şifre</label>
-        <input id="reg-pass" class="form-input" type="password" placeholder="En az 6 karakter" autocomplete="new-password">
+        <div class="pw-wrap"><input id="reg-pass" class="form-input" type="password" placeholder="En az 6 karakter" autocomplete="new-password"><button type="button" class="pw-eye" onclick="pwToggle(this, 'reg-pass')" title="Şifreyi göster/gizle">👁</button></div>
       </div>
       <button class="btn-auth" onclick="authRegister()">Hesap Oluştur</button>
       <div class="auth-divider">veya</div>
@@ -1641,12 +1641,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=86"></script>
-<script defer src="js/auth.js?v=86"></script>
-<script defer src="js/admin.js?v=86"></script>
-<script defer src="js/profile.js?v=86"></script>
-<script defer src="js/extras.js?v=86"></script>
-<script defer src="js/app.js?v=86"></script>
+<script defer src="js/supabase-config.js?v=87"></script>
+<script defer src="js/auth.js?v=87"></script>
+<script defer src="js/admin.js?v=87"></script>
+<script defer src="js/profile.js?v=87"></script>
+<script defer src="js/extras.js?v=87"></script>
+<script defer src="js/app.js?v=87"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
