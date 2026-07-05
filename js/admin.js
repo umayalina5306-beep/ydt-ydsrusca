@@ -125,18 +125,13 @@ async function togglePremium(userId, currentPlan) {
     } catch (e) { uiAlert("İşlem başarısız."); }
     return;
   }
-  // Premium yap: bitiş tarihi sor (varsayılan: 6 ay sonrası)
-  const def = new Date(); def.setMonth(def.getMonth() + 6);
-  const defStr = def.toISOString().slice(0, 10);
-  const t = await uiPrompt("Premium bitiş tarihi (YYYY-AA-GG):", { title: "👑 Premium Yap", placeholder: defStr, value: defStr });
-  if (t === null) return;
-  const dstr = (t || defStr).trim();
-  const d = new Date(dstr + "T23:59:59");
-  if (isNaN(d.getTime()) || d < new Date()) { uiAlert("Geçerli, ileri bir tarih gir (örn: " + defStr + ")."); return; }
+  // Premium yap: otomatik 6 ay (paket sistemi geldiğinde 1/3/6 ay seçenekleri eklenecek)
+  const d = new Date(); d.setMonth(d.getMonth() + 6); d.setHours(23, 59, 59, 0);
+  if (!(await uiConfirm("Bu kullanıcıya 6 aylık premium tanımlansın mı? (Bitiş: " + d.toLocaleDateString("tr-TR") + " — süre dolunca otomatik olarak ücretsiz plana döner.)", "👑 Premium Yap"))) return;
   try {
     const { error } = await sb.from("profiles").update({ plan: "premium", premium_until: d.toISOString() }).eq("id", userId);
     if (error) throw error;
-    toast("👑 Premium yapıldı — bitiş: " + d.toLocaleDateString("tr-TR"));
+    toast("👑 6 aylık premium tanımlandı — bitiş: " + d.toLocaleDateString("tr-TR"));
     loadAdminUsers();
   } catch (e) { uiAlert("İşlem başarısız. premium_sure.sql çalıştırıldı mı?"); }
 }
