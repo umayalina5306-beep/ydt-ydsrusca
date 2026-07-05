@@ -2364,8 +2364,6 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .nav-logo-img { height:44px; width:auto; display:block; }
 @media (max-width: 640px) { .nav-logo-img { height:34px; } }
 
-/* Dil değiştirici + RU modunda Türkçe ipucu balonu */
-.lang-btn { min-width:52px; font-weight:800; letter-spacing:.5px; }
 
 /* Panel: ağırlık çubukları */
 .cfg-lab { font-weight:800; color:var(--blue); margin:12px 0 4px; font-size:.9rem; }
@@ -2406,10 +2404,6 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .ana-coach .ana-h { color:var(--gold-light); }
 .ana-coach-p { color:#e8ecf4; line-height:1.65; font-size:.92rem; margin:0; }
 
-/* Akıllı RU balonu (JS konumlandırmalı) + Öneriler sayfası */
-.ru-tip { position:fixed; z-index:99998; background:var(--blue); color:#fff; border:1px solid var(--gold);
-  padding:7px 12px; border-radius:9px; font-size:.76rem; font-weight:600; max-width:320px;
-  box-shadow:0 8px 22px rgba(13,27,42,.3); pointer-events:none; }
 .recs-filters { display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 18px; }
 .recs-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:16px; }
 .rec-card { background:var(--white); border:1px solid var(--light-gray); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; transition:transform .15s, box-shadow .15s; }
@@ -2466,16 +2460,6 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .cwb-row { display:grid; grid-template-columns:28px 1.2fr 1.2fr 74px 110px; gap:6px; margin-bottom:6px; align-items:center; }
 .cwb-no { font-size:.78rem; color:var(--gray); text-align:right; }
 
-/* Dil düğmesi v2 + sabit "Site dili" rozeti */
-.lang-btn { min-width:78px; font-weight:800; position:relative; border:1.5px solid var(--gold) !important; }
-.lang-btn.ru-on { background:var(--gold); color:var(--blue) !important; }
-.lang-btn:hover::after {
-  content: attr(data-langlabel);
-  position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%);
-  background:var(--blue); color:#fff; border:1px solid var(--gold);
-  padding:5px 11px; border-radius:8px; font-size:.72rem; font-weight:700; white-space:nowrap;
-  box-shadow:0 6px 16px rgba(13,27,42,.3); z-index:1300; pointer-events:none;
-}
 
 /* Yönetim: sol menü daraltıldı, içerik alanı genişledi */
 #page-admin .profile-layout { grid-template-columns: 200px 1fr; }
