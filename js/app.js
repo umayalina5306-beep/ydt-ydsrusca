@@ -3392,10 +3392,11 @@ async function logError(message, source) {
     const _m = String(message || '').slice(0, 600);
     if (_m && _m === _errLastMsg) return; // aynı hatanın arka arkaya tekrarını yazma
     _errLastMsg = _m;
-    if (typeof sb === 'undefined' || !sb || typeof currentUser === 'undefined' || !currentUser) return;
+    if (typeof sb === 'undefined' || !sb) return;
     _errLogged++;
+    var _uid = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null;
     await sb.from('error_log').insert({
-      user_id: currentUser.id,
+      user_id: _uid,
       message: String(message || '').slice(0, 600),
       source: String(source || '').slice(0, 200),
       url: (location.pathname + location.hash).slice(0, 200)
@@ -4786,8 +4787,8 @@ function cwbBuild() {
   _cwbData = Array.from({ length: n }, _cwbYeni);
   _cwbSel = -1;
   cwbRenderRows();
-  const props = document.getElementById('cwb-props'); if (props) props.style.display = 'none';
   const btn = document.getElementById('cwb-save'); if (btn) btn.style.display = '';
+  cwbSelect(0);
 }
 function cwbAddRow() {
   if (!_cwbData.length) { cwbBuild(); return; }
@@ -4800,7 +4801,11 @@ function cwbDelRow(i) {
   _cwbData.splice(i, 1);
   if (_cwbSel >= _cwbData.length) _cwbSel = _cwbData.length - 1;
   cwbRenderRows();
-  if (_cwbSel >= 0) cwbSelect(_cwbSel); else { const p = document.getElementById('cwb-props'); if (p) p.style.display = 'none'; }
+  if (_cwbSel >= 0) cwbSelect(_cwbSel);
+  else {
+    const emp = document.getElementById('cwbp-empty'); if (emp) emp.style.display = '';
+    const flds = document.getElementById('cwbp-fields'); if (flds) flds.style.display = 'none';
+  }
 }
 function cwbRenderRows() {
   const box = document.getElementById('cwb-rows'); if (!box) return;
@@ -4817,11 +4822,12 @@ function cwbRenderRows() {
 }
 function cwbSelect(i) {
   if (i < 0 || i >= _cwbData.length) return;
-  if (_cwbSel === i && document.getElementById('cwb-props').style.display !== 'none') { _cwbVurgula(i); return; }
+  if (_cwbSel === i && document.getElementById('cwbp-fields').style.display !== 'none') { _cwbVurgula(i); return; }
   _cwbSel = i;
   _cwbVurgula(i);
   const w = _cwbData[i];
-  const props = document.getElementById('cwb-props'); if (props) props.style.display = '';
+  const emp = document.getElementById('cwbp-empty'); if (emp) emp.style.display = 'none';
+  const flds = document.getElementById('cwbp-fields'); if (flds) flds.style.display = '';
   const no = document.getElementById('cwbp-no'); if (no) no.textContent = '#' + (i + 1) + (w.ru ? ' · ' + w.ru : '');
   document.getElementById('cwbp-cat').value = w.cat;
   document.getElementById('cwbp-lvl').value = w.level;
@@ -4884,7 +4890,8 @@ async function cwBulkSave() {
     await uiAlert(n + ' kelime kaydedildi. 🎉', 'Toplu Ekleme');
     _cwbData = []; _cwbSel = -1;
     cwbRenderRows();
-    document.getElementById('cwb-props').style.display = 'none';
+    document.getElementById('cwbp-empty').style.display = '';
+    document.getElementById('cwbp-fields').style.display = 'none';
     document.getElementById('cwb-save').style.display = 'none';
     adminCwReload(); loadDbWords();
   } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
