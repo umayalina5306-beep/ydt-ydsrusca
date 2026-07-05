@@ -6,11 +6,31 @@
 var TURNSTILE_SITE_KEY = "0x4AAAAAADuwG7UJkIWquoIL";
 
 var _tsWidgetId = null;
+var _tsBekliyor = false;   // pencere açık ama script henüz gelmediyse
+var _tsDeneme = 0;
+window._tsOnload = function () {  // Turnstile scripti yüklenince Cloudflare bunu çağırır
+  if (_tsBekliyor) { _tsBekliyor = false; renderTurnstile(); }
+};
 function renderTurnstile() {
   if (!TURNSTILE_SITE_KEY) return;
   var box = document.getElementById("turnstile-box");
-  if (!box || typeof turnstile === "undefined") return;
+  if (!box) return;
+  if (typeof turnstile === "undefined") {
+    // Script henüz inmedi: bekle, kullanıcıya durum göster, birkaç kez yeniden dene
+    _tsBekliyor = true;
+    box.innerHTML = '<div class="ts-info">Güvenlik doğrulaması yükleniyor…</div>';
+    if (_tsDeneme < 6) {
+      _tsDeneme++;
+      setTimeout(renderTurnstile, 1200);
+    } else {
+      box.innerHTML = '<div class="ts-info ts-err">⚠️ Doğrulama kutusu yüklenemedi. Sayfayı yenileyin; sorun sürerse ağınız/eklentiniz challenges.cloudflare.com adresini engelliyor olabilir.</div>';
+      _tsDeneme = 0;
+    }
+    return;
+  }
+  _tsBekliyor = false; _tsDeneme = 0;
   if (_tsWidgetId !== null) { try { turnstile.reset(_tsWidgetId); } catch (e) {} return; }
+  box.innerHTML = "";
   try { _tsWidgetId = turnstile.render(box, { sitekey: TURNSTILE_SITE_KEY }); } catch (e) {}
 }
 function turnstileToken() {
