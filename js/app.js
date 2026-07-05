@@ -3408,7 +3408,11 @@ if (typeof window !== 'undefined') {
 }
 
 let _errShowAll = false;
+async function adminErrDelete(id) {
+  try { await sb.from('error_log').delete().eq('id', id); adminLoadErrors(window._errShowAll); } catch (e) { uiAlert('Silinemedi.'); }
+}
 async function adminLoadErrors(showAll) {
+  window._errShowAll = showAll;
   if (typeof showAll === 'boolean') _errShowAll = showAll;
   const box = document.getElementById('admin-errors'); if (!box) return;
   box.innerHTML = '<div class="profile-empty">Yükleniyor...</div>';
@@ -3420,7 +3424,7 @@ async function adminLoadErrors(showAll) {
       : `<div class="err-foot">Son ${data.length} kayıt. <button class="mail-act" onclick="adminLoadErrors(true)">Tümünü Gör</button></div>`;
     box.innerHTML = foot + data.map(e => {
       const d = new Date(e.created_at);
-      return `<div class="err-row"><div class="err-msg">${_escHtml(e.message)}</div>
+      return `<div class="err-row"><div class="err-msg">${_escHtml(e.message)} <button class="mail-act red err-del" onclick="adminErrDelete('${e.id}')">🗑️</button></div>
         <div class="err-meta">${_escHtml(e.source || '')} · ${_escHtml((e.user_id || '').slice(0,8))} · ${d.toLocaleString('tr-TR')}</div></div>`;
     }).join('');
   } catch (e) { box.innerHTML = '<div class="profile-empty">Hata kayıtları alınamadı (error_log.sql çalıştırıldı mı?).</div>'; }
@@ -4463,6 +4467,7 @@ const I18N_EXTRA = {
   lblLevel: { tr: "🎯 Seviye", ru: "🎯 Уровень" },
   lblCat: { tr: "📚 Kategori", ru: "📚 Категория" },
   lblTime: { tr: "⏱️ Süre", ru: "⏱️ Время" },
+  lblCount: { tr: "🔢 Soru Sayısı", ru: "🔢 Количество вопросов" },
   tRuTr: { tr: "🇷🇺 → 🇹🇷 Rusça → Türkçe", ru: "🇷🇺 → 🇹🇷 Русский → турецкий" },
   tTrRu: { tr: "🇹🇷 → 🇷🇺 Türkçe → Rusça", ru: "🇹🇷 → 🇷🇺 Турецкий → русский" },
   tYaz: { tr: "✍️ Yaz Bakalım", ru: "✍️ Напиши сам" },
@@ -4569,15 +4574,25 @@ const RU_TEXT_MAP = {
   "Anında göster": "Показывать сразу", "Test sonunda göster": "Показать в конце",
   "Kelime Kasam": "Копилка слов", "Öğrenilen Kelimeler": "Выученные слова", "Test Geçmişim": "История тестов", "Video İzleme Geçmişim": "История просмотров", "İstatistikler": "Статистика",
   "Çalışma istatistiklerinize genel bir bakış.": "Общий обзор вашей статистики.",
-  "Profili Düzenle": "Редактировать профиль", "Kayıtlı Kelime": "Сохранено слов", "Öğrenilen Kelime": "Выучено слов", "Çözülen Test": "Решено тестов", "İzlenen Video": "Просмотрено видео"
+  "Profili Düzenle": "Редактировать профиль",
+  "Genel Bakış": "Обзор", "Kullanıcılar": "Пользователи", "İçerik (Kelimeler)": "Контент (слова)", "Bildirim Gönder": "Отправить уведомление",
+  "Destek Talepleri": "Обращения", "Mail Kutusu": "Почта", "Soru Havuzu": "Банк вопросов", "Paragraf Soruları": "Вопросы по тексту",
+  "Videolar": "Видео", "Öneriler": "Рекомендации", "Ziyaret & SEO": "Посещения и SEO", "Site Ayarları": "Настройки сайта",
+  "Yedekleme": "Резервные копии", "Hata Kayıtları": "Журнал ошибок",
+  "« Önceki": "« Назад", "Sonraki »": "Вперёд »", "Tümü": "Все", "Listele": "Показать", "Aralık:": "Диапазон:",
+  "Kelime Kasası": "Копилка слов", "Kaydettiğin kelimeleri tekrar edin ve pekiştirin.": "Повторяй и закрепляй сохранённые слова.",
+  "Tüm Kelime Kasama Git": "Вся копилка слов", "Çalışma Serisi": "Серия занятий", "Günlük çalışmaya devam et!": "Продолжай заниматься каждый день!",
+  "Gün": "дн.", "En uzun seri:": "Рекорд:", "Kayıtlılar": "Сохранённые", "Öğrenilenler": "Выученные", "Hepsi": "Все",
+  "Detayları Gör": "Подробнее", "Geçmişim": "История", "Kayıtlı Kelime": "Сохранено слов", "Öğrenilen Kelime": "Выучено слов", "Çözülen Test": "Решено тестов", "İzlenen Video": "Просмотрено видео"
 };
 const _ruNodeOrig = new WeakMap();
 const _ruTouched = [];
 function applyRuTextMap(lang) {
-  const roots = document.querySelectorAll('#page-testbuilder, #page-review, .notif-panel, #page-words .cat-tabs, #page-profile .profile-main');
+  const roots = document.querySelectorAll('#page-testbuilder, #page-review, .notif-panel, #page-words, #page-profile, #page-admin .profile-sidebar');
   if (lang === 'tr') {
     _ruTouched.forEach(n => { if (_ruNodeOrig.has(n)) n.nodeValue = _ruNodeOrig.get(n); });
     _ruTouched.length = 0;
+    document.querySelectorAll('[data-tip-map]').forEach(el => { el.removeAttribute('data-tip'); el.removeAttribute('data-tip-map'); });
     return;
   }
   roots.forEach(root => {
@@ -4589,11 +4604,27 @@ function applyRuTextMap(lang) {
         if (!_ruNodeOrig.has(n)) _ruNodeOrig.set(n, n.nodeValue);
         n.nodeValue = n.nodeValue.replace(t, RU_TEXT_MAP[t]);
         _ruTouched.push(n);
+        const pe = n.parentElement;
+        if (pe && !pe.hasAttribute('data-i18n') && !pe.hasAttribute('data-tip')) { pe.setAttribute('data-tip', t); pe.setAttribute('data-tip-map', '1'); }
       }
     }
   });
 }
 if (typeof window !== 'undefined') window.applyRuTextIn = function () { try { applyRuTextMap(getLang()); } catch (e) {} };
+let _i18nMoT = null;
+try {
+  const _i18nMo = new MutationObserver(function () {
+    if (getLang() !== 'ru') return;
+    clearTimeout(_i18nMoT);
+    _i18nMoT = setTimeout(function () { try { applyLangExtra('ru'); } catch (e) {} }, 250);
+  });
+  ['page-profile', 'page-admin', 'page-words', 'page-testbuilder', 'page-review'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) _i18nMo.observe(el, { childList: true, subtree: true });
+  });
+  const np = document.getElementById('notif-panel');
+  if (np) _i18nMo.observe(np, { childList: true });
+} catch (e) {}
 
 /* ---- Akıllı balon: imlecin/öğenin ekrana uzaklığına göre üstte ya da altta ---- */
 let _ruTipBox = null, _ruTipCur = null;
@@ -4610,16 +4641,19 @@ document.addEventListener('mouseover', function (e) {
   _ruTipBox.className = 'ru-tip';
   _ruTipBox.textContent = txt;
   document.body.appendChild(_ruTipBox);
-  const r = t.getBoundingClientRect();
+  _ruTipMove(e.clientX, e.clientY);
+});
+function _ruTipMove(x, y) {
+  if (!_ruTipBox) return;
   const tw = _ruTipBox.offsetWidth, th = _ruTipBox.offsetHeight;
-  // Üstte yeterli boşluk varsa üste, yoksa alta konumlan
-  const above = r.top >= th + 14;
-  const top = above ? (r.top - th - 9) : (r.bottom + 9);
-  let left = r.left + r.width / 2 - tw / 2;
-  left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
-  _ruTipBox.style.top = top + 'px';
-  _ruTipBox.style.left = left + 'px';
-  _ruTipBox.classList.add(above ? 'above' : 'below');
+  let top = y + 20, left = x + 14; // imlecin sağ altı
+  if (top + th > window.innerHeight - 8) top = y - th - 12;  // sığmazsa üstü
+  if (left + tw > window.innerWidth - 8) left = x - tw - 12; // sığmazsa solu
+  _ruTipBox.style.top = Math.max(8, top) + 'px';
+  _ruTipBox.style.left = Math.max(8, left) + 'px';
+}
+document.addEventListener('mousemove', function (e) {
+  if (_ruTipBox) _ruTipMove(e.clientX, e.clientY);
 });
 window.addEventListener('scroll', _ruTipHide, true);
 function applyLang() {
