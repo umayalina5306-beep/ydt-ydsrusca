@@ -2500,3 +2500,4 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .pwbar-t { font-size:.75rem; min-height:16px; margin-bottom:4px; }
 .tk-user-tools { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px dashed var(--light-gray); }
 .tk-status-sel { width:auto; display:inline-block; padding:5px 8px; font-size:.8rem; margin-left:8px; }
+.cw-tabs { display:flex; gap:8px; align-items:center; margin:10px 0 12px; }
