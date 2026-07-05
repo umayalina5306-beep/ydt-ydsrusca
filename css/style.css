@@ -2488,3 +2488,6 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 @media (max-width: 900px) { .cwb-layout { grid-template-columns: 1fr; } .cwb-right { position:static; } }
 .ts-info { font-size:.82rem; color:var(--gray); padding:8px 4px; }
 .ts-info.ts-err { color:#b91c1c; }
+.cwb-line .pq-input { padding:11px 13px; font-size:.96rem; }
+.cwb-line { padding:8px 6px; }
+.cwbp-empty { text-align:center; color:var(--gray); font-size:.86rem; padding:26px 8px; line-height:1.6; }
