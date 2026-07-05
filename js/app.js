@@ -4423,6 +4423,38 @@ async function startMockExam() {
    DİL SİSTEMİ (TR/RU) — RU modunda üzerine gelince TR anlamı çıkar
    ============================================================ */
 const I18N_EXTRA = {
+  cSyn: { tr: "Eş Anlamlılar", ru: "Синонимы" },
+  cSynD: { tr: "Anlamca yakın kelimeler (tüm seviyeler).", ru: "Слова, близкие по значению (все уровни)." },
+  cAnt: { tr: "Zıt Anlamlılar", ru: "Антонимы" },
+  cAntD: { tr: "Birbirinin tersi kelime çiftleri (tüm seviyeler).", ru: "Пары слов с противоположным значением (все уровни)." },
+  cFam: { tr: "Akraba Kelimeler", ru: "Однокоренные слова" },
+  cFamD: { tr: "Aynı kökten türeyen kelime aileleri (tüm seviyeler).", ru: "Семьи слов от одного корня (все уровни)." },
+  cKasa: { tr: "Kelime Kasası", ru: "Копилка слов" },
+  cKasaC: { tr: "Kaydettiğin kelimeler", ru: "Сохранённые слова" },
+  cKasaD: { tr: "Kaydettiğin ve öğrendiğin kelimeleri seviye ve türe göre gör.", ru: "Смотри сохранённые и выученные слова по уровню и типу." },
+  rngLbl: { tr: "Aralık:", ru: "Диапазон:" },
+  rngList: { tr: "Listele", ru: "Показать" },
+  phLevel: { tr: "Bu seviyede ara... (Rusça veya Türkçe)", ru: "Поиск на этом уровне... (русский или турецкий)" },
+  tbTitle: { tr: "Kendi Testini Oluştur", ru: "Создай свой тест" },
+  tbDesc: { tr: "Tür, kaynak ve soru sayısını sen belirle; istersen kaydet, sonra tek tıkla tekrar çöz.", ru: "Выбери тип, источник и количество вопросов; сохрани и решай снова одним кликом." },
+  tbBtn: { tr: "Test Oluştur →", ru: "Создать тест →" },
+  vipT: { tr: "🔒 Premium İçerik", ru: "🔒 Премиум-контент" },
+  vipD: { tr: "Video derslere erişmek için satın alma yapmanız gerekiyor.", ru: "Для доступа к видеоурокам нужна подписка." },
+  vipB: { tr: "Şimdi Satın Al →", ru: "Купить сейчас →" },
+  ctAll: { tr: "HEPSİ", ru: "ВСЕ" },
+  ctIsim: { tr: "İSİMLER", ru: "СУЩ." },
+  ctFiil: { tr: "FİİLLER", ru: "ГЛАГОЛЫ" },
+  ctSifat: { tr: "SIFATLAR", ru: "ПРИЛАГ." },
+  ctZarf: { tr: "ZARFLAR", ru: "НАРЕЧИЯ" },
+  ctZamir: { tr: "ZAMİRLER", ru: "МЕСТОИМ." },
+  ctEdat: { tr: "EDATLAR", ru: "ПРЕДЛОГИ" },
+  ctBaglac: { tr: "BAĞLAÇLAR", ru: "СОЮЗЫ" },
+  qcAll: { tr: "Hepsi", ru: "Все" },
+  qcAll2: { tr: "Hepsi", ru: "Все" },
+  qcIsim: { tr: "İsimler", ru: "Существительные" },
+  qcFiil: { tr: "Fiiller", ru: "Глаголы" },
+  qcSifat: { tr: "Sıfatlar", ru: "Прилагательные" },
+  btnBack: { tr: "← Geri", ru: "← Назад" },
   lblType: { tr: "📝 Test Türü", ru: "📝 Тип теста" },
   lblLevel: { tr: "🎯 Seviye", ru: "🎯 Уровень" },
   lblCat: { tr: "📚 Kategori", ru: "📚 Категория" },
@@ -4701,9 +4733,12 @@ async function loadRecs() {
   renderRecs();
 }
 function recsSetType(t, btn) {
+  // Seçili filtreye tekrar tıklanırsa seçim kalkar (Tümü'ye döner)
+  if (t !== 'all' && recsType === t) t = 'all';
   recsType = t;
-  document.querySelectorAll('.recs-filters .cat-chip').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
+  document.querySelectorAll('.recs-filters .rec-chip').forEach(b => {
+    b.classList.toggle('active', b.dataset.rt === t);
+  });
   renderRecs();
 }
 function renderRecs() {
@@ -4852,7 +4887,8 @@ async function checkPremiumExpiry() {
       await sb.from('profiles').update({ plan: 'free' }).eq('id', currentUser.id);
       currentProfile.plan = 'free';
       if (typeof applyAvatar === 'function') applyAvatar();
-      if (typeof createNotification === 'function') createNotification('👑 Premium süren doldu', 'Üyeliğin ücretsiz plana geçti. Dilediğin zaman yeniden yükseltebilirsin.', 'info');
+      if (typeof createNotification === 'function') createNotification('👑 Premium üyeliğin sona erdi', 'Seninle geçen 6 ay harikaydı! Üyeliğin ücretsiz plana geçti — kelime bankası ve testler seninle kalmaya devam ediyor.', 'info');
+      if (typeof uiAlert === 'function') uiAlert('Premium üyeliğinin süresi doldu ve hesabın ücretsiz plana geçti. 💙\n\nKelime bankası ve testlere erişimin sürüyor; video dersler ve premium içerikler için dilediğin zaman Fiyatlar sayfasından yeniden yükseltebilirsin.', '👑 Premium Süren Doldu');
     }
   } catch (e) {}
 }
