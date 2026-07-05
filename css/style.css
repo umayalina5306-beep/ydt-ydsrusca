@@ -2402,3 +2402,26 @@ body.lang-ru [data-tip]:hover::before {
 .ana-rec { padding:10px 0; border-bottom:1px dashed var(--light-gray); }
 .ana-rec:last-child { border-bottom:none; }
 .ana-rec .mail-act { margin-top:6px; }
+
+/* Üst barda RU ipucu balonu aşağı açılır (yukarı taşma düzeltmesi) */
+body.lang-ru .navbar [data-tip]:hover::after {
+  bottom: auto; top: calc(100% + 9px);
+}
+body.lang-ru .navbar [data-tip]:hover::before {
+  bottom: auto; top: calc(100% + 3px);
+  border-top-color: transparent; border-bottom-color: var(--gold);
+}
+
+/* Konu analizi çubukları + koç kartı */
+.ana-sub { font-size:.83rem; color:var(--gray); margin-bottom:4px; font-weight:700; }
+.ana-topic { display:flex; align-items:center; gap:10px; margin:5px 0; }
+.ana-topic-name { width:110px; font-size:.84rem; font-weight:700; color:var(--blue); }
+.ana-topic-track { flex:1; height:9px; background:var(--off-white); border-radius:6px; overflow:hidden; }
+.ana-topic-fill { height:100%; background:var(--gold); border-radius:6px; }
+.ana-topic-fill.no { background:#c0392b; }
+.ana-topic-fill.ok { background:#1a7f37; }
+.ana-topic-val { width:110px; text-align:right; font-size:.78rem; color:var(--text); }
+.ana-topic-val i { color:var(--gray); font-style:normal; }
+.ana-coach { background:linear-gradient(135deg, #0d1b2a, #14273f); border:1px solid var(--gold); }
+.ana-coach .ana-h { color:var(--gold-light); }
+.ana-coach-p { color:#e8ecf4; line-height:1.65; font-size:.92rem; margin:0; }
