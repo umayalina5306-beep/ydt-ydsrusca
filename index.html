@@ -23,7 +23,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=64">
+<link rel="stylesheet" href="css/style.css?v=65">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -46,7 +46,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=64" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=65" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active" data-i18n="nav_home">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words" data-i18n="nav_words">Kelimeler</button></li>
@@ -81,43 +81,43 @@
     <div class="hero-content">
       <div class="hero-badge">🇷🇺 YDT · YDS · HAZIRLIK</div>
       <h1>YDT-YDS Rusça<br><em>Platformu</em></h1>
-      <p class="hero-sub">Türkiye'nin ilk YDT/YDS odaklı Rusça öğrenme platformu. Kelimeler, testler ve video derslerle sınavda fark yarat.</p>
+      <p class="hero-sub" data-i18n="heroSub">Türkiye'nin ilk YDT/YDS odaklı Rusça öğrenme platformu. Kelimeler, testler ve video derslerle sınavda fark yarat.</p>
       <div class="hero-buttons">
-        <button class="btn-primary" onclick="showPage('pricing')">Hemen Başla →</button>
-        <button class="btn-secondary" onclick="showPage('words')">Ücretsiz Dene</button>
+        <button class="btn-primary" onclick="showPage('pricing')" data-i18n="ctaStart">Hemen Başla →</button>
+        <button class="btn-secondary" onclick="showPage('words')" data-i18n="ctaFree">Ücretsiz Dene</button>
       </div>
       <div class="hero-stats">
-        <div><div class="hero-stat-num">2.272</div><div class="hero-stat-label">Kelime</div></div>
-        <div><div class="hero-stat-num">50+</div><div class="hero-stat-label">Video Ders</div></div>
-        <div><div class="hero-stat-num">500+</div><div class="hero-stat-label">Test Sorusu</div></div>
+        <div><div class="hero-stat-num">2.272</div><div class="hero-stat-label" data-i18n="stWords">Kelime</div></div>
+        <div><div class="hero-stat-num">50+</div><div class="hero-stat-label" data-i18n="stVideos">Video Ders</div></div>
+        <div><div class="hero-stat-num">500+</div><div class="hero-stat-label" data-i18n="stTests">Test Sorusu</div></div>
       </div>
     </div>
   </section>
 
   <section class="features">
     <div class="section-header">
-      <div class="section-label">Neler Sunuyoruz</div>
-      <div class="section-title">Her şey <span>tek platformda</span></div>
+      <div class="section-label" data-i18n="secOffer">Neler Sunuyoruz</div>
+      <div class="section-title" data-i18n="secOne">Her şey <span>tek platformda</span></div>
     </div>
     <div class="features-grid">
       <div class="feature-card" onclick="showPage('words')">
         <div class="feature-icon">📚</div>
-        <div class="feature-title">Kelime Kasası</div>
+        <div class="feature-title" data-i18n="ftKasa">Kelime Kasası</div>
         <div class="feature-desc">YDT/YDS sınavına özel 2.272 kelime. Seviyeye ve konuya göre filtrele, sesli telaffuzla öğren.</div>
       </div>
       <div class="feature-card" onclick="showPage('quiz')">
         <div class="feature-icon">🎯</div>
-        <div class="feature-title">Akıllı Testler</div>
+        <div class="feature-title" data-i18n="ftTests">Akıllı Testler</div>
         <div class="feature-desc">Gerçek sınav formatında sorular. Her testten sonra detaylı analiz ve eksik noktalarını gör.</div>
       </div>
       <div class="feature-card" onclick="showPage('video')">
         <div class="feature-icon">🎬</div>
-        <div class="feature-title">Video Dersler</div>
+        <div class="feature-title" data-i18n="ftVideos">Video Dersler</div>
         <div class="feature-desc">A1'den C1'e kapsamlı video dersler. Gramer, okuma, dinleme ve konuşma becerilerini geliştir.</div>
       </div>
       <div class="feature-card" onclick="showPage('pricing')">
         <div class="feature-icon">💎</div>
-        <div class="feature-title">6 Aylık Erişim</div>
+        <div class="feature-title" data-i18n="ftAccess">6 Aylık Erişim</div>
         <div class="feature-desc">₺24.000 ile 6 ay boyunca tüm içeriklere tam erişim. 2.272 kelime, testler ve videolar seni bekliyor.</div>
       </div>
     </div>
@@ -132,7 +132,7 @@
     <div class="words-header">
       <div class="kb-header-row">
         <div>
-          <h2>Kelime <span>Bankası</span></h2>
+          <h2 data-i18n="hWords">Kelime <span>Bankası</span></h2>
           <p>Önce seviyeni seç, sonra kategoriye göre kelimeleri incele.</p>
         </div>
         <div class="kb-search">
@@ -208,7 +208,7 @@
     <div class="words-header">
       <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
         <button onclick="backToLevels()" class="back-btn">← Geri</button>
-        <h2>Sözlükte <span>Ara</span></h2>
+        <h2 data-i18n="hDict">Sözlükte <span>Ara</span></h2>
       </div>
       <p>Rusça veya Türkçe kelime yazın.</p>
     </div>
@@ -272,7 +272,7 @@
       <div class="kasa-head">
         <button onclick="backToLevels()" class="back-btn">← Geri</button>
         <div>
-          <h2 class="kasa-title">Kelime <span>Kasası</span></h2>
+          <h2 class="kasa-title" data-i18n="hKasa">Kelime <span>Kasası</span></h2>
           <p class="kasa-sub">Kaydettiğin ve öğrendiğin kelimeleri görüntüle, tekrar et ve pekiştir.</p>
         </div>
       </div>
@@ -338,7 +338,7 @@
     <!-- QUIZ SETUP -->
     <div id="quiz-setup">
       <div class="quiz-header">
-        <h2>Test <span>Çöz</span></h2>
+        <h2 data-i18n="hQuiz">Test <span>Çöz</span></h2>
         <p>Test türünü, kategoriyi ve soru sayısını seç.</p>
       </div>
 
@@ -740,7 +740,7 @@
 <!-- ===== VIDEO ===== -->
 <div id="page-video" class="page">
   <div class="video-header">
-    <h2>Video <span>Dersler</span></h2>
+    <h2 data-i18n="hVideo">Video <span>Dersler</span></h2>
     <p>Adım adım Rusça öğrenin. A1'den başlayıp YDT/YDS seviyesine ulaşın.</p>
   </div>
   <div class="video-lock-banner">
@@ -1462,11 +1462,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=64"></script>
-<script defer src="js/auth.js?v=64"></script>
-<script defer src="js/admin.js?v=64"></script>
-<script defer src="js/profile.js?v=64"></script>
-<script defer src="js/extras.js?v=64"></script>
-<script defer src="js/app.js?v=64"></script>
+<script defer src="js/supabase-config.js?v=65"></script>
+<script defer src="js/auth.js?v=65"></script>
+<script defer src="js/admin.js?v=65"></script>
+<script defer src="js/profile.js?v=65"></script>
+<script defer src="js/extras.js?v=65"></script>
+<script defer src="js/app.js?v=65"></script>
 </body>
 </html>
