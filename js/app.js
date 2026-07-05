@@ -108,7 +108,7 @@ function sozlukAra(query) {
     const ncvHTML = w.ncv ? `<div class="word-cv-pair">⇄ НСВ: <b>${w.ncv}</b></div>` : '';
     const extraHTML = (cvHTML||ncvHTML) ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--light-gray);">${cvHTML}${ncvHTML}</div>` : '';
     const genderClass = w.cinsiyet==='м'?'gender-m':w.cinsiyet==='ж'?'gender-f':(w.cinsiyet==='с'?'gender-n':'gender-v');
-    const genderLabel = w.cinsiyet==='м'?'м (eril)':w.cinsiyet==='ж'?'ж (dişil)':w.cinsiyet==='с'?'с (nötr)':(w.cinsiyet==='нсв'?'НСВ (bitmemiş)':(w.cinsiyet==='св'?'СВ (bitmiş)':''));
+    const genderLabel = w.cinsiyet==='м'?'м (eril)':w.cinsiyet==='ж'?'ж (dişil)':w.cinsiyet==='с'?'с (nötr)':(w.cinsiyet==='нсв'?'НСВ':(w.cinsiyet==='св'?'СВ':''));
     const genderHTML = w.cinsiyet ? `<span class="word-gender ${genderClass}">${genderLabel}</span>` : '';
     const padejHTML = w.padej ? `<span class="word-padej">${w.padej}</span><br>` : '';
     const lc = levelColor[w.level] || '#6b7280';
@@ -120,7 +120,7 @@ function sozlukAra(query) {
       <div class="word-ru">${highlight(w.ru,q)} ${genderHTML}</div>
       ${tipHTML}${padejHTML}
       <div class="word-tr">${highlight(w.tr,q)}</div>
-      <div class="word-pron">[${w.p}]</div>
+      <div class="word-pron"></div>
       ${extraHTML}
       ${w.ornek?`<div class="word-example"><div class="word-example-ru">${w.ornek}</div><div class="word-example-tr">${w.ornekTr}</div></div>`:''}
     </div>`;
@@ -338,7 +338,7 @@ function wordCardHTML(w, inBank) {
     const ncvHTML = w.ncv ? `<div class="word-cv-pair">⇄ НСВ: <b>${w.ncv}</b></div>` : '';
     const extraHTML = (cvHTML||ncvHTML) ? `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--light-gray);">${cvHTML}${ncvHTML}</div>` : '';
     const genderClass = w.cinsiyet === 'м' ? 'gender-m' : w.cinsiyet === 'ж' ? 'gender-f' : 'gender-n';
-    const genderLabel = w.cinsiyet === 'м' ? 'м (eril)' : w.cinsiyet === 'ж' ? 'ж (dişil)' : w.cinsiyet === 'с' ? 'с (nötr)' : (w.cinsiyet === 'нсв' ? 'НСВ (bitmemiş)' : (w.cinsiyet === 'св' ? 'СВ (bitmiş)' : ''));
+    const genderLabel = w.cinsiyet === 'м' ? 'м (eril)' : w.cinsiyet === 'ж' ? 'ж (dişil)' : w.cinsiyet === 'с' ? 'с (nötr)' : (w.cinsiyet==='нсв'?'НСВ':(w.cinsiyet==='св'?'СВ':''));
     const genderHTML = w.cinsiyet ? `<span class="word-gender ${genderClass}">${genderLabel}</span>` : '';
     const padejHTML = w.padej ? `<span class="word-padej">${w.padej}</span><br>` : '';
     const ruSafe = w.ru.replace(/'/g, "\\'");
@@ -360,7 +360,6 @@ function wordCardHTML(w, inBank) {
       ${tipHTML}
       ${padejHTML}
       <div class="word-tr">${_escHtml(w.tr)}</div>
-      <div class="word-pron">[${w.p || ''}]</div>
       ${extraHTML}
       ${w.ornek ? `<div class="word-example"><div class="word-example-ru">${w.ornek}</div><div class="word-example-tr">${w.ornekTr}</div></div>` : ''}
       ${inBank ? `<button class="card-review-btn" onclick="reviewOneWord('${ruSafe}')">🔁 Tekrar Et</button>` : ''}
@@ -766,11 +765,23 @@ function fitWords() {
 // renderWords çağrısı selectLevel'dan yapılacak
 
 // SPEECH - Mobil uyumlu
+function _pickRuVoice() {
+  try {
+    const pref = localStorage.getItem('ydt_voice') || 'auto';
+    const vs = speechSynthesis.getVoices().filter(v => /^ru/i.test(v.lang));
+    if (!vs.length) return null;
+    if (pref === 'auto') return vs[0];
+    const fem = /milena|katya|alyona|svetlana|irina|tatyana|female|Женск/i;
+    const mal = /yuri|pavel|dmitr|maxim|male|Мужск/i;
+    return vs.find(v => (pref === 'female' ? fem : mal).test(v.name)) || vs[0];
+  } catch (e) { return null; }
+}
 function speak(text) {
   // Önce Web Speech API dene (mobilde daha iyi çalışır)
   if (window.speechSynthesis) {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
+  try { const _v = _pickRuVoice(); if (_v) u.voice = _v; } catch (e) {}
     u.lang = 'ru-RU';
     u.rate = 0.85;
     u.pitch = 1;
@@ -924,7 +935,7 @@ function buildQuestion(w, type){
     const isCorrect = Math.random() > 0.5;
     let shownTr = w.tr;
     if (!isCorrect){ const d = shuffle(words.filter(x=>x.ru!==w.ru))[0]; shownTr = d ? d.tr : w.tr; }
-    return { kind:'choice', type, optFont:'', pron:`[${w.p}]`, speakRu:w.ru,
+    return { kind:'choice', type, optFont:'', pron:``, speakRu:w.ru,
       promptHTML:`<span style="font-family:'Noto Sans',sans-serif;">${w.ru}</span><br><small style="font-size:1rem;color:var(--gray);">${shownTr}</small>`,
       options:['Doğru ✓','Yanlış ✗'], correctIndex: isCorrect ? 0 : 1, aciklama:'' };
   }
@@ -934,12 +945,12 @@ function buildQuestion(w, type){
       return { kind:'write', type:'fill', writeMode:'ru', pron:'', speakRu:w.ru, correct:w.ru, aciklama:'',
         promptHTML:`<div style="font-size:1.1rem;color:var(--gray);margin-bottom:8px;">Türkçesi:</div><div style="font-size:1.6rem;font-weight:700;">${w.tr}</div>` };
     return { kind:'write', type:'fill', writeMode:'tr', pron:'', speakRu:w.ru, correct:w.tr, aciklama:'',
-      promptHTML:`<div style="font-size:1.1rem;color:var(--gray);margin-bottom:8px;">Rusçası:</div><div style="font-family:'Noto Sans',sans-serif;font-size:1.8rem;font-weight:700;">${w.ru}</div><div style="font-size:0.9rem;color:var(--gray);">[${w.p}]</div>` };
+      promptHTML:`<div style="font-size:1.1rem;color:var(--gray);margin-bottom:8px;">Rusçası:</div><div style="font-family:'Noto Sans',sans-serif;font-size:1.8rem;font-weight:700;">${w.ru}</div><div style="font-size:0.9rem;color:var(--gray);"></div>` };
   }
   // ru-tr (varsayılan)
   const wrong = shuffle(words.filter(x=>x.ru!==w.ru)).slice(0,3).map(x=>x.tr);
   const options = shuffle([w.tr, ...wrong]);
-  return { kind:'choice', type:'ru-tr', optFont:'tr', pron:`[${w.p}]`, speakRu:w.ru,
+  return { kind:'choice', type:'ru-tr', optFont:'tr', pron:``, speakRu:w.ru,
     promptHTML:`<span style="font-family:'Noto Sans',sans-serif;">${w.ru}</span>`, options, correctIndex:options.indexOf(w.tr), aciklama:'' };
 }
 
@@ -3686,7 +3697,7 @@ function adminWordEdit(id) {
 async function adminWordSave() {
   const ru = _cwVal('cw-ru'), tr = _cwVal('cw-tr');
   if (!ru || !tr) { uiAlert('Rusça kelime ve Türkçe anlam zorunlu.'); return; }
-  const row = { ru, tr, p: _cwVal('cw-p') || null, cat: _cwVal('cw-cat'), level: _cwVal('cw-lvl'),
+  const row = { ru, tr, p: null, cat: _cwVal('cw-cat'), level: _cwVal('cw-lvl'),
     cinsiyet: (_cwVal('cw-cat') === 'edat') ? null : (_cwVal('cw-gram') || null),
     padej: (_cwVal('cw-cat') === 'edat') ? cwPadejValue() : null,
     ornek: _cwVal('cw-ornek') || null, ornek_tr: _cwVal('cw-ornektr') || null,
@@ -3970,7 +3981,7 @@ async function adminTicketMail(ticketId) {
 /* ---- Kelime formu: türe göre gramer seçenekleri ---- */
 const CW_GRAM_OPTS = {
   'isim': [['', 'Cinsiyet...'], ['м', 'м'], ['ж', 'ж'], ['с', 'с']],
-  'fiil': [['', 'Görünüş seç...'], ['нсв', 'НСВ — bitmemiş (HCB)'], ['св', 'СВ — bitmiş (CB)']]
+  'fiil': [['', '—'], ['нсв', 'НСВ'], ['св', 'СВ']]
 };
 const CW_PADEJ = ['Р.п.', 'Д.п.', 'В.п.', 'Т.п.', 'П.п.']; // sitedeki etiket biçimi (örn: "П.п. / В.п.")
 function cwCatChanged(setVal) {
@@ -4564,8 +4575,8 @@ function applyLangExtra(lang) {
     const v = e[lang] || e.tr;
     if (e.html) el.innerHTML = v; else el.textContent = v;
     // RU modunda üzerine gelince Türkçesi görünsün
-    if (lang === 'ru') { const _tt = e.tr.replace(/<[^>]*>/g, ''); if (!/[А-Яа-яЁё]/.test(_tt)) el.setAttribute('data-tip', _tt); }
-    else el.removeAttribute('data-tip');
+    if (lang === 'ru') { const _tt = e.tr.replace(/<[^>]*>/g, ''); _tipStore.set(el, _tt); el.classList.add('ru-t'); }
+    else { _tipStore.delete(el); el.classList.remove('ru-t'); }
   });
   applyRuTextMap(lang);
   document.querySelectorAll('[data-i18n-ph]').forEach(el => {
@@ -4676,28 +4687,24 @@ const RU_TEXT_MAP = {
   "Başlat →": "Начать →", "Testi Kaydet": "Сохранить тест", "Kayıtlı Testlerim": "Мои тесты",
   "Tekrar hedefi": "Цель повторения", "kelime seçildi": "слов выбрано", "Kayıtlı Kelime": "Сохранено слов", "Öğrenilen Kelime": "Выучено слов", "Çözülen Test": "Решено тестов", "İzlenen Video": "Просмотрено видео"
 };
+const _tipStore = new WeakMap();
+const _touchedEls = new Set();
 function applyRuTextMap(lang) {
   if (lang === 'tr') {
-    // GERİ YÜKLEME: yalnız işaretli (bizim çevirdiğimiz) öğeler taranır; baz Rusça içeriğe dokunulmaz
-    if (!applyRuTextMap._rev) {
-      applyRuTextMap._rev = {};
-      Object.keys(RU_TEXT_MAP).forEach(k => { applyRuTextMap._rev[RU_TEXT_MAP[k]] = k; });
-    }
+    if (!applyRuTextMap._rev) { applyRuTextMap._rev = {}; Object.keys(RU_TEXT_MAP).forEach(k => { applyRuTextMap._rev[RU_TEXT_MAP[k]] = k; }); }
     const REV = applyRuTextMap._rev;
-    document.querySelectorAll('[data-tip-map]').forEach(el => {
-      const tip = el.getAttribute('data-tip');
+    _touchedEls.forEach(el => {
       const w2 = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
       let n2;
       while ((n2 = w2.nextNode())) {
-        const t2 = (n2.nodeValue || '').trim(); if (!t2) continue;
-        if (tip && t2 === (RU_TEXT_MAP[tip] || '')) { n2.nodeValue = n2.nodeValue.replace(t2, tip); continue; }
-        if (REV[t2]) n2.nodeValue = n2.nodeValue.replace(t2, REV[t2]);
+        const t2 = (n2.nodeValue || '').trim();
+        if (t2 && REV[t2]) n2.nodeValue = n2.nodeValue.replace(t2, REV[t2]);
       }
-      el.removeAttribute('data-tip'); el.removeAttribute('data-tip-map');
+      _tipStore.delete(el); el.classList.remove('ru-t');
     });
+    _touchedEls.clear();
     return;
   }
-  // RU: yalnız sözlükteki BİREBİR Türkçe metinleri çevir; orijinali data-tip'te sakla.
   // Sitenin öz Rusça içeriğine (kelimeler, örnek cümleler) asla dokunulmaz.
   const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   let n;
@@ -4708,7 +4715,7 @@ function applyRuTextMap(lang) {
     const pe = n.parentElement;
     if (pe && pe.hasAttribute('data-i18n')) continue; // onların kendi sistemi var
     n.nodeValue = raw.replace(t, rep);
-    if (pe && !pe.hasAttribute('data-tip') && !/[А-Яа-яЁё]/.test(t)) { pe.setAttribute('data-tip', t); pe.setAttribute('data-tip-map', '1'); }
+    if (pe && !_tipStore.has(pe)) { _tipStore.set(pe, t); pe.classList.add('ru-t'); _touchedEls.add(pe); }
   }
 }
 if (typeof window !== 'undefined') window.applyRuTextIn = function () { try { applyRuTextMap(getLang()); } catch (e) {} };
@@ -4728,12 +4735,12 @@ function _ruTipHide() { if (_ruTipBox) { _ruTipBox.remove(); _ruTipBox = null; }
 document.addEventListener('mouseover', function (e) {
   if (!document.body.classList.contains('lang-ru')) { _ruTipHide(); return; }
   if (localStorage.getItem('ydt_rutip') === 'off') { _ruTipHide(); return; }
-  const t = e.target.closest ? e.target.closest('[data-tip]') : null;
+  const t = e.target.closest ? e.target.closest('.ru-t') : null;
   if (!t || t.classList.contains('lang-btn')) { _ruTipHide(); return; }
   if (t === _ruTipCur) return;
   _ruTipHide();
-  const txt = t.getAttribute('data-tip');
-  if (!txt || /[А-Яа-яЁё]/.test(txt)) return; // orijinal metin Türkçedir; Kiril asla gösterilmez
+  const txt = _tipStore.get(t);
+  if (!txt || /[А-Яа-яЁё]/.test(txt)) return;
   _ruTipCur = t;
   _ruTipBox = document.createElement('div');
   _ruTipBox.className = 'ru-tip';
@@ -4765,7 +4772,7 @@ function applyLang() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const k = el.getAttribute('data-i18n'); const t = I18N[k]; if (!t) return;
     el.textContent = t[lang] || t.tr;
-    if (lang === 'ru') el.setAttribute('data-tip', t.tr); else el.removeAttribute('data-tip');
+    if (lang === 'ru') { _tipStore.set(el, t.tr); el.classList.add('ru-t'); } else { _tipStore.delete(el); el.classList.remove('ru-t'); }
   });
 }
 setTimeout(function () { try { applyLang(); } catch (e) {} }, 400);
@@ -5117,9 +5124,9 @@ function cwBulkBuild() {
         <input class="pq-input cwb-ru" placeholder="Rusça *" autocomplete="off">
         <input class="pq-input cwb-tr" placeholder="Türkçe *" autocomplete="off">
         <select class="pq-input cwb-lvl"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
-        <select class="pq-input cwb-cat"><option>isim</option><option>fiil</option><option>sıfat</option><option>zarf</option><option>zamir</option><option>edat</option><option>bağlaç</option></select>
-        <select class="pq-input cwb-gram"><option value="">—</option><option>м</option><option>ж</option><option>с</option><option>нсв</option><option>св</option></select>
-        <span class="cwb-pd">${PD.map(x => `<label><input type="checkbox" value="${x}">${x.slice(0,1)}</label>`).join('')}</span>
+        <select class="pq-input cwb-cat" onchange="cwbRowCat(this)"><option>isim</option><option>fiil</option><option>sıfat</option><option>zarf</option><option>zamir</option><option>edat</option><option>bağlaç</option></select>
+        <select class="pq-input cwb-gram"><option value="">—</option><option>м</option><option>ж</option><option>с</option></select>
+        <span class="cwb-pd" style="display:none;">${PD.map(x => `<label><input type="checkbox" value="${x}">${x.slice(0,1)}</label>`).join('')}</span>
         <label class="cwb-prem"><input type="checkbox" class="cwb-premium">👑</label>
       </div>
       <div class="cwb-row2">
@@ -5128,6 +5135,25 @@ function cwBulkBuild() {
       </div>
     </div>`).join('');
   const btn = document.getElementById('cwb-save'); if (btn) btn.style.display = '';
+}
+function cwbRowCat(sel) {
+  const row = sel.closest('.cwb-row');
+  const gram = row.querySelector('.cwb-gram');
+  const pd = row.querySelector('.cwb-pd');
+  const cat = sel.value;
+  if (cat === 'isim') {
+    gram.style.display = ''; pd.style.display = 'none';
+    gram.innerHTML = '<option value="">—</option><option>м</option><option>ж</option><option>с</option>';
+  } else if (cat === 'fiil') {
+    gram.style.display = ''; pd.style.display = 'none';
+    gram.innerHTML = '<option value="">—</option><option value="нсв">НСВ</option><option value="св">СВ</option>';
+  } else if (cat === 'edat') {
+    gram.style.display = 'none'; gram.innerHTML = '<option value=""></option>';
+    pd.style.display = 'flex';
+  } else {
+    gram.style.display = 'none'; gram.innerHTML = '<option value=""></option>';
+    pd.style.display = 'none';
+  }
 }
 async function cwBulkSave() {
   const rows = [...document.querySelectorAll('#cwb-rows .cwb-word')].map(r => {
