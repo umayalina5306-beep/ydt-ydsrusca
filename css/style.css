@@ -2486,3 +2486,5 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .cwbp-pd { display:flex; flex-wrap:wrap; gap:8px; font-size:.8rem; }
 .cwbp-pd label { display:flex; align-items:center; gap:3px; cursor:pointer; }
 @media (max-width: 900px) { .cwb-layout { grid-template-columns: 1fr; } .cwb-right { position:static; } }
+.ts-info { font-size:.82rem; color:var(--gray); padding:8px 4px; }
+.ts-info.ts-err { color:#b91c1c; }
