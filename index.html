@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=72">
+<link rel="stylesheet" href="css/style.css?v=73">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=72" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=73" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active" data-i18n="nav_home">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words" data-i18n="nav_words">Kelimeler</button></li>
@@ -1190,6 +1190,16 @@
           </div>
 
           <div class="admin-notif-card">
+            <h3 class="an-h3">⚡ Toplu Manuel Ekleme (dosyasız)</h3>
+            <p class="pq-hint">Kaç kelime ekleyeceğini yaz (en çok 100), satırları doldur, tek tuşla hepsini kaydet. Boş satırlar atlanır.</p>
+            <div class="pq-row2">
+              <input id="cwb-count" class="pq-input pq-level" type="number" min="1" max="100" value="10">
+              <button class="set-btn" onclick="cwBulkBuild()">Satırları Oluştur</button>
+            </div>
+            <div id="cwb-rows"></div>
+            <button class="set-btn" id="cwb-save" style="display:none;" onclick="cwBulkSave()">💾 Hepsini Kaydet</button>
+          </div>
+          <div class="admin-notif-card">
             <h3 class="an-h3">📦 Toplu Yükleme</h3>
             <p class="pq-hint">Dosya (.json / .csv / .xlsx) yükle veya JSON'u doğrudan yapıştır. Sütun/alan adları: <code>ru, tr, p, cat, level, ornek, ornekTr, premium</code> (ru ve tr zorunlu). Aynı "ru" varsa üzerine yazılır.</p>
             <div class="pq-row2">
@@ -1419,6 +1429,7 @@
               <button type="button" class="rte-btn" onclick="rte('removeFormat')" title="Biçimi temizle">🧹</button>
             </div>
             <div id="rc-desc" class="rte-area" contenteditable="true" data-ph="Neden izlenmeli/okunmalı? (2-3 cümle)"></div>
+            <textarea id="rc-desc-ru" class="an-textarea" placeholder="Açıklama (Rusça — RU modunda gösterilir, opsiyonel)"></textarea>
             <div class="pq-row2">
               <input id="rc-thumb" class="pq-input" placeholder="Afiş/kapak görseli URL (opsiyonel)" autocomplete="off">
               <input id="rc-trailer" class="pq-input" placeholder="YouTube fragman ID (opsiyonel)" autocomplete="off">
@@ -1547,12 +1558,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=72"></script>
-<script defer src="js/auth.js?v=72"></script>
-<script defer src="js/admin.js?v=72"></script>
-<script defer src="js/profile.js?v=72"></script>
-<script defer src="js/extras.js?v=72"></script>
-<script defer src="js/app.js?v=72"></script>
+<script defer src="js/supabase-config.js?v=73"></script>
+<script defer src="js/auth.js?v=73"></script>
+<script defer src="js/admin.js?v=73"></script>
+<script defer src="js/profile.js?v=73"></script>
+<script defer src="js/extras.js?v=73"></script>
+<script defer src="js/app.js?v=73"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
