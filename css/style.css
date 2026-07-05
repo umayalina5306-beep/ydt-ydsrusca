@@ -2495,3 +2495,8 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .pw-wrap .form-input, .pw-wrap input { width:100%; padding-right:44px; }
 .pw-eye { position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.05rem; padding:4px; opacity:.7; }
 .pw-eye:hover { opacity:1; }
+.pwbar { height:6px; background:var(--light-gray); border-radius:4px; margin:6px 0 2px; overflow:hidden; }
+.pwbar-fill { height:100%; width:0; border-radius:4px; transition:width .2s, background .2s; }
+.pwbar-t { font-size:.75rem; min-height:16px; margin-bottom:4px; }
+.tk-user-tools { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px dashed var(--light-gray); }
+.tk-status-sel { width:auto; display:inline-block; padding:5px 8px; font-size:.8rem; margin-left:8px; }
