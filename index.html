@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=79">
+<link rel="stylesheet" href="css/style.css?v=80">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,20 +48,19 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=79" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=80" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
-    <li><button onclick="showPage('home')" id="nav-home" class="active" data-i18n="nav_home">Ana Sayfa</button></li>
-    <li><button onclick="showPage('words')" id="nav-words" data-i18n="nav_words">Kelimeler</button></li>
-    <li><button onclick="showPage('quiz')" id="nav-quiz" data-i18n="nav_quiz">Testler</button></li>
-    <li><button onclick="showPage('video')" id="nav-video" data-i18n="nav_video">Video Dersler</button></li>
-    <li><button onclick="showPage('recs')" id="nav-recs" data-i18n="nav_recs">Öneriler</button></li>
-    <li><button onclick="showPage('pricing')" id="nav-pricing" data-i18n="nav_pricing">Fiyatlar</button></li>
+    <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
+    <li><button onclick="showPage('words')" id="nav-words">Kelimeler</button></li>
+    <li><button onclick="showPage('quiz')" id="nav-quiz">Testler</button></li>
+    <li><button onclick="showPage('video')" id="nav-video">Video Dersler</button></li>
+    <li><button onclick="showPage('recs')" id="nav-recs">Öneriler</button></li>
+    <li><button onclick="showPage('pricing')" id="nav-pricing">Fiyatlar</button></li>
   </ul>
   <div class="nav-auth">
-    <button id="lang-toggle" class="btn-login lang-btn" onclick="toggleLang()" title="Site dili">RU</button>
     <div id="nav-auth-buttons" style="display:flex; gap:8px; align-items:center;">
-      <button class="btn-login" onclick="openAuth('login')" data-i18n="btn_login">Giriş Yap</button>
-      <button class="btn-signup" onclick="openAuth('register')" data-i18n="btn_signup">Üye Ol</button>
+      <button class="btn-login" onclick="openAuth('login')">Giriş Yap</button>
+      <button class="btn-signup" onclick="openAuth('register')">Üye Ol</button>
     </div>
     <div id="nav-account" style="display:none; align-items:center; gap:10px;">
       <span id="account-avatar" class="nav-avatar" onclick="showPage('profile')" title="Profilim"></span>
@@ -69,9 +68,9 @@
       <span id="account-plan" class="plan-badge plan-free">FREE</span>
       <span id="account-admin" title="Yönetici" style="display:none; color:var(--gold); font-weight:700;">★</span>
       <span id="notif-bell" class="notif-bell" onclick="toggleNotifPanel(event)" title="Bildirimler" style="display:none;">🔔<span id="notif-count" class="notif-count" style="display:none;">0</span><div id="notif-panel" class="notif-panel" style="display:none;"></div></span>
-      <button id="nav-profile-link" class="btn-login" onclick="showPage('profile')" data-i18n="btn_profile">Profilim</button>
-      <button id="nav-admin-link" class="btn-login" style="display:none;" onclick="showPage('admin')" data-i18n="btn_admin">Yönetim</button>
-      <button class="btn-login" onclick="authLogout()" data-i18n="btn_logout">Çıkış</button>
+      <button id="nav-profile-link" class="btn-login" onclick="showPage('profile')">Profilim</button>
+      <button id="nav-admin-link" class="btn-login" style="display:none;" onclick="showPage('admin')">Yönetim</button>
+      <button class="btn-login" onclick="authLogout()">Çıkış</button>
     </div>
   </div>
 </nav>
@@ -84,43 +83,43 @@
     <div class="hero-content">
       <div class="hero-badge">🇷🇺 YDT · YDS · HAZIRLIK</div>
       <h1>YDT-YDS Rusça<br><em>Platformu</em></h1>
-      <p class="hero-sub" data-i18n="heroSub">Türkiye'nin ilk YDT/YDS odaklı Rusça öğrenme platformu. Kelimeler, testler ve video derslerle sınavda fark yarat.</p>
+      <p class="hero-sub">Türkiye'nin ilk YDT/YDS odaklı Rusça öğrenme platformu. Kelimeler, testler ve video derslerle sınavda fark yarat.</p>
       <div class="hero-buttons">
-        <button class="btn-primary" onclick="showPage('pricing')" data-i18n="ctaStart">Hemen Başla →</button>
-        <button class="btn-secondary" onclick="showPage('words')" data-i18n="ctaFree">Ücretsiz Dene</button>
+        <button class="btn-primary" onclick="showPage('pricing')">Hemen Başla →</button>
+        <button class="btn-secondary" onclick="showPage('words')">Ücretsiz Dene</button>
       </div>
       <div class="hero-stats">
-        <div><div class="hero-stat-num">2.272</div><div class="hero-stat-label" data-i18n="stWords">Kelime</div></div>
-        <div><div class="hero-stat-num">50+</div><div class="hero-stat-label" data-i18n="stVideos">Video Ders</div></div>
-        <div><div class="hero-stat-num">500+</div><div class="hero-stat-label" data-i18n="stTests">Test Sorusu</div></div>
+        <div><div class="hero-stat-num">2.272</div><div class="hero-stat-label">Kelime</div></div>
+        <div><div class="hero-stat-num">50+</div><div class="hero-stat-label">Video Ders</div></div>
+        <div><div class="hero-stat-num">500+</div><div class="hero-stat-label">Test Sorusu</div></div>
       </div>
     </div>
   </section>
 
   <section class="features">
     <div class="section-header">
-      <div class="section-label" data-i18n="secOffer">Neler Sunuyoruz</div>
-      <div class="section-title" data-i18n="secOne">Her şey <span>tek platformda</span></div>
+      <div class="section-label">Neler Sunuyoruz</div>
+      <div class="section-title">Her şey <span>tek platformda</span></div>
     </div>
     <div class="features-grid">
       <div class="feature-card" onclick="showPage('words')">
         <div class="feature-icon">📚</div>
-        <div class="feature-title" data-i18n="ftKasa">Kelime Kasası</div>
+        <div class="feature-title">Kelime Kasası</div>
         <div class="feature-desc">YDT/YDS sınavına özel 2.272 kelime. Seviyeye ve konuya göre filtrele, sesli telaffuzla öğren.</div>
       </div>
       <div class="feature-card" onclick="showPage('quiz')">
         <div class="feature-icon">🎯</div>
-        <div class="feature-title" data-i18n="ftTests">Akıllı Testler</div>
+        <div class="feature-title">Akıllı Testler</div>
         <div class="feature-desc">Gerçek sınav formatında sorular. Her testten sonra detaylı analiz ve eksik noktalarını gör.</div>
       </div>
       <div class="feature-card" onclick="showPage('video')">
         <div class="feature-icon">🎬</div>
-        <div class="feature-title" data-i18n="ftVideos">Video Dersler</div>
+        <div class="feature-title">Video Dersler</div>
         <div class="feature-desc">A1'den C1'e kapsamlı video dersler. Gramer, okuma, dinleme ve konuşma becerilerini geliştir.</div>
       </div>
       <div class="feature-card" onclick="showPage('pricing')">
         <div class="feature-icon">💎</div>
-        <div class="feature-title" data-i18n="ftAccess">6 Aylık Erişim</div>
+        <div class="feature-title">6 Aylık Erişim</div>
         <div class="feature-desc">₺24.000 ile 6 ay boyunca tüm içeriklere tam erişim. 2.272 kelime, testler ve videolar seni bekliyor.</div>
       </div>
     </div>
@@ -135,12 +134,12 @@
     <div class="words-header">
       <div class="kb-header-row">
         <div>
-          <h2 data-i18n="hWords">Kelime <span>Bankası</span></h2>
-          <p data-i18n="subWords">Önce seviyeni seç, sonra kategoriye göre kelimeleri incele.</p>
+          <h2>Kelime <span>Bankası</span></h2>
+          <p>Önce seviyeni seç, sonra kategoriye göre kelimeleri incele.</p>
         </div>
         <div class="kb-search">
           <span class="kb-search-ic">🔍</span>
-          <input type="text" id="kb-search-input" data-i18n-ph="phDict" placeholder="Sözlükte ara... (Rusça veya Türkçe)" oninput="kbSearch(this.value)" autocomplete="off">
+          <input type="text" id="kb-search-input" placeholder="Sözlükte ara... (Rusça veya Türkçe)" oninput="kbSearch(this.value)" autocomplete="off">
           <button class="kb-search-clear" id="kb-search-clear" onclick="kbClear()" style="display:none;">✕</button>
         </div>
       </div>
@@ -151,56 +150,56 @@
         <div class="level-flag">🟢</div>
         <div class="level-name">A1 — A2</div>
         <div class="level-count" id="lc-a1a2">— kelime</div>
-        <div class="level-desc" data-i18n="ldA">Temel seviye. Günlük hayatta kullanılan kelimeler.</div>
-        <div class="level-badge" data-i18n="lbBeg">Başlangıç</div>
+        <div class="level-desc">Temel seviye. Günlük hayatta kullanılan kelimeler.</div>
+        <div class="level-badge">Başlangıç</div>
       </div>
       <div class="level-card" onclick="selectLevel('b1')">
         <div class="level-flag">🟡</div>
         <div class="level-name">B1</div>
         <div class="level-count" id="lc-b1">— kelime</div>
-        <div class="level-desc" data-i18n="ldB1">Orta seviye. YDT hazırlık için temel kelimeler.</div>
-        <div class="level-badge" data-i18n="lbMid">Orta</div>
+        <div class="level-desc">Orta seviye. YDT hazırlık için temel kelimeler.</div>
+        <div class="level-badge">Orta</div>
       </div>
       <div class="level-card" onclick="selectLevel('b2')">
         <div class="level-flag">🟠</div>
         <div class="level-name">B2</div>
         <div class="level-count" id="lc-b2">— kelime</div>
-        <div class="level-desc" data-i18n="ldB2">Orta üstü seviye. YDT/YDS için kritik kelimeler.</div>
-        <div class="level-badge" data-i18n="lbUpp">Orta Üstü</div>
+        <div class="level-desc">Orta üstü seviye. YDT/YDS için kritik kelimeler.</div>
+        <div class="level-badge">Orta Üstü</div>
       </div>
       <div class="level-card" onclick="selectLevel('c1')">
         <div class="level-flag">🔴</div>
         <div class="level-name">C1</div>
         <div class="level-count" id="lc-c1">— kelime</div>
-        <div class="level-desc" data-i18n="ldC1">İleri seviye. YDS'de yüksek puan için.</div>
-        <div class="level-badge" data-i18n="lbAdv">İleri</div>
+        <div class="level-desc">İleri seviye. YDS'de yüksek puan için.</div>
+        <div class="level-badge">İleri</div>
       </div>
       <div class="level-card" onclick="showSpecial('esanlamli')" style="border-color:#a7f3d0; background:linear-gradient(135deg,#ecfdf5,#fff);">
         <div class="level-flag">≈</div>
-        <div class="level-name" style="color:#10b981;" data-i18n="cSyn">Eş Anlamlılar</div>
+        <div class="level-name" style="color:#10b981;">Eş Anlamlılar</div>
         <div class="level-count" style="color:var(--gray);">1.719 grup</div>
-        <div class="level-desc" data-i18n="cSynD">Anlamca yakın kelimeler (tüm seviyeler).</div>
+        <div class="level-desc">Anlamca yakın kelimeler (tüm seviyeler).</div>
         <div class="level-badge" style="background:#10b981;color:#fff;border-color:#10b981;">Eş Anlam</div>
       </div>
       <div class="level-card" onclick="showSpecial('zitanlamli')" style="border-color:#fca5a5; background:linear-gradient(135deg,#fef2f2,#fff);">
         <div class="level-flag">↔</div>
-        <div class="level-name" style="color:#ef4444;" data-i18n="cAnt">Zıt Anlamlılar</div>
+        <div class="level-name" style="color:#ef4444;">Zıt Anlamlılar</div>
         <div class="level-count" style="color:var(--gray);">20 çift</div>
-        <div class="level-desc" data-i18n="cAntD">Birbirinin tersi kelime çiftleri (tüm seviyeler).</div>
+        <div class="level-desc">Birbirinin tersi kelime çiftleri (tüm seviyeler).</div>
         <div class="level-badge" style="background:#ef4444;color:#fff;border-color:#ef4444;">Zıt Anlam</div>
       </div>
       <div class="level-card" onclick="showSpecial('akraba')" style="border-color:#c4b5fd; background:linear-gradient(135deg,#f5f3ff,#fff);">
         <div class="level-flag">🌿</div>
-        <div class="level-name" style="color:#8b5cf6;" data-i18n="cFam">Akraba Kelimeler</div>
+        <div class="level-name" style="color:#8b5cf6;">Akraba Kelimeler</div>
         <div class="level-count" style="color:var(--gray);">8 kök</div>
-        <div class="level-desc" data-i18n="cFamD">Aynı kökten türeyen kelime aileleri (tüm seviyeler).</div>
+        <div class="level-desc">Aynı kökten türeyen kelime aileleri (tüm seviyeler).</div>
         <div class="level-badge" style="background:#8b5cf6;color:#fff;border-color:#8b5cf6;">Akraba</div>
       </div>
       <div class="level-card" onclick="showBank()" style="border-color:var(--gold); background:linear-gradient(135deg,#fffaf0,#fff);">
         <div class="level-flag">📚</div>
-        <div class="level-name" style="color:var(--gold);" data-i18n="cKasa">Kelime Kasası</div>
-        <div class="level-count" style="color:var(--gray);" data-i18n="cKasaC">Kaydettiğin kelimeler</div>
-        <div class="level-desc" data-i18n="cKasaD">Kaydettiğin ve öğrendiğin kelimeleri seviye ve türe göre gör.</div>
+        <div class="level-name" style="color:var(--gold);">Kelime Kasası</div>
+        <div class="level-count" style="color:var(--gray);">Kaydettiğin kelimeler</div>
+        <div class="level-desc">Kaydettiğin ve öğrendiğin kelimeleri seviye ve türe göre gör.</div>
         <div class="level-badge" style="background:var(--gold);color:var(--dark);border-color:var(--gold);">Kasam</div>
       </div>
     </div>
@@ -210,8 +209,8 @@
   <div id="words-sozluk" style="display:none;">
     <div class="words-header">
       <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-        <button onclick="backToLevels()" class="back-btn" data-i18n="btnBack">← Geri</button>
-        <h2 data-i18n="hDict">Sözlükte <span>Ara</span></h2>
+        <button onclick="backToLevels()" class="back-btn">← Geri</button>
+        <h2>Sözlükte <span>Ara</span></h2>
       </div>
       <p>Rusça veya Türkçe kelime yazın.</p>
     </div>
@@ -231,16 +230,16 @@
   <div id="words-category-select" style="display:none;">
     <div class="words-header">
       <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-        <button onclick="backToLevels()" class="back-btn" data-i18n="btnBack">← Geri</button>
+        <button onclick="backToLevels()" class="back-btn">← Geri</button>
         <h2 id="words-level-title">A1-A2 <span>Kelimeleri</span></h2>
       </div>
-      <p data-i18n="subLevel">Kategori seç ve kelimeleri incele.</p>
+      <p>Kategori seç ve kelimeleri incele.</p>
     </div>
     <div class="sozluk-search-wrap" id="level-search-wrap" style="margin-bottom:16px;">
       <div class="sozluk-input-wrap">
         <span class="sozluk-icon">🔍</span>
         <input type="text" id="level-search-input" class="sozluk-input"
-          data-i18n-ph="phLevel" placeholder="Bu seviyede ara... (Rusça veya Türkçe)"
+          placeholder="Bu seviyede ara... (Rusça veya Türkçe)"
           oninput="levelAra(this.value)"
           autocomplete="off" autocorrect="off" spellcheck="false">
         <button class="sozluk-clear" onclick="levelTemizle()" id="level-search-clear" style="display:none;">✕</button>
@@ -257,11 +256,11 @@
       <button class="cat-btn" onclick="filterWords('bağlaç',this)">Bağlaçlar <span class="cat-count" id="cnt-bağlaç"></span></button>
     </div>
     <div class="range-bar" id="range-bar">
-      <span class="range-label" data-i18n="rngLbl">Aralık:</span>
+      <span class="range-label">Aralık:</span>
       <input type="number" id="range-from" min="1" placeholder="1">
       <span class="range-label">–</span>
       <input type="number" id="range-to" min="1" placeholder="50">
-      <button onclick="applyRange()" data-i18n="rngList">Listele</button>
+      <button onclick="applyRange()">Listele</button>
       <button class="range-quick" onclick="clearRange()">Tümü</button>
       <span class="range-info" id="range-info"></span>
     </div>
@@ -273,9 +272,9 @@
   <div id="words-bank" style="display:none;">
     <div class="kasa-top">
       <div class="kasa-head">
-        <button onclick="backToLevels()" class="back-btn" data-i18n="btnBack">← Geri</button>
+        <button onclick="backToLevels()" class="back-btn">← Geri</button>
         <div>
-          <h2 class="kasa-title" data-i18n="hKasa">Kelime <span>Kasası</span></h2>
+          <h2 class="kasa-title">Kelime <span>Kasası</span></h2>
           <p class="kasa-sub">Kaydettiğin ve öğrendiğin kelimeleri görüntüle, tekrar et ve pekiştir.</p>
         </div>
       </div>
@@ -318,14 +317,14 @@
       <button class="cat-btn" onclick="bankSetLevel('C1',this)">C1 <span class="cat-count" id="blc-c1"></span></button>
     </div>
     <div class="cat-tabs" id="bank-type-tabs">
-      <button class="cat-btn active" onclick="bankSetType('hepsi',this)" ><span data-i18n="ctAll">HEPSİ</span> <span class="cat-count" id="btc-hepsi"></span></button>
-      <button class="cat-btn" onclick="bankSetType('isim',this)" ><span data-i18n="ctIsim">İSİMLER</span> <span class="cat-count" id="btc-isim"></span></button>
-      <button class="cat-btn" onclick="bankSetType('fiil',this)" ><span data-i18n="ctFiil">FİİLLER</span> <span class="cat-count" id="btc-fiil"></span></button>
-      <button class="cat-btn" onclick="bankSetType('sıfat',this)" ><span data-i18n="ctSifat">SIFATLAR</span> <span class="cat-count" id="btc-sıfat"></span></button>
-      <button class="cat-btn" onclick="bankSetType('zarf',this)" ><span data-i18n="ctZarf">ZARFLAR</span> <span class="cat-count" id="btc-zarf"></span></button>
-      <button class="cat-btn" onclick="bankSetType('zamir',this)" ><span data-i18n="ctZamir">ZAMİRLER</span> <span class="cat-count" id="btc-zamir"></span></button>
-      <button class="cat-btn" onclick="bankSetType('edat',this)" ><span data-i18n="ctEdat">EDATLAR</span> <span class="cat-count" id="btc-edat"></span></button>
-      <button class="cat-btn" onclick="bankSetType('bağlaç',this)" ><span data-i18n="ctBaglac">BAĞLAÇLAR</span> <span class="cat-count" id="btc-bağlaç"></span></button>
+      <button class="cat-btn active" onclick="bankSetType('hepsi',this)" ><span>HEPSİ</span> <span class="cat-count" id="btc-hepsi"></span></button>
+      <button class="cat-btn" onclick="bankSetType('isim',this)" ><span>İSİMLER</span> <span class="cat-count" id="btc-isim"></span></button>
+      <button class="cat-btn" onclick="bankSetType('fiil',this)" ><span>FİİLLER</span> <span class="cat-count" id="btc-fiil"></span></button>
+      <button class="cat-btn" onclick="bankSetType('sıfat',this)" ><span>SIFATLAR</span> <span class="cat-count" id="btc-sıfat"></span></button>
+      <button class="cat-btn" onclick="bankSetType('zarf',this)" ><span>ZARFLAR</span> <span class="cat-count" id="btc-zarf"></span></button>
+      <button class="cat-btn" onclick="bankSetType('zamir',this)" ><span>ZAMİRLER</span> <span class="cat-count" id="btc-zamir"></span></button>
+      <button class="cat-btn" onclick="bankSetType('edat',this)" ><span>EDATLAR</span> <span class="cat-count" id="btc-edat"></span></button>
+      <button class="cat-btn" onclick="bankSetType('bağlaç',this)" ><span>BAĞLAÇLAR</span> <span class="cat-count" id="btc-bağlaç"></span></button>
     </div>
 
     <div class="words-grid" id="bank-grid"></div>
@@ -341,39 +340,39 @@
     <!-- QUIZ SETUP -->
     <div id="quiz-setup">
       <div class="quiz-header">
-        <h2 data-i18n="hQuiz">Test <span>Çöz</span></h2>
-        <p data-i18n="subQuiz">Test türünü, kategoriyi ve soru sayısını seç.</p>
+        <h2>Test <span>Çöz</span></h2>
+        <p>Test türünü, kategoriyi ve soru sayısını seç.</p>
       </div>
 
       <div class="tb-entry">
         <div class="tb-entry-ic">🛠️</div>
         <div class="tb-entry-tx">
-          <h3 data-i18n="tbTitle">Kendi Testini Oluştur</h3>
-          <p data-i18n="tbDesc">Tür, kaynak ve soru sayısını sen belirle; istersen kaydet, sonra tek tıkla tekrar çöz.</p>
+          <h3>Kendi Testini Oluştur</h3>
+          <p>Tür, kaynak ve soru sayısını sen belirle; istersen kaydet, sonra tek tıkla tekrar çöz.</p>
         </div>
-        <button class="tb-entry-btn" onclick="openTestBuilder()" data-i18n="tbBtn">Test Oluştur →</button>
+        <button class="tb-entry-btn" onclick="openTestBuilder()">Test Oluştur →</button>
       </div>
 
       <div class="setup-grid">
         <!-- Test türü -->
         <div class="setup-section">
-          <div class="setup-label" data-i18n="lblType">📝 Test Türü</div>
+          <div class="setup-label">📝 Test Türü</div>
           <div class="setup-options">
-            <button class="setup-btn active" data-type="ru-tr" onclick="selectSetup('type','ru-tr',this)" data-i18n="tRuTr">🇷🇺 → 🇹🇷 Rusça → Türkçe</button>
-            <button class="setup-btn" data-type="tr-ru" onclick="selectSetup('type','tr-ru',this)" data-i18n="tTrRu">🇹🇷 → 🇷🇺 Türkçe → Rusça</button>
-            <button class="setup-btn" data-type="fill" onclick="selectSetup('type','fill',this)" data-i18n="tYaz">✍️ Yaz Bakalım</button>
-            <button class="setup-btn" data-type="tf" onclick="selectSetup('type','tf',this)" data-i18n="tTf">✓✗ Doğru / Yanlış</button>
-            <button class="setup-btn" data-type="paragraf" onclick="selectSetup('type','paragraf',this)" data-i18n="tPara">📖 Paragraf Soruları</button>
-            <button class="setup-btn setup-btn-plc" onclick="openPlacement()" data-i18n="tPlc">🎚️ Seviye Tespit Sınavı →</button>
-            <button class="setup-btn setup-btn-plc" onclick="startMockExam()" data-i18n="tMock">📝 Deneme Sınavı (YDS · 80 soru · 180 dk) →</button>
+            <button class="setup-btn active" data-type="ru-tr" onclick="selectSetup('type','ru-tr',this)">🇷🇺 → 🇹🇷 Rusça → Türkçe</button>
+            <button class="setup-btn" data-type="tr-ru" onclick="selectSetup('type','tr-ru',this)">🇹🇷 → 🇷🇺 Türkçe → Rusça</button>
+            <button class="setup-btn" data-type="fill" onclick="selectSetup('type','fill',this)">✍️ Yaz Bakalım</button>
+            <button class="setup-btn" data-type="tf" onclick="selectSetup('type','tf',this)">✓✗ Doğru / Yanlış</button>
+            <button class="setup-btn" data-type="paragraf" onclick="selectSetup('type','paragraf',this)">📖 Paragraf Soruları</button>
+            <button class="setup-btn setup-btn-plc" onclick="openPlacement()">🎚️ Seviye Tespit Sınavı →</button>
+            <button class="setup-btn setup-btn-plc" onclick="startMockExam()">📝 Deneme Sınavı (YDS · 80 soru · 180 dk) →</button>
           </div>
         </div>
 
         <!-- Seviye -->
         <div class="setup-section">
-          <div class="setup-label" data-i18n="lblLevel">🎯 Seviye</div>
+          <div class="setup-label">🎯 Seviye</div>
           <div class="setup-options">
-            <button class="setup-btn active" data-level="hepsi" onclick="selectSetup('level','hepsi',this)" data-i18n="qcAll2">Hepsi</button>
+            <button class="setup-btn active" data-level="hepsi" onclick="selectSetup('level','hepsi',this)">Hepsi</button>
             <button class="setup-btn" data-level="A1" onclick="selectSetup('level','A1',this)">🟢 A1</button>
             <button class="setup-btn" data-level="A2" onclick="selectSetup('level','A2',this)">🔵 A2</button>
             <button class="setup-btn" data-level="B1" onclick="selectSetup('level','B1',this)">🟡 B1</button>
@@ -384,12 +383,12 @@
 
         <!-- Kategori -->
         <div class="setup-section">
-          <div class="setup-label" data-i18n="lblCat">📚 Kategori</div>
+          <div class="setup-label">📚 Kategori</div>
           <div class="setup-options">
-            <button class="setup-btn active" data-cat="hepsi" onclick="selectSetup('cat','hepsi',this)" data-i18n="qcAll">Hepsi</button>
-            <button class="setup-btn" data-cat="isim" onclick="selectSetup('cat','isim',this)" data-i18n="qcIsim">İsimler</button>
-            <button class="setup-btn" data-cat="fiil" onclick="selectSetup('cat','fiil',this)" data-i18n="qcFiil">Fiiller</button>
-            <button class="setup-btn" data-cat="sıfat" onclick="selectSetup('cat','sıfat',this)" data-i18n="qcSifat">Sıfatlar</button>
+            <button class="setup-btn active" data-cat="hepsi" onclick="selectSetup('cat','hepsi',this)">Hepsi</button>
+            <button class="setup-btn" data-cat="isim" onclick="selectSetup('cat','isim',this)">İsimler</button>
+            <button class="setup-btn" data-cat="fiil" onclick="selectSetup('cat','fiil',this)">Fiiller</button>
+            <button class="setup-btn" data-cat="sıfat" onclick="selectSetup('cat','sıfat',this)">Sıfatlar</button>
             <button class="setup-btn" data-cat="zarf" onclick="selectSetup('cat','zarf',this)">Zarflar</button>
             <button class="setup-btn" data-cat="zamir" onclick="selectSetup('cat','zamir',this)">Zamirler</button>
           </div>
@@ -397,7 +396,7 @@
 
         <!-- Soru sayısı -->
         <div class="setup-section">
-          <div class="setup-label" data-i18n="lblCount">🔢 Soru Sayısı</div>
+          <div class="setup-label">🔢 Soru Sayısı</div>
           <div class="setup-options">
             <button class="setup-btn" data-count="10" onclick="selectSetup('count','10',this)">10 Soru</button>
             <button class="setup-btn active" data-count="20" onclick="selectSetup('count','20',this)">20 Soru</button>
@@ -411,20 +410,20 @@
         <div class="setup-section">
           <div class="setup-label">👁️ Cevaplar</div>
           <div class="setup-options">
-            <button class="setup-btn active" data-reveal="instant" onclick="selectReveal('instant',this)" data-i18n="rvNow">Anında göster</button>
-            <button class="setup-btn" data-reveal="end" onclick="selectReveal('end',this)" data-i18n="rvEnd">Test sonunda göster</button>
+            <button class="setup-btn active" data-reveal="instant" onclick="selectReveal('instant',this)">Anında göster</button>
+            <button class="setup-btn" data-reveal="end" onclick="selectReveal('end',this)">Test sonunda göster</button>
           </div>
         </div>
         <div class="setup-group">
-          <div class="setup-label" data-i18n="lblTime">⏱️ Süre</div>
+          <div class="setup-label">⏱️ Süre</div>
           <div class="setup-btns">
-            <button class="setup-btn active" data-time="off" onclick="selectTime(this)" data-i18n="tmOff">Süresiz</button>
-            <button class="setup-btn" data-time="on" onclick="selectTime(this)" data-i18n="tmOn">Süreli (soru tipine göre otomatik)</button>
+            <button class="setup-btn active" data-time="off" onclick="selectTime(this)">Süresiz</button>
+            <button class="setup-btn" data-time="on" onclick="selectTime(this)">Süreli (soru tipine göre otomatik)</button>
           </div>
         </div>
       </div>
 
-      <button class="btn-start-quiz" onclick="startQuiz()" data-i18n="btnStartQuiz">Teste Başla →</button>
+      <button class="btn-start-quiz" onclick="startQuiz()">Teste Başla →</button>
     </div>
 
     <!-- QUIZ PROGRESS -->
@@ -494,7 +493,7 @@
 
         <!-- KURULUM -->
         <div id="review-setup">
-          <div class="rev-crumb"><button class="back-btn" data-i18n="btnBack2" onclick="profileGoKasa('saved')">← Geri</button></div>
+          <div class="rev-crumb"><button class="back-btn" onclick="profileGoKasa('saved')">← Geri</button></div>
 
           <div class="rev-top">
             <div>
@@ -758,16 +757,16 @@
   <section class="words-section">
     <div class="words-header">
       <div>
-        <h2 data-i18n="hRecs">Film & Kitap <span>Önerileri</span></h2>
-        <p data-i18n="subRecs">Rusçanı geliştirecek film, dizi, anime ve kitaplar — seviyene uygun seç.</p>
+        <h2>Film & Kitap <span>Önerileri</span></h2>
+        <p>Rusçanı geliştirecek film, dizi, anime ve kitaplar — seviyene uygun seç.</p>
       </div>
     </div>
     <div class="recs-filters">
-      <button class="rec-chip active" data-rt="all" onclick="recsSetType('all', this)" data-i18n="rfAll">Tümü</button>
-      <button class="rec-chip" data-rt="film" onclick="recsSetType('film', this)" data-i18n="rfFilm">🎬 Film</button>
-      <button class="rec-chip" data-rt="dizi" onclick="recsSetType('dizi', this)" data-i18n="rfDizi">📺 Dizi</button>
-      <button class="rec-chip" data-rt="anime" onclick="recsSetType('anime', this)" data-i18n="rfAnime">🌸 Anime</button>
-      <button class="rec-chip" data-rt="kitap" onclick="recsSetType('kitap', this)" data-i18n="rfKitap">📚 Kitap</button>
+      <button class="rec-chip active" data-rt="all" onclick="recsSetType('all', this)">Tümü</button>
+      <button class="rec-chip" data-rt="film" onclick="recsSetType('film', this)">🎬 Film</button>
+      <button class="rec-chip" data-rt="dizi" onclick="recsSetType('dizi', this)">📺 Dizi</button>
+      <button class="rec-chip" data-rt="anime" onclick="recsSetType('anime', this)">🌸 Anime</button>
+      <button class="rec-chip" data-rt="kitap" onclick="recsSetType('kitap', this)">📚 Kitap</button>
     </div>
     <div id="recs-grid" class="recs-grid"><div class="profile-empty">Yükleniyor...</div></div>
   </section>
@@ -775,15 +774,15 @@
 
 <div id="page-video" class="page">
   <div class="video-header">
-    <h2 data-i18n="hVideo">Video <span>Dersler</span></h2>
-    <p data-i18n="subVideo">Adım adım Rusça öğrenin. A1'den başlayıp YDT/YDS seviyesine ulaşın.</p>
+    <h2>Video <span>Dersler</span></h2>
+    <p>Adım adım Rusça öğrenin. A1'den başlayıp YDT/YDS seviyesine ulaşın.</p>
   </div>
   <div class="video-lock-banner">
     <div class="video-lock-text">
-      <strong data-i18n="vipT">🔒 Premium İçerik</strong>
-      <span data-i18n="vipD">Video derslere erişmek için satın alma yapmanız gerekiyor.</span>
+      <strong>🔒 Premium İçerik</strong>
+      <span>Video derslere erişmek için satın alma yapmanız gerekiyor.</span>
     </div>
-    <button class="btn-unlock" onclick="showPage('pricing')" data-i18n="vipB">Şimdi Satın Al →</button>
+    <button class="btn-unlock" onclick="showPage('pricing')">Şimdi Satın Al →</button>
   </div>
   <div class="video-grid" id="video-grid"></div>
 </div>
@@ -792,8 +791,8 @@
 <div id="page-pricing" class="page">
   <div class="pricing-header">
     <div class="section-label">Fiyatlandırma</div>
-    <div class="section-title" style="margin-bottom:12px;" data-i18n="hPricing">Sana uygun <span>planı seç</span></div>
-    <p style="color:var(--gray); font-size:0.88rem;" data-i18n="subPricing">Ücretsiz önizlemeyle başla, istediğin zaman yükselt.</p>
+    <div class="section-title" style="margin-bottom:12px;">Sana uygun <span>planı seç</span></div>
+    <p style="color:var(--gray); font-size:0.88rem;">Ücretsiz önizlemeyle başla, istediğin zaman yükselt.</p>
   </div>
   <div class="pricing-grid" style="max-width:1100px; grid-template-columns: repeat(auto-fit, minmax(260px,1fr));">
 
@@ -863,16 +862,16 @@
       </div>
 
       <div class="psb-menu">
-        <button class="psb-item active" id="psb-overview" onclick="profileNav('overview',this)"><span class="psb-ic">👤</span> <span data-i18n="pOverview">Profil Özeti</span></button>
-        <button class="psb-item" id="psb-saved" onclick="profileNav('saved')"><span class="psb-ic">📦</span> <span data-i18n="pKasa">Kelime Kasam</span></button>
-        <button class="psb-item" id="psb-learned" onclick="profileNav('learned')"><span class="psb-ic">✓</span> <span data-i18n="pLearned">Öğrenilen Kelimeler</span></button>
-        <button class="psb-item" id="psb-tests" onclick="profileNav('tests',this)"><span class="psb-ic">📋</span> <span data-i18n="pTests">Test Geçmişim</span></button>
-        <button class="psb-item" id="psb-videos" onclick="profileNav('videos',this)"><span class="psb-ic">▶️</span> <span data-i18n="pVideos">Video İzleme Geçmişim</span></button>
-        <button class="psb-item" id="psb-stats" onclick="profileNav('stats',this)"><span class="psb-ic">📊</span> <span data-i18n="pStats">İstatistikler</span></button>
-        <button class="psb-item" id="psb-tasks" onclick="profileNav('tasks',this)"><span class="psb-ic">🎯</span> <span data-i18n="pTasks">Görevler</span></button>
-        <button class="psb-item" id="psb-analysis" onclick="profileNav('analysis',this)"><span class="psb-ic">🔎</span> <span data-i18n="pAnalysis">Analiz & Öneri</span></button>
-        <button class="psb-item" id="psb-support" onclick="profileNav('support',this)"><span class="psb-ic">💬</span> <span data-i18n="pSupport">Destek</span></button>
-        <button class="psb-item" id="psb-settings" onclick="profileNav('settings',this)"><span class="psb-ic">⚙️</span> <span data-i18n="pSettings">Ayarlar</span></button>
+        <button class="psb-item active" id="psb-overview" onclick="profileNav('overview',this)"><span class="psb-ic">👤</span> <span>Profil Özeti</span></button>
+        <button class="psb-item" id="psb-saved" onclick="profileNav('saved')"><span class="psb-ic">📦</span> <span>Kelime Kasam</span></button>
+        <button class="psb-item" id="psb-learned" onclick="profileNav('learned')"><span class="psb-ic">✓</span> <span>Öğrenilen Kelimeler</span></button>
+        <button class="psb-item" id="psb-tests" onclick="profileNav('tests',this)"><span class="psb-ic">📋</span> <span>Test Geçmişim</span></button>
+        <button class="psb-item" id="psb-videos" onclick="profileNav('videos',this)"><span class="psb-ic">▶️</span> <span>Video İzleme Geçmişim</span></button>
+        <button class="psb-item" id="psb-stats" onclick="profileNav('stats',this)"><span class="psb-ic">📊</span> <span>İstatistikler</span></button>
+        <button class="psb-item" id="psb-tasks" onclick="profileNav('tasks',this)"><span class="psb-ic">🎯</span> <span>Görevler</span></button>
+        <button class="psb-item" id="psb-analysis" onclick="profileNav('analysis',this)"><span class="psb-ic">🔎</span> <span>Analiz & Öneri</span></button>
+        <button class="psb-item" id="psb-support" onclick="profileNav('support',this)"><span class="psb-ic">💬</span> <span>Destek</span></button>
+        <button class="psb-item" id="psb-settings" onclick="profileNav('settings',this)"><span class="psb-ic">⚙️</span> <span>Ayarlar</span></button>
       </div>
 
       <div class="psb-premium" id="psb-premium">
@@ -885,7 +884,7 @@
     <div class="profile-main">
       <!-- PROFİL ÖZETİ -->
       <div id="pv-overview" class="profile-view">
-        <h2 class="profile-h2" data-i18n="pvOverview">Profil Özeti</h2>
+        <h2 class="profile-h2">Profil Özeti</h2>
         <p class="profile-sub">Çalışma istatistiklerinize genel bir bakış.</p>
 
         <div class="profile-id-card">
@@ -983,64 +982,63 @@
 
       <!-- KELİME KASAM (inline) -->
       <div id="pv-saved" class="profile-view" style="display:none;">
-        <h2 class="profile-h2" data-i18n="pvKasa">Kelime Kasam</h2>
+        <h2 class="profile-h2">Kelime Kasam</h2>
         <p class="profile-sub">Kaydettiğin tüm kelimeler burada.</p>
         <div id="kasa-saved-body"></div>
       </div>
 
       <!-- ÖĞRENİLEN KELİMELER (inline) -->
       <div id="pv-learned" class="profile-view" style="display:none;">
-        <h2 class="profile-h2" data-i18n="pvLearned">Öğrenilen Kelimeler</h2>
+        <h2 class="profile-h2">Öğrenilen Kelimeler</h2>
         <p class="profile-sub">Öğrendin olarak işaretlediğin kelimeler.</p>
         <div id="kasa-learned-body"></div>
       </div>
 
       <!-- TEST GEÇMİŞİM -->
       <div id="pv-tests" class="profile-view" style="display:none;">
-        <h2 class="profile-h2" data-i18n="pvTests">Test Geçmişim</h2>
+        <h2 class="profile-h2">Test Geçmişim</h2>
         <p class="profile-sub">Çözdüğün testler ve sonuçların burada görünecek. Bir teste tıklayıp doğru/yanlışlarını inceleyebilirsin.</p>
         <div id="test-history"></div>
       </div>
 
       <!-- VIDEO İZLEME GEÇMİŞİM -->
       <div id="pv-videos" class="profile-view" style="display:none;">
-        <h2 class="profile-h2" data-i18n="pvVideos">Video İzleme Geçmişim</h2>
+        <h2 class="profile-h2">Video İzleme Geçmişim</h2>
         <p class="profile-sub">İzlediğin video dersler burada görünecek.</p>
         <div class="profile-panel"><div class="profile-empty">Henüz video izlenmedi.</div></div>
       </div>
 
       <!-- İSTATİSTİKLER -->
       <div id="pv-stats" class="profile-view" style="display:none;">
-        <h2 class="profile-h2" data-i18n="pvStats">İstatistikler</h2>
+        <h2 class="profile-h2">İstatistikler</h2>
         <p class="profile-sub">Çalışma ilerlemenin detaylı görünümü.</p>
         <div id="stats-body"></div>
       </div>
 
       <!-- AYARLAR -->
       <div id="pv-tasks" class="profile-view" style="display:none;">
-        <h2 class="profile-h2" data-i18n="pvTasks">Görevler</h2>
+        <h2 class="profile-h2">Görevler</h2>
         <p class="profile-sub">Günlük ve haftalık görevleri tamamla, XP kazan!</p>
         <div id="tasks-body"></div>
       </div>
 
       <div id="pv-analysis" class="profile-view" style="display:none;">
-        <h2 class="profile-h2" data-i18n="pvAnalysis">Analiz & Öneri</h2>
+        <h2 class="profile-h2">Analiz & Öneri</h2>
         <p class="profile-sub">Çalışma verilerine göre kişisel değerlendirme ve öneriler.</p>
         <div id="analysis-body"></div>
       </div>
 
       <div id="pv-support" class="profile-view" style="display:none;">
-        <h2 class="profile-h2" data-i18n="pvSupport">Destek</h2>
+        <h2 class="profile-h2">Destek</h2>
         <p class="profile-sub">Bir sorun mu var, bir sorun mu yaşıyorsun? Talep oluştur, ekibimiz yanıtlasın.</p>
         <div id="support-body"></div>
       </div>
 
       <div id="pv-settings" class="profile-view" style="display:none;">
-        <h2 class="profile-h2" data-i18n="pvSettings">Ayarlar</h2>
+        <h2 class="profile-h2">Ayarlar</h2>
         <div class="admin-notif-card" style="margin-bottom:14px;">
-          <h3 class="an-h3">🌐 Dil & Balon</h3>
-          <label class="cw-check"><input type="checkbox" id="set-rutip" checked onchange="localStorage.setItem('ydt_rutip', this.checked ? 'on' : 'off'); toast(this.checked ? 'Türkçe balonlar açık.' : 'Türkçe balonlar kapalı.');"> Rusça modda kelimelerin üzerine gelince Türkçe balonu göster</label>
-          <div class="pq-row2" style="margin-top:8px; align-items:center;">
+          <h3 class="an-h3">🔊 Seslendirme</h3>
+          <div class="pq-row2" style="align-items:center;">
             <span style="font-size:.86rem;">🔊 Seslendirme sesi:</span>
             <select id="set-voice" class="pq-input pq-level" onchange="localStorage.setItem('ydt_voice', this.value); toast('Ses tercihi kaydedildi.');">
               <option value="auto">Otomatik</option>
@@ -1157,21 +1155,21 @@
       <div class="profile-main">
 
         <div id="av-overview" class="admin-view">
-          <h2 class="profile-h2" data-i18n="avOverview">Genel Bakış</h2>
+          <h2 class="profile-h2">Genel Bakış</h2>
           <p class="profile-sub">Sitenin genel durumu.</p>
           <div id="admin-stats" class="admin-stats"></div>
           <div class="profile-panel"><div class="panel-title">📈 Son 7 Gün Ziyaret</div><div id="admin-visits-mini"></div></div>
         </div>
 
         <div id="av-users" class="admin-view" style="display:none;">
-          <h2 class="profile-h2" data-i18n="avUsers">Kullanıcılar</h2>
+          <h2 class="profile-h2">Kullanıcılar</h2>
           <p class="profile-sub">Üyeleri görüntüle, planlarını yönet.</p>
           <input id="admin-search" class="admin-search" placeholder="🔍 İsim veya e-posta ara..." oninput="filterAdminUsers(this.value)" autocomplete="off">
           <div id="admin-users" class="admin-users"></div>
         </div>
 
         <div id="av-content" class="admin-view" style="display:none;">
-          <h2 class="profile-h2" data-i18n="avWords">İçerik Yönetimi — Kelimeler</h2>
+          <h2 class="profile-h2">İçerik Yönetimi — Kelimeler</h2>
           <p class="profile-sub">Kelimeleri tek tek düzenle veya toplu yükle. Değişiklikler anında yayına girer.</p>
           <div class="pq-stats" id="cw-stats">Yükleniyor...</div>
 
@@ -1232,7 +1230,7 @@
         </div>
 
         <div id="av-notify" class="admin-view" style="display:none;">
-          <h2 class="profile-h2" data-i18n="avNotify">Bildirim Gönder</h2>
+          <h2 class="profile-h2">Bildirim Gönder</h2>
           <p class="profile-sub">Tüm kullanıcılara veya seçtiklerine bildirim yolla.</p>
           <div class="admin-notif-card">
             <h3 class="an-h3">🔔 Bildirim Gönder</h3>
@@ -1248,7 +1246,7 @@
         </div>
 
         <div id="av-support" class="admin-view" style="display:none;">
-          <h2 class="profile-h2" data-i18n="avSupport">Destek Talepleri</h2>
+          <h2 class="profile-h2">Destek Talepleri</h2>
           <p class="profile-sub">Kullanıcı taleplerini yanıtla ve yönet.</p>
           <div class="admin-notif-card">
         <div class="an-card-head"><h3 class="an-h3">💬 Destek Talepleri</h3><div><button class="set-btn ghost" onclick="adminClearClosedTickets()">Kapanmışları Temizle</button><button class="set-btn ghost" onclick="adminLoadTickets()" style="margin-left:8px;">Yenile</button></div></div>
@@ -1257,7 +1255,7 @@
         </div>
 
         <div id="av-mail" class="admin-view" style="display:none;">
-          <h2 class="profile-h2" data-i18n="avMail">Mail Kutusu</h2>
+          <h2 class="profile-h2">Mail Kutusu</h2>
           <p class="profile-sub">info@ / destek@ / support@ adreslerine gelenler.</p>
           <div class="admin-notif-card">
         <div class="an-card-head"><h3 class="an-h3">📨 Gelen Mesajlar (İletişim)</h3><button class="set-btn ghost" onclick="adminLoadMail()">Yenile</button></div>
@@ -1266,7 +1264,7 @@
         </div>
 
         <div id="av-questions" class="admin-view" style="display:none;">
-          <h2 class="profile-h2" data-i18n="avPool">Soru Havuzu</h2>
+          <h2 class="profile-h2">Soru Havuzu</h2>
           <p class="profile-sub">Seviye sınavı sorularını yönet.</p>
           <div class="admin-notif-card">
         <h3 class="an-h3">🧩 Seviye Sınavı Soru Havuzu</h3>
@@ -1337,7 +1335,7 @@
         </div>
 
         <div id="av-pquest" class="admin-view" style="display:none;">
-          <h2 class="profile-h2" data-i18n="avPq">Paragraf Soruları</h2>
+          <h2 class="profile-h2">Paragraf Soruları</h2>
           <p class="profile-sub">Okuma-anlama sorularını yönet. Değişiklikler anında yayına girer.</p>
           <div class="pq-stats" id="cpq-stats">Yükleniyor...</div>
           <div class="admin-notif-card">
@@ -1378,7 +1376,7 @@
         </div>
 
         <div id="av-videos" class="admin-view" style="display:none;">
-          <h2 class="profile-h2" data-i18n="avVideos">Video Yönetimi</h2>
+          <h2 class="profile-h2">Video Yönetimi</h2>
           <p class="profile-sub">Ücretsizler YouTube'da, ücretliler Cloudflare Stream'de barınır. Buradan liste, kapak ve premium durumu yönetilir.</p>
           <div class="pq-stats" id="cv-stats">Yükleniyor...</div>
           <div class="admin-notif-card">
@@ -1406,7 +1404,7 @@
         </div>
 
         <div id="av-recs" class="admin-view" style="display:none;">
-          <h2 class="profile-h2" data-i18n="avRecs">Öneri Yönetimi</h2>
+          <h2 class="profile-h2">Öneri Yönetimi</h2>
           <p class="profile-sub">Film, dizi, anime ve kitap önerileri. Değişiklikler anında yayına girer.</p>
           <div class="pq-stats" id="rc-stats">Yükleniyor...</div>
           <div class="admin-notif-card">
@@ -1456,14 +1454,14 @@
         </div>
 
         <div id="av-visits" class="admin-view" style="display:none;">
-          <h2 class="profile-h2" data-i18n="avVisits">Ziyaret & SEO</h2>
+          <h2 class="profile-h2">Ziyaret & SEO</h2>
           <p class="profile-sub">Trafik istatistikleri ve sayfa içi SEO denetimi.</p>
           <div class="profile-panel"><div class="panel-title">📈 Ziyaretler</div><div id="admin-visits"></div></div>
           <div class="profile-panel"><div class="panel-title">🔎 SEO Denetimi</div><div id="admin-seo"></div></div>
         </div>
 
         <div id="av-settings" class="admin-view" style="display:none;">
-          <h2 class="profile-h2" data-i18n="avSettings">Site Ayarları</h2>
+          <h2 class="profile-h2">Site Ayarları</h2>
           <p class="profile-sub">Site genelini etkileyen ayarlar.</p>
           <div class="admin-notif-card">
             <h3 class="an-h3">📢 Duyuru Bandı</h3>
@@ -1480,7 +1478,7 @@
         </div>
 
         <div id="av-backup" class="admin-view" style="display:none;">
-          <h2 class="profile-h2" data-i18n="avBackup">Yedekleme</h2>
+          <h2 class="profile-h2">Yedekleme</h2>
           <p class="profile-sub">Veritabanındaki tüm tabloları JSON olarak indir.</p>
           <div class="admin-notif-card">
             <h3 class="an-h3">💾 Tam Yedek</h3>
@@ -1501,7 +1499,7 @@
         </div>
 
         <div id="av-errors" class="admin-view" style="display:none;">
-          <h2 class="profile-h2" data-i18n="avErrors">Hata Kayıtları</h2>
+          <h2 class="profile-h2">Hata Kayıtları</h2>
           <p class="profile-sub">Sitede oluşan hataların zaman damgalı kaydı.</p>
           <div class="admin-notif-card">
         <div class="an-card-head"><h3 class="an-h3">🛠️ Hata Kayıtları</h3><div><button class="set-btn ghost" onclick="adminClearErrors()">Temizle</button><button class="set-btn ghost" onclick="adminLoadErrors()" style="margin-left:8px;">Yenile</button></div></div>
@@ -1565,19 +1563,19 @@
 
 
 <footer>
-  <p data-i18n="footer">© 2026 <span>YDT-YDS Rusça Platformu</span> — Tüm hakları saklıdır.</p>
+  <p>© 2026 <span>YDT-YDS Rusça Platformu</span> — Tüm hakları saklıdır.</p>
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=79"></script>
-<script defer src="js/auth.js?v=79"></script>
-<script defer src="js/admin.js?v=79"></script>
-<script defer src="js/profile.js?v=79"></script>
-<script defer src="js/extras.js?v=79"></script>
-<script defer src="js/app.js?v=79"></script>
+<script defer src="js/supabase-config.js?v=80"></script>
+<script defer src="js/auth.js?v=80"></script>
+<script defer src="js/admin.js?v=80"></script>
+<script defer src="js/profile.js?v=80"></script>
+<script defer src="js/extras.js?v=80"></script>
+<script defer src="js/app.js?v=80"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
-<script>try{var _rt=document.getElementById('set-rutip');if(_rt)_rt.checked=localStorage.getItem('ydt_rutip')!=='off';var _sv=document.getElementById('set-voice');if(_sv)_sv.value=localStorage.getItem('ydt_voice')||'auto';}catch(e){}</script>
+<script>try{var _sv=document.getElementById('set-voice');if(_sv)_sv.value=localStorage.getItem('ydt_voice')||'auto';}catch(e){}</script>
 </body>
 </html>
