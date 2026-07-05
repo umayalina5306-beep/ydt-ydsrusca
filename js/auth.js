@@ -389,6 +389,16 @@ async function authForgot() {
 if (typeof location !== "undefined" && (location.hash || "").includes("type=recovery")) {
   window.addEventListener("load", function () { setTimeout(openPwReset, 800); });
 }
+/* E-posta doğrulama linkiyle dönüş: karşılama */
+if (typeof location !== "undefined" && /type=(signup|email_change|invite)/.test(location.hash || "")) {
+  window.addEventListener("load", function () {
+    setTimeout(function () {
+      try { history.replaceState(null, "", location.pathname); } catch (e) {}
+      var m = "E-posta adresin doğrulandı ve hesabın etkinleşti. \ud83c\udf89\n\nArtık tüm özellikleri kullanabilirsin — iyi çalışmalar!";
+      if (typeof uiAlert === "function") uiAlert(m, "✅ Hoş Geldin!");
+    }, 900);
+  });
+}
 /* Süresi dolmuş / kullanılmış sıfırlama linki: sessiz kalma, açıkla */
 if (typeof location !== "undefined" && /error_code=otp_expired|error=access_denied/.test(location.hash || "")) {
   window.addEventListener("load", function () {
