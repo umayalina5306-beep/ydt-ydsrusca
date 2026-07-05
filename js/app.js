@@ -4555,7 +4555,7 @@ function applyLangExtra(lang) {
     const v = e[lang] || e.tr;
     if (e.html) el.innerHTML = v; else el.textContent = v;
     // RU modunda üzerine gelince Türkçesi görünsün
-    if (lang === 'ru') el.setAttribute('data-tip', e.tr.replace(/<[^>]*>/g, ''));
+    if (lang === 'ru') { const _tt = e.tr.replace(/<[^>]*>/g, ''); if (!/[А-Яа-яЁё]/.test(_tt)) el.setAttribute('data-tip', _tt); }
     else el.removeAttribute('data-tip');
   });
   applyRuTextMap(lang);
@@ -4585,6 +4585,20 @@ const RU_TEXT_MAP = {
   "Tüm Kelime Kasama Git": "Вся копилка слов", "Çalışma Serisi": "Серия занятий", "Günlük çalışmaya devam et!": "Продолжай заниматься каждый день!",
   "Gün": "дн.", "En uzun seri:": "Рекорд:", "Kayıtlılar": "Сохранённые", "Öğrenilenler": "Выученные", "Hepsi": "Все",
   "Detayları Gör": "Подробнее", "Geçmişim": "История",
+  "10 Soru": "10 вопросов", "20 Soru": "20 вопросов", "30 Soru": "30 вопросов", "50 Soru": "50 вопросов", "100 Soru": "100 вопросов",
+  "Cevaplar": "Ответы", "CEVAPLAR": "ОТВЕТЫ",
+  "Zarflar": "Наречия", "Zamirler": "Местоимения", "Edatlar": "Предлоги", "Bağlaçlar": "Союзы",
+  "Tüm Türler": "Все типы", "İsim": "Сущ.", "Fiil": "Глагол", "Sıfat": "Прил.", "Zarf": "Нареч.", "Zamir": "Мест.", "Edat": "Предлог", "Bağlaç": "Союз",
+  "Dinle": "Слушать",
+  "Platformu tanımak için ücretsiz başla": "Начни бесплатно, чтобы познакомиться с платформой",
+  "100 kelime bankası": "Банк из 100 слов", "10 test sorusu": "10 тестовых вопросов", "2 ücretsiz video ders": "2 бесплатных видеоурока",
+  "Temel telaffuz rehberi": "Базовый гид по произношению", "Kayıt gerekmez": "Регистрация не нужна",
+  "Ücretsiz Dene →": "Попробовать бесплатно →", "Abone Ol →": "Подписаться →",
+  "YDT/YDS sınavına kadar tam erişim": "Полный доступ до экзамена YDT/YDS",
+  "2.272 kelime bankası": "Банк из 2 272 слов", "500+ test sorusu": "500+ тестовых вопросов", "50+ video ders (A1→C1)": "50+ видеоуроков (A1→C1)",
+  "Gramer dersleri": "Уроки грамматики", "Deneme sınavları": "Пробные экзамены", "Sesli telaffuz sistemi": "Озвучка произношения", "6 ay tam erişim": "Полный доступ на 6 месяцев",
+  "Nasıl çalışır?": "Как это работает?",
+  "Önce ücretsiz ön izlemeyle platformu tanı. Beğenirsen 6 aylık erişim satın al.": "Сначала познакомься с платформой бесплатно. Понравится — купи доступ на 6 месяцев.",
   "Kaydettiğin tüm kelimeler burada.": "Все сохранённые слова — здесь.",
   "Öğrendin olarak işaretlediğin kelimeler.": "Слова, отмеченные как выученные.",
   "Çözdüğün testler ve sonuçların burada görünecek. Bir teste tıklayıp doğru/yanlışlarını inceleyebilirsin.": "Здесь появятся решённые тесты и результаты. Нажми на тест, чтобы разобрать ответы.",
@@ -4652,7 +4666,7 @@ function applyRuTextMap(lang) {
     const pe = n.parentElement;
     if (pe && pe.hasAttribute('data-i18n')) continue; // onların kendi sistemi var
     n.nodeValue = raw.replace(t, rep);
-    if (pe && !pe.hasAttribute('data-tip')) { pe.setAttribute('data-tip', t); pe.setAttribute('data-tip-map', '1'); }
+    if (pe && !pe.hasAttribute('data-tip') && !/[А-Яа-яЁё]/.test(t)) { pe.setAttribute('data-tip', t); pe.setAttribute('data-tip-map', '1'); }
   }
 }
 if (typeof window !== 'undefined') window.applyRuTextIn = function () { try { applyRuTextMap(getLang()); } catch (e) {} };
@@ -4675,7 +4689,12 @@ document.addEventListener('mouseover', function (e) {
   if (!t) { _ruTipHide(); return; }
   if (t === _ruTipCur) return;
   _ruTipHide();
-  const txt = t.getAttribute('data-tip'); if (!txt) return;
+  let txt = t.getAttribute('data-tip'); if (!txt) return;
+  if (/[А-Яа-яЁё]/.test(txt)) {
+    if (!applyRuTextMap._rev) { applyRuTextMap._rev = {}; Object.keys(RU_TEXT_MAP).forEach(k => { applyRuTextMap._rev[RU_TEXT_MAP[k]] = k; }); }
+    const fixed = applyRuTextMap._rev[txt.trim()];
+    if (fixed) { txt = fixed; t.setAttribute('data-tip', fixed); } else { t.removeAttribute('data-tip'); return; }
+  }
   _ruTipCur = t;
   _ruTipBox = document.createElement('div');
   _ruTipBox.className = 'ru-tip';
