@@ -23,7 +23,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=68">
+<link rel="stylesheet" href="css/style.css?v=69">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -46,7 +46,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=68" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=69" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active" data-i18n="nav_home">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words" data-i18n="nav_words">Kelimeler</button></li>
@@ -492,7 +492,7 @@
 
         <!-- KURULUM -->
         <div id="review-setup">
-          <div class="rev-crumb"><span class="rev-crumb-link" onclick="profileGoKasa('saved')">← Kelime Kasam</span> <span class="rev-crumb-sep">›</span> <strong>Tekrar Et</strong></div>
+          <div class="rev-crumb"><button class="back-btn" data-i18n="btnBack2" onclick="profileGoKasa('saved')">← Geri</button></div>
 
           <div class="rev-top">
             <div>
@@ -761,11 +761,11 @@
       </div>
     </div>
     <div class="recs-filters">
-      <button class="rec-chip active" data-rt="all" onclick="recsSetType('all', this)">Tümü</button>
-      <button class="rec-chip" data-rt="film" onclick="recsSetType('film', this)">🎬 Film</button>
-      <button class="rec-chip" data-rt="dizi" onclick="recsSetType('dizi', this)">📺 Dizi</button>
-      <button class="rec-chip" data-rt="anime" onclick="recsSetType('anime', this)">🌸 Anime</button>
-      <button class="rec-chip" data-rt="kitap" onclick="recsSetType('kitap', this)">📚 Kitap</button>
+      <button class="rec-chip active" data-rt="all" onclick="recsSetType('all', this)" data-i18n="rfAll">Tümü</button>
+      <button class="rec-chip" data-rt="film" onclick="recsSetType('film', this)" data-i18n="rfFilm">🎬 Film</button>
+      <button class="rec-chip" data-rt="dizi" onclick="recsSetType('dizi', this)" data-i18n="rfDizi">📺 Dizi</button>
+      <button class="rec-chip" data-rt="anime" onclick="recsSetType('anime', this)" data-i18n="rfAnime">🌸 Anime</button>
+      <button class="rec-chip" data-rt="kitap" onclick="recsSetType('kitap', this)" data-i18n="rfKitap">📚 Kitap</button>
     </div>
     <div id="recs-grid" class="recs-grid"><div class="profile-empty">Yükleniyor...</div></div>
   </section>
@@ -883,7 +883,7 @@
     <div class="profile-main">
       <!-- PROFİL ÖZETİ -->
       <div id="pv-overview" class="profile-view">
-        <h2 class="profile-h2">Profil Özeti</h2>
+        <h2 class="profile-h2" data-i18n="pvOverview">Profil Özeti</h2>
         <p class="profile-sub">Çalışma istatistiklerinize genel bir bakış.</p>
 
         <div class="profile-id-card">
@@ -981,60 +981,60 @@
 
       <!-- KELİME KASAM (inline) -->
       <div id="pv-saved" class="profile-view" style="display:none;">
-        <h2 class="profile-h2">Kelime Kasam</h2>
+        <h2 class="profile-h2" data-i18n="pvKasa">Kelime Kasam</h2>
         <p class="profile-sub">Kaydettiğin tüm kelimeler burada.</p>
         <div id="kasa-saved-body"></div>
       </div>
 
       <!-- ÖĞRENİLEN KELİMELER (inline) -->
       <div id="pv-learned" class="profile-view" style="display:none;">
-        <h2 class="profile-h2">Öğrenilen Kelimeler</h2>
+        <h2 class="profile-h2" data-i18n="pvLearned">Öğrenilen Kelimeler</h2>
         <p class="profile-sub">Öğrendin olarak işaretlediğin kelimeler.</p>
         <div id="kasa-learned-body"></div>
       </div>
 
       <!-- TEST GEÇMİŞİM -->
       <div id="pv-tests" class="profile-view" style="display:none;">
-        <h2 class="profile-h2">Test Geçmişim</h2>
+        <h2 class="profile-h2" data-i18n="pvTests">Test Geçmişim</h2>
         <p class="profile-sub">Çözdüğün testler ve sonuçların burada görünecek. Bir teste tıklayıp doğru/yanlışlarını inceleyebilirsin.</p>
         <div id="test-history"></div>
       </div>
 
       <!-- VIDEO İZLEME GEÇMİŞİM -->
       <div id="pv-videos" class="profile-view" style="display:none;">
-        <h2 class="profile-h2">Video İzleme Geçmişim</h2>
+        <h2 class="profile-h2" data-i18n="pvVideos">Video İzleme Geçmişim</h2>
         <p class="profile-sub">İzlediğin video dersler burada görünecek.</p>
         <div class="profile-panel"><div class="profile-empty">Henüz video izlenmedi.</div></div>
       </div>
 
       <!-- İSTATİSTİKLER -->
       <div id="pv-stats" class="profile-view" style="display:none;">
-        <h2 class="profile-h2">İstatistikler</h2>
+        <h2 class="profile-h2" data-i18n="pvStats">İstatistikler</h2>
         <p class="profile-sub">Çalışma ilerlemenin detaylı görünümü.</p>
         <div id="stats-body"></div>
       </div>
 
       <!-- AYARLAR -->
       <div id="pv-tasks" class="profile-view" style="display:none;">
-        <h2 class="profile-h2">Görevler</h2>
+        <h2 class="profile-h2" data-i18n="pvTasks">Görevler</h2>
         <p class="profile-sub">Günlük ve haftalık görevleri tamamla, XP kazan!</p>
         <div id="tasks-body"></div>
       </div>
 
       <div id="pv-analysis" class="profile-view" style="display:none;">
-        <h2 class="profile-h2">Analiz & Öneri</h2>
+        <h2 class="profile-h2" data-i18n="pvAnalysis">Analiz & Öneri</h2>
         <p class="profile-sub">Çalışma verilerine göre kişisel değerlendirme ve öneriler.</p>
         <div id="analysis-body"></div>
       </div>
 
       <div id="pv-support" class="profile-view" style="display:none;">
-        <h2 class="profile-h2">Destek</h2>
+        <h2 class="profile-h2" data-i18n="pvSupport">Destek</h2>
         <p class="profile-sub">Bir sorun mu var, bir sorun mu yaşıyorsun? Talep oluştur, ekibimiz yanıtlasın.</p>
         <div id="support-body"></div>
       </div>
 
       <div id="pv-settings" class="profile-view" style="display:none;">
-        <h2 class="profile-h2">Ayarlar</h2>
+        <h2 class="profile-h2" data-i18n="pvSettings">Ayarlar</h2>
         <p class="profile-sub">Hesap ve uygulama tercihlerinizi yönetin.</p>
 
         <div class="st-tabs">
@@ -1143,21 +1143,21 @@
       <div class="profile-main">
 
         <div id="av-overview" class="admin-view">
-          <h2 class="profile-h2">Genel Bakış</h2>
+          <h2 class="profile-h2" data-i18n="avOverview">Genel Bakış</h2>
           <p class="profile-sub">Sitenin genel durumu.</p>
           <div id="admin-stats" class="admin-stats"></div>
           <div class="profile-panel"><div class="panel-title">📈 Son 7 Gün Ziyaret</div><div id="admin-visits-mini"></div></div>
         </div>
 
         <div id="av-users" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Kullanıcılar</h2>
+          <h2 class="profile-h2" data-i18n="avUsers">Kullanıcılar</h2>
           <p class="profile-sub">Üyeleri görüntüle, planlarını yönet.</p>
           <input id="admin-search" class="admin-search" placeholder="🔍 İsim veya e-posta ara..." oninput="filterAdminUsers(this.value)" autocomplete="off">
           <div id="admin-users" class="admin-users"></div>
         </div>
 
         <div id="av-content" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">İçerik Yönetimi — Kelimeler</h2>
+          <h2 class="profile-h2" data-i18n="avWords">İçerik Yönetimi — Kelimeler</h2>
           <p class="profile-sub">Kelimeleri tek tek düzenle veya toplu yükle. Değişiklikler anında yayına girer.</p>
           <div class="pq-stats" id="cw-stats">Yükleniyor...</div>
 
@@ -1209,7 +1209,7 @@
         </div>
 
         <div id="av-notify" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Bildirim Gönder</h2>
+          <h2 class="profile-h2" data-i18n="avNotify">Bildirim Gönder</h2>
           <p class="profile-sub">Tüm kullanıcılara veya seçtiklerine bildirim yolla.</p>
           <div class="admin-notif-card">
             <h3 class="an-h3">🔔 Bildirim Gönder</h3>
@@ -1225,7 +1225,7 @@
         </div>
 
         <div id="av-support" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Destek Talepleri</h2>
+          <h2 class="profile-h2" data-i18n="avSupport">Destek Talepleri</h2>
           <p class="profile-sub">Kullanıcı taleplerini yanıtla ve yönet.</p>
           <div class="admin-notif-card">
         <div class="an-card-head"><h3 class="an-h3">💬 Destek Talepleri</h3><div><button class="set-btn ghost" onclick="adminClearClosedTickets()">Kapanmışları Temizle</button><button class="set-btn ghost" onclick="adminLoadTickets()" style="margin-left:8px;">Yenile</button></div></div>
@@ -1234,7 +1234,7 @@
         </div>
 
         <div id="av-mail" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Mail Kutusu</h2>
+          <h2 class="profile-h2" data-i18n="avMail">Mail Kutusu</h2>
           <p class="profile-sub">info@ / destek@ / support@ adreslerine gelenler.</p>
           <div class="admin-notif-card">
         <div class="an-card-head"><h3 class="an-h3">📨 Gelen Mesajlar (İletişim)</h3><button class="set-btn ghost" onclick="adminLoadMail()">Yenile</button></div>
@@ -1243,7 +1243,7 @@
         </div>
 
         <div id="av-questions" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Soru Havuzu</h2>
+          <h2 class="profile-h2" data-i18n="avPool">Soru Havuzu</h2>
           <p class="profile-sub">Seviye sınavı sorularını yönet.</p>
           <div class="admin-notif-card">
         <h3 class="an-h3">🧩 Seviye Sınavı Soru Havuzu</h3>
@@ -1314,7 +1314,7 @@
         </div>
 
         <div id="av-pquest" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Paragraf Soruları</h2>
+          <h2 class="profile-h2" data-i18n="avPq">Paragraf Soruları</h2>
           <p class="profile-sub">Okuma-anlama sorularını yönet. Değişiklikler anında yayına girer.</p>
           <div class="pq-stats" id="cpq-stats">Yükleniyor...</div>
           <div class="admin-notif-card">
@@ -1355,7 +1355,7 @@
         </div>
 
         <div id="av-videos" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Video Yönetimi</h2>
+          <h2 class="profile-h2" data-i18n="avVideos">Video Yönetimi</h2>
           <p class="profile-sub">Ücretsizler YouTube'da, ücretliler Cloudflare Stream'de barınır. Buradan liste, kapak ve premium durumu yönetilir.</p>
           <div class="pq-stats" id="cv-stats">Yükleniyor...</div>
           <div class="admin-notif-card">
@@ -1383,7 +1383,7 @@
         </div>
 
         <div id="av-recs" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Öneri Yönetimi</h2>
+          <h2 class="profile-h2" data-i18n="avRecs">Öneri Yönetimi</h2>
           <p class="profile-sub">Film, dizi, anime ve kitap önerileri. Değişiklikler anında yayına girer.</p>
           <div class="pq-stats" id="rc-stats">Yükleniyor...</div>
           <div class="admin-notif-card">
@@ -1432,14 +1432,14 @@
         </div>
 
         <div id="av-visits" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Ziyaret & SEO</h2>
+          <h2 class="profile-h2" data-i18n="avVisits">Ziyaret & SEO</h2>
           <p class="profile-sub">Trafik istatistikleri ve sayfa içi SEO denetimi.</p>
           <div class="profile-panel"><div class="panel-title">📈 Ziyaretler</div><div id="admin-visits"></div></div>
           <div class="profile-panel"><div class="panel-title">🔎 SEO Denetimi</div><div id="admin-seo"></div></div>
         </div>
 
         <div id="av-settings" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Site Ayarları</h2>
+          <h2 class="profile-h2" data-i18n="avSettings">Site Ayarları</h2>
           <p class="profile-sub">Site genelini etkileyen ayarlar.</p>
           <div class="admin-notif-card">
             <h3 class="an-h3">📢 Duyuru Bandı</h3>
@@ -1456,7 +1456,7 @@
         </div>
 
         <div id="av-backup" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Yedekleme</h2>
+          <h2 class="profile-h2" data-i18n="avBackup">Yedekleme</h2>
           <p class="profile-sub">Veritabanındaki tüm tabloları JSON olarak indir.</p>
           <div class="admin-notif-card">
             <h3 class="an-h3">💾 Tam Yedek</h3>
@@ -1477,7 +1477,7 @@
         </div>
 
         <div id="av-errors" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Hata Kayıtları</h2>
+          <h2 class="profile-h2" data-i18n="avErrors">Hata Kayıtları</h2>
           <p class="profile-sub">Sitede oluşan hataların zaman damgalı kaydı.</p>
           <div class="admin-notif-card">
         <div class="an-card-head"><h3 class="an-h3">🛠️ Hata Kayıtları</h3><div><button class="set-btn ghost" onclick="adminClearErrors()">Temizle</button><button class="set-btn ghost" onclick="adminLoadErrors()" style="margin-left:8px;">Yenile</button></div></div>
@@ -1545,11 +1545,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=68"></script>
-<script defer src="js/auth.js?v=68"></script>
-<script defer src="js/admin.js?v=68"></script>
-<script defer src="js/profile.js?v=68"></script>
-<script defer src="js/extras.js?v=68"></script>
-<script defer src="js/app.js?v=68"></script>
+<script defer src="js/supabase-config.js?v=69"></script>
+<script defer src="js/auth.js?v=69"></script>
+<script defer src="js/admin.js?v=69"></script>
+<script defer src="js/profile.js?v=69"></script>
+<script defer src="js/extras.js?v=69"></script>
+<script defer src="js/app.js?v=69"></script>
 </body>
 </html>
