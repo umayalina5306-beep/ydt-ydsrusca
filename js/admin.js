@@ -50,7 +50,7 @@ async function loadAdminUsers() {
   try {
     const { data, error } = await sb
       .from("profiles")
-      .select("id, email, display_name, plan, is_admin, level, streak_count, created_at")
+      .select("id, email, display_name, plan, is_admin, level, streak_count, created_at, premium_until")
       .order("created_at", { ascending: false });
     if (error) throw error;
     _adminUsers = data || [];
@@ -79,6 +79,7 @@ function renderAdminUsers(list) {
     const ad = u.display_name || (u.email || "").split("@")[0];
     const isPrem = u.plan === "premium";
     const tarih = u.created_at ? new Date(u.created_at).toLocaleDateString("tr-TR") : "";
+    const pUntil = (u.plan === "premium" && u.premium_until) ? " · 👑 " + new Date(u.premium_until).toLocaleDateString("tr-TR") + "'e kadar" : "";
     const planBadge = u.is_admin
       ? '<span class="plan-badge plan-admin">Yönetici</span>'
       : `<span class="plan-badge ${isPrem ? "plan-premium" : "plan-free"}">${isPrem ? "Premium" : "Ücretsiz"}</span>`;
@@ -88,7 +89,7 @@ function renderAdminUsers(list) {
     return `<div class="admin-user">
       <div class="admin-user-info">
         <div class="admin-user-name">${ad} ${planBadge}</div>
-        <div class="admin-user-meta">${u.email || ""} · ${u.level || "seviye yok"} · ${tarih}</div>
+        <div class="admin-user-meta">${u.email || ""} · ${u.level || "seviye yok"} · ${tarih}${pUntil}</div>
         <div class="admin-user-acts">
           <button class="mail-act" onclick="adminUserDetail('${u.id}')">🔍 Detay</button>
           <button class="mail-act" onclick="adminUserNotify('${u.id}', '${(u.display_name||'').replace(/'/g,'')}')">🔔 Bildirim</button>
@@ -113,17 +114,29 @@ function filterAdminUsers(q) {
 }
 
 async function togglePremium(userId, currentPlan) {
-  const yeni = currentPlan === "premium" ? "free" : "premium";
-  try {
-    const { error } = await sb.from("profiles").update({ plan: yeni }).eq("id", userId);
-    if (error) throw error;
-    const u = _adminUsers.find(x => x.id === userId);
-    if (u) u.plan = yeni;
-    renderAdminStats();
-    const search = document.getElementById("admin-search");
-    filterAdminUsers(search ? search.value : "");
-  } catch (e) {
-    _logDev("Plan değiştirilemedi:", e);
-    if (typeof window.uiAlert === "function") window.uiAlert("Plan değiştirilemedi. Yönetici yetkisi ve SQL kuralları gerekli.", "Hata"); else alert("Plan değiştirilemedi.");
+  const isPrem = currentPlan === "premium";
+  if (isPrem) {
+    if (!(await uiConfirm("Bu kullanıcı ücretsiz plana düşürülsün mü?", "Ücretsiz Yap"))) return;
+    try {
+      const { error } = await sb.from("profiles").update({ plan: "free", premium_until: null }).eq("id", userId);
+      if (error) throw error;
+      toast("Kullanıcı ücretsiz plana alındı.");
+      loadAdminUsers();
+    } catch (e) { uiAlert("İşlem başarısız."); }
+    return;
   }
+  // Premium yap: bitiş tarihi sor (varsayılan: 6 ay sonrası)
+  const def = new Date(); def.setMonth(def.getMonth() + 6);
+  const defStr = def.toISOString().slice(0, 10);
+  const t = await uiPrompt("Premium bitiş tarihi (YYYY-AA-GG):", { title: "👑 Premium Yap", placeholder: defStr, value: defStr });
+  if (t === null) return;
+  const dstr = (t || defStr).trim();
+  const d = new Date(dstr + "T23:59:59");
+  if (isNaN(d.getTime()) || d < new Date()) { uiAlert("Geçerli, ileri bir tarih gir (örn: " + defStr + ")."); return; }
+  try {
+    const { error } = await sb.from("profiles").update({ plan: "premium", premium_until: d.toISOString() }).eq("id", userId);
+    if (error) throw error;
+    toast("👑 Premium yapıldı — bitiş: " + d.toLocaleDateString("tr-TR"));
+    loadAdminUsers();
+  } catch (e) { uiAlert("İşlem başarısız. premium_sure.sql çalıştırıldı mı?"); }
 }
