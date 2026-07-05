@@ -4585,6 +4585,30 @@ const RU_TEXT_MAP = {
   "Tüm Kelime Kasama Git": "Вся копилка слов", "Çalışma Serisi": "Серия занятий", "Günlük çalışmaya devam et!": "Продолжай заниматься каждый день!",
   "Gün": "дн.", "En uzun seri:": "Рекорд:", "Kayıtlılar": "Сохранённые", "Öğrenilenler": "Выученные", "Hepsi": "Все",
   "Detayları Gör": "Подробнее", "Geçmişim": "История",
+  "Kaydettiğin tüm kelimeler burada.": "Все сохранённые слова — здесь.",
+  "Öğrendin olarak işaretlediğin kelimeler.": "Слова, отмеченные как выученные.",
+  "Çözdüğün testler ve sonuçların burada görünecek. Bir teste tıklayıp doğru/yanlışlarını inceleyebilirsin.": "Здесь появятся решённые тесты и результаты. Нажми на тест, чтобы разобрать ответы.",
+  "İzlediğin video dersler burada görünecek.": "Здесь появятся просмотренные видеоуроки.",
+  "Çalışma ilerlemenin detaylı görünümü.": "Подробный обзор твоего прогресса.",
+  "Çalışma istatistiklerinize genel bir bakış.": "Общий обзор вашей статистики.",
+  "Günlük ve haftalık görevleri tamamla, XP kazan!": "Выполняй ежедневные и недельные задания — получай XP!",
+  "Çalışma verilerine göre kişisel değerlendirme ve öneriler.": "Личная оценка и советы на основе твоих данных.",
+  "Bir sorun mu var, bir sorun mu yaşıyorsun? Talep oluştur, ekibimiz yanıtlasın.": "Возникла проблема? Создай обращение — команда ответит.",
+  "Hesap ve uygulama tercihlerinizi yönetin.": "Управляй настройками аккаунта и приложения.",
+  "Sitenin genel durumu.": "Общее состояние сайта.",
+  "Üyeleri görüntüle, planlarını yönet.": "Просматривай пользователей и управляй планами.",
+  "Kelimeleri tek tek düzenle veya toplu yükle. Değişiklikler anında yayına girer.": "Редактируй слова по одному или загружай пакетом. Изменения публикуются сразу.",
+  "Tüm kullanıcılara veya seçtiklerine bildirim yolla.": "Отправляй уведомления всем или выбранным пользователям.",
+  "Kullanıcı taleplerini yanıtla ve yönet.": "Отвечай на обращения пользователей и управляй ими.",
+  "info@ / destek@ / support@ adreslerine gelenler.": "Входящие на info@ / destek@ / support@.",
+  "Seviye sınavı sorularını yönet.": "Управляй вопросами теста на уровень.",
+  "Okuma-anlama sorularını yönet. Değişiklikler anında yayına girer.": "Управляй вопросами на понимание текста. Изменения публикуются сразу.",
+  "Ücretsizler YouTube'da, ücretliler Cloudflare Stream'de barınır. Buradan liste, kapak ve premium durumu yönetilir.": "Бесплатные — на YouTube, платные — в Cloudflare Stream. Здесь управляются список, обложки и премиум-статус.",
+  "Film, dizi, anime ve kitap önerileri. Değişiklikler anında yayına girer.": "Рекомендации фильмов, сериалов, аниме и книг. Публикуются сразу.",
+  "Trafik istatistikleri ve sayfa içi SEO denetimi.": "Статистика трафика и SEO-проверка страницы.",
+  "Site genelini etkileyen ayarlar.": "Настройки, влияющие на весь сайт.",
+  "Veritabanındaki tüm tabloları JSON olarak indir.": "Скачай все таблицы базы данных в формате JSON.",
+  "Sitede oluşan hataların zaman damgalı kaydı.": "Журнал ошибок сайта с отметками времени.",
   "1.719 grup": "1 719 групп", "20 çift": "20 пар", "8 kök": "8 корней",
   "м (erkil)": "м (муж.)", "ж (dişil)": "ж (жен.)", "с (nötr)": "с (ср.)",
   "Sonraki Soru →": "Следующий вопрос →", "Testi Bitir ✓": "Завершить тест ✓", "Süre doldu!": "Время вышло!",
@@ -4637,7 +4661,7 @@ try {
   const _i18nMo = new MutationObserver(function () {
     if (getLang() !== 'ru') return;
     clearTimeout(_i18nMoT);
-    _i18nMoT = setTimeout(function () { try { applyLangExtra('ru'); } catch (e) {} }, 300);
+    _i18nMoT = setTimeout(function () { try { if (getLang() === 'ru') applyLangExtra('ru'); } catch (e) {} }, 300);
   });
   _i18nMo.observe(document.body, { childList: true, subtree: true });
 } catch (e) {}
@@ -4674,6 +4698,7 @@ document.addEventListener('mousemove', function (e) {
 window.addEventListener('scroll', _ruTipHide, true);
 function applyLang() {
   const lang = getLang();
+  try { clearTimeout(_i18nMoT); } catch (e) {}
   document.body.classList.toggle('lang-ru', lang === 'ru');
   applyLangExtra(lang);
   if (typeof updateLevelCards === 'function') try { updateLevelCards(); } catch (e) {}
