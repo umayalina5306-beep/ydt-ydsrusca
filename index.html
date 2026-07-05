@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=89">
+<link rel="stylesheet" href="css/style.css?v=90">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=89" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=90" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words">Kelimeler</button></li>
@@ -1121,7 +1121,19 @@
         </div>
 
         <div id="stab-other" class="st-panel" style="display:none;">
-          <div class="profile-panel"><div class="profile-empty" id="stab-other-msg">Bu bölüm yakında eklenecek.</div></div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">🔒 Şifre Değiştir</h3>
+            <p class="pq-hint">Güvenliğin için önce mevcut şifreni doğruluyoruz.</p>
+            <label class="cwbp-lbl">Mevcut şifre</label>
+            <div class="pw-wrap"><input id="cpw-old" class="form-input" type="password" autocomplete="current-password" placeholder="Mevcut şifren"><button type="button" class="pw-eye" onclick="pwToggle(this, 'cpw-old')">👁</button></div>
+            <label class="cwbp-lbl">Yeni şifre</label>
+            <div class="pw-wrap"><input id="cpw-new" class="form-input" type="password" autocomplete="new-password" placeholder="En az 6 karakter" oninput="pwStrengthPaint(this.value, 'cpw-bar', 'cpw-bar-t')"><button type="button" class="pw-eye" onclick="pwToggle(this, 'cpw-new')">👁</button></div>
+            <div class="pwbar"><div id="cpw-bar" class="pwbar-fill"></div></div><div id="cpw-bar-t" class="pwbar-t"></div>
+            <label class="cwbp-lbl">Yeni şifre (tekrar)</label>
+            <div class="pw-wrap"><input id="cpw-new2" class="form-input" type="password" autocomplete="new-password" placeholder="Tekrar yaz"><button type="button" class="pw-eye" onclick="pwToggle(this, 'cpw-new2')">👁</button></div>
+            <div id="cpw-msg" style="font-size:.84rem; min-height:18px; margin:6px 0;"></div>
+            <button class="set-btn" onclick="changePassword()">Şifreyi Güncelle</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1641,12 +1653,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=89"></script>
-<script defer src="js/auth.js?v=89"></script>
-<script defer src="js/admin.js?v=89"></script>
-<script defer src="js/profile.js?v=89"></script>
-<script defer src="js/extras.js?v=89"></script>
-<script defer src="js/app.js?v=89"></script>
+<script defer src="js/supabase-config.js?v=90"></script>
+<script defer src="js/auth.js?v=90"></script>
+<script defer src="js/admin.js?v=90"></script>
+<script defer src="js/profile.js?v=90"></script>
+<script defer src="js/extras.js?v=90"></script>
+<script defer src="js/app.js?v=90"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
