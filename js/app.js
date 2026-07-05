@@ -3395,13 +3395,33 @@ async function logError(message, source) {
     if (typeof sb === 'undefined' || !sb) return;
     _errLogged++;
     var _uid = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null;
-    await sb.from('error_log').insert({
+    const { error: _insErr } = await sb.from('error_log').insert({
       user_id: _uid,
       message: String(message || '').slice(0, 600),
       source: String(source || '').slice(0, 200),
       url: (location.pathname + location.hash).slice(0, 200)
     });
+    if (_insErr && typeof console !== 'undefined') console.warn('[Hata kaydı yazılamadı]', _insErr.message, '— error_log_acik.sql çalıştırıldı mı?');
   } catch (e) {}
+}
+/* Panelden tek tıkla hata-kayıt sistemini test et: sonucu açıkça söyler */
+async function adminErrTest() {
+  try {
+    const { error } = await sb.from('error_log').insert({
+      user_id: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null,
+      message: '🧪 Test kaydı — hata sistemi çalışıyor (' + new Date().toLocaleTimeString('tr-TR') + ')',
+      source: 'manuel-test', url: '/test'
+    });
+    if (error) { uiAlert('Kayıt YAZILAMADI ❌\n\nVeritabanı yanıtı: ' + error.message + '\n\nÇözüm: error_log_acik.sql dosyasını Supabase SQL Editor\'da çalıştır.', 'Hata Sistemi Testi'); return; }
+    toast('✅ Test kaydı yazıldı.');
+    adminLoadErrors(window._errShowAll);
+  } catch (e) { uiAlert('Test başarısız: ' + e.message); }
+}
+function pwToggle(btn, id) {
+  const inp = document.getElementById(id); if (!inp) return;
+  const goster = inp.type === 'password';
+  inp.type = goster ? 'text' : 'password';
+  btn.textContent = goster ? '🙈' : '👁';
 }
 if (typeof window !== 'undefined') {
   window.logError = logError;
