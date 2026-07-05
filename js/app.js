@@ -107,8 +107,8 @@ function sozlukAra(query) {
     const cvHTML = w.cv ? `<div class="word-cv-pair">⇄ СВ: <b>${w.cv}</b></div>` : '';
     const ncvHTML = w.ncv ? `<div class="word-cv-pair">⇄ НСВ: <b>${w.ncv}</b></div>` : '';
     const extraHTML = (cvHTML||ncvHTML) ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--light-gray);">${cvHTML}${ncvHTML}</div>` : '';
-    const genderClass = w.cinsiyet==='м'?'gender-m':w.cinsiyet==='ж'?'gender-f':'gender-n';
-    const genderLabel = w.cinsiyet==='м'?'м (erkil)':w.cinsiyet==='ж'?'ж (dişil)':w.cinsiyet==='с'?'с (nötr)':'';
+    const genderClass = w.cinsiyet==='м'?'gender-m':w.cinsiyet==='ж'?'gender-f':(w.cinsiyet==='с'?'gender-n':'gender-v');
+    const genderLabel = w.cinsiyet==='м'?'м (eril)':w.cinsiyet==='ж'?'ж (dişil)':w.cinsiyet==='с'?'с (nötr)':(w.cinsiyet==='нсв'?'НСВ (bitmemiş)':(w.cinsiyet==='св'?'СВ (bitmiş)':''));
     const genderHTML = w.cinsiyet ? `<span class="word-gender ${genderClass}">${genderLabel}</span>` : '';
     const padejHTML = w.padej ? `<span class="word-padej">${w.padej}</span><br>` : '';
     const lc = levelColor[w.level] || '#6b7280';
@@ -338,7 +338,7 @@ function wordCardHTML(w, inBank) {
     const ncvHTML = w.ncv ? `<div class="word-cv-pair">⇄ НСВ: <b>${w.ncv}</b></div>` : '';
     const extraHTML = (cvHTML||ncvHTML) ? `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--light-gray);">${cvHTML}${ncvHTML}</div>` : '';
     const genderClass = w.cinsiyet === 'м' ? 'gender-m' : w.cinsiyet === 'ж' ? 'gender-f' : 'gender-n';
-    const genderLabel = w.cinsiyet === 'м' ? 'м (erkil)' : w.cinsiyet === 'ж' ? 'ж (dişil)' : w.cinsiyet === 'с' ? 'с (nötr)' : '';
+    const genderLabel = w.cinsiyet === 'м' ? 'м (eril)' : w.cinsiyet === 'ж' ? 'ж (dişil)' : w.cinsiyet === 'с' ? 'с (nötr)' : (w.cinsiyet === 'нсв' ? 'НСВ (bitmemiş)' : (w.cinsiyet === 'св' ? 'СВ (bitmiş)' : ''));
     const genderHTML = w.cinsiyet ? `<span class="word-gender ${genderClass}">${genderLabel}</span>` : '';
     const padejHTML = w.padej ? `<span class="word-padej">${w.padej}</span><br>` : '';
     const ruSafe = w.ru.replace(/'/g, "\\'");
@@ -3819,6 +3819,7 @@ function startNotifPolling() {
 }
 if (typeof window !== 'undefined') window.startNotifPolling = startNotifPolling;
 setTimeout(function () { try { startNotifPolling(); } catch (e) {} }, 2000);
+setTimeout(function () { try { _langBtnPaint(); } catch (e) {} }, 300);
 
 /* ============================================================
    YÖNETİCİ — kullanıcı işlemleri (bildirim, şifre maili, e-posta)
@@ -3968,7 +3969,7 @@ async function adminTicketMail(ticketId) {
 
 /* ---- Kelime formu: türe göre gramer seçenekleri ---- */
 const CW_GRAM_OPTS = {
-  'isim': [['', 'Cinsiyet seç...'], ['м', 'м — eril'], ['ж', 'ж — dişil'], ['с', 'с — nötr']],
+  'isim': [['', 'Cinsiyet...'], ['м', 'м'], ['ж', 'ж'], ['с', 'с']],
   'fiil': [['', 'Görünüş seç...'], ['нсв', 'НСВ — bitmemiş (HCB)'], ['св', 'СВ — bitmiş (CB)']]
 };
 const CW_PADEJ = ['Р.п.', 'Д.п.', 'В.п.', 'Т.п.', 'П.п.']; // sitedeki etiket biçimi (örn: "П.п. / В.п.")
@@ -4542,10 +4543,18 @@ const I18N = {
   btn_logout: { tr: 'Çıkış', ru: 'Выйти' }
 };
 function getLang() { try { return localStorage.getItem('ydt_lang') || 'tr'; } catch (e) { return 'tr'; } }
+function _langBtnPaint() {
+  const b = document.querySelector('.lang-btn'); if (!b) return;
+  const ru = getLang() === 'ru';
+  b.textContent = ru ? '🇷🇺 RU' : '🇹🇷 TR';
+  b.setAttribute('data-langlabel', ru ? 'Язык сайта: Русский' : 'Site dili: Türkçe');
+  b.classList.toggle('ru-on', ru);
+}
 function toggleLang() {
   const next = getLang() === 'tr' ? 'ru' : 'tr';
   try { localStorage.setItem('ydt_lang', next); } catch (e) {}
   applyLang();
+  _langBtnPaint();
   toast(next === 'ru' ? 'Site dili: Русский (üzerine gelince Türkçesi görünür)' : 'Site dili: Türkçe');
 }
 function applyLangExtra(lang) {
@@ -4585,6 +4594,15 @@ const RU_TEXT_MAP = {
   "Tüm Kelime Kasama Git": "Вся копилка слов", "Çalışma Serisi": "Серия занятий", "Günlük çalışmaya devam et!": "Продолжай заниматься каждый день!",
   "Gün": "дн.", "En uzun seri:": "Рекорд:", "Kayıtlılar": "Сохранённые", "Öğrenilenler": "Выученные", "Hepsi": "Все",
   "Detayları Gör": "Подробнее", "Geçmişim": "История",
+  "Kelime Ekle": "Добавить слово", "Temizle": "Очистить", "Dosyayı İçe Aktar": "Импортировать файл",
+  "JSON'u İçe Aktar": "Импортировать JSON", "Toplu Ekle": "Добавить пакетом", "Soru Ekle": "Добавить вопрос",
+  "Video Ekle": "Добавить видео", "Öneri Ekle": "Добавить рекомендацию", "Gönder": "Отправить",
+  "Kaydet & Yayınla": "Сохранить и опубликовать", "Bakım modu AÇIK": "Режим обслуживания ВКЛ",
+  "Doğru şık:": "Правильный вариант:", "Hızlı İşlemler": "Быстрые действия",
+  "Aktif": "Активные", "Silinenler": "Удалённые", "Mevcut Sorular": "Существующие вопросы",
+  "Tüm Veritabanını İndir": "Скачать всю базу данных", "Kurtarma Paketi Oluştur & İndir": "Создать и скачать пакет восстановления",
+  "Tümünü Gör": "Показать все", "Yenile": "Обновить", "Tam Yedek": "Полная резервная копия",
+  "Tablo Bazında İndir": "Скачать по таблицам", "Duyuru Bandı": "Лента объявлений", "Bakım Modu": "Режим обслуживания",
   "Giriş yap": "Войти", "Hesap Oluştur": "Создать аккаунт", "Google ile devam et": "Продолжить с Google",
   "Hesabın var mı?": "Уже есть аккаунт?", "Hesabın yok mu?": "Нет аккаунта?", "Kullanıcı Adı": "Имя пользователя",
   "Hesabınıza giriş yapın veya yeni hesap oluşturun": "Войдите в аккаунт или создайте новый",
@@ -4648,7 +4666,7 @@ const RU_TEXT_MAP = {
   "Veritabanındaki tüm tabloları JSON olarak indir.": "Скачай все таблицы базы данных в формате JSON.",
   "Sitede oluşan hataların zaman damgalı kaydı.": "Журнал ошибок сайта с отметками времени.",
   "1.719 grup": "1 719 групп", "20 çift": "20 пар", "8 kök": "8 корней",
-  "м (erkil)": "м (муж.)", "ж (dişil)": "ж (жен.)", "с (nötr)": "с (ср.)",
+  "м (eril)": "м (муж.)", "ж (dişil)": "ж (жен.)", "с (nötr)": "с (ср.)",
   "Sonraki Soru →": "Следующий вопрос →", "Testi Bitir ✓": "Завершить тест ✓", "Süre doldu!": "Время вышло!",
   "Doğru": "Верно", "Yanlış": "Неверно", "Boş": "Пусто", "Skor": "Счёт",
   "👤 Hesap": "👤 Аккаунт", "🔔 Bildirimler": "🔔 Уведомления", "🛡️ Güvenlik": "🛡️ Безопасность",
@@ -4707,39 +4725,15 @@ try {
 /* ---- Akıllı balon: imlecin/öğenin ekrana uzaklığına göre üstte ya da altta ---- */
 let _ruTipBox = null, _ruTipCur = null;
 function _ruTipHide() { if (_ruTipBox) { _ruTipBox.remove(); _ruTipBox = null; } _ruTipCur = null; }
-function _i18nREV() {
-  if (_i18nREV._m) return _i18nREV._m;
-  const m = {};
-  Object.keys(RU_TEXT_MAP).forEach(k => { m[RU_TEXT_MAP[k]] = k; });
-  const addDict = D => { Object.keys(D).forEach(k => { const e = D[k]; if (e && e.ru && e.tr) m[String(e.ru).replace(/<[^>]*>/g, '').trim()] = String(e.tr).replace(/<[^>]*>/g, '').trim(); }); };
-  try { addDict(I18N); } catch (e) {}
-  try { addDict(I18N_EXTRA); } catch (e) {}
-  _i18nREV._m = m; return m;
-}
-function _tipFor(el) {
-  // 1) data-i18n anahtarı varsa sözlükteki Türkçesi
-  const k = el.getAttribute('data-i18n');
-  if (k) {
-    const e = (typeof I18N_EXTRA !== 'undefined' && I18N_EXTRA[k]) || (typeof I18N !== 'undefined' && I18N[k]);
-    if (e && e.tr) return String(e.tr).replace(/<[^>]*>/g, '');
-  }
-  // 2) Ekranda O AN görünen metinden ters sözlükle türet (kayda güvenme)
-  const cur = (el.textContent || '').trim();
-  const rev = _i18nREV();
-  if (rev[cur]) return rev[cur];
-  // 3) Son çare: etiket — ama asla Kiril gösterme
-  const dt = el.getAttribute('data-tip');
-  if (dt && !/[А-Яа-яЁё]/.test(dt)) return dt;
-  return null;
-}
 document.addEventListener('mouseover', function (e) {
   if (!document.body.classList.contains('lang-ru')) { _ruTipHide(); return; }
-  const t = e.target.closest ? e.target.closest('[data-tip],[data-i18n]') : null;
-  if (!t) { _ruTipHide(); return; }
+  if (localStorage.getItem('ydt_rutip') === 'off') { _ruTipHide(); return; }
+  const t = e.target.closest ? e.target.closest('[data-tip]') : null;
+  if (!t || t.classList.contains('lang-btn')) { _ruTipHide(); return; }
   if (t === _ruTipCur) return;
   _ruTipHide();
-  const txt = _tipFor(t);
-  if (!txt || /[А-Яа-яЁё]/.test(txt)) return;
+  const txt = t.getAttribute('data-tip');
+  if (!txt || /[А-Яа-яЁё]/.test(txt)) return; // orijinal metin Türkçedir; Kiril asla gösterilmez
   _ruTipCur = t;
   _ruTipBox = document.createElement('div');
   _ruTipBox.className = 'ru-tip';
@@ -5115,24 +5109,44 @@ async function adminGiftSet(userId, n, unit) {
 function cwBulkBuild() {
   const n = Math.min(100, Math.max(1, parseInt((document.getElementById('cwb-count') || {}).value, 10) || 10));
   const box = document.getElementById('cwb-rows'); if (!box) return;
+  const PD = ['Р.п.','Д.п.','В.п.','Т.п.','П.п.'];
   box.innerHTML = Array.from({ length: n }, (_, i) => `
-    <div class="cwb-row">
-      <span class="cwb-no">${i + 1}</span>
-      <input class="pq-input cwb-ru" placeholder="Rusça *" autocomplete="off">
-      <input class="pq-input cwb-tr" placeholder="Türkçe *" autocomplete="off">
-      <select class="pq-input cwb-lvl"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
-      <select class="pq-input cwb-cat"><option>isim</option><option>fiil</option><option>sıfat</option><option>zarf</option><option>zamir</option><option>edat</option><option>bağlaç</option></select>
+    <div class="cwb-word">
+      <div class="cwb-row">
+        <span class="cwb-no">${i + 1}</span>
+        <input class="pq-input cwb-ru" placeholder="Rusça *" autocomplete="off">
+        <input class="pq-input cwb-tr" placeholder="Türkçe *" autocomplete="off">
+        <select class="pq-input cwb-lvl"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
+        <select class="pq-input cwb-cat"><option>isim</option><option>fiil</option><option>sıfat</option><option>zarf</option><option>zamir</option><option>edat</option><option>bağlaç</option></select>
+        <select class="pq-input cwb-gram"><option value="">—</option><option>м</option><option>ж</option><option>с</option><option>нсв</option><option>св</option></select>
+        <span class="cwb-pd">${PD.map(x => `<label><input type="checkbox" value="${x}">${x.slice(0,1)}</label>`).join('')}</span>
+        <label class="cwb-prem"><input type="checkbox" class="cwb-premium">👑</label>
+      </div>
+      <div class="cwb-row2">
+        <input class="pq-input cwb-ornek" placeholder="Örnek cümle (Rusça)" autocomplete="off">
+        <input class="pq-input cwb-ornektr" placeholder="Örnek cümle (Türkçe)" autocomplete="off">
+      </div>
     </div>`).join('');
   const btn = document.getElementById('cwb-save'); if (btn) btn.style.display = '';
 }
 async function cwBulkSave() {
-  const rows = [...document.querySelectorAll('#cwb-rows .cwb-row')].map(r => ({
-    ru: r.querySelector('.cwb-ru').value.trim(),
-    tr: r.querySelector('.cwb-tr').value.trim(),
-    level: r.querySelector('.cwb-lvl').value,
-    cat: r.querySelector('.cwb-cat').value,
-    active: true
-  })).filter(r => r.ru && r.tr);
+  const rows = [...document.querySelectorAll('#cwb-rows .cwb-word')].map(r => {
+    const cat = r.querySelector('.cwb-cat').value;
+    const gram = r.querySelector('.cwb-gram').value;
+    const pd = [...r.querySelectorAll('.cwb-pd input:checked')].map(c => c.value);
+    return {
+      ru: r.querySelector('.cwb-ru').value.trim(),
+      tr: r.querySelector('.cwb-tr').value.trim(),
+      level: r.querySelector('.cwb-lvl').value,
+      cat,
+      cinsiyet: gram || null,
+      padej: (cat === 'edat' && pd.length) ? pd.join(' / ') : null,
+      ornek: r.querySelector('.cwb-ornek').value.trim() || null,
+      ornek_tr: r.querySelector('.cwb-ornektr').value.trim() || null,
+      premium: r.querySelector('.cwb-premium').checked,
+      active: true
+    };
+  }).filter(r => r.ru && r.tr);
   if (!rows.length) { uiAlert('En az bir satırda Rusça + Türkçe doldurulmalı.'); return; }
   try {
     const n = await _cwUpsertAll(rows);
@@ -5141,4 +5155,42 @@ async function cwBulkSave() {
     document.getElementById('cwb-save').style.display = 'none';
     adminCwReload(); loadDbWords();
   } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
+}
+
+/* ============================================================
+   DİL SÖZLÜĞÜ — VERİTABANI (kaynak: ui_translations)
+   Yükleme: DB'deki çeviriler yerleşik sözlüklerin ÜZERİNE yazılır.
+   Senkron: yönetici paneli açıldığında koddaki yeni metinler DB'ye otomatik itilir.
+   ============================================================ */
+async function loadUiTranslations() {
+  try {
+    const rows = await sbFetchAll('ui_translations');
+    let n = 0;
+    rows.forEach(r => {
+      if (!r || !r.k) return;
+      if (r.k.startsWith('txt:')) { if (r.ru) { RU_TEXT_MAP[r.tr] = r.ru; n++; } }
+      else {
+        const key = r.k.slice(4);
+        const target = (typeof I18N !== 'undefined' && I18N[key]) ? I18N[key] : (I18N_EXTRA[key] = I18N_EXTRA[key] || {});
+        target.tr = r.tr; if (r.ru) target.ru = r.ru; n++;
+      }
+    });
+    if (n && getLang() === 'ru') applyLang();
+  } catch (e) {}
+}
+setTimeout(function () { try { if (typeof sb !== 'undefined' && sb) loadUiTranslations(); } catch (e) {} }, 1600);
+
+async function adminSyncTranslations() {
+  try {
+    if (sessionStorage.getItem('ydt_uisync')) return;
+    sessionStorage.setItem('ydt_uisync', '1');
+    const rows = [];
+    const push = (k, tr, ru) => { if (tr) rows.push({ k, tr, ru: ru || null }); };
+    try { Object.keys(I18N).forEach(k => push('key:' + k, I18N[k].tr, I18N[k].ru)); } catch (e) {}
+    Object.keys(I18N_EXTRA).forEach(k => push('key:' + k, I18N_EXTRA[k].tr, I18N_EXTRA[k].ru));
+    Object.keys(RU_TEXT_MAP).forEach(t => push('txt:' + t, t, RU_TEXT_MAP[t]));
+    for (let i = 0; i < rows.length; i += 400) {
+      await sb.from('ui_translations').upsert(rows.slice(i, i + 400), { onConflict: 'k' });
+    }
+  } catch (e) {}
 }
