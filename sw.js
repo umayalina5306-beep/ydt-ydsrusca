@@ -1,5 +1,5 @@
 /* YDT-YDS Rusça — basit, güvenli service worker (ağ-öncelikli; eski dosya dayatmaz) */
-const CACHE = 'ydt-v78';
+const CACHE = 'ydt-v79';
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
