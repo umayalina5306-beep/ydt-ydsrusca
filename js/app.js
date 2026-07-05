@@ -4598,16 +4598,20 @@ const RU_TEXT_MAP = {
 };
 function applyRuTextMap(lang) {
   if (lang === 'tr') {
-    // GERİ YÜKLEME: çeviri değil — çevrilen her öğenin sakladığı ORİJİNAL Türkçe metni geri koy
+    // GERİ YÜKLEME: yalnız işaretli (bizim çevirdiğimiz) öğeler taranır; baz Rusça içeriğe dokunulmaz
+    if (!applyRuTextMap._rev) {
+      applyRuTextMap._rev = {};
+      Object.keys(RU_TEXT_MAP).forEach(k => { applyRuTextMap._rev[RU_TEXT_MAP[k]] = k; });
+    }
+    const REV = applyRuTextMap._rev;
     document.querySelectorAll('[data-tip-map]').forEach(el => {
-      const orig = el.getAttribute('data-tip');
-      if (orig) {
-        const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-        let n;
-        while ((n = w.nextNode())) {
-          const t = (n.nodeValue || '').trim();
-          if (t && t === (RU_TEXT_MAP[orig] || '')) { n.nodeValue = n.nodeValue.replace(t, orig); break; }
-        }
+      const tip = el.getAttribute('data-tip');
+      const w2 = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let n2;
+      while ((n2 = w2.nextNode())) {
+        const t2 = (n2.nodeValue || '').trim(); if (!t2) continue;
+        if (tip && t2 === (RU_TEXT_MAP[tip] || '')) { n2.nodeValue = n2.nodeValue.replace(t2, tip); continue; }
+        if (REV[t2]) n2.nodeValue = n2.nodeValue.replace(t2, REV[t2]);
       }
       el.removeAttribute('data-tip'); el.removeAttribute('data-tip-map');
     });
@@ -4673,6 +4677,7 @@ function applyLang() {
   document.body.classList.toggle('lang-ru', lang === 'ru');
   applyLangExtra(lang);
   if (typeof updateLevelCards === 'function') try { updateLevelCards(); } catch (e) {}
+  if (typeof renderRecs === 'function') try { renderRecs(); } catch (e) {}
   const lb = document.getElementById('lang-toggle'); if (lb) lb.textContent = lang === 'ru' ? 'TR' : 'RU';
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const k = el.getAttribute('data-i18n'); const t = I18N[k]; if (!t) return;
@@ -4841,8 +4846,8 @@ function renderRecs() {
       <div class="rec-thumb" style="${bg}">${r.thumb ? '' : `<span class="rec-emoji">${RC_EMO[r.rtype] || '⭐'}</span>`}</div>
       <div class="rec-body">
         <div class="rec-chips"><span class="cw-cat">${RC_EMO[r.rtype] || ''} ${RC_LAB[r.rtype] || r.rtype}</span> <span class="kv-lvl">${_escHtml(r.level || '')}+ seviye</span></div>
-        <div class="rec-title">${_escHtml(r.title)}</div>
-        <div class="rec-desc">${_sanitizeRich(r.descr || '')}</div>
+        <div class="rec-title">${_escHtml((getLang() === 'ru' && r.title_ru) ? r.title_ru : r.title)}</div>
+        <div class="rec-desc">${_sanitizeRich((getLang() === 'ru' && r.descr_ru) ? r.descr_ru : (r.descr || ''))}</div>
         <div class="rec-acts">
           ${r.trailer ? `<button class="mail-act" onclick="recTrailer(${idx})">▶ Fragman</button>` : ''}
           ${r.link ? `<a class="mail-act" href="${_escAttr(r.link)}" target="_blank" rel="noopener">🔗 ${r.rtype === 'kitap' ? 'İncele' : 'Nerede izlenir'}</a>` : ''}
@@ -4894,7 +4899,7 @@ function renderRcList() {
     </div>`).join('');
 }
 function adminRcFormClear() {
-  ['rc-id','rc-title','rc-thumb','rc-trailer','rc-link'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['rc-id','rc-title','rc-title-ru','rc-desc-ru','rc-thumb','rc-trailer','rc-link'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const rd = document.getElementById('rc-desc'); if (rd) rd.innerHTML = '';
   const btn = document.getElementById('rc-save-btn'); if (btn) btn.textContent = 'Öneri Ekle';
 }
@@ -4903,6 +4908,8 @@ function adminRcEdit(id) {
   document.getElementById('rc-id').value = r.id;
   document.getElementById('rc-type').value = r.rtype || 'film';
   document.getElementById('rc-title').value = r.title || '';
+  const tru = document.getElementById('rc-title-ru'); if (tru) tru.value = r.title_ru || '';
+  const dru = document.getElementById('rc-desc-ru'); if (dru) dru.value = r.descr_ru || '';
   document.getElementById('rc-level').value = r.level || 'A2';
   document.getElementById('rc-desc').innerHTML = _sanitizeRich(r.descr || '');
   document.getElementById('rc-thumb').value = r.thumb || '';
@@ -4916,6 +4923,7 @@ async function adminRcSave() {
   let trailer = _cwVal('rc-trailer');
   const ym = trailer.match(/(?:youtu\.be\/|v=)([\w-]{6,})/); if (ym) trailer = ym[1]; // tam link yapıştırılırsa ID'yi ayıkla
   const row = { rtype: _cwVal('rc-type'), title, level: _cwVal('rc-level'), descr: _rcDescHtml(),
+    title_ru: _cwVal('rc-title-ru') || null, descr_ru: _cwVal('rc-desc-ru') || null,
     thumb: _cwVal('rc-thumb') || null, trailer: trailer || null, link: _cwVal('rc-link') || null, active: true };
   const id = _cwVal('rc-id');
   try {
@@ -5012,4 +5020,36 @@ async function adminGiftSet(userId, n, unit) {
     toast('👑 Premium tanımlandı — bitiş: ' + d.toLocaleDateString('tr-TR'));
     if (typeof loadAdminUsers === 'function') loadAdminUsers();
   } catch (e) { uiAlert('Tanımlanamadı. premium_sure.sql çalıştırıldı mı?'); }
+}
+
+/* ---- Toplu manuel kelime ekleme (dosyasız, 100'e kadar) ---- */
+function cwBulkBuild() {
+  const n = Math.min(100, Math.max(1, parseInt((document.getElementById('cwb-count') || {}).value, 10) || 10));
+  const box = document.getElementById('cwb-rows'); if (!box) return;
+  box.innerHTML = Array.from({ length: n }, (_, i) => `
+    <div class="cwb-row">
+      <span class="cwb-no">${i + 1}</span>
+      <input class="pq-input cwb-ru" placeholder="Rusça *" autocomplete="off">
+      <input class="pq-input cwb-tr" placeholder="Türkçe *" autocomplete="off">
+      <select class="pq-input cwb-lvl"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
+      <select class="pq-input cwb-cat"><option>isim</option><option>fiil</option><option>sıfat</option><option>zarf</option><option>zamir</option><option>edat</option><option>bağlaç</option></select>
+    </div>`).join('');
+  const btn = document.getElementById('cwb-save'); if (btn) btn.style.display = '';
+}
+async function cwBulkSave() {
+  const rows = [...document.querySelectorAll('#cwb-rows .cwb-row')].map(r => ({
+    ru: r.querySelector('.cwb-ru').value.trim(),
+    tr: r.querySelector('.cwb-tr').value.trim(),
+    level: r.querySelector('.cwb-lvl').value,
+    cat: r.querySelector('.cwb-cat').value,
+    active: true
+  })).filter(r => r.ru && r.tr);
+  if (!rows.length) { uiAlert('En az bir satırda Rusça + Türkçe doldurulmalı.'); return; }
+  try {
+    const n = await _cwUpsertAll(rows);
+    await uiAlert(n + ' kelime kaydedildi. 🎉', 'Toplu Ekleme');
+    document.getElementById('cwb-rows').innerHTML = '';
+    document.getElementById('cwb-save').style.display = 'none';
+    adminCwReload(); loadDbWords();
+  } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
 }
