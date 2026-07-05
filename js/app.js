@@ -4585,6 +4585,30 @@ const RU_TEXT_MAP = {
   "Tüm Kelime Kasama Git": "Вся копилка слов", "Çalışma Serisi": "Серия занятий", "Günlük çalışmaya devam et!": "Продолжай заниматься каждый день!",
   "Gün": "дн.", "En uzun seri:": "Рекорд:", "Kayıtlılar": "Сохранённые", "Öğrenilenler": "Выученные", "Hepsi": "Все",
   "Detayları Gör": "Подробнее", "Geçmişim": "История",
+  "Giriş yap": "Войти", "Hesap Oluştur": "Создать аккаунт", "Google ile devam et": "Продолжить с Google",
+  "Hesabın var mı?": "Уже есть аккаунт?", "Hesabın yok mu?": "Нет аккаунта?", "Kullanıcı Adı": "Имя пользователя",
+  "Hesabınıza giriş yapın veya yeni hesap oluşturun": "Войдите в аккаунт или создайте новый",
+  "Kelime Arama": "Поиск слова", "Aramak istediğiniz kelimeyi yukarıya yazın.": "Введите слово в поле выше.",
+  "Rusça → Türkçe": "Русский → турецкий", "Türkçe → Rusça": "Турецкий → русский",
+  "Rusça'yı gör, çevir, Türkçesini hatırla.": "Смотри русское слово и вспоминай турецкое.",
+  "Cevabı klavyeyle yaz.": "Напиши ответ с клавиатуры.", "Eşleştirme": "Сопоставление",
+  "Eşleşme doğru mu yanlış mı?": "Пара верна или нет?", "Eşleşme doğru mu, yanlış mı?": "Пара верна или нет?",
+  "Karışık": "Смешанный", "Rusça kelimenin Türkçesini seç.": "Выбери турецкий перевод русского слова.",
+  "Rusça veya Türkçe kelime yazın.": "Введите слово на русском или турецком.",
+  "Kelimeleri Seç ve Filtrele": "Выбери и отфильтруй слова", "Görünenleri Seç": "Выбрать видимые",
+  "Kelime Kaynağı ve Kapsam": "Источник и охват слов", "Kayıtlı": "Сохранённые", "Günlük Tekrar": "Ежедневное повторение",
+  "Kasaya Dön": "Назад в копилку", "Bugün": "Сегодня", "Soru Sayısı ve Başlat": "Количество вопросов и старт",
+  "Kayıtlı kelimelerinizi tekrar edin ve pekiştirin.": "Повторяй и закрепляй сохранённые слова.",
+  "Kaydettiğin ve öğrendiğin kelimeleri görüntüle, tekrar et ve pekiştir.": "Просматривай, повторяй и закрепляй сохранённые и выученные слова.",
+  "Kayıtlı kelimelerini tekrar sistemiyle çalış ve kalıcı hâle getir.": "Закрепляй сохранённые слова с системой повторения.",
+  "Kelime Kasam →": "Копилка слов →", "Geçmişim →": "История →", "Detayları Gör →": "Подробнее →",
+  "Henüz video izlenmedi.": "Видео ещё не просмотрены.", "Bu bölüm yakında eklenecek.": "Этот раздел скоро появится.",
+  "Fiyatlandırma": "Цены", "En Çok Tercih": "Самый популярный", "Nasıl Çalışır?": "Как это работает?", "Premium'a Geç": "Перейти на премиум",
+  "Kendinizi ifade eden bir avatar seçin.": "Выбери аватар, который тебе подходит.",
+  "Kişisel bilgilerinizi güncelleyebilirsiniz.": "Здесь можно обновить личные данные.",
+  "Otomatik Kelime Kaydetme": "Автосохранение слов", "Hesabınız Güvende": "Ваш аккаунт под защитой",
+  "Hesabı dondurma/silme işlemleri": "Заморозка/удаление аккаунта", "Hızlı İşlemler": "Быстрые действия",
+  "Doğru / Yanlış": "Верно / неверно", "Kelime Kartları": "Карточки слов",
   "10 Soru": "10 вопросов", "20 Soru": "20 вопросов", "30 Soru": "30 вопросов", "50 Soru": "50 вопросов", "100 Soru": "100 вопросов",
   "Cevaplar": "Ответы", "CEVAPLAR": "ОТВЕТЫ",
   "Zarflar": "Наречия", "Zamirler": "Местоимения", "Edatlar": "Предлоги", "Bağlaçlar": "Союзы",
@@ -4683,18 +4707,39 @@ try {
 /* ---- Akıllı balon: imlecin/öğenin ekrana uzaklığına göre üstte ya da altta ---- */
 let _ruTipBox = null, _ruTipCur = null;
 function _ruTipHide() { if (_ruTipBox) { _ruTipBox.remove(); _ruTipBox = null; } _ruTipCur = null; }
+function _i18nREV() {
+  if (_i18nREV._m) return _i18nREV._m;
+  const m = {};
+  Object.keys(RU_TEXT_MAP).forEach(k => { m[RU_TEXT_MAP[k]] = k; });
+  const addDict = D => { Object.keys(D).forEach(k => { const e = D[k]; if (e && e.ru && e.tr) m[String(e.ru).replace(/<[^>]*>/g, '').trim()] = String(e.tr).replace(/<[^>]*>/g, '').trim(); }); };
+  try { addDict(I18N); } catch (e) {}
+  try { addDict(I18N_EXTRA); } catch (e) {}
+  _i18nREV._m = m; return m;
+}
+function _tipFor(el) {
+  // 1) data-i18n anahtarı varsa sözlükteki Türkçesi
+  const k = el.getAttribute('data-i18n');
+  if (k) {
+    const e = (typeof I18N_EXTRA !== 'undefined' && I18N_EXTRA[k]) || (typeof I18N !== 'undefined' && I18N[k]);
+    if (e && e.tr) return String(e.tr).replace(/<[^>]*>/g, '');
+  }
+  // 2) Ekranda O AN görünen metinden ters sözlükle türet (kayda güvenme)
+  const cur = (el.textContent || '').trim();
+  const rev = _i18nREV();
+  if (rev[cur]) return rev[cur];
+  // 3) Son çare: etiket — ama asla Kiril gösterme
+  const dt = el.getAttribute('data-tip');
+  if (dt && !/[А-Яа-яЁё]/.test(dt)) return dt;
+  return null;
+}
 document.addEventListener('mouseover', function (e) {
   if (!document.body.classList.contains('lang-ru')) { _ruTipHide(); return; }
-  const t = e.target.closest ? e.target.closest('[data-tip]') : null;
+  const t = e.target.closest ? e.target.closest('[data-tip],[data-i18n]') : null;
   if (!t) { _ruTipHide(); return; }
   if (t === _ruTipCur) return;
   _ruTipHide();
-  let txt = t.getAttribute('data-tip'); if (!txt) return;
-  if (/[А-Яа-яЁё]/.test(txt)) {
-    if (!applyRuTextMap._rev) { applyRuTextMap._rev = {}; Object.keys(RU_TEXT_MAP).forEach(k => { applyRuTextMap._rev[RU_TEXT_MAP[k]] = k; }); }
-    const fixed = applyRuTextMap._rev[txt.trim()];
-    if (fixed) { txt = fixed; t.setAttribute('data-tip', fixed); } else { t.removeAttribute('data-tip'); return; }
-  }
+  const txt = _tipFor(t);
+  if (!txt || /[А-Яа-яЁё]/.test(txt)) return;
   _ruTipCur = t;
   _ruTipBox = document.createElement('div');
   _ruTipBox.className = 'ru-tip';
