@@ -398,8 +398,9 @@ function openPwReset() {
   ov.innerHTML = '<div class="ui-modal" style="max-width:400px;">' +
     '<h3 class="ui-modal-title">🔑 Yeni Şifre Belirle</h3>' +
     '<p class="ui-modal-msg">Sıfırlama bağlantısı doğrulandı. Hesabın için yeni bir şifre seç.</p>' +
-    '<div class="pw-wrap" style="margin-bottom:10px;"><input id="pwr-1" class="form-input" type="password" placeholder="Yeni şifre (en az 6 karakter)" autocomplete="new-password">' +
+    '<div class="pw-wrap" style="margin-bottom:10px;"><input id="pwr-1" class="form-input" type="password" placeholder="Yeni şifre (en az 6 karakter)" autocomplete="new-password" oninput="pwStrengthPaint(this.value, \'pwr-bar\', \'pwr-bar-t\')">' +
     '<button type="button" class="pw-eye" onclick="pwToggle(this, \'pwr-1\')">👁</button></div>' +
+    '<div class="pwbar"><div id="pwr-bar" class="pwbar-fill"></div></div><div id="pwr-bar-t" class="pwbar-t"></div>' +
     '<div class="pw-wrap" style="margin-bottom:12px;"><input id="pwr-2" class="form-input" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password">' +
     '<button type="button" class="pw-eye" onclick="pwToggle(this, \'pwr-2\')">👁</button></div>' +
     '<div id="pwr-msg" style="font-size:.84rem; color:#b91c1c; min-height:18px; margin-bottom:8px;"></div>' +
