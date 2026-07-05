@@ -104,9 +104,6 @@ function sozlukAra(query) {
 
   grid.innerHTML = results.map(w => {
     const tipHTML = w.tip ? `<span class="word-tip ${w.tip==='СВ'?'word-tip-cv':'word-tip-ncv'}">${w.tip}</span>` : '';
-    const cvHTML = w.cv ? `<div class="word-cv-pair">⇄ СВ: <b>${w.cv}</b></div>` : '';
-    const ncvHTML = w.ncv ? `<div class="word-cv-pair">⇄ НСВ: <b>${w.ncv}</b></div>` : '';
-    const extraHTML = (cvHTML||ncvHTML) ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--light-gray);">${cvHTML}${ncvHTML}</div>` : '';
     const genderClass = w.cinsiyet==='м'?'gender-m':w.cinsiyet==='ж'?'gender-f':(w.cinsiyet==='с'?'gender-n':'gender-v');
     const genderLabel = w.cinsiyet==='м'?'м (eril)':w.cinsiyet==='ж'?'ж (dişil)':w.cinsiyet==='с'?'с (nötr)':'';
     const genderHTML = w.cinsiyet ? `<span class="word-gender ${genderClass}">${genderLabel}</span>` : '';
@@ -121,7 +118,7 @@ function sozlukAra(query) {
       ${tipHTML}${padejHTML}
       <div class="word-tr">${highlight(w.tr,q)}</div>
       <div class="word-pron"></div>
-      ${extraHTML}
+      
       ${w.ornek?`<div class="word-example"><div class="word-example-ru">${w.ornek}</div><div class="word-example-tr">${w.ornekTr}</div></div>`:''}
     </div>`;
   }).join('');
@@ -334,9 +331,6 @@ function renderWords(cat) {
 
 function wordCardHTML(w, inBank) {
     const tipHTML = w.tip ? `<span class="word-tip ${w.tip==='СВ'||w.tip==='CV'?'word-tip-cv':'word-tip-ncv'}">${w.tip==='CV'?'СВ':w.tip==='NCV'?'НСВ':w.tip}</span>` : '';
-    const cvHTML = w.cv ? `<div class="word-cv-pair">⇄ СВ: <b>${w.cv}</b></div>` : '';
-    const ncvHTML = w.ncv ? `<div class="word-cv-pair">⇄ НСВ: <b>${w.ncv}</b></div>` : '';
-    const extraHTML = (cvHTML||ncvHTML) ? `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--light-gray);">${cvHTML}${ncvHTML}</div>` : '';
     const genderClass = w.cinsiyet === 'м' ? 'gender-m' : w.cinsiyet === 'ж' ? 'gender-f' : 'gender-n';
     const genderLabel = w.cinsiyet === 'м' ? 'м (eril)' : w.cinsiyet === 'ж' ? 'ж (dişil)' : w.cinsiyet === 'с' ? 'с (nötr)' : '';
     const genderHTML = w.cinsiyet ? `<span class="word-gender ${genderClass}">${genderLabel}</span>` : '';
@@ -360,7 +354,7 @@ function wordCardHTML(w, inBank) {
       ${tipHTML}
       ${padejHTML}
       <div class="word-tr">${_escHtml(w.tr)}</div>
-      ${extraHTML}
+      
       ${w.ornek ? `<div class="word-example"><div class="word-example-ru">${w.ornek}</div><div class="word-example-tr">${w.ornekTr}</div></div>` : ''}
       ${inBank ? `<button class="card-review-btn" onclick="reviewOneWord('${ruSafe}')">🔁 Tekrar Et</button>` : ''}
     </div>`;
@@ -4848,3 +4842,110 @@ async function cwBulkSave() {
     adminCwReload(); loadDbWords();
   } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
 }
+
+
+/* ============================================================
+   ROLLER — işlem logu, rol atama, öğretmen-öğrenci eşleştirme
+   ============================================================ */
+async function staffLog(action, target, detail) {
+  try {
+    if (!currentUser || !currentProfile) return;
+    const rol = currentProfile.is_admin ? 'superadmin' : (currentProfile.role || 'user');
+    if (rol === 'user') return;
+    await sb.from('action_log').insert({
+      actor_id: currentUser.id, actor_role: rol,
+      action, target: target || null, detail: detail || null
+    });
+  } catch (e) {}
+}
+
+async function adminSetRole(userId, role, name) {
+  try {
+    const { error } = await sb.from('profiles').update({ role }).eq('id', userId);
+    if (error) throw error;
+    toast('Rol güncellendi: ' + role);
+    staffLog('rol_degistir', userId, { yeni_rol: role, kullanici: name || '' });
+    const u = _adminUsers.find(x => x.id === userId); if (u) u.role = role;
+  } catch (e) { uiAlert('Rol güncellenemedi. roller_altyapi.sql çalıştırıldı mı?'); }
+}
+
+/* ---- Atama görünümü (yönetici + destek) ---- */
+let _asgTeachers = [], _asgStudents = [], _asgRows = [];
+async function adminAssignInit() {
+  try {
+    const { data: profs } = await sb.from('profiles').select('id, display_name, email, role, is_admin').order('display_name');
+    const all = profs || [];
+    _asgTeachers = all.filter(p => p.role === 'ogretmen');
+    _asgStudents = all.filter(p => !p.is_admin && p.role !== 'ogretmen' && p.role !== 'destek');
+    const { data: rows } = await sb.from('teacher_students').select('*').limit(2000);
+    _asgRows = rows || [];
+  } catch (e) { _asgTeachers = []; _asgStudents = []; _asgRows = []; }
+  const tSel = document.getElementById('asg-teacher');
+  const sSel = document.getElementById('asg-student');
+  const nm = p => _escHtml(p.display_name || (p.email || '').split('@')[0]);
+  if (tSel) tSel.innerHTML = _asgTeachers.length
+    ? _asgTeachers.map(t => `<option value="${t.id}">${nm(t)}</option>`).join('')
+    : '<option value="">— önce bir kullanıcıya Öğretmen rolü ver —</option>';
+  if (sSel) sSel.innerHTML = _asgStudents.map(st => `<option value="${st.id}">${nm(st)}</option>`).join('');
+  renderAssignList();
+}
+function renderAssignList() {
+  const box = document.getElementById('asg-list'); if (!box) return;
+  if (!_asgRows.length) { box.innerHTML = '<div class="profile-empty">Henüz eşleştirme yok.</div>'; return; }
+  const isim = id => {
+    const p = _asgTeachers.find(x => x.id === id) || _asgStudents.find(x => x.id === id);
+    return p ? _escHtml(p.display_name || (p.email || '').split('@')[0]) : id.slice(0, 8) + '…';
+  };
+  box.innerHTML = _asgRows.map(r => `
+    <div class="cw-row">
+      <div class="cw-main">👩‍🏫 <b>${isim(r.teacher_id)}</b> → 🎓 ${isim(r.student_id)}
+        <span class="err-meta">${r.created_at ? new Date(r.created_at).toLocaleDateString('tr-TR') : ''}</span></div>
+      <div class="cw-acts"><button class="mail-act red" onclick="adminAssignRemove('${r.teacher_id}', '${r.student_id}')">Kaldır</button></div>
+    </div>`).join('');
+}
+async function adminAssignAdd() {
+  const t = (document.getElementById('asg-teacher') || {}).value;
+  const st = (document.getElementById('asg-student') || {}).value;
+  if (!t || !st) { uiAlert('Öğretmen ve öğrenci seç.'); return; }
+  try {
+    const { error } = await sb.from('teacher_students').upsert({ teacher_id: t, student_id: st });
+    if (error) throw error;
+    toast('Eşleştirme kaydedildi.');
+    staffLog('ogrenci_ata', st, { ogretmen: t });
+    adminAssignInit();
+  } catch (e) { uiAlert('Eşleştirilemedi. roller_altyapi.sql çalıştırıldı mı?'); }
+}
+async function adminAssignRemove(t, st) {
+  if (!(await uiConfirm('Bu eşleştirme kaldırılsın mı?', 'Kaldır', { danger: true }))) return;
+  try {
+    await sb.from('teacher_students').delete().eq('teacher_id', t).eq('student_id', st);
+    staffLog('ogrenci_atama_kaldir', st, { ogretmen: t });
+    adminAssignInit();
+  } catch (e) {}
+}
+
+/* ---- İşlem logları (yalnız superadmin görür) ---- */
+async function adminStaffLogLoad() {
+  const box = document.getElementById('stafflog-list'); if (!box) return;
+  box.innerHTML = '<div class="admin-loading">Yükleniyor...</div>';
+  try {
+    const { data } = await sb.from('action_log').select('*').order('created_at', { ascending: false }).limit(300);
+    const rows = data || [];
+    if (!rows.length) { box.innerHTML = '<div class="profile-empty">Henüz işlem kaydı yok.</div>'; return; }
+    const AD = { rol_degistir: '🔧 Rol değişimi', ogrenci_ata: '🎓 Öğrenci atama', ogrenci_atama_kaldir: '❌ Atama kaldırma', premium_tanim: '👑 Premium tanımlama', ticket_mail: '📧 Talep maili', bildirim: '🔔 Bildirim' };
+    const kim = id => { const u = (_adminUsers || []).find(x => x.id === id); return u ? _escHtml(u.display_name || (u.email || '').split('@')[0]) : (id || '').slice(0, 8) + '…'; };
+    box.innerHTML = rows.map(r => `
+      <div class="err-row"><div class="err-msg"><b>${AD[r.action] || _escHtml(r.action)}</b> — ${kim(r.actor_id)} <span class="cw-cat">${_escHtml(r.actor_role || '')}</span></div>
+        <div class="err-meta">${r.target ? 'Hedef: ' + kim(r.target) + ' · ' : ''}${r.detail ? _escHtml(JSON.stringify(r.detail)).slice(0, 120) + ' · ' : ''}${new Date(r.created_at).toLocaleString('tr-TR')}</div></div>`).join('');
+  } catch (e) { box.innerHTML = '<div class="profile-empty">Loglar okunamadı. roller_altyapi.sql çalıştırıldı mı?</div>'; }
+}
+
+/* ---- Log kancaları: mevcut eylemleri sarmala ---- */
+try {
+  const _gOrig = adminGiftSet;
+  adminGiftSet = async function (userId, n, unit) { await _gOrig(userId, n, unit); staffLog('premium_tanim', userId, { sure: n + (unit === 'g' ? ' gün' : ' ay') }); };
+} catch (e) {}
+try {
+  const _tmOrig = adminTicketMail;
+  adminTicketMail = async function (ticketId) { await _tmOrig(ticketId); staffLog('ticket_mail', null, { ticket: ticketId }); };
+} catch (e) {}
