@@ -389,6 +389,17 @@ async function authForgot() {
 if (typeof location !== "undefined" && (location.hash || "").includes("type=recovery")) {
   window.addEventListener("load", function () { setTimeout(openPwReset, 800); });
 }
+/* Süresi dolmuş / kullanılmış sıfırlama linki: sessiz kalma, açıkla */
+if (typeof location !== "undefined" && /error_code=otp_expired|error=access_denied/.test(location.hash || "")) {
+  window.addEventListener("load", function () {
+    setTimeout(function () {
+      try { history.replaceState(null, "", location.pathname); } catch (e) {}
+      var m = "Bu şifre sıfırlama bağlantısının süresi dolmuş ya da bağlantı daha önce kullanılmış.\n\nSıfırlama linkleri güvenlik gereği TEK KULLANIMLIKTIR ve sınırlı süre geçerlidir. Lütfen en yeni maildeki linki kullan; gerekirse yeni bir sıfırlama maili iste.";
+      if (typeof uiAlert === "function") uiAlert(m, "🔗 Bağlantı Geçersiz");
+      else alert(m);
+    }, 900);
+  });
+}
 function openPwReset() {
   if (document.getElementById("pwr-overlay")) return;
   const ov = document.createElement("div");
