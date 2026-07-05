@@ -114,7 +114,7 @@ async function loadProfile() {
   try {
     const { data, error } = await sb
       .from("profiles")
-      .select("display_name, plan, is_admin, level, streak_count, created_at, avatar_seed, status, badges, premium_until")
+      .select("display_name, plan, is_admin, role, level, streak_count, created_at, avatar_seed, status, badges, premium_until")
       .eq("id", currentUser.id)
       .single();
     if (!error) currentProfile = data;
@@ -126,7 +126,7 @@ async function loadProfile() {
           email: currentUser.email || null,
           display_name: (currentUser.user_metadata && (currentUser.user_metadata.display_name || currentUser.user_metadata.full_name)) || ((currentUser.email || "").split("@")[0]) || null
         });
-        const r2 = await sb.from("profiles").select("display_name, plan, is_admin, level, streak_count, created_at, avatar_seed, status, badges, premium_until").eq("id", currentUser.id).single();
+        const r2 = await sb.from("profiles").select("display_name, plan, is_admin, role, level, streak_count, created_at, avatar_seed, status, badges, premium_until").eq("id", currentUser.id).single();
         if (!r2.error) currentProfile = r2.data;
       } catch (e3) { _logDev("Profil öz-onarım başarısız:", e3); }
     }
@@ -260,12 +260,17 @@ function updateAuthUI() {
     if (adminDot) adminDot.style.display = "none";
     // Yönetim paneli linki (sadece yöneticide)
     const adminLink = document.getElementById("nav-admin-link");
-    if (adminLink) adminLink.style.display = isAdmin ? "inline-block" : "none";
+    const rol = (typeof currentProfile !== "undefined" && currentProfile && currentProfile.role) || "user";
+    if (adminLink) adminLink.style.display = (isAdmin || rol === "destek") ? "inline-block" : "none";
+    const tLink = document.getElementById("nav-teacher-link");
+    if (tLink) tLink.style.display = (rol === "ogretmen") ? "inline-block" : "none";
   } else {
     buttons.style.display = "flex";
     account.style.display = "none";
     const adminLink = document.getElementById("nav-admin-link");
     if (adminLink) adminLink.style.display = "none";
+    const tLink = document.getElementById("nav-teacher-link");
+    if (tLink) tLink.style.display = "none";
   }
 }
 
