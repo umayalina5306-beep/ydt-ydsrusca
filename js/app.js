@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v90';
+var YDT_SURUM = 'v91';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -3663,7 +3663,7 @@ async function loadDbWords() {
    tekli ekleme, JSON kutusu, JSON/CSV/Excel dosyası, JSON->DB göçü
    ============================================================ */
 let _cwRows = [];
-const cwState = { page: 1, q: '', level: 'all' };
+const cwState = { page: 1, q: '', level: 'all', trash: false };
 const CW_PAGE = 20;
 
 async function adminContentInit() {
@@ -3688,14 +3688,18 @@ function renderCwStats() {
 function cwSet(k, v) { cwState[k] = v; cwState.page = 1; renderCwList(); }
 function renderCwList() {
   const box = document.getElementById('cw-list'); if (!box) return;
-  let list = _cwRows;
+  const copSay = _cwRows.filter(r => r.active === false).length;
+  const sayEl = document.getElementById('cw-trash-count'); if (sayEl) sayEl.textContent = copSay;
+  const purgeBtn = document.getElementById('cw-purge-all');
+  if (purgeBtn) purgeBtn.style.display = (cwState.trash && copSay > 0) ? '' : 'none';
+  let list = cwState.trash ? _cwRows.filter(r => r.active === false) : _cwRows.filter(r => r.active !== false);
   if (cwState.level !== 'all') list = list.filter(r => r.level === cwState.level);
   const q = cwState.q.toLowerCase();
   if (q) list = list.filter(r => (r.ru || '').toLowerCase().includes(q) || (r.tr || '').toLowerCase().includes(q));
   const pages = Math.max(1, Math.ceil(list.length / CW_PAGE));
   if (cwState.page > pages) cwState.page = pages;
   const slice = list.slice((cwState.page - 1) * CW_PAGE, cwState.page * CW_PAGE);
-  if (!list.length) { box.innerHTML = '<div class="profile-empty">DB\'de eşleşen kelime yok. (JSON\'dan gelenleri düzenlemek için önce "JSON\'daki kelimeleri DB\'ye aktar" butonunu kullan.)</div>'; return; }
+  if (!list.length) { box.innerHTML = cwState.trash ? '<div class="profile-empty">🗑️ Çöp kutusu boş.</div>' : '<div class="profile-empty">Eşleşen kelime yok.</div>'; return; }
   let pager = '';
   if (pages > 1) {
     pager = '<div class="kv-pager">';
@@ -3710,10 +3714,41 @@ function renderCwList() {
       <div class="cw-acts">
         <button class="mail-act" onclick="adminWordEdit('${r.id}')">✏️ Düzenle</button>
         ${r.active === false
-          ? `<button class="mail-act" onclick="adminWordRestore('${r.id}')">↩️ Göster</button>`
-          : `<button class="mail-act red" onclick="adminWordDelete('${r.id}')">🗑️ Gizle/Sil</button>`}
+          ? `<button class="mail-act" onclick="adminWordRestore('${r.id}')">↩️ Geri Al</button>
+             <button class="mail-act red" onclick="adminWordPurge('${r.id}')">❌ Kalıcı Sil</button>`
+          : `<button class="mail-act red" onclick="adminWordDelete('${r.id}')">🗑️ Çöpe At</button>`}
       </div>
     </div>`).join('') + pager;
+}
+function cwTrashMode(t) {
+  cwState.trash = !!t;
+  cwState.page = 1;
+  const a = document.getElementById('cw-tab-active'), b = document.getElementById('cw-tab-trash');
+  if (a) a.classList.toggle('active', !t);
+  if (b) b.classList.toggle('active', !!t);
+  renderCwList();
+}
+async function adminWordPurge(id) {
+  const r = _cwRows.find(x => x.id === id);
+  if (!(await uiConfirm('"' + ((r && r.ru) || 'kelime') + '" KALICI olarak silinsin mi? Bu işlem geri alınamaz.', '❌ Kalıcı Sil', { danger: true }))) return;
+  try {
+    const { error } = await sb.from('content_words').delete().eq('id', id);
+    if (error) throw error;
+    toast('Kelime kalıcı olarak silindi.');
+    adminCwReload(); loadDbWords();
+  } catch (e) { uiAlert('Silinemedi: ' + ((e && e.message) || e)); }
+}
+async function adminWordPurgeAll() {
+  const n = _cwRows.filter(r => r.active === false).length;
+  if (!n) return;
+  if (!(await uiConfirm('Çöp kutusundaki ' + n + ' kelimenin TAMAMI kalıcı olarak silinsin mi? Bu işlem geri alınamaz.', '🧹 Çöpü Boşalt', { danger: true }))) return;
+  try {
+    const { error } = await sb.from('content_words').delete().eq('active', false);
+    if (error) throw error;
+    toast('🧹 Çöp kutusu boşaltıldı (' + n + ' kelime).');
+    cwTrashMode(false);
+    adminCwReload(); loadDbWords();
+  } catch (e) { uiAlert('Boşaltılamadı: ' + ((e && e.message) || e)); }
 }
 function _cwVal(id) { const el = document.getElementById(id); return el ? (el.value || '').trim() : ''; }
 function adminWordFormClear() {
