@@ -2981,7 +2981,7 @@ function renderPlacementIntro() {
   box.innerHTML = `<div class="plc-card">
     <div class="plc-icon">🎚️</div>
     <h2 class="plc-title">Seviye Tespit Sınavı</h2>
-    <p class="plc-sub">${PLC_SIZE} soruluk bir sınavla Rusça seviyen belirlenir. Sonuç avatarındaki seviye çerçevesine ve gelişim grafiğine işlenir.</p>
+    <p class="plc-sub">${getPlcCfg().size} soruluk bir sınavla Rusça seviyen belirlenir. Sonuç avatarındaki seviye çerçevesine ve gelişim grafiğine işlenir.</p>
     ${lvl ? `<div class="plc-level-now">Mevcut seviyen: <b>${lvl}</b></div>` : ''}
     <ul class="plc-rules">
       ${lvl
@@ -3020,22 +3020,21 @@ function placementCounts(idx, total) {
   return counts;
 }
 function buildPlacementExam() {
+  const cfg = getPlcCfg();
+  const SIZE = Math.max(5, parseInt(cfg.size, 10) || 80);
   const rawLevel = currentProfile && currentProfile.level;
   plcNoLevel = !(rawLevel && PLC_LEVELS.indexOf(String(rawLevel).toUpperCase()) >= 0);
-  let counts;
-  if (plcNoLevel) {
-    // Seviyesi hiç belirlenmemiş kullanıcı: tüm seviyelere yayılan tanı dağılımı
-    // A1 %30 · A2 %25 · B1 %20 · B2 %15 · C1 %10
-    const w = [0.30, 0.25, 0.20, 0.15, 0.10];
-    counts = {};
-    let sum = 0;
-    w.forEach((p, i) => { counts[i] = Math.round(PLC_SIZE * p); sum += counts[i]; });
-    while (sum > PLC_SIZE) { counts[0]--; sum--; }
-    while (sum < PLC_SIZE) { counts[0]++; sum++; }
-  } else {
-    const idx0 = PLC_LEVELS.indexOf(String(rawLevel).toUpperCase());
-    counts = placementCounts(idx0, PLC_SIZE);
-  }
+  const baseKey = plcNoLevel ? 'none' : String(rawLevel).toUpperCase();
+  const w = (cfg.weights && cfg.weights[baseKey]) || PLC_CFG_DEFAULT.weights[baseKey] || PLC_CFG_DEFAULT.weights.none;
+  const counts = {};
+  let sum = 0, maxI = 0, maxV = -1;
+  PLC_LEVELS.forEach((lv, i) => {
+    const c = Math.round(SIZE * (parseFloat(w[lv]) || 0) / 100);
+    counts[i] = c; sum += c;
+    if (c > maxV) { maxV = c; maxI = i; }
+  });
+  while (sum > SIZE && counts[maxI] > 0) { counts[maxI]--; sum--; }
+  while (sum < SIZE) { counts[maxI]++; sum++; }
   const curLevel = plcNoLevel ? 'A1' : String(rawLevel).toUpperCase();
   let idx = PLC_LEVELS.indexOf(curLevel); if (idx < 0) idx = 0;
   let exam = [], deficit = 0;
@@ -3052,7 +3051,7 @@ function buildPlacementExam() {
     shuffle(extra); exam = exam.concat(extra.slice(0, deficit));
   }
   shuffle(exam);
-  return exam.slice(0, PLC_SIZE);
+  return exam.slice(0, Math.max(5, parseInt(getPlcCfg().size, 10) || 80));
 }
 async function startPlacement() {
   const box = document.getElementById('plc-content'); if (box) box.innerHTML = '<div class="plc-card"><div class="profile-empty">Sorular hazırlanıyor...</div></div>';
@@ -3063,6 +3062,7 @@ async function startPlacement() {
   plcAnswers = new Array(plcExam.length).fill(null);
   plcIdx = 0;
   renderPlcQ();
+  plcStartTimer(plcExam.length * (parseInt(getPlcCfg().secPerQ, 10) || 45));
 }
 function renderPlcQ() {
   const box = document.getElementById('plc-content'); if (!box) return;
@@ -3072,7 +3072,7 @@ function renderPlcQ() {
   const optsHtml = opts.map((o, i) => `<button class="plc-opt ${plcAnswers[plcIdx] === i ? 'sel' : ''}" onclick="plcPick(${i})">${_escHtml(o)}</button>`).join('');
   box.innerHTML = `<div class="plc-card plc-quiz">
     <div class="plc-progress"><div class="plc-progress-bar" style="width:${pct}%"></div></div>
-    <div class="plc-qnum">Soru ${plcIdx + 1} / ${plcExam.length}</div>
+    <div class="plc-qnum">Soru ${plcIdx + 1} / ${plcExam.length} <span id="plc-timer" class="plc-timer"></span></div>
     <div class="plc-q">${_escHtml(q.question)}</div>
     <div class="plc-opts">${optsHtml}</div>
     <div class="plc-nav">
@@ -3080,13 +3080,33 @@ function renderPlcQ() {
       ${plcIdx < plcExam.length - 1 ? `<button class="plc-navbtn" onclick="plcNext()">Sonraki ›</button>` : `<button class="plc-navbtn gold" onclick="finishPlacement()">Sınavı Bitir</button>`}
     </div>
   </div>`;
+  if (typeof _plcTick === 'function') _plcTick();
 }
 function plcPick(i) { plcAnswers[plcIdx] = i; renderPlcQ(); }
+let plcTimerId = null, plcTimeLeft = 0;
+function plcStartTimer(sec) {
+  plcStopTimer(); plcTimeLeft = Math.max(30, sec | 0); _plcTick();
+  plcTimerId = setInterval(function () {
+    plcTimeLeft--; _plcTick();
+    if (plcTimeLeft <= 0) {
+      plcStopTimer();
+      if (document.getElementById('plc-timer')) { toast('Süre doldu! Sınav sonlandırıldı.'); finishPlacement(true); }
+    }
+  }, 1000);
+}
+function plcStopTimer() { if (plcTimerId) { clearInterval(plcTimerId); plcTimerId = null; } }
+function _plcTick() {
+  const el = document.getElementById('plc-timer'); if (!el) return;
+  const t = Math.max(0, plcTimeLeft);
+  el.textContent = '⏱️ ' + Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
+  el.classList.toggle('low', t <= 60);
+}
 function plcNext() { if (plcIdx < plcExam.length - 1) { plcIdx++; renderPlcQ(); } }
 function plcPrev() { if (plcIdx > 0) { plcIdx--; renderPlcQ(); } }
-async function finishPlacement() {
+async function finishPlacement(force) {
   const blanks = plcAnswers.filter(a => a === null).length;
-  if (blanks > 0 && !(await uiConfirm(blanks + ' soru boş. Yine de bitirilsin mi?', 'Sınavı Bitir'))) return;
+  if (!force && blanks > 0 && !(await uiConfirm(blanks + ' soru boş. Yine de bitirilsin mi?', 'Sınavı Bitir'))) return;
+  plcStopTimer();
   // Önce SUNUCU puanlaması dene (manipülasyona kapalı); olmazsa yerel hesap
   let srv = null;
   try {
@@ -3851,6 +3871,7 @@ async function loadSiteSettings() {
   try {
     const { data } = await sb.from('site_settings').select('*');
     const map = {}; (data || []).forEach(r => map[r.key] = r.value);
+    window._siteCfg = map;
     const txt = (map['announcement'] || '').trim();
     let b = document.getElementById('site-announce');
     if (txt) {
@@ -4333,18 +4354,23 @@ async function startMockExam() {
   const wordPool = words.slice();
   if (wordPool.length < 60) { toast('Deneme sınavı için yeterli içerik yok.'); return; }
   const paraAll = (paragraphQuestions || []).slice();
-  const TOTAL = 80, MIN = 180;
+  const mcfg = getMockCfg();
+  const TOTAL = Math.max(10, parseInt(mcfg.total, 10) || 80);
+  const MIN = Math.max(5, parseInt(mcfg.minutes, 10) || 180);
   if (!(await uiConfirm('YDS formatında deneme sınavı: ' + TOTAL + ' soru, ' + MIN + ' dakika süre. Cevaplar sınav sonunda gösterilir, süre bitince sınav otomatik kapanır. Başlansın mı?', '📝 Deneme Sınavı'))) return;
 
-  const paraCount = Math.min(paraAll.length, 12);
+  const paraCount = Math.min(paraAll.length, Math.max(0, parseInt(mcfg.para, 10) || 0), TOTAL);
   const paras = shuffle(paraAll).slice(0, paraCount);
   const wordCount = TOTAL - paraCount;
   const ws = shuffle(wordPool).slice(0, wordCount);
 
-  // Tür dağılımı: RU→TR %40 · TR→RU %30 · boşluk %20 · D/Y %10
+  // Tür dağılımı panelden ayarlanır (Soru Havuzu -> Deneme Sınavı Ayarları)
+  const d = mcfg.dist || { rutr:40, trru:30, fill:20, tf:10 };
+  const dsum = ((d.rutr||0)+(d.trru||0)+(d.fill||0)+(d.tf||0)) || 100;
+  const t1 = (d.rutr||0)/dsum, t2 = t1 + (d.trru||0)/dsum, t3 = t2 + (d.fill||0)/dsum;
   const wTypes = ws.map((_, i) => {
     const r = i / wordCount;
-    return r < 0.40 ? 'ru-tr' : (r < 0.70 ? 'tr-ru' : (r < 0.90 ? 'fill' : 'tf'));
+    return r < t1 ? 'ru-tr' : (r < t2 ? 'tr-ru' : (r < t3 ? 'fill' : 'tf'));
   });
   shuffle(wTypes);
 
@@ -4368,4 +4394,147 @@ async function startMockExam() {
   window.scrollTo(0, 0);
   loadQ();
   startQuizTimer(MIN * 60);
+}
+
+/* ============================================================
+   DİL SİSTEMİ (TR/RU) — RU modunda üzerine gelince TR anlamı çıkar
+   ============================================================ */
+const I18N = {
+  nav_home: { tr: 'Ana Sayfa', ru: 'Главная' },
+  nav_words: { tr: 'Kelimeler', ru: 'Слова' },
+  nav_quiz: { tr: 'Testler', ru: 'Тесты' },
+  nav_video: { tr: 'Video Dersler', ru: 'Видеоуроки' },
+  nav_pricing: { tr: 'Fiyatlar', ru: 'Цены' },
+  btn_login: { tr: 'Giriş Yap', ru: 'Войти' },
+  btn_signup: { tr: 'Üye Ol', ru: 'Регистрация' },
+  btn_profile: { tr: 'Profilim', ru: 'Мой профиль' },
+  btn_admin: { tr: 'Yönetim', ru: 'Управление' },
+  btn_logout: { tr: 'Çıkış', ru: 'Выйти' }
+};
+function getLang() { try { return localStorage.getItem('ydt_lang') || 'tr'; } catch (e) { return 'tr'; } }
+function toggleLang() {
+  const next = getLang() === 'tr' ? 'ru' : 'tr';
+  try { localStorage.setItem('ydt_lang', next); } catch (e) {}
+  applyLang();
+  toast(next === 'ru' ? 'Site dili: Русский (üzerine gelince Türkçesi görünür)' : 'Site dili: Türkçe');
+}
+function applyLang() {
+  const lang = getLang();
+  document.body.classList.toggle('lang-ru', lang === 'ru');
+  const lb = document.getElementById('lang-toggle'); if (lb) lb.textContent = lang === 'ru' ? 'TR' : 'RU';
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.getAttribute('data-i18n'); const t = I18N[k]; if (!t) return;
+    el.textContent = t[lang] || t.tr;
+    if (lang === 'ru') el.setAttribute('data-tip', t.tr); else el.removeAttribute('data-tip');
+  });
+}
+setTimeout(function () { try { applyLang(); } catch (e) {} }, 400);
+
+/* ============================================================
+   SINAV AYARLARI — panelden yapılandırılabilir (site_settings)
+   ============================================================ */
+const PLC_CFG_DEFAULT = {
+  size: 80, secPerQ: 45,
+  weights: {
+    none: { A1:30, A2:30, B1:20, B2:10, C1:10 },
+    A1: { A1:70, A2:20, B1:10, B2:0, C1:0 },
+    A2: { A1:10, A2:60, B1:20, B2:10, C1:0 },
+    B1: { A1:0, A2:10, B1:60, B2:20, C1:10 },
+    B2: { A1:0, A2:0, B1:10, B2:60, C1:30 },
+    C1: { A1:0, A2:0, B1:10, B2:10, C1:80 }
+  }
+};
+const MOCK_CFG_DEFAULT = { total:80, minutes:180, para:12, dist:{ rutr:40, trru:30, fill:20, tf:10 } };
+function _cfgFrom(key, def) {
+  try {
+    const raw = (window._siteCfg || {})[key];
+    if (!raw) return JSON.parse(JSON.stringify(def));
+    const o = JSON.parse(raw);
+    return Object.assign(JSON.parse(JSON.stringify(def)), o);
+  } catch (e) { return JSON.parse(JSON.stringify(def)); }
+}
+function getPlcCfg() { return _cfgFrom('plc_cfg', PLC_CFG_DEFAULT); }
+function getMockCfg() { return _cfgFrom('mock_cfg', MOCK_CFG_DEFAULT); }
+
+/* ---- Panel: seviye tespit ağırlık çubukları ---- */
+let _plcDraft = null, _mockDraft = null;
+async function plcCfgInit() {
+  if (typeof loadSiteSettings === 'function') await loadSiteSettings();
+  _plcDraft = getPlcCfg(); _mockDraft = getMockCfg();
+  const sz = document.getElementById('plccfg-size'); if (sz) sz.value = _plcDraft.size;
+  const sc = document.getElementById('plccfg-sec'); if (sc) sc.value = _plcDraft.secPerQ;
+  plcCfgRenderRows();
+  const mt = document.getElementById('mockcfg-total'); if (mt) mt.value = _mockDraft.total;
+  const mm = document.getElementById('mockcfg-min'); if (mm) mm.value = _mockDraft.minutes;
+  const mp = document.getElementById('mockcfg-para'); if (mp) mp.value = _mockDraft.para;
+  mockCfgRenderRows();
+}
+function _sliderRow(idPrefix, key, label, val, onName) {
+  return `<div class="cfgrow"><span class="cfgrow-lab">${label}</span>
+    <input type="range" min="0" max="100" step="10" value="${val}" oninput="${onName}('${key}', this.value, this)">
+    <span class="cfgrow-val" id="${idPrefix}-${key}">%${val}</span></div>`;
+}
+function plcCfgRenderRows() {
+  const box = document.getElementById('plccfg-rows'); if (!box || !_plcDraft) return;
+  const base = (document.getElementById('plccfg-base') || {}).value || 'none';
+  const w = _plcDraft.weights[base] || {};
+  box.innerHTML = ['A1','A2','B1','B2','C1'].map(l => _sliderRow('plcw', l, l + ' soruları', w[l] || 0, 'plcCfgSlide')).join('') +
+    `<div class="cfg-total" id="plccfg-total"></div>`;
+  _plcCfgTotal();
+}
+function plcCfgSlide(level, val, el) {
+  const base = (document.getElementById('plccfg-base') || {}).value || 'none';
+  _plcDraft.weights[base][level] = parseInt(val, 10);
+  const lab = document.getElementById('plcw-' + level); if (lab) lab.textContent = '%' + val;
+  _plcCfgTotal();
+}
+function _plcCfgTotal() {
+  const base = (document.getElementById('plccfg-base') || {}).value || 'none';
+  const w = _plcDraft.weights[base];
+  const sum = ['A1','A2','B1','B2','C1'].reduce((a, l) => a + (w[l] || 0), 0);
+  const el = document.getElementById('plccfg-total');
+  if (el) { el.textContent = 'Toplam: %' + sum + (sum === 100 ? ' ✓' : ' — %100 olmalı'); el.className = 'cfg-total ' + (sum === 100 ? 'ok' : 'no'); }
+}
+async function plcCfgSave() {
+  for (const base of Object.keys(_plcDraft.weights)) {
+    const w = _plcDraft.weights[base];
+    const sum = ['A1','A2','B1','B2','C1'].reduce((a, l) => a + (w[l] || 0), 0);
+    if (sum !== 100) { uiAlert('"' + (base === 'none' ? 'Seviyesizler' : base) + '" ağırlıkları %' + sum + ' — her seviye için toplam %100 olmalı.'); return; }
+  }
+  _plcDraft.size = parseInt((document.getElementById('plccfg-size') || {}).value, 10) || 80;
+  _plcDraft.secPerQ = parseInt((document.getElementById('plccfg-sec') || {}).value, 10) || 45;
+  try {
+    await sb.from('site_settings').upsert({ key: 'plc_cfg', value: JSON.stringify(_plcDraft) }, { onConflict: 'key' });
+    if (window._siteCfg) window._siteCfg['plc_cfg'] = JSON.stringify(_plcDraft);
+    toast('Seviye sınavı ayarları kaydedildi.');
+  } catch (e) { uiAlert('Kaydedilemedi.'); }
+}
+function mockCfgRenderRows() {
+  const box = document.getElementById('mockcfg-rows'); if (!box || !_mockDraft) return;
+  const D = [['rutr','RU→TR'],['trru','TR→RU'],['fill','Boşluk doldurma'],['tf','Doğru / Yanlış']];
+  box.innerHTML = D.map(([k, l]) => _sliderRow('mockw', k, l, _mockDraft.dist[k] || 0, 'mockCfgSlide')).join('') +
+    `<div class="cfg-total" id="mockcfg-total2"></div>`;
+  _mockCfgTotal();
+}
+function mockCfgSlide(k, val, el) {
+  _mockDraft.dist[k] = parseInt(val, 10);
+  const lab = document.getElementById('mockw-' + k); if (lab) lab.textContent = '%' + val;
+  _mockCfgTotal();
+}
+function _mockCfgTotal() {
+  const sum = Object.values(_mockDraft.dist).reduce((a, b) => a + b, 0);
+  const el = document.getElementById('mockcfg-total2');
+  if (el) { el.textContent = 'Toplam: %' + sum + (sum === 100 ? ' ✓' : ' — %100 olmalı'); el.className = 'cfg-total ' + (sum === 100 ? 'ok' : 'no'); }
+}
+async function mockCfgSave() {
+  const sum = Object.values(_mockDraft.dist).reduce((a, b) => a + b, 0);
+  if (sum !== 100) { uiAlert('Tür dağılımı %' + sum + ' — toplam %100 olmalı.'); return; }
+  _mockDraft.total = parseInt((document.getElementById('mockcfg-total') || {}).value, 10) || 80;
+  _mockDraft.minutes = parseInt((document.getElementById('mockcfg-min') || {}).value, 10) || 180;
+  _mockDraft.para = parseInt((document.getElementById('mockcfg-para') || {}).value, 10) || 0;
+  try {
+    await sb.from('site_settings').upsert({ key: 'mock_cfg', value: JSON.stringify(_mockDraft) }, { onConflict: 'key' });
+    if (window._siteCfg) window._siteCfg['mock_cfg'] = JSON.stringify(_mockDraft);
+    toast('Deneme sınavı ayarları kaydedildi.');
+  } catch (e) { uiAlert('Kaydedilemedi.'); }
 }
