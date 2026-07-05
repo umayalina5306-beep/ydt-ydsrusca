@@ -23,7 +23,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=65">
+<link rel="stylesheet" href="css/style.css?v=66">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -46,12 +46,13 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=65" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=66" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active" data-i18n="nav_home">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words" data-i18n="nav_words">Kelimeler</button></li>
     <li><button onclick="showPage('quiz')" id="nav-quiz" data-i18n="nav_quiz">Testler</button></li>
     <li><button onclick="showPage('video')" id="nav-video" data-i18n="nav_video">Video Dersler</button></li>
+    <li><button onclick="showPage('recs')" id="nav-recs" data-i18n="nav_recs">Öneriler</button></li>
     <li><button onclick="showPage('pricing')" id="nav-pricing" data-i18n="nav_pricing">Fiyatlar</button></li>
   </ul>
   <div class="nav-auth">
@@ -133,7 +134,7 @@
       <div class="kb-header-row">
         <div>
           <h2 data-i18n="hWords">Kelime <span>Bankası</span></h2>
-          <p>Önce seviyeni seç, sonra kategoriye göre kelimeleri incele.</p>
+          <p data-i18n="subWords">Önce seviyeni seç, sonra kategoriye göre kelimeleri incele.</p>
         </div>
         <div class="kb-search">
           <span class="kb-search-ic">🔍</span>
@@ -231,7 +232,7 @@
         <button onclick="backToLevels()" class="back-btn">← Geri</button>
         <h2 id="words-level-title">A1-A2 <span>Kelimeleri</span></h2>
       </div>
-      <p>Kategori seç ve kelimeleri incele.</p>
+      <p data-i18n="subLevel">Kategori seç ve kelimeleri incele.</p>
     </div>
     <div class="sozluk-search-wrap" id="level-search-wrap" style="margin-bottom:16px;">
       <div class="sozluk-input-wrap">
@@ -339,7 +340,7 @@
     <div id="quiz-setup">
       <div class="quiz-header">
         <h2 data-i18n="hQuiz">Test <span>Çöz</span></h2>
-        <p>Test türünü, kategoriyi ve soru sayısını seç.</p>
+        <p data-i18n="subQuiz">Test türünü, kategoriyi ve soru sayısını seç.</p>
       </div>
 
       <div class="tb-entry">
@@ -410,6 +411,13 @@
           <div class="setup-options">
             <button class="setup-btn active" data-reveal="instant" onclick="selectReveal('instant',this)">Anında göster</button>
             <button class="setup-btn" data-reveal="end" onclick="selectReveal('end',this)">Test sonunda göster</button>
+          </div>
+        </div>
+        <div class="setup-group">
+          <div class="setup-label">⏱️ Süre</div>
+          <div class="setup-btns">
+            <button class="setup-btn active" data-time="off" onclick="selectTime(this)">Süresiz</button>
+            <button class="setup-btn" data-time="on" onclick="selectTime(this)">Süreli (soru tipine göre otomatik)</button>
           </div>
         </div>
       </div>
@@ -715,6 +723,12 @@
           <button class="tb-reveal active" data-r="instant" onclick="tbPick('reveal','instant',this)">Anında göster</button>
           <button class="tb-reveal" data-r="end" onclick="tbPick('reveal','end',this)">Test sonunda göster</button>
         </div>
+        <div class="tb-reveal-row">
+          <span class="rev-field-cap">Süre:</span>
+          <button class="tb-time active" data-t="off" onclick="tbPick('time','off',this)">Süresiz</button>
+          <button class="tb-time" data-t="on" onclick="tbPick('time','on',this)">Süreli</button>
+          <input id="tb-secper" type="number" min="5" max="300" placeholder="sn/soru (boş = otomatik)" class="tb-secper" style="display:none;">
+        </div>
         <div class="tb-counts">
           <button class="tb-count" data-c="10" onclick="tbPick('count','10',this)">10 Soru</button>
           <button class="tb-count active" data-c="20" onclick="tbPick('count','20',this)">20 Soru</button>
@@ -738,10 +752,29 @@
 </div>
 
 <!-- ===== VIDEO ===== -->
+<div id="page-recs" class="page">
+  <section class="words-section">
+    <div class="words-header">
+      <div>
+        <h2 data-i18n="hRecs">Film & Kitap <span>Önerileri</span></h2>
+        <p data-i18n="subRecs">Rusçanı geliştirecek film, dizi, anime ve kitaplar — seviyene uygun seç.</p>
+      </div>
+    </div>
+    <div class="recs-filters">
+      <button class="cat-chip active" data-rt="all" onclick="recsSetType('all', this)">Tümü</button>
+      <button class="cat-chip" data-rt="film" onclick="recsSetType('film', this)">🎬 Film</button>
+      <button class="cat-chip" data-rt="dizi" onclick="recsSetType('dizi', this)">📺 Dizi</button>
+      <button class="cat-chip" data-rt="anime" onclick="recsSetType('anime', this)">🌸 Anime</button>
+      <button class="cat-chip" data-rt="kitap" onclick="recsSetType('kitap', this)">📚 Kitap</button>
+    </div>
+    <div id="recs-grid" class="recs-grid"><div class="profile-empty">Yükleniyor...</div></div>
+  </section>
+</div>
+
 <div id="page-video" class="page">
   <div class="video-header">
     <h2 data-i18n="hVideo">Video <span>Dersler</span></h2>
-    <p>Adım adım Rusça öğrenin. A1'den başlayıp YDT/YDS seviyesine ulaşın.</p>
+    <p data-i18n="subVideo">Adım adım Rusça öğrenin. A1'den başlayıp YDT/YDS seviyesine ulaşın.</p>
   </div>
   <div class="video-lock-banner">
     <div class="video-lock-text">
@@ -757,8 +790,8 @@
 <div id="page-pricing" class="page">
   <div class="pricing-header">
     <div class="section-label">Fiyatlandırma</div>
-    <div class="section-title" style="margin-bottom:12px;">Sana uygun <span>planı seç</span></div>
-    <p style="color:var(--gray); font-size:0.88rem;">Ücretsiz önizlemeyle başla, istediğin zaman yükselt.</p>
+    <div class="section-title" style="margin-bottom:12px;" data-i18n="hPricing">Sana uygun <span>planı seç</span></div>
+    <p style="color:var(--gray); font-size:0.88rem;" data-i18n="subPricing">Ücretsiz önizlemeyle başla, istediğin zaman yükselt.</p>
   </div>
   <div class="pricing-grid" style="max-width:1100px; grid-template-columns: repeat(auto-fit, minmax(260px,1fr));">
 
@@ -1100,6 +1133,7 @@
           <button class="psb-item" id="asb-questions" onclick="adminNav('questions')"><span class="psb-ic">🧩</span> Soru Havuzu</button>
           <button class="psb-item" id="asb-pquest" onclick="adminNav('pquest')"><span class="psb-ic">📖</span> Paragraf Soruları</button>
           <button class="psb-item" id="asb-videos" onclick="adminNav('videos')"><span class="psb-ic">🎬</span> Videolar</button>
+          <button class="psb-item" id="asb-recs" onclick="adminNav('recs')"><span class="psb-ic">⭐</span> Öneriler</button>
           <button class="psb-item" id="asb-visits" onclick="adminNav('visits')"><span class="psb-ic">📈</span> Ziyaret & SEO</button>
           <button class="psb-item" id="asb-settings" onclick="adminNav('settings')"><span class="psb-ic">⚙️</span> Site Ayarları</button>
           <button class="psb-item" id="asb-backup" onclick="adminNav('backup')"><span class="psb-ic">💾</span> Yedekleme</button>
@@ -1348,6 +1382,33 @@
           </div>
         </div>
 
+        <div id="av-recs" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Öneri Yönetimi</h2>
+          <p class="profile-sub">Film, dizi, anime ve kitap önerileri. Değişiklikler anında yayına girer.</p>
+          <div class="pq-stats" id="rc-stats">Yükleniyor...</div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">✏️ Öneri Ekle / Düzenle</h3>
+            <input type="hidden" id="rc-id">
+            <div class="pq-row2">
+              <select id="rc-type" class="pq-input"><option value="film">🎬 Film</option><option value="dizi">📺 Dizi</option><option value="anime">🌸 Anime</option><option value="kitap">📚 Kitap</option></select>
+              <input id="rc-title" class="pq-input" placeholder="Başlık *" autocomplete="off">
+              <select id="rc-level" class="pq-input pq-level"><option>A1</option><option selected>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
+            </div>
+            <textarea id="rc-desc" class="an-textarea" placeholder="Neden izlenmeli/okunmalı? (2-3 cümle)"></textarea>
+            <div class="pq-row2">
+              <input id="rc-thumb" class="pq-input" placeholder="Afiş/kapak görseli URL (opsiyonel)" autocomplete="off">
+              <input id="rc-trailer" class="pq-input" placeholder="YouTube fragman ID (opsiyonel)" autocomplete="off">
+            </div>
+            <input id="rc-link" class="pq-input" placeholder="Nerede izlenir/alınır linki (opsiyonel)" autocomplete="off">
+            <div><button class="set-btn" id="rc-save-btn" onclick="adminRcSave()">Öneri Ekle</button>
+            <button class="set-btn ghost" onclick="adminRcFormClear()" style="margin-left:8px;">Temizle</button></div>
+          </div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">📋 Öneri Listesi</h3>
+            <div id="rc-list"><div class="profile-empty">Yükleniyor...</div></div>
+          </div>
+        </div>
+
         <div id="av-visits" class="admin-view" style="display:none;">
           <h2 class="profile-h2">Ziyaret & SEO</h2>
           <p class="profile-sub">Trafik istatistikleri ve sayfa içi SEO denetimi.</p>
@@ -1462,11 +1523,11 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=65"></script>
-<script defer src="js/auth.js?v=65"></script>
-<script defer src="js/admin.js?v=65"></script>
-<script defer src="js/profile.js?v=65"></script>
-<script defer src="js/extras.js?v=65"></script>
-<script defer src="js/app.js?v=65"></script>
+<script defer src="js/supabase-config.js?v=66"></script>
+<script defer src="js/auth.js?v=66"></script>
+<script defer src="js/admin.js?v=66"></script>
+<script defer src="js/profile.js?v=66"></script>
+<script defer src="js/extras.js?v=66"></script>
+<script defer src="js/app.js?v=66"></script>
 </body>
 </html>
