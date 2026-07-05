@@ -127,6 +127,7 @@ function profileNav(view, btn) {
   if (target) target.style.display = "block";
   if (view === "tests" && typeof renderTestHistory === "function") renderTestHistory();
   if (view === "stats" && typeof renderStatsView === "function") renderStatsView();
+  if (view === "analysis" && typeof renderAnalysis === "function") renderAnalysis();
   if (view === "saved" && typeof renderKasaView === "function") renderKasaView("saved");
   if (view === "learned" && typeof renderKasaView === "function") renderKasaView("learned");
   if (view === "overview" && typeof renderStudyCalendar === "function") renderStudyCalendar();
@@ -134,7 +135,7 @@ function profileNav(view, btn) {
   if (view === "tasks" && typeof renderTasksView === "function") { if (typeof checkTasks === "function") checkTasks(); renderTasksView(); }
   if (view === "support") { if (typeof supportView !== "undefined") supportView = { mode: "list", ticketId: null }; if (typeof renderSupport === "function") renderSupport(); }
   document.querySelectorAll(".psb-item").forEach(b => b.classList.remove("active"));
-  const map = { overview: "psb-overview", saved: "psb-saved", learned: "psb-learned", tests: "psb-tests", videos: "psb-videos", stats: "psb-stats", tasks: "psb-tasks", support: "psb-support", settings: "psb-settings" };
+  const map = { overview: "psb-overview", saved: "psb-saved", learned: "psb-learned", tests: "psb-tests", videos: "psb-videos", stats: "psb-stats", analysis: "psb-analysis", tasks: "psb-tasks", support: "psb-support", settings: "psb-settings" };
   if (btn && btn.classList) btn.classList.add("active");
   else { const el = document.getElementById(map[view]); if (el) el.classList.add("active"); }
   window.scrollTo(0, 0);
@@ -308,4 +309,90 @@ function renderBadges() {
     if (newly.length && newly.length <= 5 && typeof createNotification === "function" && (typeof notifPref !== "function" || notifPref("badges"))) newly.forEach(b => createNotification("🏅 Yeni rozet: " + b.t, b.d, "success"));
   }
   box.innerHTML = html;
+}
+
+/* ============================================================
+   ANALİZ & ÖNERİLER — kullanıcının verisinden dürüst çıkarımlar
+   ============================================================ */
+async function renderAnalysis() {
+  const box = document.getElementById("analysis-body"); if (!box) return;
+  box.innerHTML = '<div class="profile-empty">Analiz hazırlanıyor...</div>';
+  try {
+    // Test geçmişi (yerel) — en yeni başa
+    let tests = (typeof getTestResults === "function") ? getTestResults().slice() : [];
+    if (tests.length > 1 && tests[0].date && tests[tests.length - 1].date &&
+        new Date(tests[0].date) < new Date(tests[tests.length - 1].date)) tests.reverse();
+    const pctOf = t => (t && t.total) ? Math.round((t.score / t.total) * 100) : 0;
+    const avgOf = arr => arr.length ? Math.round(arr.reduce((a, t) => a + pctOf(t), 0) / arr.length) : null;
+    const last5 = avgOf(tests.slice(0, 5)), prev5 = avgOf(tests.slice(5, 10));
+
+    // Son 7 gün aktivite (hesaptan)
+    let act7 = {};
+    try {
+      const { data } = await sb.from("activity_log").select("kind, amount")
+        .eq("user_id", currentUser.id)
+        .gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString()).limit(1000);
+      (data || []).forEach(a => { act7[a.kind] = (act7[a.kind] || 0) + (a.amount || 0); });
+    } catch (e) {}
+
+    // Seviye geçmişi (sunucudan)
+    let levels = [];
+    try {
+      const { data } = await sb.from("placement_results").select("new_level, pct, created_at")
+        .eq("user_id", currentUser.id).order("created_at").limit(50);
+      levels = data || [];
+    } catch (e) {}
+
+    const level = (currentProfile && currentProfile.level) || null;
+    const streak = (currentProfile && currentProfile.streak_count) || 0;
+    const savedN = (typeof savedWords !== "undefined" && savedWords) ? (savedWords.length || savedWords.size || 0) : 0;
+
+    // ---- Durum kartı ----
+    const stats = `<div class="ana-card"><div class="ana-h">📸 Anlık Durum</div><div class="ana-row">
+      <span class="ana-stat">🎚️ Seviye: <b>${level || "belirlenmedi"}</b></span>
+      <span class="ana-stat">🔥 Seri: <b>${streak} gün</b></span>
+      <span class="ana-stat">📝 Kayıtlı test: <b>${tests.length}</b></span>
+      ${last5 !== null ? `<span class="ana-stat">Son 5 test ort.: <b>%${last5}</b></span>` : ""}
+      <span class="ana-stat">📦 Kasadaki kelime: <b>${savedN}</b></span>
+    </div></div>`;
+
+    // ---- Trend kartı ----
+    let trendHtml = "";
+    if (last5 !== null && prev5 !== null) {
+      const d = last5 - prev5;
+      const yon = d > 3 ? "📈 Yükselişte" : (d < -3 ? "📉 Düşüşte" : "➡️ Sabit");
+      trendHtml = `<div class="ana-card"><div class="ana-h">${yon}</div>
+        Son 5 testinin ortalaması <b>%${last5}</b>, önceki 5 testin <b>%${prev5}</b> idi (${d >= 0 ? "+" : ""}${d} puan).</div>`;
+    }
+
+    // ---- Seviye yolculuğu ----
+    let lvlHtml = "";
+    if (levels.length) {
+      lvlHtml = `<div class="ana-card"><div class="ana-h">🎚️ Seviye Yolculuğu</div>` +
+        levels.map(l => `<span class="ana-chip">${new Date(l.created_at).toLocaleDateString("tr-TR")} → <b>${_escHtml(l.new_level || "")}</b> (%${l.pct ?? "-"})</span>`).join(" ") + `</div>`;
+    }
+
+    // ---- 7 gün aktivite ----
+    const AK = { testsDone: "📝 Test", questions: "❓ Soru", wordsLearned: "🧠 Öğrenilen", wordsSaved: "📦 Kaydedilen", dailyReviews: "🔁 Tekrar", pomodoros: "🍅 Pomodoro", videos: "🎬 Video", focusMin: "⏱️ Odak dk" };
+    const actKeys = Object.keys(act7);
+    const actHtml = `<div class="ana-card"><div class="ana-h">🗓️ Son 7 Gün</div>` +
+      (actKeys.length ? `<div class="ana-row">${actKeys.map(k => `<span class="ana-stat">${AK[k] || k}: <b>${act7[k]}</b></span>`).join("")}</div>`
+                      : `<div class="err-meta">Bu hafta kayıtlı aktivite yok — bugün küçük bir adımla başlayabilirsin.</div>`) + `</div>`;
+
+    // ---- Öneriler (kural tabanlı, dürüst) ----
+    const recs = [];
+    if (!level) recs.push({ t: "🎚️ Önce seviyeni belirle", d: "Sana doğru içerik önerebilmemiz için seviye tespit sınavına gir.", b: "Sınava Gir", fn: "showPage('placement')" });
+    if ((act7.dailyReviews || 0) === 0) recs.push({ t: "🔁 Günlük tekrarı aksatma", d: "Bu hafta hiç günlük tekrar yapılmamış; kalıcı öğrenmenin en güçlü aracı bu.", b: "Günlük Tekrara Git", fn: "showPage('review')" });
+    if (last5 !== null && last5 < 60) recs.push({ t: "🧠 Temeli sağlamlaştır", d: `Son testlerin ortalaması %${last5}. Yanlış yaptığın kelimeleri kasana ekleyip tekrar etmen puanı hızlı yükseltir.`, b: "Kelime Kasası", fn: "profileNav('saved')" });
+    if (last5 !== null && prev5 !== null && (last5 - prev5) < -3) recs.push({ t: "📉 Küçük bir mola sinyali", d: "Son testlerde düşüş var. Yeni kelime eklemek yerine 2-3 gün sadece tekrar yapmak toparlar.", b: "Teste Başla", fn: "showPage('quiz')" });
+    if ((act7.videos || 0) === 0) recs.push({ t: "🎬 Video dersle pekiştir", d: "Bu hafta hiç video izlenmemiş; konu anlatımı + kelime birlikte daha kalıcı.", b: "Videolara Git", fn: "showPage('videos')" });
+    if ((act7.wordsLearned || 0) < 20) recs.push({ t: "🎯 Haftalık kelime hedefi", d: `Bu hafta ${act7.wordsLearned || 0} kelime öğrenildi. Hedefi 20+ yapmak YDS için ideal tempo.`, b: "Kelimelere Git", fn: "showPage('words')" });
+    if (!recs.length) recs.push({ t: "🏆 Harika gidiyorsun!", d: "Tüm göstergeler yolunda. Kendini gerçek sınav koşullarında dene.", b: "📝 Deneme Sınavı", fn: "startMockExam()" });
+    const recHtml = `<div class="ana-card"><div class="ana-h">💡 Sana Özel Öneriler</div>` +
+      recs.slice(0, 4).map(r => `<div class="ana-rec"><b>${r.t}</b><div class="err-meta">${r.d}</div><button class="mail-act" onclick="${r.fn}">${r.b} →</button></div>`).join("") + `</div>`;
+
+    box.innerHTML = stats + trendHtml + recHtml + actHtml + lvlHtml;
+  } catch (e) {
+    box.innerHTML = '<div class="profile-empty">Analiz şu an hazırlanamadı.</div>';
+  }
 }
