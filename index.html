@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=84">
+<link rel="stylesheet" href="css/style.css?v=85">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=84" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=85" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words">Kelimeler</button></li>
@@ -1227,7 +1227,9 @@
                   <span class="cwb-total">Toplam Kelime: <b id="cwb-total">0</b></span>
                 </div>
               </div>
-              <div class="cwb-right" id="cwb-props" style="display:none;">
+              <div class="cwb-right" id="cwb-props">
+                <div id="cwbp-empty" class="cwbp-empty">👈 Düzenlemek için soldan bir satıra tıkla.<br><small>Satırları oluşturunca ilk satır otomatik seçilir.</small></div>
+                <div id="cwbp-fields" style="display:none;">
                 <h4 class="cwbp-h">⚙️ Kelime Özellikleri <span id="cwbp-no" class="kv-lvl"></span></h4>
                 <label class="cwbp-lbl">Kelime Türü</label>
                 <select id="cwbp-cat" class="pq-input" onchange="cwbProp('cat', this.value)"><option>isim</option><option>fiil</option><option>sıfat</option><option>zarf</option><option>zamir</option><option>edat</option><option>bağlaç</option></select>
@@ -1247,6 +1249,7 @@
                 <textarea id="cwbp-ornek" class="an-textarea cwbp-ta" oninput="cwbProp('ornek', this.value)" placeholder="Örnek cümle giriniz..."></textarea>
                 <label class="cwbp-lbl">Türkçesi</label>
                 <textarea id="cwbp-ornektr" class="an-textarea cwbp-ta" oninput="cwbProp('ornekTr', this.value)" placeholder="Türkçe anlamını yazınız..."></textarea>
+                </div>
               </div>
             </div>
             <button class="set-btn" id="cwb-save" style="display:none; margin-top:12px;" onclick="cwBulkSave()">💾 Hepsini Kaydet</button>
@@ -1638,12 +1641,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=84"></script>
-<script defer src="js/auth.js?v=84"></script>
-<script defer src="js/admin.js?v=84"></script>
-<script defer src="js/profile.js?v=84"></script>
-<script defer src="js/extras.js?v=84"></script>
-<script defer src="js/app.js?v=84"></script>
+<script defer src="js/supabase-config.js?v=85"></script>
+<script defer src="js/auth.js?v=85"></script>
+<script defer src="js/admin.js?v=85"></script>
+<script defer src="js/profile.js?v=85"></script>
+<script defer src="js/extras.js?v=85"></script>
+<script defer src="js/app.js?v=85"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
