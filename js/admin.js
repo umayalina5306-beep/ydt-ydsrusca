@@ -37,6 +37,7 @@ function adminNav(view) {
   if (view === "questions") { if (typeof adminQuestionStats === "function") adminQuestionStats(); if (typeof adminPqlReload === "function") adminPqlReload();  if (typeof plcCfgInit === "function") plcCfgInit(); }
   if (view === "pquest" && typeof adminPquestInit === "function") adminPquestInit();
   if (view === "videos" && typeof adminVideosInit === "function") adminVideosInit();
+  if (view === "recs" && typeof adminRecsInit === "function") adminRecsInit();
   if (view === "visits") { if (typeof renderVisitsFull === "function") renderVisitsFull(); if (typeof renderSeoCheck === "function") renderSeoCheck(); }
   if (view === "settings" && typeof adminSettingsInit === "function") adminSettingsInit();
   if (view === "backup" && typeof renderBackupView === "function") renderBackupView();
