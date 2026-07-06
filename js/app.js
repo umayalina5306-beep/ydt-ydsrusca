@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v92';
+var YDT_SURUM = 'v93';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -117,8 +117,7 @@ function sozlukAra(query) {
       <button class="word-speak" onclick="speak('${ruSafe}')">🔊</button>
       <span style="position:absolute;top:12px;right:44px;font-size:0.6rem;font-weight:700;color:${lc};background:${lc}22;padding:2px 6px;border-radius:10px;">${w.level}</span>
       <div class="word-ru">${highlight(w.ru,q)} ${genderHTML}</div>
-      <span class="word-catlab">${w.cat || ''}</span> ${tipHTML}${padejHTML}
-      ${(w.sifat_f || w.sifat_n) ? `<div class="word-sifat">ж: <b>${w.sifat_f || '—'}</b> · с: <b>${w.sifat_n || '—'}</b></div>` : ''}
+      ${tipHTML}${padejHTML}
       <div class="word-tr">${highlight(w.tr,q)}</div>
       <div class="word-pron"></div>
       
@@ -353,11 +352,9 @@ function wordCardHTML(w, inBank) {
       <button class="word-save${isSaved ? ' active' : ''}" onclick="toggleSaveWord(event,'${ruSafe}','${trSafe}','${w.level || ''}')" title="Kaydet">${isSaved ? '★' : '☆'}</button>
       <button class="word-speak" onclick="speak('${ruSafe}')">🔊</button>
       <div class="word-ru">${_escHtml(w.ru)}</div>
-      <span class="word-catlab">${w.cat || ''}</span>
       ${genderHTML}
       ${tipHTML}
       ${padejHTML}
-      ${(w.sifat_f || w.sifat_n) ? `<div class="word-sifat">ж: <b>${w.sifat_f || '—'}</b> · с: <b>${w.sifat_n || '—'}</b></div>` : ''}
       <div class="word-tr">${_escHtml(w.tr)}</div>
       
       ${w.ornek ? `<div class="word-example"><div class="word-example-ru">${w.ornek}</div><div class="word-example-tr">${w.ornekTr}</div></div>` : ''}
@@ -1195,6 +1192,7 @@ function showPage(id){
   window.scrollTo(0,0);
   if(id==='quiz') showSetup();
   if(id==='admin' && typeof openAdmin==='function') openAdmin();
+  if(id==='teacher' && typeof loadTeacherPanel==='function') loadTeacherPanel();
   if (typeof trackPageView === 'function') trackPageView(id);
   if(id==='profile' && typeof openProfile==='function') openProfile();
 }
@@ -3643,8 +3641,6 @@ function applyDbWords(rows) {
                 ornek: r.ornek || '', ornekTr: r.ornek_tr || '', cinsiyet: r.cinsiyet || '', premium: !!r.premium };
     if (r.padej) w.padej = r.padej;
     if (r.tip) w.tip = r.tip;
-    if (r.sifat_f) w.sifat_f = r.sifat_f;
-    if (r.sifat_n) w.sifat_n = r.sifat_n;
     if (r.cv) w.cv = r.cv;
     if (r.ncv) w.ncv = r.ncv;
     const ex = words.find(match);
@@ -3776,8 +3772,6 @@ function adminWordEdit(id) {
   document.getElementById('cw-ornek').value = r.ornek || '';
   document.getElementById('cw-ornektr').value = r.ornek_tr || '';
   document.getElementById('cw-premium').checked = !!r.premium;
-  const sf = document.getElementById('cw-sifat-f'); if (sf) sf.value = r.sifat_f || '';
-  const sn = document.getElementById('cw-sifat-n'); if (sn) sn.value = r.sifat_n || '';
   const btn = document.getElementById('cw-save-btn'); if (btn) btn.textContent = 'Değişiklikleri Kaydet';
   document.getElementById('cw-ru').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
@@ -3790,11 +3784,6 @@ async function adminWordSave() {
     padej: (_cwVal('cw-cat') === 'edat') ? cwPadejValue() : null,
     ornek: _cwVal('cw-ornek') || null, ornek_tr: _cwVal('cw-ornektr') || null,
     premium: document.getElementById('cw-premium').checked, active: true, updated_at: new Date().toISOString() };
-  if (row.cat === 'sıfat') {
-    const oto = sifatTuret(ru);
-    row.sifat_f = _cwVal('cw-sifat-f') || oto.f || null;
-    row.sifat_n = _cwVal('cw-sifat-n') || oto.n || null;
-  } else { row.sifat_f = null; row.sifat_n = null; }
   try {
     let error;
     if (_cwEditId) { ({ error } = await sb.from('content_words').update(row).eq('id', _cwEditId)); }
@@ -3837,8 +3826,6 @@ function _cwNormalize(o) {
     tip: (o.tip || '') ? String(o.tip).trim() : null,
     cv: (o.cv || '') ? String(o.cv).trim() : null,
     ncv: (o.ncv || '') ? String(o.ncv).trim() : null,
-    sifat_f: (o.sifat_f || o.disil || '') ? String(o.sifat_f || o.disil).trim() : null,
-    sifat_n: (o.sifat_n || o.notr || '') ? String(o.sifat_n || o.notr).trim() : null,
     premium: o.premium === true || o.premium === 'true' || o.premium === 1,
     active: true };
 }
@@ -4078,22 +4065,11 @@ async function adminTicketMail(ticketId) {
 }
 
 /* ---- Kelime formu: türe göre gramer seçenekleri ---- */
-/* Rusça sıfat: eril tabandan dişil/nötr biçimleri türet (düzensizler elle düzeltilebilir) */
-function sifatTuret(ru) {
-  const r = (ru || '').trim();
-  if (r.endsWith('ый')) { const k = r.slice(0, -2); return { f: k + 'ая', n: k + 'ое' }; }
-  if (r.endsWith('ой')) { const k = r.slice(0, -2); return { f: k + 'ая', n: k + 'ое' }; }
-  if (r.endsWith('ий')) {
-    const k = r.slice(0, -2); const c = k.slice(-1);
-    if ('кгх'.includes(c)) return { f: k + 'ая', n: k + 'ое' };
-    if ('жшщч'.includes(c)) return { f: k + 'ая', n: k + 'ее' };
-    return { f: k + 'яя', n: k + 'ее' };
-  }
-  return { f: '', n: '' };
-}
 const CW_GRAM_OPTS = {
   'isim': [['', 'Cinsiyet...'], ['м', 'м'], ['ж', 'ж'], ['с', 'с']],
-  'fiil': [['', '—'], ['нсв', 'НСВ'], ['св', 'СВ']]
+  'sıfat': [['', 'Cinsiyet...'], ['м', 'м'], ['ж', 'ж'], ['с', 'с']],
+  'fiil': [['', '—'], ['нсв', 'НСВ'], ['св', 'СВ']],
+  'sıfat': [['', 'Cinsiyet...'], ['м', 'м'], ['ж', 'ж'], ['с', 'с']]
 };
 const CW_PADEJ = ['Р.п.', 'Д.п.', 'В.п.', 'Т.п.', 'П.п.']; // sitedeki etiket biçimi (örn: "П.п. / В.п.")
 function cwCatChanged(setVal) {
@@ -4111,8 +4087,6 @@ function cwCatChanged(setVal) {
     }
     return;
   }
-  const sifatRow = document.getElementById('cw-sifat-row');
-  if (sifatRow) sifatRow.style.display = (cat === 'sıfat') ? '' : 'none';
   const opts = CW_GRAM_OPTS[cat];
   if (!opts) { sel.innerHTML = ''; sel.style.display = 'none'; return; }
   sel.style.display = '';
@@ -4896,7 +4870,7 @@ async function adminGiftSet(userId, n, unit) {
 let _cwbData = [], _cwbSel = -1;
 const _CWB_PD = ['Р.п.', 'Д.п.', 'В.п.', 'Т.п.', 'П.п.'];
 function _cwbYeni() {
-  return { ru: '', tr: '', cat: 'isim', level: 'A1', cinsiyet: '', padej: [], sifat_f: '', sifat_n: '', premium: false, ornek: '', ornekTr: '' };
+  return { ru: '', tr: '', cat: 'isim', level: 'A1', cinsiyet: '', padej: [], premium: false, ornek: '', ornekTr: '' };
 }
 function cwbBuild() {
   const n = Math.min(100, Math.max(1, parseInt((document.getElementById('cwb-count') || {}).value, 10) || 10));
@@ -4960,7 +4934,7 @@ function _cwbGramUI(w) {
   const pWrap = document.getElementById('cwbp-padej-wrap');
   const gSel = document.getElementById('cwbp-gram');
   const gLbl = document.getElementById('cwbp-gram-lbl');
-  if (w.cat === 'isim') {
+  if (w.cat === 'isim' || w.cat === 'sıfat') {
     gWrap.style.display = ''; pWrap.style.display = 'none';
     gLbl.textContent = 'Cinsiyet';
     gSel.innerHTML = '<option value="">Seçiniz</option><option>м</option><option>ж</option><option>с</option>';
@@ -4976,12 +4950,6 @@ function _cwbGramUI(w) {
       `<label><input type="checkbox" value="${x}" ${w.padej.includes(x) ? 'checked' : ''} onchange="cwbPadej(this)"> ${x}</label>`).join('');
   } else {
     gWrap.style.display = 'none'; pWrap.style.display = 'none';
-  }
-  const sw = document.getElementById('cwbp-sifat-wrap');
-  if (sw) sw.style.display = (w.cat === 'sıfat') ? '' : 'none';
-  if (w.cat === 'sıfat') {
-    const f = document.getElementById('cwbp-sifat-f'); if (f) f.value = w.sifat_f || '';
-    const nn = document.getElementById('cwbp-sifat-n'); if (nn) nn.value = w.sifat_n || '';
   }
 }
 function cwbProp(field, val) {
@@ -5003,8 +4971,6 @@ async function cwBulkSave() {
     cinsiyet: w.cinsiyet || null,
     tip: (w.cat === 'fiil') ? ({ 'нсв': 'НСВ', 'св': 'СВ' }[w.cinsiyet] || null) : null,
     padej: (w.cat === 'edat' && w.padej.length) ? w.padej.join(' / ') : null,
-    sifat_f: (w.cat === 'sıfat') ? (w.sifat_f || sifatTuret(w.ru).f || null) : null,
-    sifat_n: (w.cat === 'sıfat') ? (w.sifat_n || sifatTuret(w.ru).n || null) : null,
     ornek: w.ornek.trim() || null, ornek_tr: w.ornekTr.trim() || null,
     premium: !!w.premium, active: true
   }));
@@ -5274,4 +5240,131 @@ async function tkTplSave() {
     const sel = document.querySelector('#page-admin .mail-tpl');
     if (sel) sel.innerHTML = '<option value="">📋 Hazır şablon ekle...</option>' + tkTplList().map((tp, i) => `<option value="${i}">${_escHtml(tp.t)}</option>`).join('');
   } catch (e) { uiAlert('Eklenemedi: ' + ((e && e.message) || e) + ' — destek_paketi.sql çalıştırıldı mı?'); }
+}
+
+/* ============================================================
+   👩‍🏫 ÖĞRETMEN PANELİ
+   Atanan öğrenciler + 7 gün aktivite + test özeti;
+   bildirim ve info@'dan mail gönderme (hepsi loglanır).
+   ============================================================ */
+let _teachStudents = [];
+async function loadTeacherPanel() {
+  const box = document.getElementById('teach-list');
+  const sum = document.getElementById('teach-summary');
+  if (!box) return;
+  const rol = (currentProfile && currentProfile.role) || 'user';
+  if (!currentUser || (!currentProfile.is_admin && rol !== 'ogretmen')) {
+    box.innerHTML = '<div class="profile-empty">Bu sayfa öğretmen hesapları içindir.</div>';
+    if (sum) sum.textContent = '';
+    return;
+  }
+  box.innerHTML = '<div class="admin-loading">Öğrenciler yükleniyor...</div>';
+  try {
+    const { data: ts } = await sb.from('teacher_students').select('student_id').eq('teacher_id', currentUser.id);
+    const ids = (ts || []).map(r => r.student_id);
+    if (!ids.length) {
+      if (sum) sum.textContent = 'Henüz sana atanmış öğrenci yok.';
+      box.innerHTML = '<div class="profile-empty">🎓 Öğrenci ataması yönetici veya destek ekibi tarafından yapılır. Atama yapıldığında öğrencilerin burada görünecek.</div>';
+      return;
+    }
+    const { data: profs } = await sb.from('profiles').select('id, display_name, email, level, plan, streak_count, created_at').in('id', ids);
+    _teachStudents = profs || [];
+    // Son 7 gün aktivite + test özetleri (toplu çek, JS'te grupla)
+    const yediGun = new Date(Date.now() - 7 * 864e5).toISOString();
+    let actMap = {}, testMap = {};
+    try {
+      const { data: acts } = await sb.from('activity_log').select('user_id, created_at').in('user_id', ids).gte('created_at', yediGun).limit(5000);
+      (acts || []).forEach(a => { actMap[a.user_id] = (actMap[a.user_id] || 0) + 1; });
+    } catch (e) {}
+    try {
+      const { data: tests } = await sb.from('test_results').select('user_id, created_at').in('user_id', ids).order('created_at', { ascending: false }).limit(2000);
+      (tests || []).forEach(t => {
+        if (!testMap[t.user_id]) testMap[t.user_id] = { n: 0, son: t.created_at };
+        testMap[t.user_id].n++;
+      });
+    } catch (e) {}
+    if (sum) sum.innerHTML = `👥 <b>${_teachStudents.length}</b> öğrenci · bu hafta toplam <b>${Object.values(actMap).reduce((a, b) => a + b, 0)}</b> aktivite`;
+    box.innerHTML = _teachStudents.map(p => {
+      const ad = _escHtml(p.display_name || (p.email || '').split('@')[0]);
+      const act = actMap[p.id] || 0;
+      const tst = testMap[p.id];
+      const aktiflik = act >= 10 ? '🔥 Çok aktif' : act >= 3 ? '✅ Aktif' : act >= 1 ? '🌤️ Az aktif' : '💤 Bu hafta girmedi';
+      return `<div class="cw-row teach-card">
+        <div class="cw-main">
+          <b>${ad}</b> <span class="kv-lvl">${p.level || 'seviye yok'}</span>
+          ${p.plan === 'premium' ? '<span class="mail-member yes">👑 Premium</span>' : ''}
+          ${p.streak_count ? `<span class="cw-cat">🔥 ${p.streak_count} gün seri</span>` : ''}
+          <div class="err-meta">${_escHtml(p.email || '')}</div>
+          <div class="err-meta">${aktiflik} · bu hafta ${act} aktivite · ${tst ? tst.n + ' test (son: ' + new Date(tst.son).toLocaleDateString('tr-TR') + ')' : 'henüz test çözmedi'}</div>
+        </div>
+        <div class="cw-acts">
+          <button class="mail-act" onclick="tNotify('${p.id}', '${ad.replace(/'/g, '')}')">🔔 Bildirim</button>
+          <button class="mail-act" onclick="tMail('${_escAttr(p.email || '')}', '${ad.replace(/'/g, '')}')">✉️ Mail</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    box.innerHTML = '<div class="profile-empty">Öğrenciler yüklenemedi: ' + _escHtml((e && e.message) || e) + '<br>ogretmen_paneli.sql çalıştırıldı mı?</div>';
+  }
+}
+
+/* 🔔 Öğrenciye site bildirimi */
+function tNotify(userId, name) {
+  const ov = document.createElement('div');
+  ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9500';
+  ov.innerHTML = `<div class="ui-modal" style="max-width:420px;">
+    <h3 class="ui-modal-title">🔔 ${_escHtml(name)} — Bildirim Gönder</h3>
+    <input id="tn-title" class="pq-input" placeholder="Başlık (örn: Haftalık hedefin)" style="margin-bottom:8px;">
+    <textarea id="tn-body" class="an-textarea" placeholder="Mesajın..."></textarea>
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button class="set-btn" onclick="tNotifySend('${userId}', '${name}')">Gönder</button>
+      <button class="set-btn ghost" onclick="this.closest('.ui-modal-overlay').remove()">Vazgeç</button>
+    </div></div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+async function tNotifySend(userId, name) {
+  const title = (document.getElementById('tn-title') || {}).value.trim();
+  const body = (document.getElementById('tn-body') || {}).value.trim();
+  if (!title || !body) { uiAlert('Başlık ve mesaj zorunlu.'); return; }
+  try {
+    const { error } = await sb.from('notifications').insert({ user_id: userId, title: '👩‍🏫 ' + title, body, type: 'info' });
+    if (error) throw error;
+    document.querySelector('.ui-modal-overlay').remove();
+    toast('🔔 Bildirim gönderildi.');
+    staffLog('ogretmen_bildirim', userId, { baslik: title });
+  } catch (e) { uiAlert('Gönderilemedi: ' + ((e && e.message) || e) + ' — roller_altyapi.sql çalıştırıldı mı?'); }
+}
+
+/* ✉️ Öğrenciye info@ üzerinden mail */
+function tMail(email, name) {
+  if (!email) { uiAlert('Bu öğrencinin e-postası yok.'); return; }
+  const ov = document.createElement('div');
+  ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9500';
+  ov.innerHTML = `<div class="ui-modal" style="max-width:460px;">
+    <h3 class="ui-modal-title">✉️ ${_escHtml(name)} — Mail Gönder <span class="cw-cat">info@ üzerinden</span></h3>
+    <input id="tm-subj" class="pq-input" placeholder="Konu" style="margin-bottom:8px;">
+    <textarea id="tm-body" class="an-textarea" placeholder="Mesajın... (sade metin)"></textarea>
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button class="set-btn" onclick="tMailSend('${_escAttr(email)}', '${name}')">Gönder</button>
+      <button class="set-btn ghost" onclick="this.closest('.ui-modal-overlay').remove()">Vazgeç</button>
+    </div></div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+async function tMailSend(email, name) {
+  const subj = (document.getElementById('tm-subj') || {}).value.trim();
+  const body = (document.getElementById('tm-body') || {}).value.trim();
+  if (!subj || !body) { uiAlert('Konu ve mesaj zorunlu.'); return; }
+  try {
+    const { data, error } = await sb.functions.invoke('send-mail', { body: {
+      to: email, subject: subj, body: body, from: 'info@ydt-ydsrusca.com'
+    } });
+    if (error || (data && data.error)) throw new Error((data && data.error) || (error && error.message) || 'gönderilemedi');
+    document.querySelector('.ui-modal-overlay').remove();
+    toast('✉️ Mail gönderildi.');
+    staffLog('ogretmen_mail', null, { kime: email, konu: subj });
+  } catch (e) {
+    uiAlert('Mail gönderilemedi: ' + ((e && e.message) || e) + '\n\nNot: Mail fonksiyonu yalnız yönetici yetkisine açıksa, öğretmen erişimi bir sonraki güncellemede sunucu tarafında açılacak.');
+  }
 }
