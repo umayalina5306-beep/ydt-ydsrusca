@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=93">
+<link rel="stylesheet" href="css/style.css?v=94">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,13 +48,15 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=93" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=94" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words">Kelimeler</button></li>
+    <li><button onclick="showPage('grammar')" id="nav-grammar">Gramer</button></li>
     <li><button onclick="showPage('quiz')" id="nav-quiz">Testler</button></li>
     <li><button onclick="showPage('video')" id="nav-video">Video Dersler</button></li>
     <li><button onclick="showPage('recs')" id="nav-recs">Öneriler</button></li>
+    <li><button onclick="showPage('practice')" id="nav-practice">Alıştırmalar</button></li>
     <li><button onclick="showPage('pricing')" id="nav-pricing">Fiyatlar</button></li>
   </ul>
   <div class="nav-auth">
@@ -754,6 +756,41 @@
 </div>
 
 <!-- ===== VIDEO ===== -->
+<div id="page-grammar" class="page">
+  <section class="words-section" style="max-width:1180px; margin:0 auto; padding:28px 20px 48px;">
+    <div class="words-header"><div>
+      <h2>Gramer <span>Merkezi</span></h2>
+      <p>Padej çekimleri, konu notları ve gramer alıştırmaları — YDS'nin kalbi burada.</p>
+    </div></div>
+
+    <div class="admin-notif-card">
+      <h3 class="an-h3">📐 Padej Çekim Laboratuvarı</h3>
+      <p class="pq-hint">Bir isim seç, 6 hâlin tablosunu gör; sonra alıştırmayla pekiştir.</p>
+      <div class="pq-row2" style="position:relative;">
+        <input id="pl-search" class="pq-input" placeholder="İsim ara... (Rusça veya Türkçe)" autocomplete="off" oninput="plSearch(this.value)">
+        <button class="set-btn ghost" onclick="plRandom()">🎲 Rastgele</button>
+      </div>
+      <div id="pl-results" class="pl-results"></div>
+      <div id="pl-table"></div>
+      <div style="margin-top:14px;">
+        <button class="set-btn" onclick="plStartQuiz()">🎯 Alıştırmayı Başlat (10 soru)</button>
+      </div>
+      <div id="pl-quiz"></div>
+    </div>
+
+    <div class="admin-notif-card">
+      <h3 class="an-h3">📖 Gramer Notları</h3>
+      <p class="pq-hint">Konu konu kısa notlar — başlığa tıklayınca açılır.</p>
+      <div id="gn-site-list"><div class="profile-empty">Yükleniyor...</div></div>
+    </div>
+
+    <div class="admin-notif-card" style="opacity:.75;">
+      <h3 class="an-h3">🎮 Yakında Burada</h3>
+      <p class="pq-hint">НСВ/СВ eşleştirme oyunu ve cümle kurma alıştırması bir sonraki güncellemeyle bu sayfaya eklenecek.</p>
+    </div>
+  </section>
+</div>
+
 <div id="page-teacher" class="page">
   <section class="words-section" style="max-width:1180px; margin:0 auto; padding:28px 20px 48px;">
     <div class="words-header">
@@ -765,6 +802,83 @@
     </div>
     <div id="teach-summary" class="pq-stats" style="margin-bottom:14px;">Yükleniyor...</div>
     <div id="teach-list"><div class="profile-empty">Yükleniyor...</div></div>
+  </section>
+</div>
+
+<div id="page-practice" class="page">
+  <section class="words-section" style="max-width:1180px; margin:0 auto; padding:28px 20px 48px;">
+    <div class="words-header"><div>
+      <h2>Alıştırma <span>Laboratuvarı</span></h2>
+      <p>Gramerini oyunlaştırılmış alıştırmalarla pekiştir. YDS/YDT'nin kalbi burada.</p>
+    </div></div>
+    <div class="practice-grid">
+      <div class="practice-card" onclick="showPage('padejlab')">
+        <div class="pc-emoji">📊</div><div class="pc-title">Padej Laboratuvarı</div>
+        <div class="pc-desc">6 hâlin çekim tablosu + boşluk doldurma alıştırması.</div>
+      </div>
+      <div class="practice-card" onclick="showPage('aspectmatch')">
+        <div class="pc-emoji">🔄</div><div class="pc-title">НСВ/СВ Eşleştirme</div>
+        <div class="pc-desc">Fiil görünüş çiftlerini eşleştir — süreli oyun.</div>
+      </div>
+      <div class="practice-card" onclick="showPage('sentence')">
+        <div class="pc-emoji">🧩</div><div class="pc-title">Cümle Kurma</div>
+        <div class="pc-desc">Karışık kelimeleri doğru sıraya diz.</div>
+      </div>
+      <div class="practice-card" onclick="showPage('grammar')">
+        <div class="pc-emoji">📖</div><div class="pc-title">Gramer Notları</div>
+        <div class="pc-desc">Konu anlatımı kartları — seviyeye göre.</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="page-padejlab" class="page">
+  <section class="words-section" style="max-width:1000px; margin:0 auto; padding:28px 20px 48px;">
+    <div class="words-header"><div>
+      <button class="back-btn" onclick="showPage('practice')">← Geri</button>
+      <h2>Padej <span>Laboratuvarı</span></h2>
+      <p>Rusçanın 6 hâli. Tabloyu incele, sonra alıştırmayla pekiştir.</p>
+    </div></div>
+    <div class="padej-tabs">
+      <button class="rec-chip active" onclick="padejTab('table', this)">📋 Çekim Tablosu</button>
+      <button class="rec-chip" onclick="padejTab('quiz', this)">✏️ Alıştırma</button>
+    </div>
+    <div id="padej-table-view"></div>
+    <div id="padej-quiz-view" style="display:none;"></div>
+  </section>
+</div>
+
+<div id="page-aspectmatch" class="page">
+  <section class="words-section" style="max-width:900px; margin:0 auto; padding:28px 20px 48px;">
+    <div class="words-header"><div>
+      <button class="back-btn" onclick="showPage('practice')">← Geri</button>
+      <h2>НСВ/СВ <span>Eşleştirme</span></h2>
+      <p>Bitmemiş (НСВ) ve bitmiş (СВ) fiil çiftlerini eşleştir.</p>
+    </div></div>
+    <div id="aspect-game"></div>
+  </section>
+</div>
+
+<div id="page-sentence" class="page">
+  <section class="words-section" style="max-width:820px; margin:0 auto; padding:28px 20px 48px;">
+    <div class="words-header"><div>
+      <button class="back-btn" onclick="showPage('practice')">← Geri</button>
+      <h2>Cümle <span>Kurma</span></h2>
+      <p>Karışık kelimeleri doğru sıraya dizerek cümleyi tamamla.</p>
+    </div></div>
+    <div id="sentence-game"></div>
+  </section>
+</div>
+
+<div id="page-grammar" class="page">
+  <section class="words-section" style="max-width:1000px; margin:0 auto; padding:28px 20px 48px;">
+    <div class="words-header"><div>
+      <button class="back-btn" onclick="showPage('practice')">← Geri</button>
+      <h2>Gramer <span>Notları</span></h2>
+      <p>Konu anlatımı kartları. Seviyene uygun konuyu seç.</p>
+    </div></div>
+    <div class="grammar-filters" id="grammar-filters"></div>
+    <div id="grammar-list"><div class="profile-empty">Yükleniyor...</div></div>
   </section>
 </div>
 
@@ -1174,6 +1288,8 @@
           <button class="psb-item" id="asb-pquest" onclick="adminNav('pquest')"><span class="psb-ic">📖</span> Paragraf Soruları</button>
           <button class="psb-item" id="asb-videos" onclick="adminNav('videos')"><span class="psb-ic">🎬</span> Videolar</button>
           <button class="psb-item" id="asb-recs" onclick="adminNav('recs')"><span class="psb-ic">⭐</span> Öneriler</button>
+          <button class="psb-item" id="asb-grammar" onclick="adminNav('grammar')"><span class="psb-ic">📐</span> Gramer Notları</button>
+          <button class="psb-item" id="asb-grammar" onclick="adminNav('grammar')"><span class="psb-ic">📖</span> Gramer Notları</button>
           <button class="psb-item" id="asb-visits" onclick="adminNav('visits')"><span class="psb-ic">📈</span> Ziyaret & SEO</button>
           <button class="psb-item" id="asb-settings" onclick="adminNav('settings')"><span class="psb-ic">⚙️</span> Site Ayarları</button>
           <button class="psb-item" id="asb-backup" onclick="adminNav('backup')"><span class="psb-ic">💾</span> Yedekleme</button>
@@ -1220,6 +1336,16 @@
               <label><input type="checkbox" value="Т.п.">Т.п. (Instr.)</label>
               <label><input type="checkbox" value="П.п.">П.п. (Prep.)</label>
             </div>
+              <div id="cw-cekim-row" style="display:none; margin-top:8px;">
+                <p class="pq-hint" style="margin-bottom:6px;">🧩 Çekim tablosu (otomatik üretilir — yanlışsa düzelt, boş bırakırsan kural kullanılır):</p>
+                <div class="cw-cekim-grid">
+                  <input id="ck-rp" class="pq-input" placeholder="Р.п." autocomplete="off">
+                  <input id="ck-dp" class="pq-input" placeholder="Д.п." autocomplete="off">
+                  <input id="ck-vp" class="pq-input" placeholder="В.п." autocomplete="off">
+                  <input id="ck-tp" class="pq-input" placeholder="Т.п." autocomplete="off">
+                  <input id="ck-pp" class="pq-input" placeholder="П.п." autocomplete="off">
+                </div>
+              </div>
             <input id="cw-ornek" class="pq-input" placeholder="Örnek cümle (Rusça, opsiyonel)" autocomplete="off">
             <input id="cw-ornektr" class="pq-input" placeholder="Örnek cümle (Türkçe, opsiyonel)" autocomplete="off">
             <label class="cw-check"><input type="checkbox" id="cw-premium"> Premium içerik (yalnız premium üyeler görür — ileride)</label>
@@ -1548,6 +1674,65 @@
           </div>
         </div>
 
+        <div id="av-grammar" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Gramer Notları</h2>
+          <p class="profile-sub">Konu anlatımı kartları. Alıştırmalar sayfasında öğrencilere görünür.</p>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">✏️ Not Ekle / Düzenle</h3>
+            <input type="hidden" id="gr-id">
+            <div class="pq-row2">
+              <input id="gr-title" class="pq-input" placeholder="Başlık *" autocomplete="off">
+              <select id="gr-level" class="pq-input pq-level"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
+              <select id="gr-cat" class="pq-input"><option value="genel">Genel</option><option value="padej">Padej</option><option value="fiil">Fiiller</option><option value="cümle">Cümle Yapısı</option></select>
+            </div>
+            <div class="rte-bar">
+              <button type="button" class="rte-btn" onclick="grRte('bold')"><b>K</b></button>
+              <button type="button" class="rte-btn" onclick="grRte('italic')"><i>İ</i></button>
+              <button type="button" class="rte-btn" onclick="grRte('underline')"><u>A</u></button>
+              <span class="rte-sep"></span>
+              <button type="button" class="rte-btn" onclick="grRte('insertUnorderedList')">• —</button>
+              <button type="button" class="rte-btn" onclick="grRte('insertOrderedList')">1. —</button>
+              <label class="rte-color">🅰️<input type="color" onchange="grRte('foreColor', this.value)"></label>
+            </div>
+            <div id="gr-body" class="rte-area" contenteditable="true" data-ph="Konu anlatımı... (kalın, liste, renk kullanabilirsin)"></div>
+            <button class="set-btn" id="gr-save-btn" onclick="adminGrSave()">Not Ekle</button>
+            <button class="set-btn ghost" onclick="adminGrClear()" style="margin-left:8px;">Temizle</button>
+          </div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">📋 Not Listesi</h3>
+            <div id="gr-list"><div class="profile-empty">Yükleniyor...</div></div>
+          </div>
+        </div>
+
+        <div id="av-grammar" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Gramer Notları</h2>
+          <p class="profile-sub">Sitedeki Gramer Merkezi'nde görünen konu kartları. Değişiklikler anında yayına girer.</p>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">✏️ Not Ekle / Düzenle</h3>
+            <input type="hidden" id="gn-id">
+            <input id="gn-title" class="pq-input" placeholder="Konu başlığı (örn: Р.п. ne zaman kullanılır?)" style="margin-bottom:8px;">
+            <div class="rte-bar">
+              <button type="button" class="rte-btn" onclick="rteFor('gn-body','bold')"><b>K</b></button>
+              <button type="button" class="rte-btn" onclick="rteFor('gn-body','italic')"><i>İ</i></button>
+              <button type="button" class="rte-btn" onclick="rteFor('gn-body','underline')"><u>A</u></button>
+              <span class="rte-sep"></span>
+              <label class="rte-color">🅰️<input type="color" onchange="rteFor('gn-body','foreColor', this.value)"></label>
+              <label class="rte-color">🖍️<input type="color" onchange="rteFor('gn-body','hiliteColor', this.value)"></label>
+              <span class="rte-sep"></span>
+              <button type="button" class="rte-btn" onclick="rteFor('gn-body','insertUnorderedList')">• —</button>
+              <button type="button" class="rte-btn" onclick="rteFor('gn-body','insertOrderedList')">1. —</button>
+              <button type="button" class="rte-btn" onclick="rteFor('gn-body','removeFormat')">🧹</button>
+            </div>
+            <div id="gn-body" class="rte-area" contenteditable="true" data-ph="Konu anlatımı... (tablolar için madde listesi kullan)"></div>
+            <div><button class="set-btn" id="gn-save-btn" onclick="adminGnSave()">Not Ekle</button>
+            <button class="set-btn ghost" style="margin-left:8px;" onclick="adminGnClear()">Temizle</button></div>
+          </div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">📋 Not Listesi</h3>
+            <div id="gn-list"><div class="profile-empty">Yükleniyor...</div></div>
+          </div>
+        </div>
+
         <div id="av-visits" class="admin-view" style="display:none;">
           <h2 class="profile-h2">Ziyaret & SEO</h2>
           <p class="profile-sub">Trafik istatistikleri ve sayfa içi SEO denetimi.</p>
@@ -1663,12 +1848,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=93"></script>
-<script defer src="js/auth.js?v=93"></script>
-<script defer src="js/admin.js?v=93"></script>
-<script defer src="js/profile.js?v=93"></script>
-<script defer src="js/extras.js?v=93"></script>
-<script defer src="js/app.js?v=93"></script>
+<script defer src="js/supabase-config.js?v=94"></script>
+<script defer src="js/auth.js?v=94"></script>
+<script defer src="js/admin.js?v=94"></script>
+<script defer src="js/profile.js?v=94"></script>
+<script defer src="js/extras.js?v=94"></script>
+<script defer src="js/app.js?v=94"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
