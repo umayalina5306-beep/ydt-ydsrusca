@@ -2501,5 +2501,4 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .tk-user-tools { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px dashed var(--light-gray); }
 .tk-status-sel { width:auto; display:inline-block; padding:5px 8px; font-size:.8rem; margin-left:8px; }
 .cw-tabs { display:flex; gap:8px; align-items:center; margin:10px 0 12px; }
-.word-catlab { display:inline-block; font-size:.62rem; font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:var(--gray); background:var(--off-white); border:1px solid var(--light-gray); padding:2px 7px; border-radius:9px; margin:2px 0 4px; }
-.word-sifat { font-size:.76rem; color:#6d28d9; margin:2px 0 4px; }
+.teach-card { align-items:flex-start; padding:12px 10px; }
