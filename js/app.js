@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v93';
+var YDT_SURUM = 'v94';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -3641,6 +3641,7 @@ function applyDbWords(rows) {
                 ornek: r.ornek || '', ornekTr: r.ornek_tr || '', cinsiyet: r.cinsiyet || '', premium: !!r.premium };
     if (r.padej) w.padej = r.padej;
     if (r.tip) w.tip = r.tip;
+    if (r.cekim) w.cekim = r.cekim;
     if (r.cv) w.cv = r.cv;
     if (r.ncv) w.ncv = r.ncv;
     const ex = words.find(match);
@@ -3772,6 +3773,7 @@ function adminWordEdit(id) {
   document.getElementById('cw-ornek').value = r.ornek || '';
   document.getElementById('cw-ornektr').value = r.ornek_tr || '';
   document.getElementById('cw-premium').checked = !!r.premium;
+  if (r.cat === 'isim') setTimeout(() => cwCekimDoldur(r.cekim || null), 60);
   const btn = document.getElementById('cw-save-btn'); if (btn) btn.textContent = 'Değişiklikleri Kaydet';
   document.getElementById('cw-ru').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
@@ -3781,6 +3783,16 @@ async function adminWordSave() {
   const row = { ru, tr, p: null, cat: _cwVal('cw-cat'), level: _cwVal('cw-lvl'),
     cinsiyet: (_cwVal('cw-cat') === 'edat') ? null : (_cwVal('cw-gram') || null),
     tip: (_cwVal('cw-cat') === 'fiil') ? ({ 'нсв': 'НСВ', 'св': 'СВ' }[_cwVal('cw-gram')] || null) : null,
+    cekim: (function () {
+      if (_cwVal('cw-cat') !== 'isim') return null;
+      const oto = ruDecline(_cwVal('cw-ru'), _cwVal('cw-gram') || null);
+      const out = {};
+      ['rp','dp','vp','tp','pp'].forEach(k => {
+        const v = _cwVal('ck-' + k);
+        if (v && v !== oto[k]) out[k] = v;
+      });
+      return Object.keys(out).length ? out : null;
+    })(),
     padej: (_cwVal('cw-cat') === 'edat') ? cwPadejValue() : null,
     ornek: _cwVal('cw-ornek') || null, ornek_tr: _cwVal('cw-ornektr') || null,
     premium: document.getElementById('cw-premium').checked, active: true, updated_at: new Date().toISOString() };
@@ -4065,6 +4077,13 @@ async function adminTicketMail(ticketId) {
 }
 
 /* ---- Kelime formu: türe göre gramer seçenekleri ---- */
+function cwCekimDoldur(kayit) {
+  // otomatik üret; kayit (düzeltme) varsa onu yaz
+  const ru = _cwVal('cw-ru'), g = _cwVal('cw-gram');
+  const oto = ruDecline(ru, g || null);
+  const kaynak = kayit ? Object.assign({}, oto, kayit) : oto;
+  ['rp','dp','vp','tp','pp'].forEach(k => { const el = document.getElementById('ck-' + k); if (el) el.value = kaynak[k] || ''; });
+}
 const CW_GRAM_OPTS = {
   'isim': [['', 'Cinsiyet...'], ['м', 'м'], ['ж', 'ж'], ['с', 'с']],
   'sıfat': [['', 'Cinsiyet...'], ['м', 'м'], ['ж', 'ж'], ['с', 'с']],
@@ -4087,6 +4106,9 @@ function cwCatChanged(setVal) {
     }
     return;
   }
+  const ckRow = document.getElementById('cw-cekim-row');
+  if (ckRow) ckRow.style.display = (cat === 'isim') ? '' : 'none';
+  if (cat === 'isim') cwCekimDoldur();
   const opts = CW_GRAM_OPTS[cat];
   if (!opts) { sel.innerHTML = ''; sel.style.display = 'none'; return; }
   sel.style.display = '';
@@ -5368,3 +5390,517 @@ async function tMailSend(email, name) {
     uiAlert('Mail gönderilemedi: ' + ((e && e.message) || e) + '\n\nNot: Mail fonksiyonu yalnız yönetici yetkisine açıksa, öğretmen erişimi bir sonraki güncellemede sunucu tarafında açılacak.');
   }
 }
+
+/* ============================================================
+   📊 PADEJ LABORATUVARI — çekim tablosu + boşluk alıştırması
+   ============================================================ */
+const PADEJ_INFO = [
+  { ad: 'Именительный', tr: 'Yalın (kim? ne?)', soru: 'кто? что?', ek: '— (temel biçim)' },
+  { ad: 'Родительный', tr: 'İlgi (kimin? neyin?)', soru: 'кого? чего?', ek: '-а/-я, -ы/-и' },
+  { ad: 'Дательный', tr: 'Yönelme (kime? neye?)', soru: 'кому? чему?', ek: '-у/-ю, -е' },
+  { ad: 'Винительный', tr: 'Belirtme (kimi? neyi?)', soru: 'кого? что?', ek: '-а/-я, -у/-ю' },
+  { ad: 'Творительный', tr: 'Araç (kiminle? neyle?)', soru: 'кем? чем?', ek: '-ом/-ем, -ой/-ей' },
+  { ad: 'Предложный', tr: 'Bulunma (kimde? nerede?)', soru: 'о ком? о чём?', ek: '-е, -и' }
+];
+// Örnek tam çekim (стол / книга / окно)
+const PADEJ_ORNEK = {
+  masc: { w: 'стол (masa)', f: ['стол', 'стола', 'столу', 'стол', 'столом', 'о столе'] },
+  fem: { w: 'книга (kitap)', f: ['книга', 'книги', 'книге', 'книгу', 'книгой', 'о книге'] },
+  neut: { w: 'окно (pencere)', f: ['окно', 'окна', 'окну', 'окно', 'окном', 'об окне'] }
+};
+function padejTab(mode, btn) {
+  document.querySelectorAll('.padej-tabs .rec-chip').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('padej-table-view').style.display = mode === 'table' ? '' : 'none';
+  document.getElementById('padej-quiz-view').style.display = mode === 'quiz' ? '' : 'none';
+  if (mode === 'table') renderPadejTable();
+  if (mode === 'quiz') startPadejQuiz();
+}
+function renderPadejTable() {
+  const box = document.getElementById('padej-table-view'); if (!box) return;
+  box.innerHTML = `
+    <div class="padej-legend">${PADEJ_INFO.map((p, i) => `
+      <div class="padej-legend-row"><span class="padej-num">${i + 1}</span>
+        <div><b>${p.ad}</b> — ${p.tr}<div class="err-meta">Soru: ${p.soru} · Tipik ek: ${p.ek}</div></div>
+      </div>`).join('')}</div>
+    <div class="padej-table-wrap"><table class="padej-table">
+      <thead><tr><th>Hâl</th><th>Eril (m)</th><th>Dişil (ж)</th><th>Nötr (с)</th></tr></thead>
+      <tbody>${PADEJ_INFO.map((p, i) => `<tr>
+        <td class="pt-case">${p.ad}<br><small>${p.tr.split('(')[0]}</small></td>
+        <td>${PADEJ_ORNEK.masc.f[i]}</td>
+        <td>${PADEJ_ORNEK.fem.f[i]}</td>
+        <td>${PADEJ_ORNEK.neut.f[i]}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    <p class="pq-hint">💡 İpucu: Padej ekleri kelimenin cinsiyetine ve son harfine göre değişir. Yukarıdaki üç örnek en yaygın kalıpları gösterir.</p>`;
+}
+let _padejQ = null;
+function startPadejQuiz() {
+  const box = document.getElementById('padej-quiz-view'); if (!box) return;
+  const g = Object.keys(PADEJ_ORNEK)[Math.floor(Math.random() * 3)];
+  const ci = 1 + Math.floor(Math.random() * 5); // yalın hariç
+  const dogru = PADEJ_ORNEK[g].f[ci];
+  const secenekler = new Set([dogru]);
+  Object.keys(PADEJ_ORNEK).forEach(k => { PADEJ_ORNEK[k].f.forEach(f => { if (secenekler.size < 4 && f !== dogru) secenekler.add(f); }); });
+  const opts = [...secenekler].sort(() => Math.random() - 0.5);
+  _padejQ = { dogru };
+  box.innerHTML = `
+    <div class="padej-quiz-card">
+      <div class="pqz-case">${PADEJ_INFO[ci].ad} <span class="kv-lvl">${PADEJ_INFO[ci].tr}</span></div>
+      <div class="pqz-word">"${PADEJ_ORNEK[g].w}" kelimesinin bu hâldeki biçimi nedir?</div>
+      <div class="pqz-opts">${opts.map(o => `<button class="pqz-opt" onclick="padejAnswer(this, '${o}')">${o}</button>`).join('')}</div>
+      <div id="pqz-feedback" class="pqz-fb"></div>
+      <button class="set-btn" style="margin-top:14px;" onclick="startPadejQuiz()">Yeni Soru →</button>
+    </div>`;
+}
+function padejAnswer(btn, sec) {
+  const fb = document.getElementById('pqz-feedback');
+  document.querySelectorAll('.pqz-opt').forEach(b => b.disabled = true);
+  if (sec === _padejQ.dogru) {
+    btn.classList.add('correct'); fb.innerHTML = '✅ Doğru!'; fb.style.color = '#16a34a';
+    if (typeof recordTopicStat === 'function') recordTopicStat('padej', 'A1', true);
+  } else {
+    btn.classList.add('wrong'); fb.innerHTML = '❌ Yanlış. Doğrusu: <b>' + _padejQ.dogru + '</b>'; fb.style.color = '#dc2626';
+    document.querySelectorAll('.pqz-opt').forEach(b => { if (b.textContent === _padejQ.dogru) b.classList.add('correct'); });
+    if (typeof recordTopicStat === 'function') recordTopicStat('padej', 'A1', false);
+  }
+}
+
+/* ============================================================
+   🔄 НСВ/СВ EŞLEŞTİRME OYUNU
+   ============================================================ */
+let _aspectPairs = [], _aspectSel = null, _aspectMatched = 0, _aspectStart = 0, _aspectTimer = null;
+function buildAspectPairs() {
+  const seen = {};
+  const pairs = [];
+  (words || []).forEach(w => {
+    if (w.cat === 'fiil' && w.tip === 'НСВ' && w.cv && !seen[w.ru]) {
+      const es = words.find(x => x.ru === w.cv);
+      pairs.push({ nsv: w.ru, sv: w.cv, tr: w.tr });
+      seen[w.ru] = 1;
+    }
+  });
+  return pairs;
+}
+function startAspectGame() {
+  const box = document.getElementById('aspect-game'); if (!box) return;
+  const all = buildAspectPairs();
+  if (all.length < 4) { box.innerHTML = '<div class="profile-empty">Yeterli fiil çifti bulunamadı. Kelime verisi yüklendikten sonra tekrar dene.</div>'; return; }
+  const secili = all.sort(() => Math.random() - 0.5).slice(0, 6);
+  _aspectPairs = secili; _aspectSel = null; _aspectMatched = 0; _aspectStart = Date.now();
+  const sol = secili.map(p => ({ txt: p.nsv, tip: 'nsv', key: p.nsv })).sort(() => Math.random() - 0.5);
+  const sag = secili.map(p => ({ txt: p.sv, tip: 'sv', key: p.nsv })).sort(() => Math.random() - 0.5);
+  box.innerHTML = `
+    <div class="aspect-head"><span id="aspect-status">0 / ${secili.length} eşleşti</span><span id="aspect-time">0 sn</span></div>
+    <div class="aspect-cols">
+      <div class="aspect-col"><div class="aspect-col-h">НСВ (bitmemiş)</div>${sol.map(x => `<button class="aspect-tile" data-tip="nsv" data-key="${x.key}" onclick="aspectPick(this)">${x.txt}</button>`).join('')}</div>
+      <div class="aspect-col"><div class="aspect-col-h">СВ (bitmiş)</div>${sag.map(x => `<button class="aspect-tile" data-tip="sv" data-key="${x.key}" onclick="aspectPick(this)">${x.txt}</button>`).join('')}</div>
+    </div>
+    <div id="aspect-done"></div>`;
+  clearInterval(_aspectTimer);
+  _aspectTimer = setInterval(() => { const t = document.getElementById('aspect-time'); if (t) t.textContent = Math.floor((Date.now() - _aspectStart) / 1000) + ' sn'; }, 500);
+}
+function aspectPick(btn) {
+  if (btn.classList.contains('matched')) return;
+  if (!_aspectSel) {
+    _aspectSel = btn; btn.classList.add('sel'); return;
+  }
+  if (_aspectSel === btn) { btn.classList.remove('sel'); _aspectSel = null; return; }
+  // aynı sütun tipinden ikisi seçilemez
+  if (_aspectSel.dataset.tip === btn.dataset.tip) { _aspectSel.classList.remove('sel'); _aspectSel = btn; btn.classList.add('sel'); return; }
+  if (_aspectSel.dataset.key === btn.dataset.key) {
+    _aspectSel.classList.add('matched'); btn.classList.add('matched');
+    _aspectSel.classList.remove('sel'); _aspectSel = null; _aspectMatched++;
+    const st = document.getElementById('aspect-status'); if (st) st.textContent = _aspectMatched + ' / ' + _aspectPairs.length + ' eşleşti';
+    if (_aspectMatched === _aspectPairs.length) {
+      clearInterval(_aspectTimer);
+      const sure = Math.floor((Date.now() - _aspectStart) / 1000);
+      document.getElementById('aspect-done').innerHTML = `<div class="aspect-win">🎉 Tebrikler! ${sure} saniyede tamamladın.<br><button class="set-btn" style="margin-top:10px;" onclick="startAspectGame()">Yeni Oyun →</button></div>`;
+    }
+  } else {
+    const yanlis = _aspectSel;
+    btn.classList.add('shake'); yanlis.classList.add('shake');
+    setTimeout(() => { btn.classList.remove('shake', 'sel'); yanlis.classList.remove('shake', 'sel'); }, 500);
+    _aspectSel = null;
+  }
+}
+
+/* ============================================================
+   🧩 CÜMLE KURMA
+   ============================================================ */
+let _sentence = null;
+function startSentenceGame() {
+  const box = document.getElementById('sentence-game'); if (!box) return;
+  const havuz = (words || []).filter(w => w.ornek && w.ornek.split(' ').length >= 3 && w.ornek.split(' ').length <= 8);
+  if (!havuz.length) { box.innerHTML = '<div class="profile-empty">Örnek cümle bulunamadı.</div>'; return; }
+  const sec = havuz[Math.floor(Math.random() * havuz.length)];
+  const temiz = sec.ornek.replace(/[.!?]$/, '');
+  const kelimeler = temiz.split(/\s+/);
+  const karisik = [...kelimeler].sort(() => Math.random() - 0.5);
+  _sentence = { dogru: kelimeler, secilen: [], tr: sec.ornekTr || sec.tr };
+  box.innerHTML = `
+    <div class="sentence-card">
+      <div class="sc-hint">🇹🇷 ${_escHtml(_sentence.tr)}</div>
+      <div class="sc-slot" id="sc-slot"><span class="sc-placeholder">Kelimelere tıklayarak cümleyi kur ↓</span></div>
+      <div class="sc-bank" id="sc-bank">${karisik.map((k, i) => `<button class="sc-word" data-i="${i}" onclick="scPick(this, '${_escAttr(k)}')">${_escHtml(k)}</button>`).join('')}</div>
+      <div id="sc-feedback" class="pqz-fb"></div>
+      <div class="sc-actions">
+        <button class="set-btn ghost" onclick="scReset()">↺ Temizle</button>
+        <button class="set-btn" onclick="scCheck()">Kontrol Et</button>
+        <button class="set-btn ghost" onclick="startSentenceGame()">Yeni Cümle →</button>
+      </div>
+    </div>`;
+}
+function scPick(btn, word) {
+  if (btn.classList.contains('used')) return;
+  btn.classList.add('used');
+  _sentence.secilen.push({ w: word, btn });
+  renderScSlot();
+}
+function renderScSlot() {
+  const slot = document.getElementById('sc-slot');
+  if (!_sentence.secilen.length) { slot.innerHTML = '<span class="sc-placeholder">Kelimelere tıklayarak cümleyi kur ↓</span>'; return; }
+  slot.innerHTML = _sentence.secilen.map((x, i) => `<button class="sc-chosen" onclick="scRemove(${i})">${_escHtml(x.w)}</button>`).join('');
+}
+function scRemove(i) {
+  const x = _sentence.secilen[i];
+  if (x && x.btn) x.btn.classList.remove('used');
+  _sentence.secilen.splice(i, 1);
+  renderScSlot();
+  document.getElementById('sc-feedback').innerHTML = '';
+}
+function scReset() {
+  _sentence.secilen.forEach(x => { if (x.btn) x.btn.classList.remove('used'); });
+  _sentence.secilen = [];
+  renderScSlot();
+  document.getElementById('sc-feedback').innerHTML = '';
+}
+function scCheck() {
+  const fb = document.getElementById('sc-feedback');
+  const kuruldu = _sentence.secilen.map(x => x.w);
+  if (kuruldu.length !== _sentence.dogru.length) { fb.innerHTML = '⚠️ Tüm kelimeleri kullan.'; fb.style.color = '#f59e0b'; return; }
+  const dogruMu = kuruldu.every((w, i) => w === _sentence.dogru[i]);
+  if (dogruMu) {
+    fb.innerHTML = '✅ Mükemmel! Cümle doğru.'; fb.style.color = '#16a34a';
+    if (typeof recordTopicStat === 'function') recordTopicStat('cümle', 'A1', true);
+  } else {
+    fb.innerHTML = '❌ Sıralama yanlış. Doğrusu:<br><b>' + _escHtml(_sentence.dogru.join(' ')) + '</b>'; fb.style.color = '#dc2626';
+    if (typeof recordTopicStat === 'function') recordTopicStat('cümle', 'A1', false);
+  }
+}
+
+/* ============================================================
+   📖 GRAMER NOTLARI (site tarafı)
+   ============================================================ */
+let _grammarRows = [], _grammarCat = 'all';
+const GRAMMAR_CATS = { genel: 'Genel', padej: 'Padej', fiil: 'Fiiller', 'cümle': 'Cümle Yapısı' };
+async function loadGrammar() {
+  const box = document.getElementById('grammar-list'); if (!box) return;
+  try {
+    const { data } = await sb.from('content_grammar').select('*').eq('active', true).order('sort').order('created_at');
+    _grammarRows = data || [];
+  } catch (e) { _grammarRows = []; }
+  renderGrammarFilters();
+  renderGrammar();
+}
+function renderGrammarFilters() {
+  const box = document.getElementById('grammar-filters'); if (!box) return;
+  const cats = ['all', ...Object.keys(GRAMMAR_CATS)];
+  box.innerHTML = cats.map(c => `<button class="rec-chip ${c === _grammarCat ? 'active' : ''}" onclick="grammarSetCat('${c}')">${c === 'all' ? 'Tümü' : GRAMMAR_CATS[c]}</button>`).join('');
+}
+function grammarSetCat(c) { _grammarCat = c; renderGrammarFilters(); renderGrammar(); }
+function renderGrammar() {
+  const box = document.getElementById('grammar-list'); if (!box) return;
+  let list = _grammarRows;
+  if (_grammarCat !== 'all') list = list.filter(r => (r.category || 'genel') === _grammarCat);
+  if (!list.length) { box.innerHTML = '<div class="profile-empty">📖 Bu kategoride henüz not yok. Yakında eklenecek!</div>'; return; }
+  box.innerHTML = list.map(r => `
+    <div class="grammar-card">
+      <div class="grammar-head">
+        <div class="grammar-title">${_escHtml(r.title)}</div>
+        <div class="grammar-badges"><span class="kv-lvl">${_escHtml(r.level || '')}</span> <span class="cw-cat">${GRAMMAR_CATS[r.category] || r.category || ''}</span></div>
+      </div>
+      <div class="grammar-body">${_sanitizeRich(r.body || '')}</div>
+    </div>`).join('');
+}
+
+/* Sayfa açılış kancaları */
+(function () {
+  const _origShowPage = window.showPage;
+  if (typeof _origShowPage === 'function') {
+    window.showPage = function (id) {
+      _origShowPage(id);
+      try {
+        if (id === 'padejlab') renderPadejTable();
+        if (id === 'aspectmatch') startAspectGame();
+        if (id === 'sentence') startSentenceGame();
+        if (id === 'grammar') loadGrammar();
+      } catch (e) {}
+    };
+  }
+})();
+
+/* ---- Panel: Gramer notları CRUD ---- */
+let _grRows = [];
+function grRte(cmd, val) { const a = document.getElementById('gr-body'); if (a) a.focus(); try { document.execCommand(cmd, false, val || null); } catch (e) {} }
+async function adminGrammarInit() { await adminGrReload(); }
+async function adminGrReload() {
+  try { const { data } = await sb.from('content_grammar').select('*').order('sort').order('created_at'); _grRows = data || []; }
+  catch (e) { _grRows = []; }
+  renderGrList();
+}
+function renderGrList() {
+  const box = document.getElementById('gr-list'); if (!box) return;
+  if (!_grRows.length) { box.innerHTML = '<div class="profile-empty">Henüz not yok. gramer_notlari.sql çalıştırıldı mı?</div>'; return; }
+  box.innerHTML = _grRows.map(r => `
+    <div class="cw-row ${r.active === false ? 'off' : ''}">
+      <div class="cw-main" style="flex:1;"><b>${_escHtml(r.title)}</b> <span class="kv-lvl">${r.level || ''}</span> <span class="cw-cat">${GRAMMAR_CATS[r.category] || r.category || ''}</span>
+        <div class="err-meta">${_escHtml((r.body || '').replace(/<[^>]*>/g, ' ').slice(0, 80))}</div></div>
+      <div class="cw-acts">
+        <button class="mail-act" onclick="adminGrEdit('${r.id}')">✏️</button>
+        ${r.active === false
+          ? `<button class="mail-act" onclick="adminGrToggle('${r.id}', true)">↩️</button><button class="mail-act red" onclick="adminGrPurge('${r.id}')">❌</button>`
+          : `<button class="mail-act red" onclick="adminGrToggle('${r.id}', false)">🗑️</button>`}
+      </div>
+    </div>`).join('');
+}
+function adminGrClear() {
+  ['gr-id', 'gr-title'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const b = document.getElementById('gr-body'); if (b) b.innerHTML = '';
+  const btn = document.getElementById('gr-save-btn'); if (btn) btn.textContent = 'Not Ekle';
+}
+function adminGrEdit(id) {
+  const r = _grRows.find(x => x.id === id); if (!r) return;
+  document.getElementById('gr-id').value = r.id;
+  document.getElementById('gr-title').value = r.title || '';
+  document.getElementById('gr-level').value = r.level || 'A1';
+  document.getElementById('gr-cat').value = r.category || 'genel';
+  document.getElementById('gr-body').innerHTML = _sanitizeRich(r.body || '');
+  document.getElementById('gr-save-btn').textContent = 'Değişiklikleri Kaydet';
+  document.getElementById('gr-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+async function adminGrSave() {
+  const title = _cwVal('gr-title'); if (!title) { uiAlert('Başlık zorunlu.'); return; }
+  const bodyEl = document.getElementById('gr-body');
+  const body = (bodyEl && bodyEl.textContent.trim()) ? _sanitizeRich(bodyEl.innerHTML) : null;
+  const row = { title, level: _cwVal('gr-level'), category: _cwVal('gr-cat'), body, active: true };
+  const id = _cwVal('gr-id');
+  try {
+    let error;
+    if (id) ({ error } = await sb.from('content_grammar').update(row).eq('id', id));
+    else ({ error } = await sb.from('content_grammar').insert(row));
+    if (error) throw error;
+    toast('Not kaydedildi.'); adminGrClear(); adminGrReload();
+  } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e) + ' — gramer_notlari.sql çalıştı mı?'); }
+}
+async function adminGrToggle(id, aktif) { try { await sb.from('content_grammar').update({ active: aktif }).eq('id', id); adminGrReload(); } catch (e) {} }
+async function adminGrPurge(id) {
+  if (!(await uiConfirm('Bu not kalıcı olarak silinsin mi?', 'Kalıcı Sil', { danger: true }))) return;
+  try { await sb.from('content_grammar').delete().eq('id', id); adminGrReload(); } catch (e) {}
+}
+
+/* ============================================================
+   📐 PADEJ ÇEKİM MOTORU — tekil, 6 hâl (kurallı; istisna
+   panelden 'cekim' alanıyla düzeltilir ve her yerde onu kullanır)
+   ============================================================ */
+function ruDecline(ru, cinsiyet) {
+  const w = (ru || '').trim();
+  const yum = 'кгхжшщч'; // 7 harf kuralı: ы yerine и
+  const son = w.slice(-1), son2 = w.slice(-2);
+  const kok1 = w.slice(0, -1), kok2 = w.slice(0, -2);
+  let g = cinsiyet;
+  if (!g) g = /[ая]$/.test(w) ? 'ж' : (/[оеё]$/.test(w) ? 'с' : 'м');
+  const R = { ip: w };
+  if (g === 'м') {
+    if (son === 'й') { R.rp = kok1 + 'я'; R.dp = kok1 + 'ю'; R.vp = w; R.tp = kok1 + 'ем'; R.pp = kok1 + 'е'; }
+    else if (son === 'ь') { R.rp = kok1 + 'я'; R.dp = kok1 + 'ю'; R.vp = w; R.tp = kok1 + 'ем'; R.pp = kok1 + 'е'; }
+    else { const i = yum.includes(son); R.rp = w + 'а'; R.dp = w + 'у'; R.vp = w; R.tp = w + (('жшщч'.includes(son)) ? 'ем' : 'ом'); R.pp = w + 'е'; }
+  } else if (g === 'ж') {
+    if (son2 === 'ия') { R.rp = kok1 + 'и'; R.dp = kok1 + 'и'; R.vp = kok1 + 'ю'; R.tp = kok1 + 'ей'; R.pp = kok1 + 'и'; }
+    else if (son === 'я') { R.rp = kok1 + 'и'; R.dp = kok1 + 'е'; R.vp = kok1 + 'ю'; R.tp = kok1 + 'ей'; R.pp = kok1 + 'е'; }
+    else if (son === 'ь') { R.rp = kok1 + 'и'; R.dp = kok1 + 'и'; R.vp = w; R.tp = w + 'ю'; R.pp = kok1 + 'и'; }
+    else if (son === 'а') { const i = yum.includes(w.slice(-2, -1)); R.rp = kok1 + (i ? 'и' : 'ы'); R.dp = kok1 + 'е'; R.vp = kok1 + 'у'; R.tp = kok1 + (('жшщч'.includes(w.slice(-2, -1))) ? 'ей' : 'ой'); R.pp = kok1 + 'е'; }
+    else { R.rp = R.dp = R.vp = R.tp = R.pp = w; }
+  } else { // с
+    if (son2 === 'ие') { R.rp = kok1 + 'я'; R.dp = kok1 + 'ю'; R.vp = w; R.tp = kok1 + 'ем'; R.pp = kok2 + 'ии'; }
+    else if (son === 'е' || son === 'ё') { R.rp = kok1 + 'я'; R.dp = kok1 + 'ю'; R.vp = w; R.tp = kok1 + 'ем'; R.pp = kok1 + 'е'; }
+    else if (son === 'о') { R.rp = kok1 + 'а'; R.dp = kok1 + 'у'; R.vp = w; R.tp = kok1 + 'ом'; R.pp = kok1 + 'е'; }
+    else { R.rp = R.dp = R.vp = R.tp = R.pp = w; }
+  }
+  return R;
+}
+function wordCekim(w) {
+  // Panelden düzeltme varsa o kazanır; yoksa kurallı üretim
+  if (w && w.cekim && typeof w.cekim === 'object') return Object.assign(ruDecline(w.ru, w.cinsiyet), w.cekim);
+  return ruDecline(w ? w.ru : '', w ? w.cinsiyet : '');
+}
+const PADEJ_META = [
+  ['ip', 'И.п.', 'Yalın (Kim? Ne?)', 'кто? что?'],
+  ['rp', 'Р.п.', '-in hâli (Kimin?)', 'кого? чего?'],
+  ['dp', 'Д.п.', '-e hâli (Kime?)', 'кому? чему?'],
+  ['vp', 'В.п.', '-i hâli (Kimi? Neyi?)', 'кого? что?'],
+  ['tp', 'Т.п.', 'ile hâli (Kiminle?)', 'кем? чем?'],
+  ['pp', 'П.п.', '-de hâli (Kimde? Nerede?)', 'о ком? о чём?']
+];
+
+/* ---- Padej Laboratuvarı sayfa mantığı ---- */
+let _plWord = null, _plQuiz = null;
+function plSearch(q) {
+  const box = document.getElementById('pl-results'); if (!box) return;
+  q = (q || '').trim().toLowerCase();
+  if (q.length < 2) { box.innerHTML = ''; return; }
+  const list = words.filter(w => w.cat === 'isim' && (w.ru.toLowerCase().includes(q) || (w.tr || '').toLowerCase().includes(q))).slice(0, 8);
+  box.innerHTML = list.map(w => `<button class="pl-opt" onclick="plPick('${_escAttr(w.ru)}','${_escAttr(w.level)}')">${_escHtml(w.ru)} <small>${_escHtml(w.tr)}</small></button>`).join('') || '<div class="pl-none">İsim bulunamadı.</div>';
+}
+function plPick(ru, level) {
+  _plWord = words.find(w => w.ru === ru && w.level === level && w.cat === 'isim') || words.find(w => w.ru === ru && w.cat === 'isim');
+  const box = document.getElementById('pl-results'); if (box) box.innerHTML = '';
+  const inp = document.getElementById('pl-search'); if (inp) inp.value = ru;
+  plRenderTable();
+}
+function plRandom() {
+  const isimler = words.filter(w => w.cat === 'isim');
+  if (!isimler.length) return;
+  _plWord = isimler[Math.floor(Math.random() * isimler.length)];
+  const inp = document.getElementById('pl-search'); if (inp) inp.value = _plWord.ru;
+  plRenderTable();
+}
+function plRenderTable() {
+  const box = document.getElementById('pl-table'); if (!box || !_plWord) return;
+  const c = wordCekim(_plWord);
+  const cinsAd = _plWord.cinsiyet === 'ж' ? 'ж (dişil)' : _plWord.cinsiyet === 'с' ? 'с (nötr)' : 'м (eril)';
+  box.innerHTML = `
+    <div class="pl-head"><b>${_escHtml(_plWord.ru)}</b> — ${_escHtml(_plWord.tr || '')} <span class="kv-lvl">${cinsAd}</span>
+      <button class="mail-act" onclick="speak('${_escAttr(_plWord.ru)}')">🔊</button></div>
+    <table class="pl-t"><thead><tr><th>Hâl</th><th>Soru</th><th>Biçim</th></tr></thead><tbody>
+    ${PADEJ_META.map(m => `<tr><td><b>${m[1]}</b><br><small>${m[2]}</small></td><td><i>${m[3]}</i></td><td class="pl-form">${_escHtml(c[m[0]] || '—')}</td></tr>`).join('')}
+    </tbody></table>
+    <p class="pq-hint">Not: В.п. (belirtme) cansız isimlerde yalın hâlle aynıdır; canlılarda Р.п. biçimi kullanılır. Otomatik tablo kurallıdır — istisna görürsen panelden düzeltilebilir.</p>`;
+}
+function plStartQuiz() {
+  const isimler = words.filter(w => w.cat === 'isim' && w.ru.length > 2);
+  if (isimler.length < 5) { uiAlert('Yeterli isim yok.'); return; }
+  const sorular = [];
+  const kullanilan = new Set();
+  while (sorular.length < 10 && kullanilan.size < isimler.length) {
+    const w = isimler[Math.floor(Math.random() * isimler.length)];
+    if (kullanilan.has(w.ru)) continue;
+    kullanilan.add(w.ru);
+    const m = PADEJ_META[1 + Math.floor(Math.random() * 5)]; // ip hariç
+    const c = wordCekim(w);
+    if (!c[m[0]] || c[m[0]] === w.ru && m[0] !== 'vp') { if (m[0] !== 'vp') continue; }
+    sorular.push({ w, key: m[0], meta: m, dogru: c[m[0]] });
+  }
+  _plQuiz = { sorular, i: 0, dogru: 0 };
+  plQuizRender();
+}
+function plQuizRender() {
+  const box = document.getElementById('pl-quiz'); if (!box) return;
+  const q = _plQuiz.sorular[_plQuiz.i];
+  if (!q) {
+    box.innerHTML = `<div class="pl-sonuc">🏁 Bitti! <b>${_plQuiz.dogru}/${_plQuiz.sorular.length}</b> doğru.
+      <button class="set-btn" onclick="plStartQuiz()">Tekrar</button></div>`;
+    try { if (typeof recordActivity === 'function') recordActivity('padej', _plQuiz.sorular.length); } catch (e) {}
+    return;
+  }
+  box.innerHTML = `<div class="pl-q">
+    <div class="pl-q-head">Soru ${_plQuiz.i + 1}/${_plQuiz.sorular.length} · <b>${_escHtml(q.w.ru)}</b> <small>(${_escHtml(q.w.tr || '')})</small></div>
+    <div class="pl-q-ask">${q.meta[1]} — ${q.meta[2]} <i>(${q.meta[3]})</i> biçimini yaz:</div>
+    <div class="pq-row2"><input id="pl-answer" class="pq-input" autocomplete="off" placeholder="Cevabın..." onkeydown="if(event.key==='Enter')plQuizCheck()">
+    <button class="set-btn" onclick="plQuizCheck()">Kontrol</button></div>
+    <div id="pl-feedback" class="pl-fb"></div></div>`;
+  setTimeout(() => { const el = document.getElementById('pl-answer'); if (el) el.focus(); }, 50);
+}
+function plQuizCheck() {
+  const q = _plQuiz.sorular[_plQuiz.i];
+  const el = document.getElementById('pl-answer');
+  const fb = document.getElementById('pl-feedback');
+  const cevap = (el.value || '').trim().toLowerCase().replace(/ё/g, 'е');
+  const dogru = (q.dogru || '').toLowerCase().replace(/ё/g, 'е');
+  if (!cevap) return;
+  if (cevap === dogru) {
+    _plQuiz.dogru++;
+    fb.innerHTML = '✅ Doğru!';
+    fb.className = 'pl-fb ok';
+  } else {
+    fb.innerHTML = `❌ Doğrusu: <b>${_escHtml(q.dogru)}</b>`;
+    fb.className = 'pl-fb no';
+  }
+  el.disabled = true;
+  setTimeout(() => { _plQuiz.i++; plQuizRender(); }, 1400);
+}
+
+/* ---- 📖 Gramer Notları (site) ---- */
+let _gNotes = [];
+async function loadGrammarNotes() {
+  try {
+    const { data } = await sb.from('grammar_notes').select('*').eq('active', true).order('sort').limit(500);
+    _gNotes = data || [];
+  } catch (e) { _gNotes = []; }
+  const box = document.getElementById('gn-site-list'); if (!box) return;
+  if (!_gNotes.length) { box.innerHTML = '<div class="profile-empty">Henüz gramer notu eklenmedi — yakında! 📖</div>'; return; }
+  box.innerHTML = _gNotes.map((n, i) => `
+    <div class="gn-card">
+      <button class="gn-title" onclick="this.parentElement.classList.toggle('open')">📖 ${_escHtml(n.title)} <span class="gn-arrow">▾</span></button>
+      <div class="gn-body">${_sanitizeRich(n.body || '')}</div>
+    </div>`).join('');
+}
+
+/* ---- Panel: Gramer Notları CRUD ---- */
+let _gnRows = [];
+async function adminGnInit() {
+  try { const { data } = await sb.from('grammar_notes').select('*').order('sort'); _gnRows = data || []; }
+  catch (e) { _gnRows = []; }
+  const box = document.getElementById('gn-list'); if (!box) return;
+  box.innerHTML = _gnRows.length ? _gnRows.map(n => `
+    <div class="cw-row ${n.active === false ? 'off' : ''}">
+      <div class="cw-main"><b>${_escHtml(n.title)}</b>${n.active === false ? ' <span class="mail-member no">Gizli</span>' : ''}
+        <div class="err-meta">${_escHtml((n.body || '').replace(/<[^>]*>/g, ' ').slice(0, 90))}</div></div>
+      <div class="cw-acts">
+        <button class="mail-act" onclick="adminGnEdit('${n.id}')">✏️</button>
+        ${n.active === false
+          ? `<button class="mail-act" onclick="adminGnFlag('${n.id}', true)">↩️</button>
+             <button class="mail-act red" onclick="adminGnPurge('${n.id}')">❌</button>`
+          : `<button class="mail-act red" onclick="adminGnFlag('${n.id}', false)">🗑️</button>`}
+      </div>
+    </div>`).join('') : '<div class="profile-empty">Henüz not yok — ilkini yukarıdan ekle! (gramer_merkezi.sql çalıştırıldı mı?)</div>';
+}
+function rteFor(id, cmd, val) {
+  const area = document.getElementById(id); if (area) area.focus();
+  try { document.execCommand(cmd, false, val || null); } catch (e) {}
+}
+function adminGnClear() {
+  document.getElementById('gn-id').value = '';
+  document.getElementById('gn-title').value = '';
+  document.getElementById('gn-body').innerHTML = '';
+  document.getElementById('gn-save-btn').textContent = 'Not Ekle';
+}
+function adminGnEdit(id) {
+  const n = _gnRows.find(x => x.id === id); if (!n) return;
+  document.getElementById('gn-id').value = n.id;
+  document.getElementById('gn-title').value = n.title || '';
+  document.getElementById('gn-body').innerHTML = _sanitizeRich(n.body || '');
+  document.getElementById('gn-save-btn').textContent = 'Değişiklikleri Kaydet';
+  document.getElementById('gn-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+async function adminGnSave() {
+  const title = (document.getElementById('gn-title') || {}).value.trim();
+  const bodyEl = document.getElementById('gn-body');
+  const body = bodyEl && (bodyEl.textContent || '').trim() ? bodyEl.innerHTML : null;
+  if (!title) { uiAlert('Başlık zorunlu.'); return; }
+  const id = (document.getElementById('gn-id') || {}).value;
+  try {
+    let error;
+    if (id) ({ error } = await sb.from('grammar_notes').update({ title, body }).eq('id', id));
+    else ({ error } = await sb.from('grammar_notes').insert({ title, body, active: true }));
+    if (error) throw error;
+    toast('Not kaydedildi.');
+    adminGnClear(); adminGnInit(); loadGrammarNotes();
+  } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e) + ' — gramer_merkezi.sql çalıştırıldı mı?'); }
+}
+async function adminGnFlag(id, aktif) { try { await sb.from('grammar_notes').update({ active: aktif }).eq('id', id); adminGnInit(); loadGrammarNotes(); } catch (e) {} }
+async function adminGnPurge(id) {
+  if (!(await uiConfirm('Bu not temelli silinsin mi?', 'Temelli Sil', { danger: true }))) return;
+  try { await sb.from('grammar_notes').delete().eq('id', id); adminGnInit(); loadGrammarNotes(); } catch (e) {}
+}
+setTimeout(function () { try { if (typeof sb !== 'undefined' && sb) loadGrammarNotes(); } catch (e) {} }, 1400);
