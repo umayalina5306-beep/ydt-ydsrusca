@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=92">
+<link rel="stylesheet" href="css/style.css?v=93">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=92" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=93" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words">Kelimeler</button></li>
@@ -755,12 +755,16 @@
 
 <!-- ===== VIDEO ===== -->
 <div id="page-teacher" class="page">
-  <section class="words-section">
-    <div class="words-header"><div>
-      <h2>Öğretmen <span>Paneli</span></h2>
-      <p>Sana atanan öğrencilerin ilerlemesi burada görünecek. Bu ekranın tam sürümü (öğrenci analizleri, bildirim ve mail gönderme) bir sonraki güncellemede geliyor.</p>
-    </div></div>
-    <div class="profile-empty">🎓 Öğrenci listen ve analiz kartları çok yakında burada.</div>
+  <section class="words-section" style="max-width:1180px; margin:0 auto; padding:28px 20px 48px;">
+    <div class="words-header">
+      <div>
+        <h2>Öğretmen <span>Paneli</span></h2>
+        <p>Sana atanan öğrencilerin ilerlemesi. Bildirim gönder, mail yolla, gelişimi izle.</p>
+      </div>
+      <button class="set-btn ghost" onclick="loadTeacherPanel()">🔄 Yenile</button>
+    </div>
+    <div id="teach-summary" class="pq-stats" style="margin-bottom:14px;">Yükleniyor...</div>
+    <div id="teach-list"><div class="profile-empty">Yükleniyor...</div></div>
   </section>
 </div>
 
@@ -1216,10 +1220,6 @@
               <label><input type="checkbox" value="Т.п.">Т.п. (Instr.)</label>
               <label><input type="checkbox" value="П.п.">П.п. (Prep.)</label>
             </div>
-              <div id="cw-sifat-row" class="pq-row2" style="display:none;">
-                <input id="cw-sifat-f" class="pq-input" placeholder="Dişil biçim (boşsa otomatik: -ая/-яя)" autocomplete="off">
-                <input id="cw-sifat-n" class="pq-input" placeholder="Nötr biçim (boşsa otomatik: -ое/-ее)" autocomplete="off">
-              </div>
             <input id="cw-ornek" class="pq-input" placeholder="Örnek cümle (Rusça, opsiyonel)" autocomplete="off">
             <input id="cw-ornektr" class="pq-input" placeholder="Örnek cümle (Türkçe, opsiyonel)" autocomplete="off">
             <label class="cw-check"><input type="checkbox" id="cw-premium"> Premium içerik (yalnız premium üyeler görür — ileride)</label>
@@ -1259,12 +1259,6 @@
                   <label class="cwbp-lbl">Padej</label>
                   <div class="cwbp-pd" id="cwbp-padej"></div>
                 </div>
-                <div id="cwbp-sifat-wrap" style="display:none;">
-                  <label class="cwbp-lbl">Dişil biçim</label>
-                  <input id="cwbp-sifat-f" class="pq-input" oninput="cwbProp('sifat_f', this.value)" placeholder="Boşsa otomatik türetilir">
-                  <label class="cwbp-lbl">Nötr biçim</label>
-                  <input id="cwbp-sifat-n" class="pq-input" oninput="cwbProp('sifat_n', this.value)" placeholder="Boşsa otomatik türetilir">
-                </div>
                 <label class="cwbp-lbl">Durum</label>
                 <select id="cwbp-prem" class="pq-input" onchange="cwbProp('premium', this.value === '1')"><option value="">Normal</option><option value="1">👑 Premium</option></select>
                 <label class="cwbp-lbl">Örnek Cümle (Rusça)</label>
@@ -1279,7 +1273,7 @@
 
           <div class="admin-notif-card">
             <h3 class="an-h3">📦 Toplu Yükleme (dosya / JSON)</h3>
-            <p class="pq-hint">Dosya (.json / .csv / .xlsx) yükle veya JSON'u doğrudan yapıştır. Sütun/alan adları: ru, tr, level, cat (opsiyonel: cinsiyet, padej, tip, cv, ncv, sifat_f, sifat_n, ornek, ornek_tr, premium). Tekrarlı kayıtlar otomatik ayıklanır. Aynı "ru" varsa üzerine yazılır.</p>
+            <p class="pq-hint">Dosya (.json / .csv / .xlsx) yükle veya JSON'u doğrudan yapıştır. Sütun/alan adları: ru, tr, level, cat (opsiyonel: cinsiyet, padej, tip, cv, ncv, ornek, ornek_tr, premium). Tekrarlı kayıtlar otomatik ayıklanır. Aynı "ru" varsa üzerine yazılır.</p>
             <div class="pq-row2">
               <input type="file" id="cw-file" class="pq-input" accept=".json,.csv,.xlsx,.xls">
               <button class="set-btn" onclick="adminWordsImportFile()">Dosyayı İçe Aktar</button>
@@ -1669,12 +1663,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=92"></script>
-<script defer src="js/auth.js?v=92"></script>
-<script defer src="js/admin.js?v=92"></script>
-<script defer src="js/profile.js?v=92"></script>
-<script defer src="js/extras.js?v=92"></script>
-<script defer src="js/app.js?v=92"></script>
+<script defer src="js/supabase-config.js?v=93"></script>
+<script defer src="js/auth.js?v=93"></script>
+<script defer src="js/admin.js?v=93"></script>
+<script defer src="js/profile.js?v=93"></script>
+<script defer src="js/extras.js?v=93"></script>
+<script defer src="js/app.js?v=93"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
