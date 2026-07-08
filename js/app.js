@@ -6496,30 +6496,65 @@ function cdHaftalikEkle(n) {
     renderCountdown();
   } catch (e) {}
 }
+/* ──────────────────────────────────────────────
+   SINAV GERİ SAYIM FLOATING WIDGET
+   Panelden admin tarih belirler → tüm kullanıcılar görür
+   ────────────────────────────────────────────── */
+let _examDates = { ydt: null, yds: null, eyds: null };
+
+async function fetchExamDates() {
+  try {
+    if (!sb) return;
+    const { data } = await sb.from('site_settings')
+      .select('key, value')
+      .in('key', ['ydt_date', 'yds_date', 'eyds_date']);
+    if (!data) return;
+    for (const row of data) {
+      if (row.key === 'ydt_date')  _examDates.ydt  = row.value || null;
+      if (row.key === 'yds_date')  _examDates.yds  = row.value || null;
+      if (row.key === 'eyds_date') _examDates.eyds = row.value || null;
+    }
+    renderExamCountdowns();
+  } catch (e) {}
+}
+
+function _examDaysLeft(dateStr) {
+  if (!dateStr) return null;
+  const diff = Math.ceil((new Date(dateStr + 'T09:00:00') - new Date()) / 864e5);
+  return diff;
+}
+
+function renderExamCountdowns() {
+  const wrap = document.getElementById('exam-countdown-wrap');
+  if (!wrap) return;
+  const exams = [
+    { key: 'ydt',  label: 'YDT',   date: _examDates.ydt  },
+    { key: 'yds',  label: 'YDS',   date: _examDates.yds  },
+    { key: 'eyds', label: 'e-YDS', date: _examDates.eyds },
+  ];
+  const aktif = exams.filter(e => e.date);
+  if (!aktif.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  wrap.innerHTML = aktif.map(e => {
+    const g = _examDaysLeft(e.date);
+    const renk = g <= 30 ? '#ef4444' : g <= 90 ? '#f59e0b' : 'var(--gold)';
+    const etiket = g === null ? '—'
+      : g < 0   ? 'Geçti'
+      : g === 0 ? '🎓 Bugün!'
+      : `<b style="color:${renk}">${g}</b> gün`;
+    return `<div class="ec-item"><span class="ec-label">${e.label}</span><span class="ec-days">${etiket}</span></div>`;
+  }).join('');
+}
+
+/* Haftalık hedef barı (countdown-card'dan bağımsız olarak çalışır) */
 function renderCountdown() {
-  const card = document.getElementById('countdown-card'); if (!card) return;
-  const tarih = localStorage.getItem('ydt_exam_date');
-  const gunEl = document.getElementById('cd-days');
-  if (tarih) {
-    const kalan = Math.ceil((new Date(tarih + 'T09:00:00') - new Date()) / 864e5);
-    gunEl.innerHTML = kalan > 0 ? `YDS'ye <b>${kalan}</b> gün` : (kalan === 0 ? '🎓 Sınav bugün — başarılar!' : 'Sınav tarihi geçti — yenisini belirle');
-  } else gunEl.textContent = 'Sınav tarihini belirle 👉';
   const hedef = parseInt(localStorage.getItem('ydt_week_goal'), 10) || 100;
   const yapilan = parseInt(localStorage.getItem('ydt_hafta_' + _haftaKey()), 10) || 0;
   const yuzde = Math.min(100, Math.round(100 * yapilan / hedef));
   const bar = document.getElementById('cd-bar-fill');
   if (bar) { bar.style.width = yuzde + '%'; bar.style.background = yuzde >= 100 ? '#16a34a' : 'var(--gold)'; }
   const txt = document.getElementById('cd-goal-txt');
-  if (txt) txt.innerHTML = `Bu hafta: <b>${yapilan}</b> / ${hedef} soru-aktivite ${yuzde >= 100 ? '· 🏆 Hedef tamam!' : ''}`;
-}
-async function cdSetDate() {
-  const mevcut = localStorage.getItem('ydt_exam_date') || '';
-  const t = await uiPrompt('Sınav tarihi (YYYY-AA-GG):', { title: '🎯 Sınav Geri Sayımı', value: mevcut, placeholder: '2026-11-15' });
-  if (t === null) return;
-  const d = new Date((t || '').trim() + 'T00:00:00');
-  if (isNaN(d.getTime())) { uiAlert('Geçerli bir tarih gir (örn: 2026-11-15).'); return; }
-  localStorage.setItem('ydt_exam_date', t.trim());
-  renderCountdown();
+  if (txt) txt.innerHTML = `Bu hafta: <b>${yapilan}</b> / ${hedef} ${yuzde >= 100 ? '· 🏆 Hedef tamam!' : ''}`;
 }
 async function cdSetGoal() {
   const mevcut = localStorage.getItem('ydt_week_goal') || '100';
@@ -6530,4 +6565,41 @@ async function cdSetGoal() {
   localStorage.setItem('ydt_week_goal', String(n));
   renderCountdown();
 }
-setTimeout(function () { try { renderCountdown(); } catch (e) {} }, 600);
+setTimeout(function () {
+  try { renderCountdown(); } catch (e) {}
+  try { fetchExamDates(); } catch (e) {}
+}, 600);
+
+/* ── Admin: Sınav Tarihleri kaydet/yükle ── */
+async function adminLoadExamDates() {
+  try {
+    if (!sb) return;
+    const { data } = await sb.from('site_settings')
+      .select('key, value').in('key', ['ydt_date', 'yds_date', 'eyds_date']);
+    if (!data) return;
+    const map = {};
+    for (const r of data) map[r.key] = r.value || '';
+    const f = id => { const el = document.getElementById(id); if (el) el.value = map[id] || ''; };
+    f('set-ydt-date'); f('set-yds-date'); f('set-eyds-date');
+  } catch (e) {}
+}
+async function adminSaveExamDates() {
+  try {
+    const get = id => (document.getElementById(id) || {}).value || '';
+    const pairs = [
+      { key: 'ydt_date',  value: get('set-ydt-date')  },
+      { key: 'yds_date',  value: get('set-yds-date')  },
+      { key: 'eyds_date', value: get('set-eyds-date') },
+    ];
+    for (const p of pairs) {
+      if (p.value && isNaN(new Date(p.value + 'T00:00:00').getTime())) {
+        uiAlert('Geçersiz tarih: ' + p.key + '. Format: YYYY-AA-GG'); return;
+      }
+    }
+    for (const p of pairs) {
+      await sb.from('site_settings').upsert({ key: p.key, value: p.value }, { onConflict: 'key' });
+    }
+    uiAlert('Sınav tarihleri kaydedildi ✅');
+    await fetchExamDates(); // Floating widget'ı güncelle
+  } catch (e) { uiAlert('Kaydedilemedi: ' + (e.message || e)); }
+}
