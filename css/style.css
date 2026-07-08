@@ -2626,3 +2626,47 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 #cd-bar-fill { height:100%; width:0; border-radius:6px; transition:width .3s; }
 .cd-goal-txt { color:#e8e8e8; font-size:.88rem; }
 @media (max-width:700px){ .cd-card, .vid-cols { grid-template-columns:1fr; } }
+
+/* ── Exam Countdown Floating Widget ── */
+.exam-countdown-float {
+  position: fixed;
+  bottom: 90px; /* pomodoro FAB'ın (~70px) üstünde */
+  right: 18px;
+  z-index: 998;
+  background: rgba(15,15,20,.92);
+  border: 1px solid rgba(212,164,24,.5);
+  border-radius: 14px;
+  padding: 10px 14px;
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 4px 18px rgba(0,0,0,.4);
+  min-width: 120px;
+}
+.ec-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+.ec-label {
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: .8;
+}
+.ec-days {
+  font-size: .9rem;
+  color: #fff;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ec-days b { font-size: 1.05rem; }
+/* Haftalık hedef card güncellendi: tek sütun */
+.cd-card {
+  display: block !important;
+  grid-template-columns: unset !important;
+}
