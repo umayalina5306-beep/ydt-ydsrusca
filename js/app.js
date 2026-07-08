@@ -6461,7 +6461,23 @@ function tfKonus() {
     fb.className = 'pl-fb ' + (enIyi >= 75 ? 'ok' : 'no');
     try { logActivity('telaffuz', 1); } catch (e) {}
   };
-  r.onerror = e => { fb.textContent = 'Mikrofon hatası: ' + (e.error || '') + ' (izin verdiğinden emin ol)'; fb.className = 'pl-fb no'; };
+  r.onerror = e => {
+    if (e.error === 'no-speech') {
+      fb.textContent = '🎙️ Ses algılanamadı — butona basıp tekrar dene ya da daha yüksek sesle söyle.';
+      fb.className = 'pl-fb';
+    } else if (e.error === 'aborted') {
+      /* kullanıcı yeniden bastı, sessizce geç */
+    } else {
+      fb.textContent = 'Mikrofon hatası: ' + (e.error || '') + ' (tarayıcı izinlerini kontrol et)';
+      fb.className = 'pl-fb no';
+    }
+  };
+  r.onend = () => {
+    if (fb.textContent === '🎙️ Dinliyorum... şimdi söyle!') {
+      fb.textContent = '🎙️ Ses algılanamadı — tekrar dene.';
+      fb.className = 'pl-fb';
+    }
+  };
   r.start();
 }
 
