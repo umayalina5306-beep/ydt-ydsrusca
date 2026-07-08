@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=94">
+<link rel="stylesheet" href="css/style.css?v=95">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=94" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=95" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('words')" id="nav-words">Kelimeler</button></li>
@@ -56,7 +56,6 @@
     <li><button onclick="showPage('quiz')" id="nav-quiz">Testler</button></li>
     <li><button onclick="showPage('video')" id="nav-video">Video Dersler</button></li>
     <li><button onclick="showPage('recs')" id="nav-recs">Öneriler</button></li>
-    <li><button onclick="showPage('practice')" id="nav-practice">Alıştırmalar</button></li>
     <li><button onclick="showPage('pricing')" id="nav-pricing">Fiyatlar</button></li>
   </ul>
   <div class="nav-auth">
@@ -96,8 +95,22 @@
         <div><div class="hero-stat-num">50+</div><div class="hero-stat-label">Video Ders</div></div>
         <div><div class="hero-stat-num">500+</div><div class="hero-stat-label">Test Sorusu</div></div>
       </div>
+      <div id="goal-bar" class="goal-bar" style="display:none;"></div>
     </div>
-  </section>
+  
+      <div class="cd-card" id="countdown-card">
+        <div class="cd-half">
+          <div class="cd-title">🎯 Sınav Geri Sayımı</div>
+          <div id="cd-days" class="cd-days">—</div>
+          <button class="mail-act" onclick="cdSetDate()">📅 Tarih Belirle</button>
+        </div>
+        <div class="cd-half">
+          <div class="cd-title">📈 Haftalık Hedef <button class="mail-act" onclick="cdSetGoal()">✏️ Düzenle</button></div>
+          <div class="cd-bar"><div id="cd-bar-fill"></div></div>
+          <div id="cd-goal-txt" class="cd-goal-txt">—</div>
+        </div>
+      </div>
+</section>
 
   <section class="features">
     <div class="section-header">
@@ -784,9 +797,29 @@
       <div id="gn-site-list"><div class="profile-empty">Yükleniyor...</div></div>
     </div>
 
-    <div class="admin-notif-card" style="opacity:.75;">
-      <h3 class="an-h3">🎮 Yakında Burada</h3>
-      <p class="pq-hint">НСВ/СВ eşleştirme oyunu ve cümle kurma alıştırması bir sonraki güncellemeyle bu sayfaya eklenecek.</p>
+    <div class="admin-notif-card">
+      <h3 class="an-h3">🎮 НСВ/СВ Eşleştirme Oyunu</h3>
+      <p class="pq-hint">Soldaki НСВ (tamamlanmamış) fiili sağdaki СВ (tamamlanmış) eşiyle eşleştir.</p>
+      <button class="set-btn" onclick="vidStart()">🎮 Oyunu Başlat (6 çift)</button>
+      <div id="vid-game"></div>
+    </div>
+
+    <div class="admin-notif-card">
+      <h3 class="an-h3">🧩 Cümle Kurma</h3>
+      <p class="pq-hint">Karışık kelimelere tıklayarak doğru Rusça cümleyi kur. Türkçesi ipucun.</p>
+      <button class="set-btn" onclick="ckStart()">🧩 Başlat (5 cümle)</button>
+      <div id="ck-game"></div>
+    </div>
+
+    <div class="admin-notif-card">
+      <h3 class="an-h3">🎤 Telaffuz Pratiği</h3>
+      <p class="pq-hint">Kelimeyi dinle, mikrofona söyle — tarayıcı seni puanlasın. (Chrome/Edge önerilir)</p>
+      <div id="tf-word" class="pl-head">Kelime yükleniyor...</div>
+      <div class="pq-row2">
+        <button class="set-btn" onclick="tfKonus()">🎙️ Söyle</button>
+        <button class="set-btn ghost" onclick="tfYeni()">🎲 Yeni Kelime</button>
+      </div>
+      <div id="tf-fb" class="pl-fb"></div>
     </div>
   </section>
 </div>
@@ -802,83 +835,6 @@
     </div>
     <div id="teach-summary" class="pq-stats" style="margin-bottom:14px;">Yükleniyor...</div>
     <div id="teach-list"><div class="profile-empty">Yükleniyor...</div></div>
-  </section>
-</div>
-
-<div id="page-practice" class="page">
-  <section class="words-section" style="max-width:1180px; margin:0 auto; padding:28px 20px 48px;">
-    <div class="words-header"><div>
-      <h2>Alıştırma <span>Laboratuvarı</span></h2>
-      <p>Gramerini oyunlaştırılmış alıştırmalarla pekiştir. YDS/YDT'nin kalbi burada.</p>
-    </div></div>
-    <div class="practice-grid">
-      <div class="practice-card" onclick="showPage('padejlab')">
-        <div class="pc-emoji">📊</div><div class="pc-title">Padej Laboratuvarı</div>
-        <div class="pc-desc">6 hâlin çekim tablosu + boşluk doldurma alıştırması.</div>
-      </div>
-      <div class="practice-card" onclick="showPage('aspectmatch')">
-        <div class="pc-emoji">🔄</div><div class="pc-title">НСВ/СВ Eşleştirme</div>
-        <div class="pc-desc">Fiil görünüş çiftlerini eşleştir — süreli oyun.</div>
-      </div>
-      <div class="practice-card" onclick="showPage('sentence')">
-        <div class="pc-emoji">🧩</div><div class="pc-title">Cümle Kurma</div>
-        <div class="pc-desc">Karışık kelimeleri doğru sıraya diz.</div>
-      </div>
-      <div class="practice-card" onclick="showPage('grammar')">
-        <div class="pc-emoji">📖</div><div class="pc-title">Gramer Notları</div>
-        <div class="pc-desc">Konu anlatımı kartları — seviyeye göre.</div>
-      </div>
-    </div>
-  </section>
-</div>
-
-<div id="page-padejlab" class="page">
-  <section class="words-section" style="max-width:1000px; margin:0 auto; padding:28px 20px 48px;">
-    <div class="words-header"><div>
-      <button class="back-btn" onclick="showPage('practice')">← Geri</button>
-      <h2>Padej <span>Laboratuvarı</span></h2>
-      <p>Rusçanın 6 hâli. Tabloyu incele, sonra alıştırmayla pekiştir.</p>
-    </div></div>
-    <div class="padej-tabs">
-      <button class="rec-chip active" onclick="padejTab('table', this)">📋 Çekim Tablosu</button>
-      <button class="rec-chip" onclick="padejTab('quiz', this)">✏️ Alıştırma</button>
-    </div>
-    <div id="padej-table-view"></div>
-    <div id="padej-quiz-view" style="display:none;"></div>
-  </section>
-</div>
-
-<div id="page-aspectmatch" class="page">
-  <section class="words-section" style="max-width:900px; margin:0 auto; padding:28px 20px 48px;">
-    <div class="words-header"><div>
-      <button class="back-btn" onclick="showPage('practice')">← Geri</button>
-      <h2>НСВ/СВ <span>Eşleştirme</span></h2>
-      <p>Bitmemiş (НСВ) ve bitmiş (СВ) fiil çiftlerini eşleştir.</p>
-    </div></div>
-    <div id="aspect-game"></div>
-  </section>
-</div>
-
-<div id="page-sentence" class="page">
-  <section class="words-section" style="max-width:820px; margin:0 auto; padding:28px 20px 48px;">
-    <div class="words-header"><div>
-      <button class="back-btn" onclick="showPage('practice')">← Geri</button>
-      <h2>Cümle <span>Kurma</span></h2>
-      <p>Karışık kelimeleri doğru sıraya dizerek cümleyi tamamla.</p>
-    </div></div>
-    <div id="sentence-game"></div>
-  </section>
-</div>
-
-<div id="page-grammar" class="page">
-  <section class="words-section" style="max-width:1000px; margin:0 auto; padding:28px 20px 48px;">
-    <div class="words-header"><div>
-      <button class="back-btn" onclick="showPage('practice')">← Geri</button>
-      <h2>Gramer <span>Notları</span></h2>
-      <p>Konu anlatımı kartları. Seviyene uygun konuyu seç.</p>
-    </div></div>
-    <div class="grammar-filters" id="grammar-filters"></div>
-    <div id="grammar-list"><div class="profile-empty">Yükleniyor...</div></div>
   </section>
 </div>
 
@@ -1288,7 +1244,6 @@
           <button class="psb-item" id="asb-pquest" onclick="adminNav('pquest')"><span class="psb-ic">📖</span> Paragraf Soruları</button>
           <button class="psb-item" id="asb-videos" onclick="adminNav('videos')"><span class="psb-ic">🎬</span> Videolar</button>
           <button class="psb-item" id="asb-recs" onclick="adminNav('recs')"><span class="psb-ic">⭐</span> Öneriler</button>
-          <button class="psb-item" id="asb-grammar" onclick="adminNav('grammar')"><span class="psb-ic">📐</span> Gramer Notları</button>
           <button class="psb-item" id="asb-grammar" onclick="adminNav('grammar')"><span class="psb-ic">📖</span> Gramer Notları</button>
           <button class="psb-item" id="asb-visits" onclick="adminNav('visits')"><span class="psb-ic">📈</span> Ziyaret & SEO</button>
           <button class="psb-item" id="asb-settings" onclick="adminNav('settings')"><span class="psb-ic">⚙️</span> Site Ayarları</button>
@@ -1848,12 +1803,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=94"></script>
-<script defer src="js/auth.js?v=94"></script>
-<script defer src="js/admin.js?v=94"></script>
-<script defer src="js/profile.js?v=94"></script>
-<script defer src="js/extras.js?v=94"></script>
-<script defer src="js/app.js?v=94"></script>
+<script defer src="js/supabase-config.js?v=95"></script>
+<script defer src="js/auth.js?v=95"></script>
+<script defer src="js/admin.js?v=95"></script>
+<script defer src="js/profile.js?v=95"></script>
+<script defer src="js/extras.js?v=95"></script>
+<script defer src="js/app.js?v=95"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
