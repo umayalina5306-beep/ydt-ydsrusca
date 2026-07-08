@@ -99,16 +99,9 @@
     </div>
   
       <div class="cd-card" id="countdown-card">
-        <div class="cd-half">
-          <div class="cd-title">🎯 Sınav Geri Sayımı</div>
-          <div id="cd-days" class="cd-days">—</div>
-          <button class="mail-act" onclick="cdSetDate()">📅 Tarih Belirle</button>
-        </div>
-        <div class="cd-half">
-          <div class="cd-title">📈 Haftalık Hedef <button class="mail-act" onclick="cdSetGoal()">✏️ Düzenle</button></div>
-          <div class="cd-bar"><div id="cd-bar-fill"></div></div>
-          <div id="cd-goal-txt" class="cd-goal-txt">—</div>
-        </div>
+        <div class="cd-title">📈 Haftalık Hedef <button class="mail-act" onclick="cdSetGoal()">✏️ Düzenle</button></div>
+        <div class="cd-bar"><div id="cd-bar-fill"></div></div>
+        <div id="cd-goal-txt" class="cd-goal-txt">—</div>
       </div>
 </section>
 
@@ -1699,6 +1692,16 @@
           <h2 class="profile-h2">Site Ayarları</h2>
           <p class="profile-sub">Site genelini etkileyen ayarlar.</p>
           <div class="admin-notif-card">
+            <h3 class="an-h3">📅 Sınav Tarihleri</h3>
+            <p class="pq-hint">Girilen tarihler tüm kullanıcılara pomodoro widgetinin üstünde kalan gün sayısı olarak gösterilir. Boş bırakılırsa o sınav gösterilmez.</p>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin:10px 0;">
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;">YDT Tarihi<input id="set-ydt-date" type="date" class="an-textarea" style="padding:6px 10px;width:160px;font-size:14px;"></label>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;">YDS Tarihi<input id="set-yds-date" type="date" class="an-textarea" style="padding:6px 10px;width:160px;font-size:14px;"></label>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;">e-YDS Tarihi<input id="set-eyds-date" type="date" class="an-textarea" style="padding:6px 10px;width:160px;font-size:14px;"></label>
+            </div>
+            <button class="set-btn" onclick="adminSaveExamDates()">Kaydet & Yayınla</button>
+          </div>
+          <div class="admin-notif-card">
             <h3 class="an-h3">📢 Duyuru Bandı</h3>
             <p class="pq-hint">Buraya yazılan metin sitenin en üstünde herkese görünen bir bant olarak yayınlanır. Boş bırakıp kaydedersen bant kalkar.</p>
             <textarea id="set-announce" class="an-textarea" placeholder="Örn: 15 Temmuz'a kadar premium %20 indirimli!"></textarea>
@@ -1813,5 +1816,7 @@
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
 <script>try{var _sv=document.getElementById('set-voice');if(_sv)_sv.value=localStorage.getItem('ydt_voice')||'auto';}catch(e){}</script>
+<!-- Sınav geri sayım floating widget (pomodoro üstünde) -->
+<div id="exam-countdown-wrap" class="exam-countdown-float" style="display:none;"></div>
 </body>
 </html>
