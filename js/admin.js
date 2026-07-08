@@ -59,6 +59,7 @@ function adminNav(view) {
   if (view === "grammar" && typeof adminGrammarInit === "function") adminGrammarInit();
   if (view === "visits") { if (typeof renderVisitsFull === "function") renderVisitsFull(); if (typeof renderSeoCheck === "function") renderSeoCheck(); }
   if (view === "settings" && typeof adminSettingsInit === "function") adminSettingsInit();
+  if (view === "settings" && typeof adminLoadExamDates === "function") adminLoadExamDates();
   if (view === "backup" && typeof renderBackupView === "function") renderBackupView();
   if (view === "errors" && typeof adminLoadErrors === "function") adminLoadErrors();
   if (view === "assign" && typeof adminAssignInit === "function") adminAssignInit();
