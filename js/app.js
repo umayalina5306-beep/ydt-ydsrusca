@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v95';
+var YDT_SURUM = 'v96';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -2185,9 +2185,30 @@ function logActivity(field, amount) {
   try {
     if (typeof sb !== 'undefined' && sb && typeof currentUser !== 'undefined' && currentUser) {
       sb.from('activity_log').insert({ user_id: currentUser.id, kind: field, amount: amount }).then(function(){}, function(){});
+      // daily_summary upsert — günlük özeti DB'ye de yazar (AI Koç + bülten için)
+      _syncDaySummary(k, day);
     }
   } catch (e) {}
   if (field !== 'questions' && typeof checkTasks === 'function') { try { checkTasks(); } catch (e) {} }
+}
+/* daily_summary tablosuna günün anlık özetini yazar (upsert) */
+function _syncDaySummary(dateKey, dayObj) {
+  try {
+    if (!sb || !currentUser) return;
+    sb.from('daily_summary').upsert({
+      user_id:      currentUser.id,
+      day:          dateKey,
+      questions:    dayObj.questions    || 0,
+      words_learned:dayObj.wordsLearned || 0,
+      words_saved:  dayObj.wordsSaved   || 0,
+      videos:       dayObj.videos       || 0,
+      focus_min:    dayObj.focusMin     || 0,
+      pomodoros:    dayObj.pomodoros    || 0,
+      tests_done:   dayObj.testsDone    || 0,
+      daily_reviews:dayObj.dailyReviews || 0,
+      updated_at:   new Date().toISOString()
+    }, { onConflict: 'user_id,day' }).then(function(){}, function(){});
+  } catch (e) {}
 }
 if (typeof window !== 'undefined') window.logActivity = logActivity; // extras.js (pomodoro) için
 function activeDaySet() {
@@ -3928,6 +3949,12 @@ function startNotifPolling() {
   loadNotifications();
   if (notifPollId) clearInterval(notifPollId);
   notifPollId = setInterval(function () { if (typeof currentUser !== 'undefined' && currentUser) loadNotifications(); }, 30000);
+  // TUR 3: Login sonrası arka planda çalışır (sessiz, hata atlamaz)
+  setTimeout(function() {
+    try { migrateLocalTopicStats(); }  catch (e) {}  // localStorage → topic_stats DB
+    try { migrateLocalDailySummary(); } catch (e) {}  // localStorage → daily_summary DB
+    try { checkActivityNotifications(); } catch (e) {} // Bildirim motoru
+  }, 4000); // 4 sn bekle: sayfa yüklensin, supabase hazır olsun
 }
 if (typeof window !== 'undefined') window.startNotifPolling = startNotifPolling;
 setTimeout(function () { try { startNotifPolling(); } catch (e) {} }, 2000);
@@ -4679,11 +4706,129 @@ function recordTopicStat(item, ok) {
         }).then(() => {});
       }
     } catch (e2) {}
+    // localStorage güncelle
     const st = _topicStats();
     const bump = k => { const o = st[k] || { t: 0, w: 0 }; o.t++; if (!ok) o.w++; st[k] = o; };
     if (item.cat) bump('cat:' + item.cat);
     if (item.level) bump('lvl:' + item.level);
     localStorage.setItem('ydt_topic_stats', JSON.stringify(st));
+    // 📊 DB'ye de upsert — konu istatistiklerini kalıcı yap
+    _syncTopicStat(item.cat ? 'cat:' + item.cat : null, !!ok);
+    _syncTopicStat(item.level ? 'lvl:' + item.level : null, !!ok);
+  } catch (e) {}
+}
+/* topic_stats tablosuna artımlı upsert */
+function _syncTopicStat(key, correct) {
+  try {
+    if (!key || !sb || !currentUser) return;
+    // Önce oku, sonra yaz (artımlı — RPC olmadan)
+    sb.from('topic_stats')
+      .select('id, total, wrong')
+      .eq('user_id', currentUser.id)
+      .eq('key', key)
+      .maybeSingle()
+      .then(function(res) {
+        try {
+          const row = res.data;
+          if (row) {
+            sb.from('topic_stats').update({
+              total: row.total + 1,
+              wrong: row.wrong + (correct ? 0 : 1),
+              updated_at: new Date().toISOString()
+            }).eq('id', row.id).then(function(){}, function(){});
+          } else {
+            sb.from('topic_stats').insert({
+              user_id: currentUser.id, key: key,
+              total: 1, wrong: correct ? 0 : 1
+            }).then(function(){}, function(){});
+          }
+        } catch (e2) {}
+      }, function(){});
+  } catch (e) {}
+}
+/* Eski localStorage topic_stats'ı DB'ye bir kez taşır (login sonrası) */
+async function migrateLocalTopicStats() {
+  try {
+    if (!sb || !currentUser) return;
+    const migKey = 'ydt_topic_migrated_' + currentUser.id;
+    if (localStorage.getItem(migKey)) return; // Zaten taşındı
+    const st = _topicStats();
+    const keys = Object.keys(st);
+    if (!keys.length) { localStorage.setItem(migKey, '1'); return; }
+    for (const k of keys) {
+      const o = st[k];
+      if (!o || !o.t) continue;
+      const { data: row } = await sb.from('topic_stats')
+        .select('id, total, wrong').eq('user_id', currentUser.id).eq('key', k).maybeSingle();
+      if (row) {
+        await sb.from('topic_stats').update({
+          total: row.total + (o.t || 0),
+          wrong: row.wrong + (o.w || 0),
+          updated_at: new Date().toISOString()
+        }).eq('id', row.id);
+      } else {
+        await sb.from('topic_stats').insert({
+          user_id: currentUser.id, key: k, total: o.t || 0, wrong: o.w || 0
+        });
+      }
+    }
+    localStorage.setItem(migKey, '1');
+  } catch (e) {}
+}
+/* Geçmiş günlerin daily_summary'sini DB'ye taşır (login sonrası, bir kez) */
+async function migrateLocalDailySummary() {
+  try {
+    if (!sb || !currentUser) return;
+    const migKey = 'ydt_daily_migrated_' + currentUser.id;
+    if (localStorage.getItem(migKey)) return;
+    const log = getDailyLog();
+    const today = new Date().toISOString().slice(0, 10);
+    const pastDays = Object.keys(log).filter(d => d < today);
+    if (!pastDays.length) { localStorage.setItem(migKey, '1'); return; }
+    for (const d of pastDays) {
+      const day = Object.assign(_emptyDay(), log[d]);
+      await sb.from('daily_summary').upsert({
+        user_id: currentUser.id, day: d,
+        questions: day.questions || 0, words_learned: day.wordsLearned || 0,
+        words_saved: day.wordsSaved || 0, videos: day.videos || 0,
+        focus_min: day.focusMin || 0, pomodoros: day.pomodoros || 0,
+        tests_done: day.testsDone || 0, daily_reviews: day.dailyReviews || 0
+      }, { onConflict: 'user_id,day' });
+    }
+    localStorage.setItem(migKey, '1');
+  } catch (e) {}
+}
+/* ─── Bildirim Motoru (kural bazlı, AI yok) ───
+   Login sonrası çalışır; 3+ gün aktivite yoksa site bildirimi ekler.
+   Aynı hafta içinde tekrar göndermez (throttle). */
+async function checkActivityNotifications() {
+  try {
+    if (!sb || !currentUser) return;
+    // Throttle: son 7 günde activity_reminder gönderilmiş mi?
+    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    const { data: recent } = await sb.from('notifications')
+      .select('id').eq('user_id', currentUser.id)
+      .eq('type', 'activity_reminder').gte('created_at', weekAgo).limit(1);
+    if (recent && recent.length > 0) return;
+    // Son answer_log kaydını bul
+    const { data: lastAct } = await sb.from('answer_log')
+      .select('created_at').eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false }).limit(1);
+    if (!lastAct || !lastAct.length) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const lastDate = new Date(lastAct[0].created_at).toISOString().slice(0, 10);
+    const daysSince = Math.floor((new Date(today) - new Date(lastDate)) / 86400000);
+    if (daysSince < 3) return;
+    const msg = daysSince >= 7
+      ? `${daysSince} gündür çalışma kaydın yok. Rusçan seni bekliyor! Küçük bir test bile fark yaratır 🎯`
+      : `${daysSince} gündür görünmüyorsun. Bir test çözmek sadece 2 dakika sürer ⏱️`;
+    await sb.from('notifications').insert({
+      user_id: currentUser.id,
+      title: '👋 Seninle zaman geçirelim!',
+      body: msg,
+      type: 'activity_reminder'
+    });
+    if (typeof loadNotifications === 'function') setTimeout(loadNotifications, 800);
   } catch (e) {}
 }
 
@@ -5400,7 +5545,7 @@ async function tMailSend(email, name) {
     toast('✉️ Mail gönderildi.');
     staffLog('ogretmen_mail', null, { kime: email, konu: subj });
   } catch (e) {
-    uiAlert('Mail gönderilemedi: ' + ((e && e.message) || e) + '\n\nNot: Mail fonksiyonu yalnız yönetici yetkisine açıksa, öğretmen erişimi bir sonraki güncellemede sunucu tarafında açılacak.');
+    uiAlert('Mail gönderilemedi: ' + ((e && e.message) || e) + '\n\nNot: send-mail edge function\'ının v96 güncellemesini deploy ettiğinden emin ol.');
   }
 }
 
