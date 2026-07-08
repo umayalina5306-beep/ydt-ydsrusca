@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v94';
+var YDT_SURUM = 'v95';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1193,6 +1193,7 @@ function showPage(id){
   if(id==='quiz') showSetup();
   if(id==='admin' && typeof openAdmin==='function') openAdmin();
   if(id==='teacher' && typeof loadTeacherPanel==='function') loadTeacherPanel();
+  if(id==='grammar' && typeof tfYeni==='function') setTimeout(tfYeni, 200);
   if (typeof trackPageView === 'function') trackPageView(id);
   if(id==='profile' && typeof openProfile==='function') openProfile();
 }
@@ -2175,6 +2176,7 @@ function _emptyDay() { return { focusMin:0, pomodoros:0, questions:0, videos:0, 
 function dayActivity(key) { const l = getDailyLog(); return Object.assign(_emptyDay(), l[key] || {}); }
 function _dayHasActivity(a) { return !!(a && (a.focusMin || a.pomodoros || a.questions || a.videos || a.wordsLearned)); }
 function logActivity(field, amount) {
+  try { cdHaftalikEkle(amount || 1); } catch (e) {}
   if (!amount) return;
   const l = getDailyLog(); const k = new Date().toISOString().slice(0,10);
   const day = Object.assign(_emptyDay(), l[k] || {});
@@ -4666,6 +4668,17 @@ function _topicStats() { try { return JSON.parse(localStorage.getItem('ydt_topic
 function recordTopicStat(item, ok) {
   try {
     if (!item || !item.ru) return; // paragraf vb. değil, kelime sorusu olmalı
+    // 📊 Soru bazlı kayıt (AI koç ve analizler için) — sessiz, oturum varsa
+    try {
+      if (typeof currentUser !== 'undefined' && currentUser && typeof sb !== 'undefined' && sb) {
+        sb.from('answer_log').insert({
+          user_id: currentUser.id,
+          word_ru: item.ru, level: item.level || null, cat: item.cat || null,
+          qtype: (typeof quizSettings !== 'undefined' && quizSettings && quizSettings.type) || null,
+          correct: !!ok
+        }).then(() => {});
+      }
+    } catch (e2) {}
     const st = _topicStats();
     const bump = k => { const o = st[k] || { t: 0, w: 0 }; o.t++; if (!ok) o.w++; st[k] = o; };
     if (item.cat) bump('cat:' + item.cat);
@@ -5458,7 +5471,7 @@ function padejAnswer(btn, sec) {
   document.querySelectorAll('.pqz-opt').forEach(b => b.disabled = true);
   if (sec === _padejQ.dogru) {
     btn.classList.add('correct'); fb.innerHTML = '✅ Doğru!'; fb.style.color = '#16a34a';
-    if (typeof recordTopicStat === 'function') recordTopicStat('padej', 'A1', true);
+    /* aktivite: padej alıştırması */
   } else {
     btn.classList.add('wrong'); fb.innerHTML = '❌ Yanlış. Doğrusu: <b>' + _padejQ.dogru + '</b>'; fb.style.color = '#dc2626';
     document.querySelectorAll('.pqz-opt').forEach(b => { if (b.textContent === _padejQ.dogru) b.classList.add('correct'); });
@@ -5800,7 +5813,7 @@ function plQuizRender() {
   if (!q) {
     box.innerHTML = `<div class="pl-sonuc">🏁 Bitti! <b>${_plQuiz.dogru}/${_plQuiz.sorular.length}</b> doğru.
       <button class="set-btn" onclick="plStartQuiz()">Tekrar</button></div>`;
-    try { if (typeof recordActivity === 'function') recordActivity('padej', _plQuiz.sorular.length); } catch (e) {}
+    try { if (typeof recordActivity === 'function') logActivity('padej', _plQuiz.sorular.length); } catch (e) {}
     return;
   }
   box.innerHTML = `<div class="pl-q">
@@ -5904,3 +5917,456 @@ async function adminGnPurge(id) {
   try { await sb.from('grammar_notes').delete().eq('id', id); adminGnInit(); loadGrammarNotes(); } catch (e) {}
 }
 setTimeout(function () { try { if (typeof sb !== 'undefined' && sb) loadGrammarNotes(); } catch (e) {} }, 1400);
+
+
+/* ============================================================
+   🎯 SINAV GERİ SAYIMI + HAFTALIK HEDEF (ana sayfa çubuğu)
+   ============================================================ */
+async function renderGoalBar() {
+  const bar = document.getElementById('goal-bar'); if (!bar) return;
+  if (!currentUser || !currentProfile) { bar.style.display = 'none'; return; }
+  const ed = currentProfile.exam_date;
+  const hedef = currentProfile.weekly_goal || 100;
+  let haftaN = 0;
+  try {
+    const bas = new Date(); bas.setDate(bas.getDate() - ((bas.getDay() + 6) % 7)); bas.setHours(0, 0, 0, 0);
+    const { count } = await sb.from('answer_log').select('id', { count: 'exact', head: true })
+      .eq('user_id', currentUser.id).gte('created_at', bas.toISOString());
+    haftaN = count || 0;
+  } catch (e) {}
+  const pct = Math.min(100, Math.round(haftaN / hedef * 100));
+  let gun = '';
+  if (ed) {
+    const kalan = Math.ceil((new Date(ed + 'T00:00:00') - new Date()) / 864e5);
+    gun = kalan > 0 ? `📅 YDS'ye <b>${kalan}</b> gün` : (kalan === 0 ? '📅 <b>Sınav bugün — başarılar!</b>' : '');
+  }
+  bar.style.display = '';
+  bar.innerHTML = `
+    ${gun ? `<span class="gb-days">${gun}</span>` : ''}
+    <span class="gb-goal">🎯 Bu hafta: <b>${haftaN}/${hedef}</b> soru</span>
+    <span class="gb-track"><span class="gb-fill" style="width:${pct}%"></span></span>
+    <button class="mail-act" onclick="goalSettings()">⚙️ Hedef</button>`;
+}
+function goalSettings() {
+  const ov = document.createElement('div');
+  ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9500';
+  ov.innerHTML = `<div class="ui-modal" style="max-width:380px;">
+    <h3 class="ui-modal-title">🎯 Hedeflerim</h3>
+    <label class="cwbp-lbl">Sınav tarihi (YDS/YDT)</label>
+    <input id="gs-date" class="pq-input" type="date" value="${currentProfile.exam_date || ''}">
+    <label class="cwbp-lbl">Haftalık soru hedefi</label>
+    <input id="gs-goal" class="pq-input" type="number" min="10" max="2000" value="${currentProfile.weekly_goal || 100}">
+    <div style="display:flex; gap:8px; margin-top:12px;">
+      <button class="set-btn" onclick="goalSave()">Kaydet</button>
+      <button class="set-btn ghost" onclick="this.closest('.ui-modal-overlay').remove()">Vazgeç</button>
+    </div></div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+async function goalSave() {
+  const d = (document.getElementById('gs-date') || {}).value || null;
+  const g = parseInt((document.getElementById('gs-goal') || {}).value, 10) || 100;
+  try {
+    const { error } = await sb.from('profiles').update({ exam_date: d, weekly_goal: g }).eq('id', currentUser.id);
+    if (error) throw error;
+    currentProfile.exam_date = d; currentProfile.weekly_goal = g;
+    document.querySelector('.ui-modal-overlay').remove();
+    toast('🎯 Hedefler kaydedildi.');
+    renderGoalBar();
+  } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e) + ' — tur2_paketi.sql çalıştırıldı mı?'); }
+}
+setTimeout(function () { try { renderGoalBar(); } catch (e) {} }, 2200);
+
+/* ============================================================
+   🎮 НСВ/СВ EŞLEŞTİRME OYUNU
+   Veri: fiillerin tip + cv/ncv çiftleri (DB'de hazır)
+   ============================================================ */
+let _vid = null;
+function _vidPairs() {
+  const m = new Map();
+  words.forEach(w => {
+    if (w.cat !== 'fiil') return;
+    let a = null, b = null;
+    if ((w.tip === 'НСВ') && w.cv) { a = w.ru; b = w.cv; }
+    else if ((w.tip === 'СВ') && w.ncv) { a = w.ncv; b = w.ru; }
+    if (a && b) m.set(a + '→' + b, { a, b, tr: w.tr || '' });
+  });
+  return [...m.values()];
+}
+function vidStart() {
+  const havuz = _vidPairs();
+  if (havuz.length < 6) { uiAlert('Eşleştirme için yeterli fiil çifti yok (fiil_tip_onarim.sql çalıştırıldı mı?).'); return; }
+  const secim = havuz.sort(() => Math.random() - 0.5).slice(0, 6);
+  _vid = { pairs: secim, solSec: null, bulunan: 0, hamle: 0 };
+  const sol = secim.map((p, i) => ({ t: p.a, i })).sort(() => Math.random() - 0.5);
+  const sag = secim.map((p, i) => ({ t: p.b, i })).sort(() => Math.random() - 0.5);
+  document.getElementById('vid-board').innerHTML = `
+    <div class="vid-col">${sol.map(x => `<button class="vid-card" data-side="L" data-i="${x.i}" onclick="vidPick(this)">${_escHtml(x.t)}</button>`).join('')}</div>
+    <div class="vid-col">${sag.map(x => `<button class="vid-card" data-side="R" data-i="${x.i}" onclick="vidPick(this)">${_escHtml(x.t)}</button>`).join('')}</div>`;
+  document.getElementById('vid-status').textContent = '';
+}
+function vidPick(btn) {
+  if (!_vid || btn.classList.contains('done')) return;
+  const side = btn.dataset.side;
+  if (side === 'L') {
+    document.querySelectorAll('.vid-card[data-side="L"]').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    _vid.solSec = btn;
+    return;
+  }
+  if (!_vid.solSec) { toast('Önce soldan bir НСВ fiili seç.'); return; }
+  _vid.hamle++;
+  const li = _vid.solSec.dataset.i, ri = btn.dataset.i;
+  if (li === ri) {
+    _vid.bulunan++;
+    const p = _vid.pairs[li];
+    [_vid.solSec, btn].forEach(b => { b.classList.remove('sel'); b.classList.add('done'); });
+    document.getElementById('vid-status').innerHTML = `✅ <b>${_escHtml(p.a)} — ${_escHtml(p.b)}</b> <small>(${_escHtml(p.tr)})</small>`;
+    document.getElementById('vid-status').className = 'pl-fb ok';
+    _vid.solSec = null;
+    if (_vid.bulunan === _vid.pairs.length) {
+      document.getElementById('vid-status').innerHTML = `🏁 Tebrikler! 6 çift, <b>${_vid.hamle}</b> hamlede tamamlandı. <button class="mail-act" onclick="vidStart()">Yeni Tur</button>`;
+    }
+  } else {
+    btn.classList.add('err'); _vid.solSec.classList.add('err');
+    document.getElementById('vid-status').textContent = '❌ Eşleşmedi, tekrar dene.';
+    document.getElementById('vid-status').className = 'pl-fb no';
+    setTimeout(((a, b) => () => { a.classList.remove('err', 'sel'); b.classList.remove('err'); })(_vid.solSec, btn), 600);
+    _vid.solSec = null;
+  }
+}
+
+/* ============================================================
+   🧩 CÜMLE KURMA — örnek cümlelerden (ornek alanı)
+   ============================================================ */
+let _sc = null;
+function _scTemizle(t) { return (t || '').toLowerCase().replace(/ё/g, 'е').replace(/[.,!?;:«»"()]/g, '').replace(/\s+/g, ' ').trim(); }
+function scStart() {
+  const havuz = words.filter(w => {
+    if (!w.ornek) return false;
+    const n = w.ornek.trim().split(/\s+/).length;
+    return n >= 4 && n <= 9;
+  });
+  if (havuz.length < 5) { uiAlert('Yeterli örnek cümle yok.'); return; }
+  const secim = havuz.sort(() => Math.random() - 0.5).slice(0, 5)
+    .map(w => ({ ru: w.ornek.trim(), tr: w.ornekTr || '', kelime: w.ru }));
+  _sc = { list: secim, i: 0, dogru: 0 };
+  scRender();
+}
+function scRender() {
+  const box = document.getElementById('sc-area'); if (!box) return;
+  const q = _sc.list[_sc.i];
+  if (!q) {
+    box.innerHTML = `<div class="pl-sonuc">🏁 Bitti! <b>${_sc.dogru}/${_sc.list.length}</b> doğru. <button class="set-btn" onclick="scStart()">Tekrar</button></div>`;
+    return;
+  }
+  const parcalar = q.ru.replace(/[.!?]$/, '').split(/\s+/);
+  _sc.hedef = _scTemizle(q.ru);
+  _sc.secilen = [];
+  const karisik = parcalar.map((t, i) => ({ t, i })).sort(() => Math.random() - 0.5);
+  box.innerHTML = `
+    <div class="pl-q-head">Cümle ${_sc.i + 1}/${_sc.list.length} · İpucu: <i>${_escHtml(q.tr || q.kelime)}</i></div>
+    <div id="sc-answer" class="sc-answer"></div>
+    <div id="sc-pool" class="sc-pool">${karisik.map(x => `<button class="sc-chip" data-i="${x.i}" onclick="scPick(this)">${_escHtml(x.t)}</button>`).join('')}</div>
+    <div class="pq-row2" style="margin-top:10px;">
+      <button class="set-btn" onclick="scCheck()">Kontrol</button>
+      <button class="set-btn ghost" onclick="scRender()">Sıfırla</button>
+    </div>
+    <div id="sc-fb" class="pl-fb"></div>`;
+}
+function scPick(btn) {
+  const ans = document.getElementById('sc-answer');
+  const pool = document.getElementById('sc-pool');
+  if (btn.parentElement === pool) ans.appendChild(btn); else pool.appendChild(btn);
+}
+function scCheck() {
+  const q = _sc.list[_sc.i];
+  const dizilis = [...document.querySelectorAll('#sc-answer .sc-chip')].map(b => b.textContent).join(' ');
+  const fb = document.getElementById('sc-fb');
+  if (_scTemizle(dizilis) === _sc.hedef) {
+    _sc.dogru++;
+    fb.innerHTML = '✅ Doğru! — <b>' + _escHtml(q.ru) + '</b>';
+    fb.className = 'pl-fb ok';
+  } else {
+    fb.innerHTML = '❌ Doğrusu: <b>' + _escHtml(q.ru) + '</b>';
+    fb.className = 'pl-fb no';
+  }
+  setTimeout(() => { _sc.i++; scRender(); }, 1800);
+}
+
+/* ============================================================
+   🎤 TELAFFUZ PRATİĞİ — Web Speech API (ru-RU)
+   ============================================================ */
+let _prWord = null, _prRec = null;
+function _prBenzerlik(a, b) {
+  a = _scTemizle(a); b = _scTemizle(b);
+  if (!a || !b) return 0;
+  const m = a.length, n = b.length;
+  const d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++)
+    d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+  return Math.round((1 - d[m][n] / Math.max(m, n)) * 100);
+}
+function prNew() {
+  const havuz = words.filter(w => w.ru && w.ru.length >= 3);
+  if (!havuz.length) return;
+  _prWord = havuz[Math.floor(Math.random() * havuz.length)];
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const box = document.getElementById('pr-area');
+  box.innerHTML = `
+    <div class="pl-head"><b>${_escHtml(_prWord.ru)}</b> — ${_escHtml(_prWord.tr || '')}
+      <button class="mail-act" onclick="speak('${_escAttr(_prWord.ru)}')">🔊 Dinle</button>
+      ${SR ? `<button class="set-btn" id="pr-mic" onclick="prListen()">🎙️ Konuş</button>` : ''}
+    </div>
+    ${SR ? '<div id="pr-result" class="pl-fb"></div>' : '<div class="pl-fb no">Bu tarayıcı ses tanımayı desteklemiyor — Chrome veya Edge kullan.</div>'}`;
+}
+function prListen() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR || !_prWord) return;
+  const btn = document.getElementById('pr-mic');
+  const out = document.getElementById('pr-result');
+  try { if (_prRec) _prRec.abort(); } catch (e) {}
+  const rec = new SR();
+  _prRec = rec;
+  rec.lang = 'ru-RU'; rec.interimResults = false; rec.maxAlternatives = 3;
+  btn.textContent = '🔴 Dinliyorum...'; btn.disabled = true;
+  out.textContent = ''; out.className = 'pl-fb';
+  rec.onresult = e => {
+    let enIyi = 0, duyulan = '';
+    for (const alt of e.results[0]) {
+      const p = _prBenzerlik(alt.transcript, _prWord.ru);
+      if (p > enIyi) { enIyi = p; duyulan = alt.transcript; }
+    }
+    const etiket = enIyi >= 85 ? '🌟 Mükemmel!' : enIyi >= 65 ? '👍 İyi — biraz daha net dene' : '🔁 Tekrar dene';
+    out.innerHTML = `${etiket} <b>%${enIyi}</b> <small>(duyulan: "${_escHtml(duyulan)}")</small>`;
+    out.className = 'pl-fb ' + (enIyi >= 65 ? 'ok' : 'no');
+  };
+  rec.onerror = e => {
+    out.textContent = e.error === 'not-allowed' ? 'Mikrofon izni gerekli — tarayıcı izin isteğini onayla.' : 'Ses alınamadı, tekrar dene.';
+    out.className = 'pl-fb no';
+  };
+  rec.onend = () => { btn.textContent = '🎙️ Konuş'; btn.disabled = false; };
+  rec.start();
+}
+
+/* ============================================================
+   🎮 НСВ/СВ EŞLEŞTİRME OYUNU
+   ============================================================ */
+let _vidGame = null;
+function vidPairs() {
+  const seen = new Set(), out = [];
+  words.forEach(w => {
+    if (w.cat !== 'fiil') return;
+    let n = null, sv = null;
+    if (w.tip === 'НСВ' && w.cv) { n = w.ru; sv = w.cv; }
+    else if (w.tip === 'СВ' && w.ncv) { n = w.ncv; sv = w.ru; }
+    if (!n || !sv) return;
+    const k = n + '|' + sv;
+    if (seen.has(k)) return;
+    seen.add(k); out.push({ n, s: sv });
+  });
+  return out;
+}
+function vidStart() {
+  const havuz = vidPairs();
+  const box = document.getElementById('vid-game'); if (!box) return;
+  if (havuz.length < 6) { box.innerHTML = '<div class="profile-empty">Eşleştirme için yeterli fiil çifti yok (fiil_tip_onarim.sql çalıştırıldı mı?).</div>'; return; }
+  const secim = havuz.sort(() => Math.random() - .5).slice(0, 6);
+  _vidGame = { pairs: secim, seçiliN: null, dogru: 0, yanlis: 0, bitti: new Set() };
+  const sol = secim.map((p, i) => ({ t: p.n, i })).sort(() => Math.random() - .5);
+  const sag = secim.map((p, i) => ({ t: p.s, i })).sort(() => Math.random() - .5);
+  box.innerHTML = `
+    <div class="vid-skor" id="vid-skor">Doğru: 0 · Yanlış: 0</div>
+    <div class="vid-cols">
+      <div class="vid-col"><div class="vid-col-h">НСВ (bitmemiş)</div>${sol.map(x => `<button class="vid-chip" id="vn-${x.i}" onclick="vidPick('n', ${x.i}, this)">${_escHtml(x.t)}</button>`).join('')}</div>
+      <div class="vid-col"><div class="vid-col-h">СВ (bitmiş)</div>${sag.map(x => `<button class="vid-chip" id="vs-${x.i}" onclick="vidPick('s', ${x.i}, this)">${_escHtml(x.t)}</button>`).join('')}</div>
+    </div>`;
+}
+function vidPick(taraf, i, btn) {
+  if (!_vidGame || _vidGame.bitti.has(i) && taraf === 'n') {}
+  if (btn.classList.contains('done')) return;
+  if (taraf === 'n') {
+    document.querySelectorAll('.vid-chip.sel').forEach(b => b.classList.remove('sel'));
+    _vidGame.seçiliN = i;
+    btn.classList.add('sel');
+    return;
+  }
+  if (_vidGame.seçiliN === null) { toast('Önce soldan bir НСВ fiili seç.'); return; }
+  const solBtn = document.getElementById('vn-' + _vidGame.seçiliN);
+  if (_vidGame.seçiliN === i) {
+    _vidGame.dogru++;
+    _vidGame.bitti.add(i);
+    btn.classList.add('done'); solBtn.classList.add('done'); solBtn.classList.remove('sel');
+    _vidGame.seçiliN = null;
+    if (_vidGame.bitti.size === _vidGame.pairs.length) {
+      setTimeout(() => {
+        document.getElementById('vid-game').innerHTML += `<div class="pl-sonuc">🏁 Bitti! Doğru: <b>${_vidGame.dogru}</b> · Yanlış: <b>${_vidGame.yanlis}</b> <button class="set-btn" onclick="vidStart()">Yeni Tur</button></div>`;
+        try { logActivity('vid_oyun', 6); } catch (e) {}
+      }, 300);
+    }
+  } else {
+    _vidGame.yanlis++;
+    btn.classList.add('err'); solBtn.classList.add('err');
+    setTimeout(() => { btn.classList.remove('err'); solBtn.classList.remove('err'); }, 500);
+  }
+  const sk = document.getElementById('vid-skor');
+  if (sk) sk.textContent = `Doğru: ${_vidGame.dogru} · Yanlış: ${_vidGame.yanlis}`;
+}
+
+/* ============================================================
+   🧩 CÜMLE KURMA — kelimeleri sıraya diz
+   ============================================================ */
+let _ck = null;
+function ckHavuz() {
+  return words.filter(w => {
+    if (!w.ornek) return false;
+    const n = w.ornek.trim().split(/\s+/).length;
+    return n >= 4 && n <= 9;
+  });
+}
+function ckStart() {
+  const havuz = ckHavuz();
+  const box = document.getElementById('ck-game'); if (!box) return;
+  if (havuz.length < 5) { box.innerHTML = '<div class="profile-empty">Yeterli örnek cümle yok.</div>'; return; }
+  const sorular = havuz.sort(() => Math.random() - .5).slice(0, 5);
+  _ck = { sorular, i: 0, dogru: 0 };
+  ckRender();
+}
+function ckRender() {
+  const box = document.getElementById('ck-game'); if (!box) return;
+  const q = _ck.sorular[_ck.i];
+  if (!q) {
+    box.innerHTML = `<div class="pl-sonuc">🏁 Bitti! <b>${_ck.dogru}/${_ck.sorular.length}</b> doğru. <button class="set-btn" onclick="ckStart()">Yeni Tur</button></div>`;
+    try { logActivity('cumle_kurma', _ck.sorular.length); } catch (e) {}
+    return;
+  }
+  const parcalar = q.ornek.trim().split(/\s+/);
+  _ck.hedef = parcalar.join(' ');
+  const karisik = parcalar.map((t, i) => ({ t, i })).sort(() => Math.random() - .5);
+  box.innerHTML = `
+    <div class="pl-q-head">Cümle ${_ck.i + 1}/${_ck.sorular.length} ${q.ornekTr ? `· <i>ipucu: ${_escHtml(q.ornekTr)}</i>` : ''}</div>
+    <div class="ck-answer" id="ck-answer"></div>
+    <div class="ck-pool" id="ck-pool">${karisik.map(x => `<button class="vid-chip" onclick="ckTake(this)">${_escHtml(x.t)}</button>`).join('')}</div>
+    <div class="pq-row2" style="margin-top:10px;">
+      <button class="set-btn" onclick="ckCheck()">Kontrol Et</button>
+      <button class="set-btn ghost" onclick="ckRender()">Sıfırla</button>
+    </div>
+    <div id="ck-fb" class="pl-fb"></div>`;
+}
+function ckTake(btn) {
+  const hedefKutu = btn.parentElement.id === 'ck-pool' ? document.getElementById('ck-answer') : document.getElementById('ck-pool');
+  hedefKutu.appendChild(btn);
+}
+function ckCheck() {
+  const cevap = [...document.querySelectorAll('#ck-answer .vid-chip')].map(b => b.textContent).join(' ');
+  const fb = document.getElementById('ck-fb');
+  if (cevap === _ck.hedef) {
+    _ck.dogru++;
+    fb.innerHTML = '✅ Doğru!'; fb.className = 'pl-fb ok';
+  } else {
+    fb.innerHTML = `❌ Doğrusu: <b>${_escHtml(_ck.hedef)}</b>`; fb.className = 'pl-fb no';
+  }
+  setTimeout(() => { _ck.i++; ckRender(); }, 1800);
+}
+
+/* ============================================================
+   🎤 TELAFFUZ PRATİĞİ — söyle, tarayıcı puanlasın
+   ============================================================ */
+let _tfWord = null, _tfRec = null;
+function _lev(a, b) {
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  const d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 1; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[m][n];
+}
+function tfYeni() {
+  const havuz = words.filter(w => w.ru && w.ru.length >= 3 && !w.ru.includes(' '));
+  if (!havuz.length) return;
+  _tfWord = havuz[Math.floor(Math.random() * havuz.length)];
+  const box = document.getElementById('tf-word');
+  if (box) box.innerHTML = `<b>${_escHtml(_tfWord.ru)}</b> <small>${_escHtml(_tfWord.tr || '')}</small>
+    <button class="mail-act" onclick="speak('${_escAttr(_tfWord.ru)}')">🔊 Dinle</button>`;
+  const fb = document.getElementById('tf-fb'); if (fb) { fb.textContent = ''; fb.className = 'pl-fb'; }
+}
+function tfKonus() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const fb = document.getElementById('tf-fb');
+  if (!SR) { fb.textContent = 'Bu tarayıcı ses tanımayı desteklemiyor (Chrome önerilir).'; fb.className = 'pl-fb no'; return; }
+  if (!_tfWord) tfYeni();
+  try { if (_tfRec) _tfRec.abort(); } catch (e) {}
+  const r = new SR();
+  _tfRec = r;
+  r.lang = 'ru-RU'; r.interimResults = false; r.maxAlternatives = 3;
+  fb.textContent = '🎙️ Dinliyorum... şimdi söyle!'; fb.className = 'pl-fb';
+  r.onresult = ev => {
+    const norm = t => (t || '').toLowerCase().replace(/ё/g, 'е').replace(/[^а-я]/g, '');
+    const hedef = norm(_tfWord.ru);
+    let enIyi = 0, duyulan = '';
+    for (const alt of ev.results[0]) {
+      const d = norm(alt.transcript);
+      const puan = hedef ? Math.round(100 * (1 - _lev(hedef, d) / Math.max(hedef.length, d.length || 1))) : 0;
+      if (puan > enIyi) { enIyi = puan; duyulan = alt.transcript; }
+    }
+    const mesaj = enIyi >= 95 ? '🎉 Mükemmel!' : enIyi >= 75 ? '👍 Çok iyi!' : enIyi >= 50 ? '🙂 Fena değil, tekrar dene.' : '🔁 Tekrar dinle ve dene.';
+    fb.innerHTML = `Duyulan: <i>${_escHtml(duyulan)}</i> · Benzerlik: <b>%${enIyi}</b> — ${mesaj}`;
+    fb.className = 'pl-fb ' + (enIyi >= 75 ? 'ok' : 'no');
+    try { logActivity('telaffuz', 1); } catch (e) {}
+  };
+  r.onerror = e => { fb.textContent = 'Mikrofon hatası: ' + (e.error || '') + ' (izin verdiğinden emin ol)'; fb.className = 'pl-fb no'; };
+  r.start();
+}
+
+/* ============================================================
+   🎯 SINAV GERİ SAYIMI + HAFTALIK HEDEF (ana sayfa)
+   ============================================================ */
+function _haftaKey() {
+  const d = new Date(); const b = new Date(d.getFullYear(), 0, 1);
+  const hafta = Math.ceil((((d - b) / 864e5) + b.getDay() + 1) / 7);
+  return d.getFullYear() + '-' + hafta;
+}
+function cdHaftalikEkle(n) {
+  try {
+    const k = 'ydt_hafta_' + _haftaKey();
+    localStorage.setItem(k, String((parseInt(localStorage.getItem(k), 10) || 0) + (n || 1)));
+    renderCountdown();
+  } catch (e) {}
+}
+function renderCountdown() {
+  const card = document.getElementById('countdown-card'); if (!card) return;
+  const tarih = localStorage.getItem('ydt_exam_date');
+  const gunEl = document.getElementById('cd-days');
+  if (tarih) {
+    const kalan = Math.ceil((new Date(tarih + 'T09:00:00') - new Date()) / 864e5);
+    gunEl.innerHTML = kalan > 0 ? `YDS'ye <b>${kalan}</b> gün` : (kalan === 0 ? '🎓 Sınav bugün — başarılar!' : 'Sınav tarihi geçti — yenisini belirle');
+  } else gunEl.textContent = 'Sınav tarihini belirle 👉';
+  const hedef = parseInt(localStorage.getItem('ydt_week_goal'), 10) || 100;
+  const yapilan = parseInt(localStorage.getItem('ydt_hafta_' + _haftaKey()), 10) || 0;
+  const yuzde = Math.min(100, Math.round(100 * yapilan / hedef));
+  const bar = document.getElementById('cd-bar-fill');
+  if (bar) { bar.style.width = yuzde + '%'; bar.style.background = yuzde >= 100 ? '#16a34a' : 'var(--gold)'; }
+  const txt = document.getElementById('cd-goal-txt');
+  if (txt) txt.innerHTML = `Bu hafta: <b>${yapilan}</b> / ${hedef} soru-aktivite ${yuzde >= 100 ? '· 🏆 Hedef tamam!' : ''}`;
+}
+async function cdSetDate() {
+  const mevcut = localStorage.getItem('ydt_exam_date') || '';
+  const t = await uiPrompt('Sınav tarihi (YYYY-AA-GG):', { title: '🎯 Sınav Geri Sayımı', value: mevcut, placeholder: '2026-11-15' });
+  if (t === null) return;
+  const d = new Date((t || '').trim() + 'T00:00:00');
+  if (isNaN(d.getTime())) { uiAlert('Geçerli bir tarih gir (örn: 2026-11-15).'); return; }
+  localStorage.setItem('ydt_exam_date', t.trim());
+  renderCountdown();
+}
+async function cdSetGoal() {
+  const mevcut = localStorage.getItem('ydt_week_goal') || '100';
+  const t = await uiPrompt('Haftalık hedefin (soru/aktivite sayısı):', { title: '📈 Haftalık Hedef', value: mevcut });
+  if (t === null) return;
+  const n = parseInt(t, 10);
+  if (!n || n < 5) { uiAlert('En az 5 olmalı.'); return; }
+  localStorage.setItem('ydt_week_goal', String(n));
+  renderCountdown();
+}
+setTimeout(function () { try { renderCountdown(); } catch (e) {} }, 600);
