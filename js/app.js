@@ -5463,21 +5463,51 @@ async function loadTeacherPanel() {
         testMap[t.user_id].n++;
       });
     } catch (e) {}
+    // Konu istatistiklerini çek (topic_stats tablosu — TUR 3A'da oluşturuldu)
+    let topicMap = {}; // { userId: [ {key, total, wrong}, ... ] }
+    try {
+      const { data: tStats } = await sb.from('topic_stats')
+        .select('user_id, key, total, wrong').in('user_id', ids);
+      (tStats || []).forEach(r => {
+        if (!topicMap[r.user_id]) topicMap[r.user_id] = [];
+        topicMap[r.user_id].push(r);
+      });
+    } catch (e) {}
+
     if (sum) sum.innerHTML = `👥 <b>${_teachStudents.length}</b> öğrenci · bu hafta toplam <b>${Object.values(actMap).reduce((a, b) => a + b, 0)}</b> aktivite`;
     box.innerHTML = _teachStudents.map(p => {
       const ad = _escHtml(p.display_name || (p.email || '').split('@')[0]);
       const act = actMap[p.id] || 0;
       const tst = testMap[p.id];
       const aktiflik = act >= 10 ? '🔥 Çok aktif' : act >= 3 ? '✅ Aktif' : act >= 1 ? '🌤️ Az aktif' : '💤 Bu hafta girmedi';
+
+      // Konu analizi: yalnızca kategori (cat:) verileri, en az 5 soru çözülmüş olanlar
+      const konular = (topicMap[p.id] || [])
+        .filter(r => r.key.startsWith('cat:') && r.total >= 5)
+        .map(r => ({ ad: r.key.replace('cat:', ''), oran: Math.round((r.total - r.wrong) / r.total * 100), total: r.total }))
+        .sort((a, b) => a.oran - b.oran); // en düşük doğru → zayıf
+      const zayif  = konular.slice(0, 2).map(k => `${k.ad} (%${k.oran})`).join(', ');
+      const guclu  = konular.slice(-2).reverse().map(k => `${k.ad} (%${k.oran})`).join(', ');
+      const topicDataAttr = konular.length
+        ? ` data-topics='${JSON.stringify((topicMap[p.id]||[]).filter(r=>r.total>=3))}'` : '';
+      const konuHTML = konular.length >= 2
+        ? `<div class="teach-topics">
+            ${zayif  ? `<span class="tt-weak">🔴 Zayıf: ${_escHtml(zayif)}</span>` : ''}
+            ${guclu && guclu !== zayif ? `<span class="tt-strong">🟢 Güçlü: ${_escHtml(guclu)}</span>` : ''}
+           </div>`
+        : `<div class="teach-topics tt-none">📊 Henüz yeterli konu verisi yok (≥5 soru gerekli)</div>`;
+
       return `<div class="cw-row teach-card">
-        <div class="cw-main">
+        <div class="cw-main"${topicDataAttr}>
           <b>${ad}</b> <span class="kv-lvl">${p.level || 'seviye yok'}</span>
           ${p.plan === 'premium' ? '<span class="mail-member yes">👑 Premium</span>' : ''}
           ${p.streak_count ? `<span class="cw-cat">🔥 ${p.streak_count} gün seri</span>` : ''}
           <div class="err-meta">${_escHtml(p.email || '')}</div>
           <div class="err-meta">${aktiflik} · bu hafta ${act} aktivite · ${tst ? tst.n + ' test (son: ' + new Date(tst.son).toLocaleDateString('tr-TR') + ')' : 'henüz test çözmedi'}</div>
+          ${konuHTML}
         </div>
         <div class="cw-acts">
+          ${konular.length >= 2 ? `<button class="mail-act" onclick="tTopicDetail('${p.id}', '${ad.replace(/'/g, '')}')">📊 Konu Detayı</button>` : ''}
           <button class="mail-act" onclick="tNotify('${p.id}', '${ad.replace(/'/g, '')}')">🔔 Bildirim</button>
           <button class="mail-act" onclick="tMail('${_escAttr(p.email || '')}', '${ad.replace(/'/g, '')}')">✉️ Mail</button>
         </div>
@@ -5486,6 +5516,67 @@ async function loadTeacherPanel() {
   } catch (e) {
     box.innerHTML = '<div class="profile-empty">Öğrenciler yüklenemedi: ' + _escHtml((e && e.message) || e) + '<br>ogretmen_paneli.sql çalıştırıldı mı?</div>';
   }
+}
+
+/* 📊 Öğrenci konu detayı modal */
+async function tTopicDetail(userId, name) {
+  // topic_stats'tan taze veri çek
+  let rows = [];
+  try {
+    const { data } = await sb.from('topic_stats')
+      .select('key, total, wrong').eq('user_id', userId).gte('total', 3)
+      .order('total', { ascending: false });
+    rows = data || [];
+  } catch (e) {}
+
+  const fmt = rows => rows.map(r => {
+    const dogru = r.total - r.wrong;
+    const oran  = Math.round(dogru / r.total * 100);
+    const renk  = oran >= 75 ? '#16a34a' : oran >= 50 ? '#f59e0b' : '#ef4444';
+    const etiket = oran >= 75 ? '🟢' : oran >= 50 ? '🟡' : '🔴';
+    return `<tr>
+      <td style="padding:6px 10px;">${_escHtml(r.key.replace('cat:','').replace('lvl:','Seviye: '))}</td>
+      <td style="padding:6px 10px;text-align:center;">${r.total}</td>
+      <td style="padding:6px 10px;text-align:center;">${dogru}</td>
+      <td style="padding:6px 10px;text-align:center;font-weight:700;color:${renk}">${etiket} %${oran}</td>
+    </tr>`;
+  }).join('');
+
+  const catRows = rows.filter(r => r.key.startsWith('cat:')).sort((a,b)=>((b.total-b.wrong)/b.total)-((a.total-a.wrong)/a.total));
+  const lvlRows = rows.filter(r => r.key.startsWith('lvl:')).sort((a,b)=>a.key.localeCompare(b.key));
+
+  const ov = document.createElement('div');
+  ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9500';
+  ov.innerHTML = `<div class="ui-modal" style="max-width:560px;max-height:80vh;overflow-y:auto;">
+    <h3 class="ui-modal-title">📊 ${_escHtml(name)} — Konu Analizi</h3>
+    ${!rows.length ? '<p class="pq-hint">Henüz yeterli veri yok (en az 3 soru/konu gerekli).</p>' : `
+    <p class="pq-hint" style="margin-bottom:12px;">🔴 &lt;%50 · 🟡 %50-74 · 🟢 ≥%75 doğru oranı</p>
+    ${catRows.length ? `<div style="font-weight:700;margin-bottom:6px;font-size:.85rem;color:var(--gold);">KONULARA GÖRE</div>
+    <table style="width:100%;border-collapse:collapse;font-size:.88rem;margin-bottom:16px;">
+      <thead><tr style="border-bottom:1px solid rgba(255,255,255,.1);">
+        <th style="padding:4px 10px;text-align:left;">Konu</th>
+        <th style="padding:4px 10px;">Toplam</th>
+        <th style="padding:4px 10px;">Doğru</th>
+        <th style="padding:4px 10px;">Oran</th>
+      </tr></thead>
+      <tbody>${fmt(catRows)}</tbody>
+    </table>` : ''}
+    ${lvlRows.length ? `<div style="font-weight:700;margin-bottom:6px;font-size:.85rem;color:var(--gold);">SEVİYELERE GÖRE</div>
+    <table style="width:100%;border-collapse:collapse;font-size:.88rem;">
+      <thead><tr style="border-bottom:1px solid rgba(255,255,255,.1);">
+        <th style="padding:4px 10px;text-align:left;">Seviye</th>
+        <th style="padding:4px 10px;">Toplam</th>
+        <th style="padding:4px 10px;">Doğru</th>
+        <th style="padding:4px 10px;">Oran</th>
+      </tr></thead>
+      <tbody>${fmt(lvlRows)}</tbody>
+    </table>` : ''}`}
+    <div style="margin-top:14px;display:flex;gap:8px;">
+      <button class="set-btn ghost" onclick="this.closest('.ui-modal-overlay').remove()">Kapat</button>
+    </div>
+  </div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
 }
 
 /* 🔔 Öğrenciye site bildirimi */
@@ -6532,14 +6623,14 @@ function renderExamCountdowns() {
     { key: 'yds',  label: 'YDS',   date: _examDates.yds  },
     { key: 'eyds', label: 'e-YDS', date: _examDates.eyds },
   ];
-  const aktif = exams.filter(e => e.date);
-  if (!aktif.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = '';
-  wrap.innerHTML = aktif.map(e => {
+  wrap.innerHTML = exams.map(e => {
+    if (!e.date) {
+      return `<div class="ec-item"><span class="ec-label">${e.label}</span><span class="ec-days ec-unknown">Açıklanmadı</span></div>`;
+    }
     const g = _examDaysLeft(e.date);
     const renk = g <= 30 ? '#ef4444' : g <= 90 ? '#f59e0b' : 'var(--gold)';
-    const etiket = g === null ? '—'
-      : g < 0   ? 'Geçti'
+    const etiket = g < 0   ? '<span style="color:#9ca3af">Geçti</span>'
       : g === 0 ? '🎓 Bugün!'
       : `<b style="color:${renk}">${g}</b> gün`;
     return `<div class="ec-item"><span class="ec-label">${e.label}</span><span class="ec-days">${etiket}</span></div>`;
