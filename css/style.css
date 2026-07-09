@@ -2670,3 +2670,10 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   display: block !important;
   grid-template-columns: unset !important;
 }
+.ec-unknown { color: #6b7280 !important; font-size: .78rem !important; font-style: italic; }
+
+/* ── TUR 3C: Öğretmen Paneli Konu Analizi ── */
+.teach-topics { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 8px; }
+.tt-weak  { font-size: .78rem; color: #fca5a5; background: rgba(239,68,68,.12); border-radius: 6px; padding: 3px 8px; }
+.tt-strong{ font-size: .78rem; color: #86efac; background: rgba(22,163,74,.12);  border-radius: 6px; padding: 3px 8px; }
+.tt-none  { font-size: .78rem; color: #6b7280; font-style: italic; }
