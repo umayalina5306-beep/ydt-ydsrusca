@@ -6924,6 +6924,24 @@ setTimeout(function () {
 /* ── Admin: Google Search Console verileri ── */
 let _gscDays = 28;
 function adminGscRange(days) { _gscDays = days; adminGscLoad(); }
+
+/* Panel açılınca son kaydedilmiş veriyi göster (otomatik günlük çekimden) */
+async function adminGscShowLast() {
+  const box = document.getElementById('admin-gsc'); if (!box) return;
+  try {
+    const { data: rows } = await sb.from('gsc_snapshot')
+      .select('data, days, created_at')
+      .order('created_at', { ascending: false }).limit(1);
+    if (rows && rows.length) {
+      _gscDays = rows[0].days || 28;
+      _gscRender(rows[0].data, rows[0].created_at);
+      return;
+    }
+  } catch (e) {}
+  box.innerHTML = '<div class="pq-hint">Henüz kayıtlı veri yok. "Canlı Çek" butonuna bas — sonrasında her gün otomatik güncellenecek.</div>';
+}
+
+/* Canlı çekim (butonla) */
 async function adminGscLoad() {
   const box = document.getElementById('admin-gsc'); if (!box) return;
   box.innerHTML = '<div class="admin-loading">Google Search Console verileri çekiliyor...</div>';
@@ -6932,64 +6950,63 @@ async function adminGscLoad() {
     if (error) throw new Error(error.message || 'Fonksiyon çağrılamadı');
     if (data && data.error) throw new Error(data.error);
     if (data && data.gscError) throw new Error('GSC API: ' + (data.gscError.message || JSON.stringify(data.gscError)));
-
-    const daily = data.daily || [], queries = data.queries || [], pages = data.pages || [];
-    const devices = data.devices || [], countries = data.countries || [];
-    const topClk = daily.reduce((a, r) => a + (r.clicks || 0), 0);
-    const topImp = daily.reduce((a, r) => a + (r.impressions || 0), 0);
-    const avgCtr = topImp ? (topClk / topImp * 100).toFixed(1) : '0';
-    const gun = (data.range && data.range.days) || _gscDays;
-
-    let html = `<div style="display:flex;gap:6px;margin-bottom:10px;">
-      ${[7,28,90].map(g => `<button class="mail-act${g===gun?' active':''}" style="${g===gun?'background:var(--gold);color:#111;':''}" onclick="adminGscRange(${g})">${g} gün</button>`).join('')}
-    </div>`;
-    html += `<div class="pq-stats" style="margin-bottom:12px;">Son ${gun} gün: <b>${topClk}</b> tıklama · <b>${topImp}</b> gösterim · CTR <b>%${avgCtr}</b></div>`;
-
-    if (devices.length) {
-      const DEV = { MOBILE: '📱 Mobil', DESKTOP: '💻 Masaüstü', TABLET: '📟 Tablet' };
-      html += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;">';
-      devices.forEach(r => {
-        html += `<span class="cw-cat">${DEV[r.keys[0]] || r.keys[0]}: ${r.clicks} tık</span>`;
-      });
-      html += '</div>';
-    }
-
-    if (countries.length) {
-      html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;">';
-      countries.slice(0, 6).forEach(r => {
-        html += `<span class="err-meta">${(r.keys[0]||'').toUpperCase()}: ${r.clicks}</span>`;
-      });
-      html += '</div>';
-    }
-
-    if (queries.length) {
-      html += '<div style="font-weight:700;font-size:.85rem;color:var(--gold);margin:10px 0 6px;">EN İYİ ARAMALAR</div>';
-      html += '<table style="width:100%;border-collapse:collapse;font-size:.84rem;">';
-      html += '<tr style="border-bottom:1px solid rgba(255,255,255,.1);"><th style="text-align:left;padding:4px 8px;">Sorgu</th><th style="padding:4px 8px;">Tıklama</th><th style="padding:4px 8px;">Gösterim</th><th style="padding:4px 8px;">Ort. Sıra</th></tr>';
-      queries.forEach(r => {
-        html += `<tr><td style="padding:4px 8px;">${_escHtml(r.keys[0])}</td><td style="text-align:center;">${r.clicks}</td><td style="text-align:center;">${r.impressions}</td><td style="text-align:center;">${(r.position||0).toFixed(1)}</td></tr>`;
-      });
-      html += '</table>';
-    }
-
-    if (pages.length) {
-      html += '<div style="font-weight:700;font-size:.85rem;color:var(--gold);margin:14px 0 6px;">EN İYİ SAYFALAR</div>';
-      pages.forEach(r => {
-        const url = (r.keys[0] || '').replace('https://ydt-ydsrusca.com', '') || '/';
-        html += `<div class="err-meta" style="padding:3px 0;">${_escHtml(url)} — ${r.clicks} tıklama, ${r.impressions} gösterim</div>`;
-      });
-    }
-
-    if (!queries.length && !pages.length) {
-      html += '<div class="profile-empty">Henüz veri yok — site yeni indexleniyorsa birkaç gün sürebilir.</div>';
-    }
-
-    box.innerHTML = html;
+    _gscRender(data, new Date().toISOString());
   } catch (e) {
     const msg = (e && e.message) || String(e);
     box.innerHTML = `<div style="color:#fca5a5;font-size:.85rem;margin-bottom:8px;">Hata: ${_escHtml(msg)}</div>
-      <div class="pq-hint">Kurulum yapılmadıysa: gsc-fetch edge function deploy edilmeli ve GSC_SERVICE_KEY secret'ı tanımlanmalı. Kurulum adımları Claude'un verdiği yönergede.</div>`;
+      <div class="pq-hint">Kurulum yapılmadıysa: gsc-fetch edge function deploy edilmeli ve GSC_SERVICE_KEY secret'ı tanımlanmalı.</div>`;
   }
+}
+
+/* Ortak render */
+function _gscRender(data, fetchedAt) {
+  const box = document.getElementById('admin-gsc'); if (!box || !data) return;
+  const daily = data.daily || [], queries = data.queries || [], pages = data.pages || [];
+  const devices = data.devices || [], countries = data.countries || [];
+  const topClk = daily.reduce((a, r) => a + (r.clicks || 0), 0);
+  const topImp = daily.reduce((a, r) => a + (r.impressions || 0), 0);
+  const avgCtr = topImp ? (topClk / topImp * 100).toFixed(1) : '0';
+  const gun = (data.range && data.range.days) || _gscDays;
+  const tarihStr = fetchedAt ? new Date(fetchedAt).toLocaleString('tr-TR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+
+  let html = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+    ${[7,28,90].map(g => `<button class="mail-act" style="${g===gun?'background:var(--gold);color:#111;':''}" onclick="adminGscRange(${g})">${g} gün</button>`).join('')}
+    <button class="mail-act" onclick="adminGscLoad()">🔄 Canlı Çek</button>
+    <span class="err-meta" style="margin-left:auto;">Son veri: ${tarihStr}</span>
+  </div>`;
+  html += `<div class="pq-stats" style="margin-bottom:12px;">Son ${gun} gün: <b>${topClk}</b> tıklama · <b>${topImp}</b> gösterim · CTR <b>%${avgCtr}</b></div>`;
+
+  if (devices.length) {
+    const DEV = { MOBILE: '📱 Mobil', DESKTOP: '💻 Masaüstü', TABLET: '📟 Tablet' };
+    html += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;">';
+    devices.forEach(r => { html += `<span class="cw-cat">${DEV[r.keys[0]] || r.keys[0]}: ${r.clicks} tık</span>`; });
+    html += '</div>';
+  }
+  if (countries.length) {
+    html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;">';
+    countries.slice(0, 6).forEach(r => { html += `<span class="err-meta">${(r.keys[0]||'').toUpperCase()}: ${r.clicks}</span>`; });
+    html += '</div>';
+  }
+  if (queries.length) {
+    html += '<div style="font-weight:700;font-size:.85rem;color:var(--gold);margin:10px 0 6px;">EN İYİ ARAMALAR</div>';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:.84rem;">';
+    html += '<tr style="border-bottom:1px solid rgba(255,255,255,.1);"><th style="text-align:left;padding:4px 8px;">Sorgu</th><th style="padding:4px 8px;">Tıklama</th><th style="padding:4px 8px;">Gösterim</th><th style="padding:4px 8px;">Ort. Sıra</th></tr>';
+    queries.forEach(r => {
+      html += `<tr><td style="padding:4px 8px;">${_escHtml(r.keys[0])}</td><td style="text-align:center;">${r.clicks}</td><td style="text-align:center;">${r.impressions}</td><td style="text-align:center;">${(r.position||0).toFixed(1)}</td></tr>`;
+    });
+    html += '</table>';
+  }
+  if (pages.length) {
+    html += '<div style="font-weight:700;font-size:.85rem;color:var(--gold);margin:14px 0 6px;">EN İYİ SAYFALAR</div>';
+    pages.forEach(r => {
+      const url = (r.keys[0] || '').replace('https://ydt-ydsrusca.com', '') || '/';
+      html += `<div class="err-meta" style="padding:3px 0;">${_escHtml(url)} — ${r.clicks} tıklama, ${r.impressions} gösterim</div>`;
+    });
+  }
+  if (!queries.length && !pages.length) {
+    html += '<div class="profile-empty">Henüz veri yok — site yeni indexleniyorsa birkaç gün sürebilir.</div>';
+  }
+  box.innerHTML = html;
 }
 
 /* ── Admin: Kurum Yönetimi ── */
