@@ -2677,3 +2677,13 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .tt-weak  { font-size: .78rem; color: #fca5a5; background: rgba(239,68,68,.12); border-radius: 6px; padding: 3px 8px; }
 .tt-strong{ font-size: .78rem; color: #86efac; background: rgba(22,163,74,.12);  border-radius: 6px; padding: 3px 8px; }
 .tt-none  { font-size: .78rem; color: #6b7280; font-style: italic; }
+
+/* ── TUR 4: Kurum Paneli ── */
+.kurum-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,.1); padding-bottom:12px; }
+.kurum-tab  { background:transparent; border:1px solid rgba(255,255,255,.15); color:#ccc; padding:7px 16px; border-radius:8px; cursor:pointer; font-size:.85rem; font-weight:600; transition:all .15s; }
+.kurum-tab:hover  { border-color:var(--gold); color:var(--gold); }
+.kurum-tab.active { background:var(--gold); border-color:var(--gold); color:#111; }
+.kurum-panel-section { }
+.kurum-add-row { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
+.mail-act.danger { color:#fca5a5; border-color:rgba(239,68,68,.3); }
+.mail-act.danger:hover { background:rgba(239,68,68,.15); border-color:#ef4444; }
