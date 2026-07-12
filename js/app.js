@@ -6922,20 +6922,45 @@ setTimeout(function () {
 }, 600);
 
 /* ── Admin: Google Search Console verileri ── */
+let _gscDays = 28;
+function adminGscRange(days) { _gscDays = days; adminGscLoad(); }
 async function adminGscLoad() {
   const box = document.getElementById('admin-gsc'); if (!box) return;
   box.innerHTML = '<div class="admin-loading">Google Search Console verileri çekiliyor...</div>';
   try {
-    const { data, error } = await sb.functions.invoke('gsc-fetch', { body: {} });
+    const { data, error } = await sb.functions.invoke('gsc-fetch', { body: { days: _gscDays } });
     if (error) throw new Error(error.message || 'Fonksiyon çağrılamadı');
     if (data && data.error) throw new Error(data.error);
     if (data && data.gscError) throw new Error('GSC API: ' + (data.gscError.message || JSON.stringify(data.gscError)));
 
     const daily = data.daily || [], queries = data.queries || [], pages = data.pages || [];
+    const devices = data.devices || [], countries = data.countries || [];
     const topClk = daily.reduce((a, r) => a + (r.clicks || 0), 0);
     const topImp = daily.reduce((a, r) => a + (r.impressions || 0), 0);
+    const avgCtr = topImp ? (topClk / topImp * 100).toFixed(1) : '0';
+    const gun = (data.range && data.range.days) || _gscDays;
 
-    let html = `<div class="pq-stats" style="margin-bottom:12px;">Son 28 gün: <b>${topClk}</b> tıklama · <b>${topImp}</b> gösterim</div>`;
+    let html = `<div style="display:flex;gap:6px;margin-bottom:10px;">
+      ${[7,28,90].map(g => `<button class="mail-act${g===gun?' active':''}" style="${g===gun?'background:var(--gold);color:#111;':''}" onclick="adminGscRange(${g})">${g} gün</button>`).join('')}
+    </div>`;
+    html += `<div class="pq-stats" style="margin-bottom:12px;">Son ${gun} gün: <b>${topClk}</b> tıklama · <b>${topImp}</b> gösterim · CTR <b>%${avgCtr}</b></div>`;
+
+    if (devices.length) {
+      const DEV = { MOBILE: '📱 Mobil', DESKTOP: '💻 Masaüstü', TABLET: '📟 Tablet' };
+      html += '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;">';
+      devices.forEach(r => {
+        html += `<span class="cw-cat">${DEV[r.keys[0]] || r.keys[0]}: ${r.clicks} tık</span>`;
+      });
+      html += '</div>';
+    }
+
+    if (countries.length) {
+      html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;">';
+      countries.slice(0, 6).forEach(r => {
+        html += `<span class="err-meta">${(r.keys[0]||'').toUpperCase()}: ${r.clicks}</span>`;
+      });
+      html += '</div>';
+    }
 
     if (queries.length) {
       html += '<div style="font-weight:700;font-size:.85rem;color:var(--gold);margin:10px 0 6px;">EN İYİ ARAMALAR</div>';
