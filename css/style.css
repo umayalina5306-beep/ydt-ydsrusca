@@ -2687,3 +2687,9 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .kurum-add-row { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
 .mail-act.danger { color:#fca5a5; border-color:rgba(239,68,68,.3); }
 .mail-act.danger:hover { background:rgba(239,68,68,.15); border-color:#ef4444; }
+
+/* ── Uzun Rusça kelimeler: otomatik font küçültme (kelime asla bölünmez) ── */
+.word-ru { overflow-wrap: normal; word-break: keep-all; }
+.word-ru mark { white-space: nowrap; }
+.word-ru-long  { font-size: .95rem !important; letter-spacing: -0.2px; }  /* 14-19 harf */
+.word-ru-xlong { font-size: .8rem  !important; letter-spacing: -0.3px; }  /* 20+ harf (достопримечательность vb.) */
