@@ -3834,7 +3834,7 @@ function adminWordEdit(id) {
   document.getElementById('cw-ru').value = r.ru; document.getElementById('cw-ru').disabled = true;
   document.getElementById('cw-tr').value = r.tr || '';
   document.getElementById('cw-cat').value = r.cat || 'isim';
-  cwCatChanged(r.cat === 'edat' ? (r.padej || '') : (r.cinsiyet || ''));
+  cwCatChanged(_catHas(r.cat, 'edat') ? (r.padej || '') : (r.cinsiyet || ''));
   document.getElementById('cw-lvl').value = r.level || 'A1';
   document.getElementById('cw-ornek').value = r.ornek || '';
   document.getElementById('cw-ornektr').value = r.ornek_tr || '';
@@ -3859,7 +3859,7 @@ async function adminWordSave() {
       });
       return Object.keys(out).length ? out : null;
     })(),
-    padej: (_cwVal('cw-cat') === 'edat') ? cwPadejValue() : null,
+    padej: _catHas(_cwVal('cw-cat'), 'edat') ? cwPadejValue() : undefined,
     ornek: _cwVal('cw-ornek') || null, ornek_tr: _cwVal('cw-ornektr') || null,
     premium: document.getElementById('cw-premium').checked, active: true, updated_at: new Date().toISOString() };
   try {
@@ -4163,13 +4163,24 @@ const CW_GRAM_OPTS = {
   'sıfat': [['', 'Cinsiyet...'], ['м', 'м'], ['ж', 'ж'], ['с', 'с']]
 };
 const CW_PADEJ = ['Р.п.', 'Д.п.', 'В.п.', 'Т.п.', 'П.п.']; // sitedeki etiket biçimi (örn: "П.п. / В.п.")
+/* Kategori adı varyant içerse de türü yakalar: "edat grubu"→edat, "isim/sıfat"→isim... */
+function _catHas(cat, tur) { return String(cat || '').toLowerCase().includes(tur); }
+function _catAna(cat) {
+  const c = String(cat || '').toLowerCase();
+  if (c.includes('fiil') || c.includes('verb')) return 'fiil';
+  if (c.includes('sıfat') || c.includes('sifat')) return 'sıfat';
+  if (c.includes('isim') || c.includes('noun')) return 'isim';
+  if (c.includes('edat')) return 'edat';
+  return c;
+}
 function cwCatChanged(setVal) {
   const cat = _cwVal('cw-cat');
+  const ana = _catAna(cat);
   const sel = document.getElementById('cw-gram');
   const pd = document.getElementById('cw-padej');
   if (pd) pd.style.display = 'none';
   if (!sel) return;
-  if (cat === 'edat') {
+  if (ana === 'edat') {
     sel.innerHTML = ''; sel.style.display = 'none';
     if (pd) {
       pd.style.display = 'flex';
@@ -4179,9 +4190,9 @@ function cwCatChanged(setVal) {
     return;
   }
   const ckRow = document.getElementById('cw-cekim-row');
-  if (ckRow) ckRow.style.display = (cat === 'isim') ? '' : 'none';
-  if (cat === 'isim') cwCekimDoldur();
-  const opts = CW_GRAM_OPTS[cat];
+  if (ckRow) ckRow.style.display = (ana === 'isim') ? '' : 'none';
+  if (ana === 'isim') cwCekimDoldur();
+  const opts = CW_GRAM_OPTS[ana];
   if (!opts) { sel.innerHTML = ''; sel.style.display = 'none'; return; }
   sel.style.display = '';
   sel.innerHTML = opts.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('');
@@ -5157,17 +5168,18 @@ function _cwbGramUI(w) {
   const pWrap = document.getElementById('cwbp-padej-wrap');
   const gSel = document.getElementById('cwbp-gram');
   const gLbl = document.getElementById('cwbp-gram-lbl');
-  if (w.cat === 'isim' || w.cat === 'sıfat') {
+  const bAna = _catAna(w.cat);
+  if (bAna === 'isim' || bAna === 'sıfat') {
     gWrap.style.display = ''; pWrap.style.display = 'none';
     gLbl.textContent = 'Cinsiyet';
     gSel.innerHTML = '<option value="">Seçiniz</option><option>м</option><option>ж</option><option>с</option>';
     gSel.value = ['м', 'ж', 'с'].includes(w.cinsiyet) ? w.cinsiyet : '';
-  } else if (w.cat === 'fiil') {
+  } else if (bAna === 'fiil') {
     gWrap.style.display = ''; pWrap.style.display = 'none';
     gLbl.textContent = 'Görünüş';
     gSel.innerHTML = '<option value="">Seçiniz</option><option value="нсв">НСВ</option><option value="св">СВ</option>';
     gSel.value = ['нсв', 'св'].includes(w.cinsiyet) ? w.cinsiyet : '';
-  } else if (w.cat === 'edat') {
+  } else if (bAna === 'edat') {
     gWrap.style.display = 'none'; pWrap.style.display = '';
     document.getElementById('cwbp-padej').innerHTML = _CWB_PD.map(x =>
       `<label><input type="checkbox" value="${x}" ${w.padej.includes(x) ? 'checked' : ''} onchange="cwbPadej(this)"> ${x}</label>`).join('');
