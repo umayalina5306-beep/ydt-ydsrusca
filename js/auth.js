@@ -133,11 +133,18 @@ async function handleSession(session) {
 
 async function loadProfile() {
   try {
-    const { data, error } = await sb
+    let { data, error } = await sb
       .from("profiles")
       .select("display_name, plan, is_admin, role, level, streak_count, created_at, avatar_seed, status, badges, premium_until, exam_date, weekly_goal, kurum_id")
       .eq("id", currentUser.id)
       .single();
+    // GÜVENLİ GERİ DÜŞÜŞ: kurum_id kolonu henüz yoksa (TUR 4 SQL çalıştırılmadıysa) onsuz dene
+    if (error && String(error.message || "").includes("kurum_id")) {
+      const r0 = await sb.from("profiles")
+        .select("display_name, plan, is_admin, role, level, streak_count, created_at, avatar_seed, status, badges, premium_until, exam_date, weekly_goal")
+        .eq("id", currentUser.id).single();
+      data = r0.data; error = r0.error;
+    }
     if (!error) currentProfile = data;
     // ÖZ-ONARIM: auth hesabı var ama profil satırı yoksa (silinip yeniden kayıt vb.) oluştur
     if (error || !data) {
