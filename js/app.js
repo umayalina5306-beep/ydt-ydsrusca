@@ -116,7 +116,7 @@ function sozlukAra(query) {
     <div class="word-card">
       <button class="word-speak" onclick="speak('${ruSafe}')">🔊</button>
       <span style="position:absolute;top:12px;right:44px;font-size:0.6rem;font-weight:700;color:${lc};background:${lc}22;padding:2px 6px;border-radius:10px;">${w.level}</span>
-      <div class="word-ru">${highlight(w.ru,q)} ${genderHTML}</div>
+      <div class="word-ru${w.ru.length>=20?' word-ru-xlong':w.ru.length>=14?' word-ru-long':''}">${highlight(w.ru,q)} ${genderHTML}</div>
       ${tipHTML}${padejHTML}
       <div class="word-tr">${highlight(w.tr,q)}</div>
       <div class="word-pron"></div>
@@ -5446,17 +5446,21 @@ function kurumTab(tab, btn) {
 
 /* Ana yükleme */
 async function loadKurumPanel() {
-  if (!currentUser || !currentProfile) return;
-  const rol = currentProfile.role;
-  if (rol !== 'kurum' && !currentProfile.is_admin) {
+  if (!currentUser) return;
+  // Profili DOĞRUDAN DB'den taze çek (bellek kopyası eski/eksik olabilir)
+  let rol = 'user', kurumId = null, isAdm = false;
+  try {
+    const { data: fp, error: fpe } = await sb.from('profiles')
+      .select('role, is_admin, kurum_id').eq('id', currentUser.id).single();
+    if (fpe) { console.warn('Kurum panel profil hatası:', fpe.message); }
+    if (fp) { rol = fp.role || 'user'; kurumId = fp.kurum_id || null; isAdm = !!fp.is_admin; }
+  } catch (e) {}
+  if (rol !== 'kurum' && !isAdm) {
     const b = document.getElementById('kurum-stats');
     if (b) b.textContent = 'Bu sayfa kurum yöneticilerine özeldir.';
     return;
   }
-
-  // Kurum bilgisini çek
-  const kurumId = currentProfile.kurum_id;
-  if (!kurumId && !currentProfile.is_admin) {
+  if (!kurumId && !isAdm) {
     const b = document.getElementById('kurum-stats');
     if (b) b.innerHTML = '<span style="color:#ef4444">Henüz bir kuruma atanmamışsınız. Superadmin ile iletişime geçin.</span>';
     return;
@@ -6874,6 +6878,52 @@ setTimeout(function () {
   try { renderCountdown(); } catch (e) {}
   try { fetchExamDates(); } catch (e) {}
 }, 600);
+
+/* ── Admin: Google Search Console verileri ── */
+async function adminGscLoad() {
+  const box = document.getElementById('admin-gsc'); if (!box) return;
+  box.innerHTML = '<div class="admin-loading">Google Search Console verileri çekiliyor...</div>';
+  try {
+    const { data, error } = await sb.functions.invoke('gsc-fetch', { body: {} });
+    if (error) throw new Error(error.message || 'Fonksiyon çağrılamadı');
+    if (data && data.error) throw new Error(data.error);
+    if (data && data.gscError) throw new Error('GSC API: ' + (data.gscError.message || JSON.stringify(data.gscError)));
+
+    const daily = data.daily || [], queries = data.queries || [], pages = data.pages || [];
+    const topClk = daily.reduce((a, r) => a + (r.clicks || 0), 0);
+    const topImp = daily.reduce((a, r) => a + (r.impressions || 0), 0);
+
+    let html = `<div class="pq-stats" style="margin-bottom:12px;">Son 28 gün: <b>${topClk}</b> tıklama · <b>${topImp}</b> gösterim</div>`;
+
+    if (queries.length) {
+      html += '<div style="font-weight:700;font-size:.85rem;color:var(--gold);margin:10px 0 6px;">EN İYİ ARAMALAR</div>';
+      html += '<table style="width:100%;border-collapse:collapse;font-size:.84rem;">';
+      html += '<tr style="border-bottom:1px solid rgba(255,255,255,.1);"><th style="text-align:left;padding:4px 8px;">Sorgu</th><th style="padding:4px 8px;">Tıklama</th><th style="padding:4px 8px;">Gösterim</th><th style="padding:4px 8px;">Ort. Sıra</th></tr>';
+      queries.forEach(r => {
+        html += `<tr><td style="padding:4px 8px;">${_escHtml(r.keys[0])}</td><td style="text-align:center;">${r.clicks}</td><td style="text-align:center;">${r.impressions}</td><td style="text-align:center;">${(r.position||0).toFixed(1)}</td></tr>`;
+      });
+      html += '</table>';
+    }
+
+    if (pages.length) {
+      html += '<div style="font-weight:700;font-size:.85rem;color:var(--gold);margin:14px 0 6px;">EN İYİ SAYFALAR</div>';
+      pages.forEach(r => {
+        const url = (r.keys[0] || '').replace('https://ydt-ydsrusca.com', '') || '/';
+        html += `<div class="err-meta" style="padding:3px 0;">${_escHtml(url)} — ${r.clicks} tıklama, ${r.impressions} gösterim</div>`;
+      });
+    }
+
+    if (!queries.length && !pages.length) {
+      html += '<div class="profile-empty">Henüz veri yok — site yeni indexleniyorsa birkaç gün sürebilir.</div>';
+    }
+
+    box.innerHTML = html;
+  } catch (e) {
+    const msg = (e && e.message) || String(e);
+    box.innerHTML = `<div style="color:#fca5a5;font-size:.85rem;margin-bottom:8px;">Hata: ${_escHtml(msg)}</div>
+      <div class="pq-hint">Kurulum yapılmadıysa: gsc-fetch edge function deploy edilmeli ve GSC_SERVICE_KEY secret'ı tanımlanmalı. Kurulum adımları Claude'un verdiği yönergede.</div>`;
+  }
+}
 
 /* ── Admin: Kurum Yönetimi ── */
 async function adminKurumLoad() {
