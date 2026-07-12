@@ -1193,6 +1193,7 @@ function showPage(id){
   if(id==='quiz') showSetup();
   if(id==='admin' && typeof openAdmin==='function') openAdmin();
   if(id==='teacher' && typeof loadTeacherPanel==='function') loadTeacherPanel();
+  if(id==='kurum'   && typeof loadKurumPanel==='function') loadKurumPanel();
   if(id==='grammar' && typeof tfYeni==='function') setTimeout(tfYeni, 200);
   if (typeof trackPageView === 'function') trackPageView(id);
   if(id==='profile' && typeof openProfile==='function') openProfile();
@@ -5428,6 +5429,219 @@ async function tkTplSave() {
    bildirim ve info@'dan mail gönderme (hepsi loglanır).
    ============================================================ */
 let _teachStudents = [];
+/* ============================================================
+   🏫 KURUM PANELİ — TUR 4
+   ============================================================ */
+let _kurumData  = { ogretmenler: [], ogrenciler: [], atamalar: [] };
+let _kurumInfo  = null;
+
+/* Sekme geçişi */
+function kurumTab(tab, btn) {
+  document.querySelectorAll('.kurum-panel-section').forEach(s => s.style.display = 'none');
+  document.querySelectorAll('.kurum-tab').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById('kurum-panel-' + tab);
+  if (el) el.style.display = '';
+  if (btn) btn.classList.add('active');
+}
+
+/* Ana yükleme */
+async function loadKurumPanel() {
+  if (!currentUser || !currentProfile) return;
+  const rol = currentProfile.role;
+  if (rol !== 'kurum' && !currentProfile.is_admin) {
+    const b = document.getElementById('kurum-stats');
+    if (b) b.textContent = 'Bu sayfa kurum yöneticilerine özeldir.';
+    return;
+  }
+
+  // Kurum bilgisini çek
+  const kurumId = currentProfile.kurum_id;
+  if (!kurumId && !currentProfile.is_admin) {
+    const b = document.getElementById('kurum-stats');
+    if (b) b.innerHTML = '<span style="color:#ef4444">Henüz bir kuruma atanmamışsınız. Superadmin ile iletişime geçin.</span>';
+    return;
+  }
+
+  try {
+    // Kurum adını çek
+    if (kurumId) {
+      const { data: ki } = await sb.from('kurumlar').select('*').eq('id', kurumId).single();
+      _kurumInfo = ki;
+    }
+
+    // Kurumdaki tüm kullanıcıları çek
+    let query = sb.from('profiles')
+      .select('id, display_name, email, role, level, plan, streak_count, created_at, premium_until');
+    if (kurumId) query = query.eq('kurum_id', kurumId);
+    // Admin tüm kurumları görmek için ayrı sayfa kullanır, burası kurum admin için
+    const { data: members } = await query.order('role').order('display_name');
+    const all = members || [];
+
+    _kurumData.ogretmenler = all.filter(u => u.role === 'ogretmen');
+    _kurumData.ogrenciler  = all.filter(u => u.role !== 'ogretmen' && u.role !== 'kurum');
+
+    // Atamalar
+    const allIds = all.map(u => u.id);
+    let atamaMap = {};
+    if (allIds.length) {
+      const { data: ats } = await sb.from('teacher_students').select('*').in('student_id', _kurumData.ogrenciler.map(u=>u.id)).limit(2000);
+      (ats || []).forEach(a => { atamaMap[a.student_id] = a.teacher_id; });
+    }
+    _kurumData.atamalar = atamaMap;
+
+    // Haftalık aktivite
+    const yediGun = new Date(Date.now() - 7*864e5).toISOString();
+    let actMap = {};
+    if (allIds.length) {
+      const { data: acts } = await sb.from('activity_log').select('user_id').in('user_id', allIds).gte('created_at', yediGun).limit(5000);
+      (acts || []).forEach(a => { actMap[a.user_id] = (actMap[a.user_id] || 0) + 1; });
+    }
+
+    // Genel bakış
+    const stats = document.getElementById('kurum-stats');
+    if (stats) {
+      const kurumAdi = _kurumInfo ? `<b>${_escHtml(_kurumInfo.name)}</b> · ` : '';
+      stats.innerHTML = `${kurumAdi}👩‍🏫 <b>${_kurumData.ogretmenler.length}</b> öğretmen · 🎓 <b>${_kurumData.ogrenciler.length}</b> öğrenci · Bu hafta toplam <b>${Object.values(actMap).reduce((a,b)=>a+b,0)}</b> aktivite`;
+    }
+    const actBody = document.getElementById('kurum-act-body');
+    if (actBody) {
+      actBody.innerHTML = all.filter(u => actMap[u.id]).map(u =>
+        `<div class="err-meta" style="padding:4px 0;">${_escHtml(u.display_name||u.email)} — ${actMap[u.id]} aktivite</div>`
+      ).join('') || '<div class="profile-empty">Bu hafta aktivite kaydı yok.</div>';
+    }
+
+    // Öğretmen listesi
+    _kurumRenderOgretmen(actMap);
+    // Öğrenci listesi
+    _kurumRenderOgrenci(actMap);
+    // Atama listesi
+    _kurumRenderAtama();
+
+  } catch (e) {
+    const b = document.getElementById('kurum-stats');
+    if (b) b.innerHTML = 'Yüklenemedi: ' + _escHtml((e&&e.message)||e);
+  }
+}
+
+function _kurumRenderOgretmen(actMap) {
+  const box = document.getElementById('kurum-list-ogretmen'); if (!box) return;
+  if (!_kurumData.ogretmenler.length) { box.innerHTML = '<div class="profile-empty">Henüz öğretmen yok. E-posta ile ekleyin.</div>'; return; }
+  box.innerHTML = _kurumData.ogretmenler.map(u => {
+    const ad = _escHtml(u.display_name || u.email);
+    const act = actMap ? (actMap[u.id] || 0) : 0;
+    const ogrSayisi = Object.values(_kurumData.atamalar).filter(tid => tid === u.id).length;
+    return `<div class="cw-row">
+      <div class="cw-main">
+        <b>${ad}</b> <span class="kv-lvl">Öğretmen</span>
+        <div class="err-meta">${_escHtml(u.email||'')} · Bu hafta ${act} aktivite · ${ogrSayisi} öğrenci atanmış</div>
+      </div>
+      <div class="cw-acts">
+        <button class="mail-act danger" onclick="kurumRemoveMember('${u.id}','${ad.replace(/'/g,'')}')">✕ Çıkar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _kurumRenderOgrenci(actMap) {
+  const box = document.getElementById('kurum-list-ogrenci'); if (!box) return;
+  if (!_kurumData.ogrenciler.length) { box.innerHTML = '<div class="profile-empty">Henüz öğrenci yok. E-posta ile ekleyin.</div>'; return; }
+  box.innerHTML = _kurumData.ogrenciler.map(u => {
+    const ad = _escHtml(u.display_name || u.email);
+    const act = actMap ? (actMap[u.id] || 0) : 0;
+    const ogr = _kurumData.atamalar[u.id];
+    const ogrAd = ogr ? (_kurumData.ogretmenler.find(t=>t.id===ogr)||{}).display_name || 'Atanmış' : 'Atanmamış';
+    return `<div class="cw-row">
+      <div class="cw-main">
+        <b>${ad}</b> <span class="kv-lvl">${u.level||'seviye yok'}</span>
+        ${u.plan==='premium'?'<span class="mail-member yes">👑 Premium</span>':''}
+        <div class="err-meta">${_escHtml(u.email||'')} · Bu hafta ${act} aktivite · Öğretmen: ${_escHtml(ogrAd)}</div>
+      </div>
+      <div class="cw-acts">
+        <button class="mail-act danger" onclick="kurumRemoveMember('${u.id}','${ad.replace(/'/g,'')}')">✕ Çıkar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _kurumRenderAtama() {
+  const box = document.getElementById('kurum-atama-list'); if (!box) return;
+  if (!_kurumData.ogrenciler.length) { box.innerHTML = '<div class="profile-empty">Önce öğrenci ekleyin.</div>'; return; }
+  const ogrOpts = _kurumData.ogretmenler.map(t => `<option value="${t.id}">${_escHtml(t.display_name||t.email)}</option>`).join('');
+  box.innerHTML = _kurumData.ogrenciler.map(u => {
+    const ad = _escHtml(u.display_name||u.email);
+    const mevcutOgr = _kurumData.atamalar[u.id] || '';
+    return `<div class="cw-row" style="align-items:center;">
+      <div class="cw-main"><b>${ad}</b><div class="err-meta">${_escHtml(u.email||'')}</div></div>
+      <div class="cw-acts" style="gap:8px;">
+        <select class="pq-input" style="min-width:180px;" onchange="kurumAssignTeacher('${u.id}',this.value)">
+          <option value="">— Öğretmen seç —</option>
+          ${ogrOpts}
+        </select>
+        ${mevcutOgr ? `<span class="cw-cat">✅ Atanmış</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  // Mevcut atamaları selectlere yansıt
+  setTimeout(() => {
+    _kurumData.ogrenciler.forEach(u => {
+      const ogr = _kurumData.atamalar[u.id];
+      if (!ogr) return;
+      const rows = document.querySelectorAll('#kurum-atama-list .cw-row');
+      rows.forEach(row => {
+        const sel = row.querySelector('select');
+        if (sel && row.innerHTML.includes(u.id)) sel.value = ogr;
+      });
+    });
+  }, 100);
+}
+
+async function kurumAddMember(rol) {
+  const inpId = rol === 'ogretmen' ? 'kurum-add-ogretmen-email' : 'kurum-add-ogrenci-email';
+  const inp = document.getElementById(inpId); if (!inp) return;
+  const email = inp.value.trim();
+  if (!email) { uiAlert('E-posta girin.'); return; }
+  try {
+    const { data, error } = await sb.rpc('kurum_set_member', { p_email: email, p_role: rol });
+    if (error) throw error;
+    if (data && data.error) throw new Error(data.error);
+    inp.value = '';
+    toast(rol === 'ogretmen' ? '✅ Öğretmen eklendi.' : '✅ Öğrenci eklendi.');
+    await loadKurumPanel();
+  } catch (e) { uiAlert('Eklenemedi: ' + ((e&&e.message)||e)); }
+}
+
+async function kurumRemoveMember(userId, name) {
+  const ok = await uiConfirm(`${name} kurumdan çıkarılsın mı? Öğretmen atamaları da silinir.`);
+  if (!ok) return;
+  try {
+    const { data, error } = await sb.rpc('kurum_remove_member', { p_user_id: userId });
+    if (error) throw error;
+    if (data && data.error) throw new Error(data.error);
+    toast('✅ Üye kurumdan çıkarıldı.');
+    await loadKurumPanel();
+  } catch (e) { uiAlert('İşlem başarısız: ' + ((e&&e.message)||e)); }
+}
+
+async function kurumAssignTeacher(studentId, teacherId) {
+  try {
+    if (teacherId) {
+      // Varsa güncelle, yoksa ekle
+      const { data: mevcut } = await sb.from('teacher_students').select('id').eq('student_id', studentId).limit(1);
+      if (mevcut && mevcut.length) {
+        await sb.from('teacher_students').update({ teacher_id: teacherId }).eq('student_id', studentId);
+      } else {
+        await sb.from('teacher_students').insert({ teacher_id: teacherId, student_id: studentId });
+      }
+      _kurumData.atamalar[studentId] = teacherId;
+      toast('✅ Öğretmen atandı.');
+    } else {
+      await sb.from('teacher_students').delete().eq('student_id', studentId);
+      delete _kurumData.atamalar[studentId];
+      toast('Atama kaldırıldı.');
+    }
+  } catch (e) { uiAlert('Atama başarısız: ' + ((e&&e.message)||e)); }
+}
+
 async function loadTeacherPanel() {
   const box = document.getElementById('teach-list');
   const sum = document.getElementById('teach-summary');
@@ -6660,6 +6874,83 @@ setTimeout(function () {
   try { renderCountdown(); } catch (e) {}
   try { fetchExamDates(); } catch (e) {}
 }, 600);
+
+/* ── Admin: Kurum Yönetimi ── */
+async function adminKurumLoad() {
+  const box = document.getElementById('admin-kurum-list'); if (!box) return;
+  box.innerHTML = '<div class="profile-empty">Yükleniyor...</div>';
+  try {
+    const { data: kurumlar } = await sb.from('kurumlar').select('*').order('created_at', { ascending: false });
+    if (!kurumlar || !kurumlar.length) { box.innerHTML = '<div class="profile-empty">Henüz kurum yok.</div>'; return; }
+    // Her kurum için üye sayısını çek
+    const ids = kurumlar.map(k => k.id);
+    const { data: members } = await sb.from('profiles').select('kurum_id, role').in('kurum_id', ids);
+    const sayiMap = {};
+    (members || []).forEach(m => {
+      if (!sayiMap[m.kurum_id]) sayiMap[m.kurum_id] = { ogretmen: 0, ogrenci: 0 };
+      if (m.role === 'ogretmen') sayiMap[m.kurum_id].ogretmen++;
+      else sayiMap[m.kurum_id].ogrenci++;
+    });
+    box.innerHTML = kurumlar.map(k => {
+      const s = sayiMap[k.id] || { ogretmen: 0, ogrenci: 0 };
+      const planBadge = k.plan === 'premium' ? '🥇 Premium' : k.plan === 'enterprise' ? '⭐ Enterprise' : 'Basic';
+      return `<div class="cw-row">
+        <div class="cw-main">
+          <b>${_escHtml(k.name)}</b> <span class="cw-cat">${planBadge}</span>
+          ${!k.active ? '<span class="tt-weak">Pasif</span>' : ''}
+          <div class="err-meta">👩‍🏫 ${s.ogretmen} öğretmen · 🎓 ${s.ogrenci} öğrenci · Oluşturuldu: ${new Date(k.created_at).toLocaleDateString('tr-TR')}</div>
+          ${k.notes ? `<div class="err-meta">${_escHtml(k.notes)}</div>` : ''}
+        </div>
+        <div class="cw-acts">
+          <button class="mail-act" onclick="adminKurumSetAdmin('${k.id}','${_escAttr(k.name)}')">👤 Admin Ata</button>
+          <button class="mail-act danger" onclick="adminKurumToggle('${k.id}',${k.active})">
+            ${k.active ? '⏸ Dondur' : '▶ Aktifleştir'}
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) { box.innerHTML = 'Yüklenemedi: ' + _escHtml((e&&e.message)||e); }
+}
+
+async function adminKurumCreate() {
+  const name  = (document.getElementById('new-kurum-name')  ||{}).value.trim();
+  const plan  = (document.getElementById('new-kurum-plan')  ||{}).value || 'basic';
+  const notes = (document.getElementById('new-kurum-notes') ||{}).value.trim();
+  if (!name) { uiAlert('Kurum adı zorunlu.'); return; }
+  try {
+    const { error } = await sb.from('kurumlar').insert({ name, plan, notes: notes || null });
+    if (error) throw error;
+    toast('✅ Kurum oluşturuldu: ' + name);
+    const inp = document.getElementById('new-kurum-name'); if (inp) inp.value = '';
+    await adminKurumLoad();
+  } catch (e) { uiAlert('Oluşturulamadı: ' + ((e&&e.message)||e)); }
+}
+
+async function adminKurumSetAdmin(kurumId, kurumAdi) {
+  const email = await uiPrompt(`"${kurumAdi}" kurumuna kurum admin ata
+Kullanıcı e-postası:`, { title: '👤 Kurum Admin Ata' });
+  if (!email) return;
+  try {
+    // Önce kullanıcıyı bul
+    const { data: prof } = await sb.from('profiles').select('id, display_name').eq('email', email.trim()).single();
+    if (!prof) { uiAlert('Kullanıcı bulunamadı: ' + email); return; }
+    // Rolü kurum yap, kurum_id ata
+    const { error } = await sb.from('profiles').update({ role: 'kurum', kurum_id: kurumId }).eq('id', prof.id);
+    if (error) throw error;
+    toast(`✅ ${prof.display_name || email} → Kurum Admin olarak atandı.`);
+    staffLog('kurum_admin_ata', prof.id, { kurum_id: kurumId, kurum_adi: kurumAdi });
+  } catch (e) { uiAlert('İşlem başarısız: ' + ((e&&e.message)||e)); }
+}
+
+async function adminKurumToggle(kurumId, aktif) {
+  const ok = await uiConfirm(aktif ? 'Kurumu dondur? Üyeler giriş yapabilir ama kurum paneli kapanır.' : 'Kurumu aktifleştir?');
+  if (!ok) return;
+  try {
+    await sb.from('kurumlar').update({ active: !aktif }).eq('id', kurumId);
+    toast(aktif ? 'Kurum donduruldu.' : 'Kurum aktifleştirildi.');
+    await adminKurumLoad();
+  } catch (e) { uiAlert('İşlem başarısız: ' + ((e&&e.message)||e)); }
+}
 
 /* ── Admin: Sınav Tarihleri kaydet/yükle ── */
 async function adminLoadExamDates() {
