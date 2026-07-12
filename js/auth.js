@@ -133,17 +133,29 @@ async function handleSession(session) {
 
 async function loadProfile() {
   try {
-    let { data, error } = await sb
-      .from("profiles")
+    // KADEMELİ PROFİL YÜKLEME: hangi kolon eksik olursa olsun profil MUTLAKA yüklensin
+    let data = null, error = null;
+    // 1. deneme: tüm kolonlar (kurum_id dahil)
+    let r = await sb.from("profiles")
       .select("display_name, plan, is_admin, role, level, streak_count, created_at, avatar_seed, status, badges, premium_until, exam_date, weekly_goal, kurum_id")
-      .eq("id", currentUser.id)
-      .single();
-    // GÜVENLİ GERİ DÜŞÜŞ: kurum_id kolonu henüz yoksa (TUR 4 SQL çalıştırılmadıysa) onsuz dene
-    if (error && String(error.message || "").includes("kurum_id")) {
-      const r0 = await sb.from("profiles")
+      .eq("id", currentUser.id).single();
+    data = r.data; error = r.error;
+    // 2. deneme: kurum_id olmadan (kolon henüz yoksa)
+    if (error) {
+      try { console.warn("Profil 1. deneme hatası:", error.message); } catch(e){}
+      r = await sb.from("profiles")
         .select("display_name, plan, is_admin, role, level, streak_count, created_at, avatar_seed, status, badges, premium_until, exam_date, weekly_goal")
         .eq("id", currentUser.id).single();
-      data = r0.data; error = r0.error;
+      data = r.data; error = r.error;
+    }
+    // 3. deneme: minimum kritik alanlar (her ne olursa olsun)
+    if (error) {
+      try { console.warn("Profil 2. deneme hatası:", error.message); } catch(e){}
+      r = await sb.from("profiles")
+        .select("display_name, plan, is_admin, role, level, status")
+        .eq("id", currentUser.id).single();
+      data = r.data; error = r.error;
+      if (error) { try { console.error("Profil 3. deneme hatası:", error.message); } catch(e){} }
     }
     if (!error) currentProfile = data;
     // ÖZ-ONARIM: auth hesabı var ama profil satırı yoksa (silinip yeniden kayıt vb.) oluştur
