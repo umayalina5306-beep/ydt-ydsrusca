@@ -60,6 +60,7 @@ function adminNav(view) {
   if (view === "visits") { if (typeof renderVisitsFull === "function") renderVisitsFull(); if (typeof renderSeoCheck === "function") renderSeoCheck(); }
   if (view === "settings" && typeof adminSettingsInit === "function") adminSettingsInit();
   if (view === "settings" && typeof adminLoadExamDates === "function") adminLoadExamDates();
+  if (view === "kurumlar" && typeof adminKurumLoad === "function") adminKurumLoad();
   if (view === "backup" && typeof renderBackupView === "function") renderBackupView();
   if (view === "errors" && typeof adminLoadErrors === "function") adminLoadErrors();
   if (view === "assign" && typeof adminAssignInit === "function") adminAssignInit();
@@ -109,7 +110,7 @@ function renderAdminUsers(list) {
     const isPrem = u.plan === "premium";
     const tarih = u.created_at ? new Date(u.created_at).toLocaleDateString("tr-TR") : "";
     const pUntil = (u.plan === "premium" && u.premium_until) ? " · 👑 " + new Date(u.premium_until).toLocaleDateString("tr-TR") + "'e kadar" : "";
-    const ROL_AD = { destek: "🛟 Destek", ogretmen: "👩‍🏫 Öğretmen" };
+    const ROL_AD = { destek: "🛟 Destek", ogretmen: "👩‍🏫 Öğretmen", kurum: "🏫 Kurum Admin" };
     const rolBadge = (!u.is_admin && ROL_AD[u.role]) ? ` <span class="plan-badge plan-role">${ROL_AD[u.role]}</span>` : "";
     const planBadge = (u.is_admin
       ? '<span class="plan-badge plan-admin">Yönetici</span>'
@@ -133,6 +134,7 @@ function renderAdminUsers(list) {
             <option value="user" ${(!u.role||u.role==='user')?'selected':''}>Rol: Kullanıcı</option>
             <option value="destek" ${u.role==='destek'?'selected':''}>Rol: Destek</option>
             <option value="ogretmen" ${u.role==='ogretmen'?'selected':''}>Rol: Öğretmen</option>
+            <option value="kurum" ${u.role==='kurum'?'selected':''}>Rol: Kurum Admin</option>
           </select>` : ''}
         </div>
         <div id="udet-${u.id}" class="udet-box" style="display:none;"></div>
