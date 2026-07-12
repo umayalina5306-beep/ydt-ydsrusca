@@ -1183,20 +1183,62 @@ async function refreshPqFromDb() {
 }
 
 // NAV
+/* Eğitim Merkezi'nde toplanan sayfalar: tek nav butonu + sol sidebar düzeni */
+const LEARN_PAGES = ['words', 'grammar', 'quiz', 'video'];
+
 function showPage(id){
+  // Eğitim sayfaları learn düzeninde açılır (geriye uyumluluk: eski linkler çalışmaya devam eder)
+  if (LEARN_PAGES.includes(id)) {
+    _openLearn(id);
+    return;
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-links button').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
   const nb=document.getElementById('nav-'+id);
   if(nb) nb.classList.add('active');
   window.scrollTo(0,0);
-  if(id==='quiz') showSetup();
+  if(id==='learn') _openLearn(_learnCurrent || 'words');
   if(id==='admin' && typeof openAdmin==='function') openAdmin();
   if(id==='teacher' && typeof loadTeacherPanel==='function') loadTeacherPanel();
   if(id==='kurum'   && typeof loadKurumPanel==='function') loadKurumPanel();
-  if(id==='grammar' && typeof tfYeni==='function') setTimeout(tfYeni, 200);
   if (typeof trackPageView === 'function') trackPageView(id);
   if(id==='profile' && typeof openProfile==='function') openProfile();
+}
+
+let _learnCurrent = null;
+function _openLearn(sub) {
+  // Learn kabuğunu aktive et
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-links button').forEach(b=>b.classList.remove('active'));
+  const learnPage = document.getElementById('page-learn');
+  if (learnPage) learnPage.classList.add('active');
+  const nb = document.getElementById('nav-learn');
+  if (nb) nb.classList.add('active');
+  window.scrollTo(0,0);
+  learnNav(sub);
+}
+function learnNav(sub, btn) {
+  if (!LEARN_PAGES.includes(sub)) sub = 'words';
+  _learnCurrent = sub;
+  const host = document.getElementById('learn-content');
+  if (!host) return;
+  // İlgili sayfa div'ini learn içine taşı (DOM taşıma: tüm id/event'ler korunur)
+  const pg = document.getElementById('page-' + sub);
+  if (pg && pg.parentElement !== host) host.appendChild(pg);
+  // Learn içindeki sayfaları yönet
+  LEARN_PAGES.forEach(p => {
+    const el = document.getElementById('page-' + p);
+    if (el) el.classList.toggle('active', p === sub);
+  });
+  // Sidebar vurgusu
+  document.querySelectorAll('#learn-layout .psb-item').forEach(b => b.classList.remove('active'));
+  const sb2 = btn || document.getElementById('lsb-' + sub);
+  if (sb2) sb2.classList.add('active');
+  // Sayfa özel tetikleyiciler
+  if (sub === 'quiz' && typeof showSetup === 'function') showSetup();
+  if (sub === 'grammar' && typeof tfYeni === 'function') setTimeout(tfYeni, 200);
+  if (typeof trackPageView === 'function') trackPageView(sub);
 }
 
 // AUTH
