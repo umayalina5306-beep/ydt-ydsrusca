@@ -61,6 +61,7 @@ function adminNav(view) {
   if (view === "settings" && typeof adminSettingsInit === "function") adminSettingsInit();
   if (view === "settings" && typeof adminLoadExamDates === "function") adminLoadExamDates();
   if (view === "kurumlar" && typeof adminKurumLoad === "function") adminKurumLoad();
+  if (view === "visits" && typeof adminGscShowLast === "function") adminGscShowLast();
   if (view === "backup" && typeof renderBackupView === "function") renderBackupView();
   if (view === "errors" && typeof adminLoadErrors === "function") adminLoadErrors();
   if (view === "assign" && typeof adminAssignInit === "function") adminAssignInit();
