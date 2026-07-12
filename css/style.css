@@ -2693,3 +2693,18 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .word-ru mark { white-space: nowrap; }
 .word-ru-long  { font-size: .95rem !important; letter-spacing: -0.2px; }  /* 14-19 harf */
 .word-ru-xlong { font-size: .8rem  !important; letter-spacing: -0.3px; }  /* 20+ harf (достопримечательность vb.) */
+
+/* ── Eğitim Merkezi düzeni ── */
+#learn-layout { grid-template-columns: 220px 1fr; }
+#learn-content { min-width: 0; }
+#learn-content .page { display: none; }
+#learn-content .page.active { display: block; }
+/* İç sayfaların kendi geniş container'ları learn içinde tam genişlik kullansın */
+#learn-content .words-section,
+#learn-content .video-header,
+#learn-content .video-grid { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; }
+@media (max-width: 860px) {
+  #learn-layout { grid-template-columns: 1fr; }
+  #learn-layout .profile-sidebar { position: static; flex-direction: row; flex-wrap: wrap; }
+  #learn-layout .psb-menu { flex-direction: row !important; flex-wrap: wrap; }
+}
