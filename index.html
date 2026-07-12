@@ -51,10 +51,7 @@
   <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=96" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
-    <li><button onclick="showPage('words')" id="nav-words">Kelimeler</button></li>
-    <li><button onclick="showPage('grammar')" id="nav-grammar">Gramer</button></li>
-    <li><button onclick="showPage('quiz')" id="nav-quiz">Testler</button></li>
-    <li><button onclick="showPage('video')" id="nav-video">Video Dersler</button></li>
+    <li><button onclick="showPage('learn')" id="nav-learn">📚 Eğitim</button></li>
     <li><button onclick="showPage('recs')" id="nav-recs">Öneriler</button></li>
     <li><button onclick="showPage('pricing')" id="nav-pricing">Fiyatlar</button></li>
   </ul>
@@ -137,6 +134,23 @@
 </div>
 
 <!-- ===== WORDS ===== -->
+<div id="page-learn" class="page">
+  <section style="max-width:1280px;margin:0 auto;padding:24px 20px 48px;">
+    <div class="profile-layout" id="learn-layout">
+      <div class="profile-sidebar">
+        <div class="psb-menu">
+          <div class="psb-section-title">📚 EĞİTİM MERKEZİ</div>
+          <button class="psb-item active" id="lsb-words"   onclick="learnNav('words',this)"><span class="psb-ic">🔤</span> <span>Kelimeler</span></button>
+          <button class="psb-item" id="lsb-grammar" onclick="learnNav('grammar',this)"><span class="psb-ic">📖</span> <span>Gramer</span></button>
+          <button class="psb-item" id="lsb-quiz"    onclick="learnNav('quiz',this)"><span class="psb-ic">📝</span> <span>Testler</span></button>
+          <button class="psb-item" id="lsb-video"   onclick="learnNav('video',this)"><span class="psb-ic">🎬</span> <span>Video Dersler</span></button>
+        </div>
+      </div>
+      <div id="learn-content"></div>
+    </div>
+  </section>
+</div>
+
 <div id="page-words" class="page">
 
   <!-- SEVİYE SEÇİMİ -->
