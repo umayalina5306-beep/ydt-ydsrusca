@@ -3698,8 +3698,8 @@ async function adminContentInit() {
 }
 async function adminCwReload() {
   try {
-    const { data } = await sb.from('content_words').select('*').order('ru').limit(10000);
-    _cwRows = data || [];
+    // sbFetchAll: 1000'lik sayfalarla TÜMÜNÜ çeker (Supabase tek istekte max 1000 döndürür)
+    _cwRows = await sbFetchAll('content_words', 'ru');
   } catch (e) { _cwRows = []; }
   renderCwStats(); renderCwList();
 }
