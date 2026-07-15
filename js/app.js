@@ -3560,24 +3560,42 @@ async function adminClearErrors() {
    ZİYARET TAKİBİ (page_views) + SEO DENETİMİ
    ============================================================ */
 let _pvLogged = new Set();
+/* Ziyaretçinin IP/ülke/şehir bilgisi (günde 1 kez çekilir, localStorage'da saklanır) */
+async function _getGeo() {
+  try {
+    const cached = JSON.parse(localStorage.getItem('ydt_geo') || 'null');
+    if (cached && cached.t && (Date.now() - cached.t) < 86400000) return cached;
+    const res = await fetch('https://ipwho.is/');
+    const j = await res.json();
+    if (!j || j.success === false) return null;
+    const geo = { ip: j.ip || '', country: j.country || '', city: j.city || '', t: Date.now() };
+    localStorage.setItem('ydt_geo', JSON.stringify(geo));
+    return geo;
+  } catch (e) { return null; }
+}
 function trackPageView(pageId) {
   try {
     if (typeof sb === 'undefined' || !sb) return;
     const key = pageId + ':' + new Date().toISOString().slice(0,13); // saat başına aynı sayfayı 1 kez
     if (_pvLogged.has(key)) return;
     _pvLogged.add(key);
-    sb.from('page_views').insert({
-      path: String(pageId || 'home').slice(0, 60),
-      user_id: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null,
-      referrer: (document.referrer || '').slice(0, 200),
-      ua: (navigator.userAgent || '').slice(0, 200)
-    }).then(function(){}, function(){});
+    _getGeo().then(function (geo) {
+      sb.from('page_views').insert({
+        path: String(pageId || 'home').slice(0, 60),
+        user_id: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null,
+        referrer: (document.referrer || '').slice(0, 200),
+        ua: (navigator.userAgent || '').slice(0, 200),
+        ip: geo ? geo.ip : null,
+        country: geo ? geo.country : null,
+        city: geo ? geo.city : null
+      }).then(function(){}, function(){});
+    });
   } catch (e) {}
 }
 
 async function _visitData(days) {
   const since = new Date(); since.setDate(since.getDate() - days);
-  const { data } = await sb.from('page_views').select('path, created_at, referrer')
+  const { data } = await sb.from('page_views').select('path, created_at, referrer, country, city')
     .gte('created_at', since.toISOString()).order('created_at', { ascending: false }).limit(5000);
   return data || [];
 }
@@ -3619,6 +3637,19 @@ async function renderVisitsFull() {
       <div class="st-card"><div class="st-card-num">${week}</div><div class="st-card-lab">Son 7 Gün</div></div>
       <div class="st-card"><div class="st-card-num">${total}</div><div class="st-card-lab">Son 30 Gün</div></div>
     </div>
+    <h4 class="st-h3">Ülke & Şehir (30 gün)</h4>
+    ${(() => {
+      const geo = {};
+      rows.forEach(r => {
+        if (!r.country) return;
+        const k = r.country + (r.city ? ' · ' + r.city : '');
+        geo[k] = (geo[k] || 0) + 1;
+      });
+      const gt = Object.entries(geo).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      if (!gt.length) return '<div class="profile-empty">Henüz konum verisi yok (yeni ziyaretlerle birikecek).</div>';
+      const gm = Math.max(1, ...gt.map(t => t[1]));
+      return gt.map(t => `<div class="st-bar-row"><span class="st-bar-lab" style="width:170px">${_escHtml(t[0])}</span><div class="st-bar-track"><div class="st-bar-fill" style="width:${Math.round(t[1]/gm*100)}%"></div></div><span class="st-bar-val">${t[1]}</span></div>`).join('');
+    })()}
     <h4 class="st-h3">Trafik Kaynakları (30 gün)</h4>
     ${(() => {
       const src = {};
@@ -3846,11 +3877,12 @@ function adminWordEdit(id) {
 async function adminWordSave() {
   const ru = _cwVal('cw-ru'), tr = _cwVal('cw-tr');
   if (!ru || !tr) { uiAlert('Rusça kelime ve Türkçe anlam zorunlu.'); return; }
+  const _ana = _catAna(_cwVal('cw-cat'));
   const row = { ru, tr, p: null, cat: _cwVal('cw-cat'), level: _cwVal('cw-lvl'),
-    cinsiyet: (_cwVal('cw-cat') === 'edat') ? null : (_cwVal('cw-gram') || null),
-    tip: (_cwVal('cw-cat') === 'fiil') ? ({ 'нсв': 'НСВ', 'св': 'СВ' }[_cwVal('cw-gram')] || null) : null,
+    cinsiyet: (_ana === 'edat') ? null : (_cwVal('cw-gram') || null),
+    tip: (_ana === 'fiil') ? ({ 'нсв': 'НСВ', 'св': 'СВ' }[_cwVal('cw-gram')] || null) : null,
     cekim: (function () {
-      if (_cwVal('cw-cat') !== 'isim') return null;
+      if (_ana !== 'isim') return null;
       const oto = ruDecline(_cwVal('cw-ru'), _cwVal('cw-gram') || null);
       const out = {};
       ['rp','dp','vp','tp','pp'].forEach(k => {
