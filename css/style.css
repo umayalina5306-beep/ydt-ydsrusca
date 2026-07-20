@@ -2708,3 +2708,43 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   #learn-layout .profile-sidebar { position: static; flex-direction: row; flex-wrap: wrap; }
   #learn-layout .psb-menu { flex-direction: row !important; flex-wrap: wrap; }
 }
+
+/* ── Kelime kartı meta (seviye + tür) ── */
+.word-meta { display:flex; gap:6px; align-items:center; margin-top:6px; flex-wrap:wrap; }
+.wm-lvl { font-size:.66rem; font-weight:800; padding:2px 7px; border-radius:6px; letter-spacing:.4px; }
+.wm-a1 { background:rgba(34,197,94,.18); color:#4ade80; }
+.wm-a2 { background:rgba(59,130,246,.18); color:#60a5fa; }
+.wm-b1 { background:rgba(234,179,8,.18); color:#facc15; }
+.wm-b2 { background:rgba(249,115,22,.18); color:#fb923c; }
+.wm-c1 { background:rgba(239,68,68,.18); color:#f87171; }
+.wm-cat { font-size:.68rem; color:#9ca3af; text-transform:capitalize; }
+.word-ru { white-space:nowrap; }
+
+/* ── Cümle Defterim ── */
+.sd-builder { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:16px; margin-bottom:20px; }
+.sd-chips-lbl { font-size:.85rem; color:#9ca3af; margin-bottom:8px; }
+.sd-chips { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:14px; max-height:150px; overflow-y:auto; }
+.sd-chip { background:rgba(212,164,24,.08); border:1px solid rgba(212,164,24,.3); color:#eee; border-radius:8px; padding:5px 10px; cursor:pointer; font-size:.88rem; display:flex; flex-direction:column; align-items:flex-start; transition:all .15s; font-family:'Noto Sans',sans-serif; }
+.sd-chip small { color:#9ca3af; font-size:.68rem; }
+.sd-chip:hover { border-color:var(--gold); }
+.sd-chip.on { background:var(--gold); color:#111; }
+.sd-chip.on small { color:#333; }
+.sd-list { display:flex; flex-direction:column; gap:12px; }
+.sd-item { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07); border-radius:12px; padding:14px 16px; }
+.sd-item-ru { font-family:'Noto Sans',sans-serif; font-size:1.08rem; font-weight:600; display:flex; align-items:center; gap:8px; }
+.sd-item-tr { color:#9ca3af; font-size:.9rem; margin-top:4px; }
+.sd-item-words { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+.sd-item-words span { font-size:.72rem; background:rgba(212,164,24,.12); color:var(--gold); padding:2px 8px; border-radius:6px; }
+.sd-item-foot { display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:.75rem; color:#6b7280; }
+
+/* ── Mobil iyileştirmeler ── */
+@media (max-width: 640px) {
+  .words-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important; gap:10px !important; }
+  .word-card { padding:12px 10px !important; }
+  .cat-tabs { overflow-x:auto; flex-wrap:nowrap !important; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
+  .cat-btn { white-space:nowrap; flex-shrink:0; }
+  .setup-options { gap:6px !important; }
+  .setup-btn { font-size:.82rem !important; padding:8px 10px !important; }
+  .exam-countdown-float { bottom:80px; right:10px; padding:8px 10px; min-width:104px; }
+  .sd-chips { max-height:110px; }
+}
