@@ -106,8 +106,8 @@ function sozlukAra(query) {
 
   grid.innerHTML = results.map(w => {
     const tipHTML = w.tip ? `<span class="word-tip ${w.tip==='СВ'?'word-tip-cv':'word-tip-ncv'}">${w.tip}</span>` : '';
-    const genderClass = w.cinsiyet==='м'?'gender-m':w.cinsiyet==='ж'?'gender-f':(w.cinsiyet==='с'?'gender-n':'gender-v');
-    const genderLabel = w.cinsiyet==='м'?'м (eril)':w.cinsiyet==='ж'?'ж (dişil)':w.cinsiyet==='с'?'с (nötr)':'';
+    const genderClass = ({'м':'gender-m','ж':'gender-f','с':'gender-n','мн':'gender-pl','м/ж':'gender-mf'})[w.cinsiyet] || 'gender-v';
+    const genderLabel = ({'м':'м (eril)','ж':'ж (dişil)','с':'с (nötr)','мн':'мн (çoğul)','м/ж':'м/ж (ortak)'})[w.cinsiyet] || '';
     const genderHTML = w.cinsiyet ? `<span class="word-gender ${genderClass}">${genderLabel}</span>` : '';
     const padejHTML = w.padej ? `<span class="word-padej">${w.padej}</span><br>` : '';
     const lc = levelColor[w.level] || '#6b7280';
@@ -3843,7 +3843,7 @@ function renderCwList() {
   if (cwState.tag && cwState.tag !== 'all') {
     const t = cwState.tag;
     if (t === 'НСВ' || t === 'СВ') list = list.filter(r => r.tip === t);
-    else if (t === 'м' || t === 'ж' || t === 'с') list = list.filter(r => r.cinsiyet === t);
+    else if (t === 'м' || t === 'ж' || t === 'с' || t === 'мн' || t === 'м/ж') list = list.filter(r => r.cinsiyet === t);
     else if (t === 'padejli') list = list.filter(r => r.padej);
     else if (t === 'eksik') list = list.filter(r => {
       const a = _catAna(r.cat);
@@ -3866,7 +3866,7 @@ function renderCwList() {
   }
   box.innerHTML = slice.map(r => `
     <div class="cw-row ${r.active === false ? 'off' : ''}">
-      <div class="cw-main"><b>${_escHtml(r.ru)}</b> — ${_escHtml(r.tr)} <span class="kv-lvl">${r.level || ''}</span> <span class="cw-cat">${_escHtml(r.cat || '')}</span>${r.cinsiyet ? ` <span class="word-gender gender-${({'м':'m','ж':'j','с':'s'})[r.cinsiyet]||'v'}">${r.cinsiyet}</span>` : ''}${r.tip ? ` <span class="word-tip ${r.tip==='СВ'?'word-tip-cv':'word-tip-ncv'}">${r.tip}</span>` : ''}${r.padej ? ` <span class="word-padej">${_escHtml(r.padej)}</span>` : ''}${r.premium ? ' <span class="mail-member yes">Premium</span>' : ''}${r.active === false ? ' <span class="mail-member no">Gizli</span>' : ''}</div>
+      <div class="cw-main"><b>${_escHtml(r.ru)}</b> — ${_escHtml(r.tr)} <span class="kv-lvl">${r.level || ''}</span> <span class="cw-cat">${_escHtml(r.cat || '')}</span>${r.cinsiyet ? ` <span class="word-gender ${({'м':'gender-m','ж':'gender-f','с':'gender-n','мн':'gender-pl','м/ж':'gender-mf'})[r.cinsiyet]||'gender-v'}">${r.cinsiyet}</span>` : ''}${r.tip ? ` <span class="word-tip ${r.tip==='СВ'?'word-tip-cv':'word-tip-ncv'}">${r.tip}</span>` : ''}${r.padej ? ` <span class="word-padej">${_escHtml(r.padej)}</span>` : ''}${r.premium ? ' <span class="mail-member yes">Premium</span>' : ''}${r.active === false ? ' <span class="mail-member no">Gizli</span>' : ''}</div>
       <div class="cw-acts">
         <button class="mail-act" onclick="adminWordEdit('${r.id}')">✏️ Düzenle</button>
         ${r.active === false
@@ -4259,10 +4259,9 @@ function cwCekimDoldur(kayit) {
   ['rp','dp','vp','tp','pp'].forEach(k => { const el = document.getElementById('ck-' + k); if (el) el.value = kaynak[k] || ''; });
 }
 const CW_GRAM_OPTS = {
-  'isim': [['', 'Cinsiyet...'], ['м', 'м'], ['ж', 'ж'], ['с', 'с']],
+  'isim': [['', 'Cinsiyet...'], ['м', 'м (eril)'], ['ж', 'ж (dişil)'], ['с', 'с (nötr)'], ['мн', 'мн (yalnız çoğul)'], ['м/ж', 'м/ж (ortak cins)']],
   'sıfat': [['', 'Cinsiyet...'], ['м', 'м'], ['ж', 'ж'], ['с', 'с']],
-  'fiil': [['', '—'], ['нсв', 'НСВ'], ['св', 'СВ']],
-  'sıfat': [['', 'Cinsiyet...'], ['м', 'м'], ['ж', 'ж'], ['с', 'с']]
+  'fiil': [['', '—'], ['нсв', 'НСВ'], ['св', 'СВ']]
 };
 const CW_PADEJ = ['Р.п.', 'Д.п.', 'В.п.', 'Т.п.', 'П.п.']; // sitedeki etiket biçimi (örn: "П.п. / В.п.")
 /* Kategori adı varyant içerse de türü yakalar: "edat grubu"→edat, "isim/sıfat"→isim... */
