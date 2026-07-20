@@ -2748,3 +2748,5 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   .exam-countdown-float { bottom:80px; right:10px; padding:8px 10px; min-width:104px; }
   .sd-chips { max-height:110px; }
 }
+.gender-pl { background:rgba(139,92,246,.18); color:#a78bfa; }  /* мн — mor */
+.gender-mf { background:rgba(236,72,153,.16); color:#f472b6; }  /* м/ж — pembe */
