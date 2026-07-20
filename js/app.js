@@ -876,7 +876,12 @@ function startQuiz(){
   const _rb = document.querySelector('#quiz-setup [data-reveal].active'); quizReveal = _rb ? _rb.dataset.reveal : 'instant';
   // Paragraf soruları ayrı havuzdan gelir (kelime değil)
   if (quizSettings.type === 'cloze') {
-    quizPool = quizPool.filter(w => w.ornek && w.ornek.toLowerCase().includes((w.ru||'').toLowerCase()));
+    // Kök eşleşmesi: "книга" cümlede "книгу" olarak geçse de yakalar
+    quizPool = quizPool.filter(w => {
+      if (!w.ornek || !w.ru) return false;
+      const kok = w.ru.toLowerCase().slice(0, Math.max(3, Math.ceil(w.ru.length * 0.6)));
+      return w.ornek.toLowerCase().includes(kok);
+    });
     if (quizPool.length < 4) { uiAlert('Bu seçimde örnek cümleli yeterli kelime yok. Farklı seviye/kategori dene.'); return; }
   }
   if (quizSettings.type === 'paragraf') {
@@ -928,9 +933,11 @@ function _qType(i){ return quizSettings.type === 'mix' ? ((qTypes && qTypes[i]) 
 
 function buildQuestion(w, type){
   if (type === 'cloze'){
-    // Örnek cümlede kelimeyi boşlukla değiştir; 4 Rusça şık
+    // Örnek cümlede kelimeyi (çekimli haliyle bile) boşlukla değiştir; 4 Rusça şık
     const esc = s => String(s||'').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const gap = String(w.ornek||'').replace(new RegExp(esc(w.ru), 'i'), '_____');
+    const kok = w.ru.slice(0, Math.max(3, Math.ceil(w.ru.length * 0.6)));
+    let gap = String(w.ornek||'').replace(new RegExp(esc(kok) + '[а-яёА-ЯЁ]*', 'i'), '_____');
+    if (!gap.includes('_____')) gap = String(w.ornek||'').replace(new RegExp(esc(w.ru), 'i'), '_____');
     const wrong = shuffle(words.filter(x => x.ru !== w.ru && x.ornek && _catAna(x.cat) === _catAna(w.cat))).slice(0,3).map(x=>x.ru);
     while (wrong.length < 3) { const d = shuffle(words.filter(x=>x.ru!==w.ru && wrong.indexOf(x.ru)<0))[0]; if (!d) break; wrong.push(d.ru); }
     const options = shuffle([w.ru, ...wrong]);
@@ -3910,6 +3917,19 @@ function adminWordEdit(id) {
 async function adminWordSave() {
   const ru = _cwVal('cw-ru'), tr = _cwVal('cw-tr');
   if (!ru || !tr) { uiAlert('Rusça kelime ve Türkçe anlam zorunlu.'); return; }
+  // ⚠️ Etiket eksikse uyar (kayda izin ver ama bilinçli olsun — DB trigger'ı kurala göre otomatik doldurur)
+  {
+    const anaK = _catAna(_cwVal('cw-cat'));
+    const gramV = _cwVal('cw-gram');
+    let eksik = null;
+    if ((anaK === 'isim' || anaK === 'sıfat') && !gramV) eksik = 'Cinsiyet (м/ж/с)';
+    if (anaK === 'fiil' && !gramV) eksik = 'Görünüş (НСВ/СВ)';
+    if (anaK === 'edat' && !cwPadejValue()) eksik = 'Padej';
+    if (eksik) {
+      const dv = await uiConfirm('⚠️ ' + eksik + ' seçilmedi!\n\nKaydedersen sistem dil kurallarına göre OTOMATİK dolduracak (çoğunlukla doğru ama %100 garanti değil).\n\nYine de kaydedilsin mi?');
+      if (!dv) return;
+    }
+  }
   const _ana = _catAna(_cwVal('cw-cat'));
   const row = { ru, tr, p: null, cat: _cwVal('cw-cat'), level: _cwVal('cw-lvl'),
     cinsiyet: (_ana === 'edat') ? null : (_cwVal('cw-gram') || null),
