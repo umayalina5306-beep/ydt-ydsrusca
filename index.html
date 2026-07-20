@@ -335,7 +335,8 @@
 
     <div class="cat-tabs" id="bank-level-tabs">
       <button class="cat-btn active" onclick="bankSetLevel('hepsi',this)">TÜMÜ <span class="cat-count" id="blc-hepsi"></span></button>
-      <button class="cat-btn" onclick="bankSetLevel('A1-A2',this)">A1-A2 <span class="cat-count" id="blc-a1a2"></span></button>
+      <button class="cat-btn" onclick="bankSetLevel('A1',this)">A1 <span class="cat-count" id="blc-a1"></span></button>
+      <button class="cat-btn" onclick="bankSetLevel('A2',this)">A2 <span class="cat-count" id="blc-a2"></span></button>
       <button class="cat-btn" onclick="bankSetLevel('B1',this)">B1 <span class="cat-count" id="blc-b1"></span></button>
       <button class="cat-btn" onclick="bankSetLevel('B2',this)">B2 <span class="cat-count" id="blc-b2"></span></button>
       <button class="cat-btn" onclick="bankSetLevel('C1',this)">C1 <span class="cat-count" id="blc-c1"></span></button>
@@ -386,6 +387,7 @@
             <button class="setup-btn" data-type="tr-ru" onclick="selectSetup('type','tr-ru',this)">🇹🇷 → 🇷🇺 Türkçe → Rusça</button>
             <button class="setup-btn" data-type="fill" onclick="selectSetup('type','fill',this)">✍️ Yaz Bakalım</button>
             <button class="setup-btn" data-type="tf" onclick="selectSetup('type','tf',this)">✓✗ Doğru / Yanlış</button>
+            <button class="setup-btn" data-type="cloze" onclick="selectSetup('type','cloze',this)">🧩 Cümlede Boşluk</button>
             <button class="setup-btn" data-type="paragraf" onclick="selectSetup('type','paragraf',this)">📖 Paragraf Soruları</button>
             <button class="setup-btn setup-btn-plc" onclick="openPlacement()">🎚️ Seviye Tespit Sınavı →</button>
             <button class="setup-btn setup-btn-plc" onclick="startMockExam()">📝 Deneme Sınavı (YDS · 80 soru · 180 dk) →</button>
@@ -829,6 +831,19 @@
       </div>
       <div id="tf-fb" class="pl-fb"></div>
     </div>
+  </section>
+
+  <section class="words-section" style="max-width:1100px;margin:0 auto;padding:8px 20px 40px;">
+    <div class="words-header"><div><h2>✍️ Cümle <span>Defterim</span></h2>
+    <p>Kaydettiğin kelimelerle kendi cümlelerini kur, kaydet, sesli dinle. Yazma pratiği kalıcı öğrenmenin anahtarıdır!</p></div></div>
+    <div class="sd-builder">
+      <div class="sd-chips-lbl">Kayıtlı kelimelerin (tıkla → cümleye eklensin):</div>
+      <div id="sd-chips" class="sd-chips"></div>
+      <textarea id="sd-ru" class="an-textarea" rows="2" placeholder="Rusça cümleni buraya yaz... (Я люблю...)" style="width:100%;font-family:'Noto Sans',sans-serif;font-size:1.05rem;"></textarea>
+      <input id="sd-tr" class="pq-input" placeholder="Türkçe çevirisi (isteğe bağlı)" style="width:100%;margin-top:8px;">
+      <button class="set-btn" style="margin-top:10px;" onclick="sdSave()">💾 Deftere Kaydet</button>
+    </div>
+    <div id="sd-list" class="sd-list"></div>
   </section>
 </div>
 
@@ -1422,6 +1437,15 @@
             <div class="pq-row2">
               <input class="pq-input" placeholder="🔍 Rusça veya Türkçe ara..." oninput="cwSet('q', this.value)" autocomplete="off">
               <select class="pq-input pq-level" onchange="cwSet('level', this.value)"><option value="all">Tümü</option><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
+              <select class="pq-input" style="max-width:130px;" onchange="cwState.cat=this.value;cwState.page=1;renderCwList();">
+                <option value="all">Tür: Hepsi</option><option value="isim">İsim</option><option value="fiil">Fiil</option>
+                <option value="sıfat">Sıfat</option><option value="edat">Edat</option><option value="zarf">Zarf</option><option value="zamir">Zamir</option>
+              </select>
+              <select class="pq-input" style="max-width:160px;" onchange="cwState.tag=this.value;cwState.page=1;renderCwList();">
+                <option value="all">Etiket: Hepsi</option><option value="НСВ">НСВ</option><option value="СВ">СВ</option>
+                <option value="м">м (eril)</option><option value="ж">ж (dişil)</option><option value="с">с (nötr)</option>
+                <option value="padejli">Padejli</option><option value="eksik">⚠️ Etiketi Eksik</option>
+              </select>
             </div>
             <div class="cw-tabs">
               <button id="cw-tab-active" class="rec-chip active" onclick="cwTrashMode(false)">Aktif Kelimeler</button>
