@@ -778,6 +778,12 @@ function _pickRuVoice() {
     return vs.find(v => (pref === 'female' ? fem : mal).test(v.name)) || vs[0];
   } catch (e) { return null; }
 }
+/* YouTube: URL yapıştırılsa bile video ID'sini ayıklar */
+function ytId(raw) {
+  const s = String(raw || '').trim();
+  const m = s.match(/(?:youtu\.be\/|shorts\/|embed\/|watch\?v=|[?&]v=)([A-Za-z0-9_-]{11})/) || s.match(/^([A-Za-z0-9_-]{11})$/);
+  return m ? m[1] : s;
+}
 function speak(text) {
   // Önce Web Speech API dene (mobilde daha iyi çalışır)
   if (window.speechSynthesis) {
@@ -858,7 +864,7 @@ function shuffle(a){return[...a].sort(()=>Math.random()-0.5);}
 
 
 /* Soru tipine göre ortalama süre (sn) */
-const TYPE_SEC = { 'ru-tr':25, 'tr-ru':25, 'tf':20, 'fill':40, 'yaz':45, 'mix':30, 'paragraf':90, 'cloze':35 };
+const TYPE_SEC = { 'ru-tr':25, 'tr-ru':25, 'tf':20, 'fill':40, 'yaz':45, 'mix':30, 'paragraf':90, 'cloze':35, 'listen':30 };
 function selectTime(btn) {
   document.querySelectorAll('#quiz-setup [data-time]').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -932,6 +938,17 @@ let qReviewItems = [];
 function _qType(i){ return quizSettings.type === 'mix' ? ((qTypes && qTypes[i]) ? qTypes[i] : 'ru-tr') : quizSettings.type; }
 
 function buildQuestion(w, type){
+  if (type === 'listen'){
+    // 🎧 Dinleme: kelime GÖSTERİLMEZ, sadece dinlenir; Türkçe anlamı seçilir
+    const wrong = shuffle(words.filter(x=>x.ru!==w.ru)).slice(0,3).map(x=>x.tr);
+    const options = shuffle([w.tr, ...wrong]);
+    return { kind:'choice', type:'listen', optFont:'tr', pron:'', speakRu:w.ru,
+      promptHTML:`<div style="text-align:center;padding:12px 0;">
+        <button class="set-btn" style="font-size:1.15rem;padding:14px 28px;" onclick="speak('${_escAttr(w.ru)}')">🔊 Kelimeyi Dinle</button>
+        <div style="font-size:.85rem;color:var(--gray);margin-top:10px;">Dinlediğin kelimenin anlamını seç (tekrar dinleyebilirsin)</div>
+      </div>`,
+      options, correctIndex: options.indexOf(w.tr), aciklama:'' };
+  }
   if (type === 'cloze'){
     // Örnek cümlede kelimeyi (çekimli haliyle bile) boşlukla değiştir; 4 Rusça şık
     const esc = s => String(s||'').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -1189,7 +1206,7 @@ function playVideo(i) {
     const ov = document.createElement('div');
     ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9000';
     ov.innerHTML = `<div class="ui-modal video-modal"><div class="video-modal-head"><b>${_escHtml(v.title||'')}</b><button class="sup-del" onclick="this.closest('.ui-modal-overlay').remove()">×</button></div>
-      <div class="video-frame"><iframe src="https://www.youtube-nocookie.com/embed/${_escAttr(v.video_id)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div></div>`;
+      <div class="video-frame"><iframe src="https://www.youtube-nocookie.com/embed/${_escAttr(ytId(v.video_id))}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div></div>`;
     ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
     document.body.appendChild(ov);
     if (typeof logActivity === 'function') logActivity('videos', 1);
@@ -3905,7 +3922,7 @@ function adminWordEdit(id) {
   document.getElementById('cw-ru').value = r.ru; document.getElementById('cw-ru').disabled = true;
   document.getElementById('cw-tr').value = r.tr || '';
   document.getElementById('cw-cat').value = r.cat || 'isim';
-  cwCatChanged(_catHas(r.cat, 'edat') ? (r.padej || '') : (r.cinsiyet || ''));
+  cwCatChanged((_catHas(r.cat, 'edat') || _catHas(r.cat, 'zamir')) ? (r.padej || '') : (r.cinsiyet || ''));
   document.getElementById('cw-lvl').value = r.level || 'A1';
   document.getElementById('cw-ornek').value = r.ornek || '';
   document.getElementById('cw-ornektr').value = r.ornek_tr || '';
@@ -3924,7 +3941,7 @@ async function adminWordSave() {
     let eksik = null;
     if ((anaK === 'isim' || anaK === 'sıfat') && !gramV) eksik = 'Cinsiyet (м/ж/с)';
     if (anaK === 'fiil' && !gramV) eksik = 'Görünüş (НСВ/СВ)';
-    if (anaK === 'edat' && !cwPadejValue()) eksik = 'Padej';
+    if ((anaK === 'edat' || anaK === 'zamir') && !cwPadejValue()) eksik = 'Padej';
     if (eksik) {
       const dv = await uiConfirm('⚠️ ' + eksik + ' seçilmedi!\n\nKaydedersen sistem dil kurallarına göre OTOMATİK dolduracak (çoğunlukla doğru ama %100 garanti değil).\n\nYine de kaydedilsin mi?');
       if (!dv) return;
@@ -3944,7 +3961,7 @@ async function adminWordSave() {
       });
       return Object.keys(out).length ? out : null;
     })(),
-    padej: _catHas(_cwVal('cw-cat'), 'edat') ? cwPadejValue() : undefined,
+    padej: (_catHas(_cwVal('cw-cat'), 'edat') || _catHas(_cwVal('cw-cat'), 'zamir')) ? cwPadejValue() : undefined,
     ornek: _cwVal('cw-ornek') || null, ornek_tr: _cwVal('cw-ornektr') || null,
     premium: document.getElementById('cw-premium').checked, active: true, updated_at: new Date().toISOString() };
   try {
@@ -4256,6 +4273,7 @@ function _catAna(cat) {
   if (c.includes('sıfat') || c.includes('sifat')) return 'sıfat';
   if (c.includes('isim') || c.includes('noun')) return 'isim';
   if (c.includes('edat')) return 'edat';
+  if (c.includes('zamir')) return 'zamir';
   return c;
 }
 function cwCatChanged(setVal) {
@@ -4265,7 +4283,7 @@ function cwCatChanged(setVal) {
   const pd = document.getElementById('cw-padej');
   if (pd) pd.style.display = 'none';
   if (!sel) return;
-  if (ana === 'edat') {
+  if (ana === 'edat' || ana === 'zamir') {
     sel.innerHTML = ''; sel.style.display = 'none';
     if (pd) {
       pd.style.display = 'flex';
@@ -5020,7 +5038,7 @@ function recTrailer(i) {
   const ov = document.createElement('div');
   ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9000';
   ov.innerHTML = `<div class="ui-modal video-modal"><div class="video-modal-head"><b>${_escHtml(r.title)} — Fragman</b><button class="sup-del" onclick="this.closest('.ui-modal-overlay').remove()">×</button></div>
-    <div class="video-frame"><iframe src="https://www.youtube-nocookie.com/embed/${_escAttr(r.trailer)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div></div>`;
+    <div class="video-frame"><iframe src="https://www.youtube-nocookie.com/embed/${_escAttr(ytId(r.trailer))}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div></div>`;
   ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
   document.body.appendChild(ov);
 }
@@ -6915,8 +6933,17 @@ function tfKonus() {
       fb.className = 'pl-fb';
     } else if (e.error === 'aborted') {
       /* kullanıcı yeniden bastı, sessizce geç */
+    } else if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      fb.textContent = '🎙️ Mikrofon izni verilmemiş. Adres çubuğundaki kilit simgesi → Site ayarları → Mikrofon → İzin ver.';
+      fb.className = 'pl-fb no';
+    } else if (e.error === 'audio-capture') {
+      fb.textContent = '🎙️ Mikrofon bulunamadı. Cihazına mikrofon bağlı mı ve başka uygulama kullanmıyor mu kontrol et.';
+      fb.className = 'pl-fb no';
+    } else if (e.error === 'network') {
+      fb.textContent = 'Ses tanıma servisi için internet gerekli — bağlantını kontrol et. (Tanıma yalnızca Chrome/Edge/Safari\'de çalışır)';
+      fb.className = 'pl-fb no';
     } else {
-      fb.textContent = 'Mikrofon hatası: ' + (e.error || '') + ' (tarayıcı izinlerini kontrol et)';
+      fb.textContent = 'Mikrofon hatası: ' + (e.error || '') + ' (Chrome tarayıcı önerilir)';
       fb.className = 'pl-fb no';
     }
   };
