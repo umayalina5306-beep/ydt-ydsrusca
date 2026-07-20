@@ -116,8 +116,8 @@ function sozlukAra(query) {
     <div class="word-card">
       <button class="word-speak" onclick="speak('${ruSafe}')">🔊</button>
       <span style="position:absolute;top:12px;right:44px;font-size:0.6rem;font-weight:700;color:${lc};background:${lc}22;padding:2px 6px;border-radius:10px;">${w.level}</span>
-      <div class="word-ru${w.ru.length>=20?' word-ru-xlong':w.ru.length>=14?' word-ru-long':''}">${highlight(w.ru,q)} ${genderHTML}</div>
-      ${tipHTML}${padejHTML}
+      <div class="word-ru"${w.ru.length>11?` style="font-size:${Math.max(0.62, +(1.05*11/w.ru.length).toFixed(2))}rem"`:''}>${highlight(w.ru,q)} ${genderHTML}</div>
+      ${tipHTML}${padejHTML}<div class="word-meta"><span class="wm-lvl wm-${(w.level||'A1').toLowerCase()}">${w.level||'A1'}</span><span class="wm-cat">${_escHtml(w.cat||'')}</span></div>
       <div class="word-tr">${highlight(w.tr,q)}</div>
       <div class="word-pron"></div>
       
@@ -558,7 +558,8 @@ function renderBank() {
   // Seviye sayıları (arama dahil, seviye filtresi öncesi)
   const lvlCount = (fn) => baseList.filter(fn).length;
   _setText('blc-hepsi', '(' + baseList.length + ')');
-  _setText('blc-a1a2', '(' + lvlCount(w => w.level === 'A1' || w.level === 'A2') + ')');
+  _setText('blc-a1', '(' + lvlCount(w => w.level === 'A1') + ')');
+  _setText('blc-a2', '(' + lvlCount(w => w.level === 'A2') + ')');
   _setText('blc-b1', '(' + lvlCount(w => w.level === 'B1') + ')');
   _setText('blc-b2', '(' + lvlCount(w => w.level === 'B2') + ')');
   _setText('blc-c1', '(' + lvlCount(w => w.level === 'C1') + ')');
@@ -766,7 +767,12 @@ function _pickRuVoice() {
     const pref = localStorage.getItem('ydt_voice') || 'auto';
     const vs = speechSynthesis.getVoices().filter(v => /^ru/i.test(v.lang));
     if (!vs.length) return null;
-    if (pref === 'auto') return vs[0];
+    if (pref === 'auto') {
+      // Kalite sırası: Google (çevrimiçi, en doğal) > Milena/Yuri (Apple premium) > Microsoft > ilk bulunan
+      const sira = [/google/i, /milena|yuri/i, /katya|pavel|dmitr/i, /microsoft/i];
+      for (const rx of sira) { const v = vs.find(x => rx.test(x.name)); if (v) return v; }
+      return vs[0];
+    }
     const fem = /milena|katya|alyona|svetlana|irina|tatyana|female|Женск/i;
     const mal = /yuri|pavel|dmitr|maxim|male|Мужск/i;
     return vs.find(v => (pref === 'female' ? fem : mal).test(v.name)) || vs[0];
@@ -779,7 +785,7 @@ function speak(text) {
     const u = new SpeechSynthesisUtterance(text);
   try { const _v = _pickRuVoice(); if (_v) u.voice = _v; } catch (e) {}
     u.lang = 'ru-RU';
-    u.rate = 0.85;
+    u.rate = 0.92;
     u.pitch = 1;
     // Rus sesi bul
     const voices = window.speechSynthesis.getVoices();
@@ -852,7 +858,7 @@ function shuffle(a){return[...a].sort(()=>Math.random()-0.5);}
 
 
 /* Soru tipine göre ortalama süre (sn) */
-const TYPE_SEC = { 'ru-tr':25, 'tr-ru':25, 'tf':20, 'fill':40, 'yaz':45, 'mix':30, 'paragraf':90 };
+const TYPE_SEC = { 'ru-tr':25, 'tr-ru':25, 'tf':20, 'fill':40, 'yaz':45, 'mix':30, 'paragraf':90, 'cloze':35 };
 function selectTime(btn) {
   document.querySelectorAll('#quiz-setup [data-time]').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -869,6 +875,10 @@ function startQuiz(){
   reviewReturnTo = null;
   const _rb = document.querySelector('#quiz-setup [data-reveal].active'); quizReveal = _rb ? _rb.dataset.reveal : 'instant';
   // Paragraf soruları ayrı havuzdan gelir (kelime değil)
+  if (quizSettings.type === 'cloze') {
+    quizPool = quizPool.filter(w => w.ornek && w.ornek.toLowerCase().includes((w.ru||'').toLowerCase()));
+    if (quizPool.length < 4) { uiAlert('Bu seçimde örnek cümleli yeterli kelime yok. Farklı seviye/kategori dene.'); return; }
+  }
   if (quizSettings.type === 'paragraf') {
     let pool = (paragraphQuestions || []).slice();
     if (quizSettings.level !== 'hepsi') pool = pool.filter(p => p.level === quizSettings.level);
@@ -917,6 +927,17 @@ let qReviewItems = [];
 function _qType(i){ return quizSettings.type === 'mix' ? ((qTypes && qTypes[i]) ? qTypes[i] : 'ru-tr') : quizSettings.type; }
 
 function buildQuestion(w, type){
+  if (type === 'cloze'){
+    // Örnek cümlede kelimeyi boşlukla değiştir; 4 Rusça şık
+    const esc = s => String(s||'').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const gap = String(w.ornek||'').replace(new RegExp(esc(w.ru), 'i'), '_____');
+    const wrong = shuffle(words.filter(x => x.ru !== w.ru && x.ornek && _catAna(x.cat) === _catAna(w.cat))).slice(0,3).map(x=>x.ru);
+    while (wrong.length < 3) { const d = shuffle(words.filter(x=>x.ru!==w.ru && wrong.indexOf(x.ru)<0))[0]; if (!d) break; wrong.push(d.ru); }
+    const options = shuffle([w.ru, ...wrong]);
+    return { kind:'choice', type:'cloze', optFont:'ru', pron:'', speakRu:w.ornek,
+      promptHTML:`<div style="font-family:'Noto Sans',sans-serif;font-size:1.25rem;line-height:1.6;">${gap}</div><div style="font-size:.92rem;color:var(--gray);margin-top:8px;">${_escHtml(w.ornekTr||'')}</div>`,
+      options, correctIndex: options.indexOf(w.ru), aciklama: 'Cümle: ' + (w.ornek||'') };
+  }
   if (type === 'paragraf'){
     return { kind:'choice', type:'paragraf', leftAlign:true, optFont:'', pron:'', speakRu:'',
       promptHTML:`<div class="para-text">${w.paragraf}</div><div class="para-soru">${w.soru}</div>`,
@@ -1202,6 +1223,7 @@ function showPage(id){
   if(id==='admin' && typeof openAdmin==='function') openAdmin();
   if(id==='teacher' && typeof loadTeacherPanel==='function') loadTeacherPanel();
   if(id==='kurum'   && typeof loadKurumPanel==='function') loadKurumPanel();
+  if(id==='review'  && typeof sdInit==='function') setTimeout(sdInit, 300);
   if (typeof trackPageView === 'function') trackPageView(id);
   if(id==='profile' && typeof openProfile==='function') openProfile();
 }
@@ -3762,7 +3784,7 @@ async function loadDbWords() {
    tekli ekleme, JSON kutusu, JSON/CSV/Excel dosyası, JSON->DB göçü
    ============================================================ */
 let _cwRows = [];
-const cwState = { page: 1, q: '', level: 'all', trash: false };
+const cwState = { page: 1, q: '', level: 'all', cat: 'all', tag: 'all', trash: false };
 const CW_PAGE = 20;
 
 async function adminContentInit() {
@@ -3793,6 +3815,17 @@ function renderCwList() {
   if (purgeBtn) purgeBtn.style.display = (cwState.trash && copSay > 0) ? '' : 'none';
   let list = cwState.trash ? _cwRows.filter(r => r.active === false) : _cwRows.filter(r => r.active !== false);
   if (cwState.level !== 'all') list = list.filter(r => r.level === cwState.level);
+  if (cwState.cat && cwState.cat !== 'all') list = list.filter(r => _catAna(r.cat) === cwState.cat);
+  if (cwState.tag && cwState.tag !== 'all') {
+    const t = cwState.tag;
+    if (t === 'НСВ' || t === 'СВ') list = list.filter(r => r.tip === t);
+    else if (t === 'м' || t === 'ж' || t === 'с') list = list.filter(r => r.cinsiyet === t);
+    else if (t === 'padejli') list = list.filter(r => r.padej);
+    else if (t === 'eksik') list = list.filter(r => {
+      const a = _catAna(r.cat);
+      return (a==='isim'||a==='sıfat') ? !r.cinsiyet : a==='fiil' ? !r.tip : a==='edat' ? !r.padej : false;
+    });
+  }
   const q = cwState.q.toLowerCase();
   if (q) list = list.filter(r => (r.ru || '').toLowerCase().includes(q) || (r.tr || '').toLowerCase().includes(q));
   const pages = Math.max(1, Math.ceil(list.length / CW_PAGE));
@@ -3809,7 +3842,7 @@ function renderCwList() {
   }
   box.innerHTML = slice.map(r => `
     <div class="cw-row ${r.active === false ? 'off' : ''}">
-      <div class="cw-main"><b>${_escHtml(r.ru)}</b> — ${_escHtml(r.tr)} <span class="kv-lvl">${r.level || ''}</span> <span class="cw-cat">${_escHtml(r.cat || '')}</span>${r.cinsiyet ? ` <span class="cw-cat">${_escHtml(r.cinsiyet)}</span>` : ''}${r.padej ? ` <span class="cw-cat">${_escHtml(r.padej)}</span>` : ''}${r.premium ? ' <span class="mail-member yes">Premium</span>' : ''}${r.active === false ? ' <span class="mail-member no">Gizli</span>' : ''}</div>
+      <div class="cw-main"><b>${_escHtml(r.ru)}</b> — ${_escHtml(r.tr)} <span class="kv-lvl">${r.level || ''}</span> <span class="cw-cat">${_escHtml(r.cat || '')}</span>${r.cinsiyet ? ` <span class="word-gender gender-${({'м':'m','ж':'j','с':'s'})[r.cinsiyet]||'v'}">${r.cinsiyet}</span>` : ''}${r.tip ? ` <span class="word-tip ${r.tip==='СВ'?'word-tip-cv':'word-tip-ncv'}">${r.tip}</span>` : ''}${r.padej ? ` <span class="word-padej">${_escHtml(r.padej)}</span>` : ''}${r.premium ? ' <span class="mail-member yes">Premium</span>' : ''}${r.active === false ? ' <span class="mail-member no">Gizli</span>' : ''}</div>
       <div class="cw-acts">
         <button class="mail-act" onclick="adminWordEdit('${r.id}')">✏️ Düzenle</button>
         ${r.active === false
@@ -6964,6 +6997,62 @@ setTimeout(function () {
   try { renderCountdown(); } catch (e) {}
   try { fetchExamDates(); } catch (e) {}
 }, 600);
+
+/* ============================================================
+   ✍️ CÜMLE DEFTERİM — kayıtlı kelimelerle cümle kur & kaydet
+   ============================================================ */
+let _sdSecili = [];
+async function sdInit() {
+  const wrap = document.getElementById('sd-chips'); if (!wrap) return;
+  _sdSecili = [];
+  const list = [...savedWords].map(ru => wordsByRu[ru]).filter(Boolean).slice(0, 120);
+  wrap.innerHTML = list.length
+    ? list.map(w => `<button class="sd-chip" onclick="sdToggle('${_escAttr(w.ru)}', this)">${_escHtml(w.ru)}<small>${_escHtml(w.tr)}</small></button>`).join('')
+    : '<div class="profile-empty">Önce Kelimeler bölümünden kelime kaydet — kaydettiklerin burada çip olarak görünür.</div>';
+  sdList();
+}
+function sdToggle(ru, btn) {
+  const i = _sdSecili.indexOf(ru);
+  if (i >= 0) { _sdSecili.splice(i, 1); btn.classList.remove('on'); }
+  else { _sdSecili.push(ru); btn.classList.add('on'); }
+  const inp = document.getElementById('sd-ru');
+  if (inp && i < 0) inp.value = (inp.value ? inp.value.replace(/\s+$/,'') + ' ' : '') + ru;
+}
+async function sdSave() {
+  const ru = (document.getElementById('sd-ru') || {}).value?.trim();
+  const tr = (document.getElementById('sd-tr') || {}).value?.trim();
+  if (!ru) { uiAlert('Önce Rusça cümleni yaz.'); return; }
+  if (!currentUser) { uiAlert('Cümle kaydetmek için giriş yapmalısın.'); return; }
+  try {
+    const { error } = await sb.from('user_sentences').insert({
+      user_id: currentUser.id, ru, tr: tr || null, words: _sdSecili.length ? _sdSecili : null });
+    if (error) throw error;
+    document.getElementById('sd-ru').value = ''; document.getElementById('sd-tr').value = '';
+    document.querySelectorAll('.sd-chip.on').forEach(b => b.classList.remove('on'));
+    _sdSecili = [];
+    toast('✍️ Cümlen deftere kaydedildi!');
+    try { logActivity('sentences', 1); } catch (e) {}
+    sdList();
+  } catch (e) { uiAlert('Kaydedilemedi: ' + ((e&&e.message)||e)); }
+}
+async function sdList() {
+  const box = document.getElementById('sd-list'); if (!box || !currentUser) return;
+  try {
+    const { data } = await sb.from('user_sentences').select('id, ru, tr, words, created_at')
+      .eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(100);
+    if (!data || !data.length) { box.innerHTML = '<div class="profile-empty">Defterin henüz boş. İlk cümleni yaz! 🖋️</div>'; return; }
+    box.innerHTML = data.map(s => `<div class="sd-item">
+      <div class="sd-item-ru">${_escHtml(s.ru)} <button class="sound-btn" onclick="speak('${_escAttr(s.ru)}')" title="Dinle">🔊</button></div>
+      ${s.tr ? `<div class="sd-item-tr">${_escHtml(s.tr)}</div>` : ''}
+      ${s.words && s.words.length ? `<div class="sd-item-words">${s.words.map(w=>`<span>${_escHtml(w)}</span>`).join('')}</div>` : ''}
+      <div class="sd-item-foot">${new Date(s.created_at).toLocaleDateString('tr-TR')} <button class="mail-act danger" onclick="sdDel(${s.id})">Sil</button></div>
+    </div>`).join('');
+  } catch (e) { box.innerHTML = '<div class="profile-empty">Defter yüklenemedi.</div>'; }
+}
+async function sdDel(id) {
+  const ok = await uiConfirm('Bu cümle silinsin mi?'); if (!ok) return;
+  try { await sb.from('user_sentences').delete().eq('id', id); sdList(); } catch (e) {}
+}
 
 /* ── Admin: Google Search Console verileri ── */
 let _gscDays = 28;
