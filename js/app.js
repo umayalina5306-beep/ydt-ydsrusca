@@ -1210,14 +1210,140 @@ function playVideo(i) {
     ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
     document.body.appendChild(ov);
     if (typeof logActivity === 'function') logActivity('videos', 1);
+  } else if (v.source === 'stream' && v.video_id) {
+    playStream(v);
   } else {
     toast('Bu videonun bağlantısı henüz eklenmedi.');
   }
 }
+
+/* ============================================================
+   🎬 DRM'Lİ STREAM OYNATICI + ZAMAN DAMGALI İNTERAKTİF KARTLAR
+   ============================================================ */
+let _svViewId = null, _svTimer = null, _svPlayer = null, _svShownCards = {};
+
+async function playStream(v) {
+  if (!currentUser) { uiAlert('Video izlemek için giriş yapmalısın.'); return; }
+  toast('🔐 Güvenli video hazırlanıyor...');
+  try {
+    const { data, error } = await sb.functions.invoke('stream-sign', { body: { video_id: v.id } });
+    if (error) throw new Error(error.message || 'Sunucuya ulaşılamadı');
+    if (data && data.error === 'premium_required') { showPage('pricing'); return; }
+    if (data && data.error) throw new Error(data.error);
+
+    _svViewId = data.view_id; _svShownCards = {};
+
+    // Kartları çek
+    let cards = [];
+    try {
+      const { data: cd } = await sb.from('video_cards')
+        .select('*').eq('video_id', v.id).eq('active', true).order('t_sec');
+      cards = cd || [];
+    } catch (e) {}
+
+    const ov = document.createElement('div');
+    ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9000';
+    ov.id = 'stream-modal';
+    ov.innerHTML = `<div class="ui-modal video-modal">
+      <div class="video-modal-head"><b>🔐 ${_escHtml(v.title || '')}</b>
+        <button class="sup-del" onclick="closeStream()">×</button></div>
+      <div class="video-frame" style="position:relative;">
+        <iframe id="sv-frame" src="https://iframe.videodelivery.net/${encodeURIComponent(data.token)}"
+          allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <div id="sv-card-overlay" class="sv-card-overlay" style="display:none;"></div>
+      </div></div>`;
+    document.body.appendChild(ov);
+    if (typeof logActivity === 'function') logActivity('videos', 1);
+
+    // Stream SDK'yı yükle ve player'ı bağla (kart motoru + izleme logu için)
+    _loadStreamSdk(() => {
+      try {
+        const frame = document.getElementById('sv-frame');
+        _svPlayer = Stream(frame);
+        _svPlayer.addEventListener('timeupdate', () => _svTick(cards));
+        _svPlayer.addEventListener('ended', () => _svLog(true));
+        _svTimer = setInterval(() => _svLog(false), 30000); // 30 sn'de bir konum kaydet
+      } catch (e) {}
+    });
+  } catch (e) {
+    uiAlert('Video başlatılamadı: ' + ((e && e.message) || e) + '\n\nStream kurulumu tamamlanmadıysa yönetici ile iletişime geç.');
+  }
+}
+function _loadStreamSdk(cb) {
+  if (window.Stream) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://embed.cloudflarestream.com/embed/sdk.latest.js';
+  s.onload = cb; document.head.appendChild(s);
+}
+function closeStream() {
+  _svLog(false);
+  if (_svTimer) { clearInterval(_svTimer); _svTimer = null; }
+  _svPlayer = null; _svViewId = null;
+  const m = document.getElementById('stream-modal'); if (m) m.remove();
+}
+/* Konum + izlenme süresini DB'ye yaz (forensic log) */
+async function _svLog(bitti) {
+  try {
+    if (!_svViewId || !_svPlayer || !sb) return;
+    const pos = Math.floor(_svPlayer.currentTime || 0);
+    const upd = { last_pos_sec: pos };
+    if (bitti) upd.completed = true;
+    // watched_sec: kabaca son konum (ileri sarma dahil basit metrik)
+    upd.watched_sec = pos;
+    await sb.from('video_views').update(upd).eq('id', _svViewId);
+  } catch (e) {}
+}
+/* Her timeupdate'te: zamanı gelen gösterilmemiş kart var mı? */
+function _svTick(cards) {
+  try {
+    if (!_svPlayer || !cards || !cards.length) return;
+    const t = _svPlayer.currentTime || 0;
+    for (const card of cards) {
+      if (_svShownCards[card.id]) continue;
+      if (t >= card.t_sec && t < card.t_sec + 3) {
+        _svShownCards[card.id] = true;
+        _svShowCard(card);
+        break;
+      }
+    }
+  } catch (e) {}
+}
+function _svShowCard(card) {
+  const box = document.getElementById('sv-card-overlay'); if (!box) return;
+  try { _svPlayer.pause(); } catch (e) {}
+  const tipIkon = card.card_type === 'quiz' ? '❓' : card.card_type === 'word' ? '🔤' : '💡';
+  let inner = `<div class="sv-card">
+    <div class="sv-card-head">${tipIkon} ${_escHtml(card.title || 'Bilgi')}</div>
+    ${card.body ? `<div class="sv-card-body">${_escHtml(card.body)}</div>` : ''}`;
+  if (card.card_type === 'quiz' && Array.isArray(card.options)) {
+    inner += `<div class="sv-card-opts">` + card.options.map((o, i) =>
+      `<button class="sv-opt" onclick="_svAnswer(this, ${i}, ${card.correct ?? 0})">${_escHtml(o)}</button>`
+    ).join('') + `</div><div id="sv-card-fb" class="sv-card-fb"></div>`;
+  }
+  inner += `<button class="set-btn sv-card-continue" onclick="_svResume()">▶ Devam Et</button></div>`;
+  box.innerHTML = inner; box.style.display = 'flex';
+}
+function _svAnswer(btn, i, correct) {
+  const fb = document.getElementById('sv-card-fb');
+  document.querySelectorAll('.sv-opt').forEach(b => b.disabled = true);
+  if (i === correct) { btn.classList.add('ok'); if (fb) fb.textContent = '✅ Doğru! Harikasın.'; }
+  else {
+    btn.classList.add('no');
+    const dg = document.querySelectorAll('.sv-opt')[correct]; if (dg) dg.classList.add('ok');
+    if (fb) fb.textContent = '❌ Yanlış — doğrusu işaretlendi.';
+  }
+  try { logActivity('questions', 1); } catch (e) {}
+}
+function _svResume() {
+  const box = document.getElementById('sv-card-overlay');
+  if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+  try { _svPlayer.play(); } catch (e) {}
+}
+
 async function refreshVideosFromDb() {
   try {
     const { data } = await sb.from('content_videos').select('*').eq('active', true).order('num').limit(1000);
-    if (data) { videos = data.map(r => ({ num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb })); renderVideos(); }
+    if (data) { videos = data.map(r => ({ id: r.id, num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb })); renderVideos(); }
   } catch (e) {}
 }
 async function refreshPqFromDb() {
@@ -4466,6 +4592,7 @@ function renderCvList() {
           ? `<button class="mail-act" onclick="adminVidRestore('${r.id}')">↩️ Geri Al</button>
              <button class="mail-act red" onclick="adminVidPurge('${r.id}')">❌ Temelli Sil</button>`
           : `<button class="mail-act" onclick="adminVidEdit('${r.id}')">✏️</button>
+             ${r.source === 'stream' ? `<button class="mail-act" onclick="adminVidCards('${r.id}', '${_escAttr(r.title||'')}')">🃏 Kartlar</button>` : ''}
              <button class="mail-act" onclick="adminVidTogglePremium('${r.id}', ${r.premium ? 'false' : 'true'})">${r.premium ? '🆓 Ücretsiz yap' : '👑 Premium yap'}</button>
              <button class="mail-act red" onclick="adminVidHide('${r.id}')">🗑️ Sil</button>`}
       </div>
@@ -4507,6 +4634,83 @@ async function adminVidSave() {
 async function adminVidTogglePremium(id, on) {
   try { await sb.from('content_videos').update({ premium: on }).eq('id', id); adminCvReload(); refreshVideosFromDb(); } catch (e) {}
 }
+/* 🃏 Zaman damgalı kart editörü */
+async function adminVidCards(videoId, title) {
+  let cards = [];
+  try {
+    const { data } = await sb.from('video_cards').select('*').eq('video_id', videoId).order('t_sec');
+    cards = data || [];
+  } catch (e) {}
+  const ov = document.createElement('div');
+  ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9400'; ov.id = 'vcard-modal';
+  const listHTML = cards.length ? cards.map(cd => `
+    <div class="cw-row" style="padding:8px 10px;">
+      <div class="cw-main"><b>${Math.floor(cd.t_sec/60)}:${String(cd.t_sec%60).padStart(2,'0')}</b>
+        <span class="cw-cat">${cd.card_type === 'quiz' ? '❓ Soru' : cd.card_type === 'word' ? '🔤 Kelime' : '💡 Bilgi'}</span>
+        ${_escHtml(cd.title || '')} ${cd.active === false ? '<span class="mail-member no">Pasif</span>' : ''}
+        <div class="err-meta">${_escHtml((cd.body || '').slice(0, 80))}</div></div>
+      <div class="cw-acts"><button class="mail-act red" onclick="adminVidCardDel(${cd.id}, '${videoId}', '${_escAttr(title)}')">🗑️</button></div>
+    </div>`).join('') : '<div class="profile-empty">Henüz kart yok — aşağıdan ekle.</div>';
+  ov.innerHTML = `<div class="ui-modal" style="max-width:640px;max-height:85vh;overflow-y:auto;">
+    <h3 class="ui-modal-title">🃏 ${_escHtml(title)} — İnteraktif Kartlar</h3>
+    <p class="pq-hint">Video belirtilen saniyeye gelince duraklar ve kart açılır. Soru kartlarında öğrenci cevaplayıp devam eder.</p>
+    <div style="margin-bottom:14px;">${listHTML}</div>
+    <div class="admin-notif-card">
+      <h3 class="an-h3">➕ Yeni Kart</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <input id="vc-min" class="pq-input" type="number" min="0" placeholder="Dk" style="width:70px;">
+        <input id="vc-sec" class="pq-input" type="number" min="0" max="59" placeholder="Sn" style="width:70px;">
+        <select id="vc-type" class="pq-input" style="width:130px;" onchange="document.getElementById('vc-quiz-alan').style.display = this.value==='quiz' ? '' : 'none';">
+          <option value="info">💡 Bilgi</option><option value="quiz">❓ Soru</option><option value="word">🔤 Kelime</option>
+        </select>
+        <input id="vc-title" class="pq-input" placeholder="Başlık" style="flex:1;min-width:160px;">
+      </div>
+      <textarea id="vc-body" class="an-textarea" rows="2" placeholder="Kart metni (soru kartında soru metni)" style="width:100%;"></textarea>
+      <div id="vc-quiz-alan" style="display:none;margin-top:8px;">
+        <input id="vc-o0" class="pq-input" placeholder="Şık 1 (doğru)" style="width:100%;margin-bottom:5px;">
+        <input id="vc-o1" class="pq-input" placeholder="Şık 2" style="width:100%;margin-bottom:5px;">
+        <input id="vc-o2" class="pq-input" placeholder="Şık 3" style="width:100%;margin-bottom:5px;">
+        <input id="vc-o3" class="pq-input" placeholder="Şık 4" style="width:100%;">
+        <p class="pq-hint">İlk şık doğru kabul edilir; oynatıcıda karışık gösterilir.</p>
+      </div>
+      <button class="set-btn" style="margin-top:10px;" onclick="adminVidCardAdd('${videoId}', '${_escAttr(title)}')">Kaydet</button>
+      <button class="set-btn ghost" style="margin-top:10px;" onclick="document.getElementById('vcard-modal').remove()">Kapat</button>
+    </div>
+  </div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+async function adminVidCardAdd(videoId, title) {
+  const dk = parseInt((document.getElementById('vc-min')||{}).value, 10) || 0;
+  const sn = parseInt((document.getElementById('vc-sec')||{}).value, 10) || 0;
+  const tip = (document.getElementById('vc-type')||{}).value || 'info';
+  const bas = (document.getElementById('vc-title')||{}).value.trim();
+  const govde = (document.getElementById('vc-body')||{}).value.trim();
+  if (!bas && !govde) { uiAlert('Başlık veya metin gir.'); return; }
+  const row = { video_id: videoId, t_sec: dk*60+sn, card_type: tip, title: bas || null, body: govde || null };
+  if (tip === 'quiz') {
+    const opts = [0,1,2,3].map(i => ((document.getElementById('vc-o'+i)||{}).value || '').trim()).filter(Boolean);
+    if (opts.length < 2) { uiAlert('Soru kartı için en az 2 şık gir.'); return; }
+    // İlk şık doğru; oynatıcıda karıştırıp doğru indexi güncelliyoruz
+    const dogru = opts[0];
+    const karisik = shuffle(opts.slice());
+    row.options = karisik; row.correct = karisik.indexOf(dogru);
+  }
+  try {
+    const { error } = await sb.from('video_cards').insert(row);
+    if (error) throw error;
+    document.getElementById('vcard-modal').remove();
+    toast('🃏 Kart eklendi.');
+    adminVidCards(videoId, title);
+  } catch (e) { uiAlert('Eklenemedi: ' + ((e&&e.message)||e)); }
+}
+async function adminVidCardDel(id, videoId, title) {
+  const ok = await uiConfirm('Bu kart silinsin mi?'); if (!ok) return;
+  try { await sb.from('video_cards').delete().eq('id', id);
+    document.getElementById('vcard-modal').remove(); adminVidCards(videoId, title);
+  } catch (e) {}
+}
+
 async function adminVidHide(id) { try { await sb.from('content_videos').update({ active: false }).eq('id', id); adminCvReload(); refreshVideosFromDb(); } catch (e) {} }
 async function adminVidRestore(id) { try { await sb.from('content_videos').update({ active: true }).eq('id', id); adminCvReload(); refreshVideosFromDb(); } catch (e) {} }
 async function adminVidPurge(id) {
