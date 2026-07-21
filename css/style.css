@@ -2750,3 +2750,17 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 }
 .gender-pl { background:rgba(139,92,246,.18); color:#a78bfa; }  /* мн — mor */
 .gender-mf { background:rgba(236,72,153,.16); color:#f472b6; }  /* м/ж — pembe */
+
+/* ── DRM Video: interaktif kart overlay ── */
+.sv-card-overlay { position:absolute; inset:0; background:rgba(5,8,16,.88); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:5; border-radius:inherit; }
+.sv-card { max-width:440px; width:92%; background:#12141c; border:1px solid rgba(212,164,24,.45); border-radius:16px; padding:22px; box-shadow:0 8px 40px rgba(0,0,0,.55); animation:svCardIn .25s ease; }
+@keyframes svCardIn { from { transform:scale(.92); opacity:0; } to { transform:scale(1); opacity:1; } }
+.sv-card-head { font-weight:800; font-size:1.05rem; color:var(--gold); margin-bottom:10px; }
+.sv-card-body { color:#e5e7eb; font-size:.95rem; line-height:1.55; margin-bottom:12px; }
+.sv-card-opts { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+.sv-opt { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.15); color:#eee; border-radius:10px; padding:10px 14px; cursor:pointer; text-align:left; font-size:.92rem; transition:all .15s; }
+.sv-opt:hover:not(:disabled) { border-color:var(--gold); }
+.sv-opt.ok { background:rgba(22,163,74,.25); border-color:#16a34a; }
+.sv-opt.no { background:rgba(239,68,68,.25); border-color:#ef4444; }
+.sv-card-fb { font-size:.88rem; font-weight:700; margin-bottom:8px; min-height:20px; }
+.sv-card-continue { width:100%; }
