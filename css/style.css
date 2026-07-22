@@ -2775,12 +2775,21 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .watch-player-box { position:relative; width:100%; aspect-ratio:16/9; min-height:320px; background:#000; border-radius:14px; overflow:hidden; }
 .watch-player-box:fullscreen { border-radius:0; }
 #watch-player, #watch-player iframe, #yt-target, #yt-target iframe { width:100%; height:100%; border:0; display:block; }
-.watch-controls { display:flex; align-items:center; gap:8px; margin-top:12px; flex-wrap:wrap; background:#12141c; padding:10px 12px; border-radius:10px; }
-.wc-btn { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.25); color:#fff; border-radius:8px; padding:8px 16px; cursor:pointer; font-size:.95rem; font-weight:600; }
+/* Gömülü, otomatik gizlenen kontrol çubuğu */
+.watch-controls { position:absolute; left:0; right:0; bottom:0; display:flex; align-items:center; gap:10px;
+  padding:12px 16px; background:linear-gradient(transparent, rgba(0,0,0,.75)); z-index:4;
+  opacity:1; transition:opacity .4s ease; }
+.watch-controls.hidden { opacity:0; pointer-events:none; }
+.wc-spacer { flex:1; }
+.wc-btn { background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.28); color:#fff; border-radius:8px;
+  padding:7px 13px; cursor:pointer; font-size:1rem; backdrop-filter:blur(4px); transition:background .15s; }
+.wc-btn:hover { background:rgba(212,164,24,.6); }
+.wc-play-btn { font-size:1.1rem; padding:7px 16px; }
+.watch-desc { margin:10px 0 14px; color:#cbd5e1; line-height:1.55; font-size:.92rem; }
 .wc-btn:hover { border-color:var(--gold); }
-.wc-speed { background:#12141c; border:1px solid rgba(255,255,255,.15); color:#eee; border-radius:8px; padding:7px 10px; cursor:pointer; }
+.wc-speed { background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.28); color:#fff; border-radius:8px; padding:6px 9px; cursor:pointer; backdrop-filter:blur(4px); }
 .watch-cards-badge { margin-left:auto; background:rgba(212,164,24,.15); border:1px solid var(--gold); color:var(--gold); border-radius:20px; padding:6px 14px; cursor:pointer; font-weight:700; }
-.watch-desc { margin-top:16px; color:#cbd5e1; line-height:1.6; }
+
 .watch-side { background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px; height:fit-content; max-height:80vh; display:flex; flex-direction:column; }
 .watch-side-tabs { display:flex; gap:4px; margin-bottom:10px; }
 .wst-tab { flex:1; background:transparent; border:1px solid rgba(255,255,255,.12); color:#bbb; border-radius:8px; padding:7px 4px; cursor:pointer; font-size:.78rem; font-weight:600; }
@@ -2812,3 +2821,14 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   .watch-side { max-height:none; }
   .wst-panel { max-height:300px; }
 }
+
+
+/* İzleme tam ekran: kartlar + kontroller + oynatıcı birlikte */
+.watch-wrap.watch-fs { max-width:100%; height:100vh; padding:0; gap:0; background:#000; grid-template-columns:1fr 340px; }
+.watch-wrap.watch-fs .watch-top,
+.watch-wrap.watch-fs .watch-desc { display:none; }
+.watch-wrap.watch-fs .watch-main { display:flex; flex-direction:column; }
+.watch-wrap.watch-fs .watch-player-box { flex:1; aspect-ratio:auto; border-radius:0; height:100vh; }
+.watch-wrap.watch-fs .watch-side { max-height:100vh; height:100vh; border-radius:0; border-top:none; border-bottom:none; }
+:fullscreen .watch-wrap, .watch-wrap:fullscreen { background:#000; }
+.watch-cards-badge { cursor:pointer; }
