@@ -1190,35 +1190,11 @@
 
       <div id="pv-settings" class="profile-view" style="display:none;">
         <h2 class="profile-h2">Ayarlar</h2>
-        <div class="admin-notif-card" style="margin-bottom:14px;">
-          <h3 class="an-h3">🔊 Seslendirme</h3>
-          <div class="pq-row2" style="align-items:center;">
-            <span style="font-size:.86rem;">🔊 Seslendirme sesi:</span>
-            <select id="set-voice" class="pq-input pq-level" onchange="localStorage.setItem('ydt_voice', this.value); toast('Ses tercihi kaydedildi.');">
-              <option value="auto">Otomatik</option>
-              <option value="female">Kadın</option>
-              <option value="male">Erkek</option>
-            </select>
-          </div>
-        </div>
-        <div class="admin-notif-card" style="margin-bottom:14px;">
-          <h3 class="an-h3">🎬 Video İzleme Tercihleri</h3>
-          <div class="pq-row2" style="align-items:center;margin-bottom:10px;">
-            <span style="font-size:.86rem;">🃏 İnteraktif kartlar:</span>
-            <select id="set-card-mode" class="pq-input pq-level" onchange="localStorage.setItem('ydt_card_mode', this.value); toast('Kaydedildi.');">
-              <option value="pause">Anında duraklat</option>
-              <option value="collect">Yanda biriktir</option>
-            </select>
-          </div>
-          <label class="cw-check" style="display:flex;align-items:center;gap:8px;">
-            <input type="checkbox" id="set-strict-mode" onchange="localStorage.setItem('ydt_strict_mode', this.checked?'1':'0'); toast('Kaydedildi.');">
-            <span>🚧 Sıkı hoca modu — kontrol noktası soruları doğru cevaplanmadan video ilerlemez</span>
-          </label>
-        </div>
         <p class="profile-sub">Hesap ve uygulama tercihlerinizi yönetin.</p>
 
         <div class="st-tabs">
           <button class="st-tab active" onclick="settingsTab('account',this)">👤 Hesap Bilgileri</button>
+          <button class="st-tab" onclick="settingsTab('Site Ayarları',this)">🎛️ Site Ayarları</button>
           <button class="st-tab" onclick="settingsTab('Güvenlik',this)">🛡️ Güvenlik</button>
           <button class="st-tab" onclick="settingsTab('Bildirimler',this)">🔔 Bildirimler</button>
           <button class="st-tab" onclick="settingsTab('Üyelik Yönetimi',this)">👑 Üyelik Yönetimi</button>
@@ -1951,23 +1927,6 @@
 </div>
 
 
-<footer>
-  <p>© 2026 <span>YDT-YDS Rusça Platformu</span> — Tüm hakları saklıdır.</p>
-</footer>
-
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=96"></script>
-<script defer src="js/auth.js?v=96"></script>
-<script defer src="js/admin.js?v=96"></script>
-<script defer src="js/profile.js?v=96"></script>
-<script defer src="js/extras.js?v=96"></script>
-<script defer src="js/app.js?v=96"></script>
-<script>
-  if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
-</script>
-<script>try{var _sv=document.getElementById('set-voice');if(_sv)_sv.value=localStorage.getItem('ydt_voice')||'auto';}catch(e){}</script>
-<!-- Sınav geri sayım floating widget (pomodoro üstünde) -->
-<div id="exam-countdown-wrap" class="exam-countdown-float" style="display:none;"></div>
 <!-- Tam sayfa video izleme arayüzü -->
 <div id="page-watch" class="page">
   <div class="watch-wrap">
@@ -2011,6 +1970,23 @@
     </aside>
   </div>
 </div>
+<footer>
+  <p>© 2026 <span>YDT-YDS Rusça Platformu</span> — Tüm hakları saklıdır.</p>
+</footer>
+
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="js/supabase-config.js?v=96"></script>
+<script defer src="js/auth.js?v=96"></script>
+<script defer src="js/admin.js?v=96"></script>
+<script defer src="js/profile.js?v=96"></script>
+<script defer src="js/extras.js?v=96"></script>
+<script defer src="js/app.js?v=96"></script>
+<script>
+  if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
+</script>
+<script>try{var _sv=document.getElementById('set-voice');if(_sv)_sv.value=localStorage.getItem('ydt_voice')||'auto';}catch(e){}</script>
+<!-- Sınav geri sayım floating widget (pomodoro üstünde) -->
+<div id="exam-countdown-wrap" class="exam-countdown-float" style="display:none;"></div>
 
 </body>
 </html>
