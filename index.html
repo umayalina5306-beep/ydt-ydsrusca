@@ -931,7 +931,7 @@
     <h2>Video <span>Dersler</span></h2>
     <p>Adım adım Rusça öğrenin. A1'den başlayıp YDT/YDS seviyesine ulaşın.</p>
   </div>
-  <div class="video-lock-banner">
+  <div class="video-lock-banner" id="video-lock-banner">
     <div class="video-lock-text">
       <strong>🔒 Premium İçerik</strong>
       <span>Video derslere erişmek için satın alma yapmanız gerekiyor.</span>
@@ -1601,7 +1601,7 @@
             <h3 class="an-h3">✏️ Video Ekle / Düzenle</h3>
             <input type="hidden" id="cv-id">
             <div class="pq-row2">
-              <input id="cv-num" class="pq-input pq-level" placeholder="Sıra #" autocomplete="off">
+              <input id="cv-num" class="pq-input pq-level" type="number" min="1" placeholder="Sıra (boş=sona)" autocomplete="off">
               <select id="cv-lvl" class="pq-input pq-level"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
               <input id="cv-title" class="pq-input" placeholder="Video başlığı *" autocomplete="off">
             </div>
@@ -1929,30 +1929,31 @@
 
 <!-- Tam sayfa video izleme arayüzü -->
 <div id="page-watch" class="page">
-  <div class="watch-wrap">
+  <div class="watch-wrap" id="watch-wrap">
     <div class="watch-main">
       <div class="watch-top">
         <button class="watch-back" onclick="closeWatch()">← Geri</button>
         <span id="watch-title" class="watch-title"></span>
       </div>
+      <div id="watch-desc" class="watch-desc"></div>
       <div id="watch-player-box" class="watch-player-box">
         <div id="watch-player"></div>
+        <!-- Gömülü, otomatik gizlenen kontrol çubuğu -->
+        <div class="watch-controls" id="watch-controls">
+          <button class="wc-btn" onclick="watchSeek(-10)" title="10 sn geri">⏪</button>
+          <button class="wc-btn wc-play-btn" id="wc-play" onclick="watchTogglePlay()">⏸</button>
+          <button class="wc-btn" onclick="watchSeek(10)" title="10 sn ileri">⏩</button>
+          <select class="wc-speed" id="wc-speed" onchange="watchSetSpeed(this.value)">
+            <option value="0.75">0.75x</option><option value="1" selected>1x</option>
+            <option value="1.25">1.25x</option><option value="1.5">1.5x</option><option value="2">2x</option>
+          </select>
+          <span class="wc-spacer"></span>
+          <button class="wc-btn" onclick="watchFullscreen()" title="Tam ekran">⛶</button>
+        </div>
         <div id="watch-card-overlay" class="sv-card-overlay" style="display:none;"></div>
       </div>
-      <div class="watch-controls">
-        <button class="wc-btn" onclick="watchSeek(-10)" title="10 sn geri">⏪ 10</button>
-        <button class="wc-btn" id="wc-play" onclick="watchTogglePlay()">⏸</button>
-        <button class="wc-btn" onclick="watchSeek(10)" title="10 sn ileri">10 ⏩</button>
-        <select class="wc-speed" id="wc-speed" onchange="watchSetSpeed(this.value)">
-          <option value="0.75">0.75x</option><option value="1" selected>1x</option>
-          <option value="1.25">1.25x</option><option value="1.5">1.5x</option><option value="2">2x</option>
-        </select>
-        <button class="wc-btn" onclick="watchFullscreen()" title="Tam ekran">⛶</button>
-        <span id="watch-cards-badge" class="watch-cards-badge" style="display:none;" onclick="watchOpenPanel()">🃏 <b id="wcb-count">0</b></span>
-      </div>
-      <div id="watch-desc" class="watch-desc"></div>
     </div>
-    <aside class="watch-side">
+    <aside class="watch-side" id="watch-side">
       <div class="watch-side-tabs">
         <button class="wst-tab active" onclick="watchSideTab('chapters',this)">📌 Bölümler</button>
         <button class="wst-tab" onclick="watchSideTab('cards',this)">🃏 Kartlar</button>
