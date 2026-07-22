@@ -1177,18 +1177,33 @@ function showResult(){
 
 
 // VIDEO
+/* Kullanıcı premium içeriğe erişebilir mi? (admin + staff + premium plan) */
+function userHasPremium() {
+  try {
+    const p = currentProfile;
+    if (!p) return false;
+    if (p.is_admin) return true;
+    if (['ogretmen','destek','kurum'].includes(p.role)) return true;
+    if (p.plan === 'premium' && (!p.premium_until || new Date(p.premium_until) > new Date())) return true;
+    return false;
+  } catch (e) { return false; }
+}
 function renderVideos(){
   const grid = document.getElementById('video-grid'); if (!grid) return;
+  const hasPrem = userHasPremium();
   grid.innerHTML = videos.map((v, i) => {
-    const thumb = v.thumb ? `background-image:url('${_escAttr(v.thumb)}');background-size:cover;background-position:center;` : `background:${v.locked?'#1a2744':'#003580'};`;
-    const playAct = v.locked ? "showPage('pricing')" : `playVideo(${i})`;
+    // Premium kullanıcı için kilit yok
+    const kilit = v.locked && !hasPrem;
+    const thumb = v.thumb ? `background-image:url('${_escAttr(v.thumb)}');background-size:cover;background-position:center;` : `background:${kilit?'#1a2744':'#003580'};`;
+    const playAct = kilit ? "showPage('pricing')" : `playVideo(${i})`;
     return `
-    <div class="video-card ${v.locked?'video-locked':''}">
+    <div class="video-card ${kilit?'video-locked':''}">
       <div class="video-thumb" style="${thumb}">
         <div class="video-thumb-num">${v.num || ''}</div>
-        ${v.locked?'<div class="video-lock-icon">🔒</div>':''}
+        ${kilit?'<div class="video-lock-icon">🔒</div>':''}
+        ${v.locked && hasPrem ? '<div class="video-premium-badge">👑 Premium</div>' : ''}
         <div class="video-play" onclick="${playAct}">
-          ${v.locked?'🔒':'▶'}
+          ${kilit?'🔒':'▶'}
         </div>
       </div>
       <div class="video-info">
@@ -1201,144 +1216,452 @@ function renderVideos(){
 }
 function playVideo(i) {
   const v = videos[i]; if (!v) return;
-  if (v.locked) { showPage('pricing'); return; }
-  if (v.source === 'youtube' && v.video_id) {
-    const ov = document.createElement('div');
-    ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9000';
-    ov.innerHTML = `<div class="ui-modal video-modal"><div class="video-modal-head"><b>${_escHtml(v.title||'')}</b><button class="sup-del" onclick="this.closest('.ui-modal-overlay').remove()">×</button></div>
-      <div class="video-frame"><iframe src="https://www.youtube-nocookie.com/embed/${_escAttr(ytId(v.video_id))}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div></div>`;
-    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
-    document.body.appendChild(ov);
-    if (typeof logActivity === 'function') logActivity('videos', 1);
-  } else if (v.source === 'stream' && v.video_id) {
-    playStream(v);
-  } else {
-    toast('Bu videonun bağlantısı henüz eklenmedi.');
-  }
+  if (v.locked && !userHasPremium()) { showPage('pricing'); return; }
+  if (!v.video_id) { toast('Bu videonun bağlantısı henüz eklenmedi.'); return; }
+  openWatch(v);
 }
 
 /* ============================================================
-   🎬 DRM'Lİ STREAM OYNATICI + ZAMAN DAMGALI İNTERAKTİF KARTLAR
+   🎬 TAM SAYFA İZLEME ARAYÜZÜ — YouTube + Stream ortak adaptör
    ============================================================ */
-let _svViewId = null, _svTimer = null, _svPlayer = null, _svShownCards = {};
+let _w = {
+  video: null, player: null, kind: null, // 'yt' | 'stream'
+  viewId: null, cards: [], chapters: [], notes: [],
+  shownCards: {}, answered: {}, pending: [], timer: null,
+  duration: 0, lastPos: 0, ready: false
+};
 
-async function playStream(v) {
-  if (!currentUser) { uiAlert('Video izlemek için giriş yapmalısın.'); return; }
-  toast('🔐 Güvenli video hazırlanıyor...');
+async function openWatch(v) {
+  _w = { video: v, player: null, kind: null, viewId: null, cards: [], chapters: [],
+         notes: [], shownCards: {}, answered: {}, pending: [], timer: null,
+         duration: 0, lastPos: 0, ready: false };
+
+  // Sayfayı göster
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const wp = document.getElementById('page-watch');
+  if (wp) wp.classList.add('active');
+  window.scrollTo(0, 0);
+  const tEl = document.getElementById('watch-title'); if (tEl) tEl.textContent = v.title || '';
+  const dEl = document.getElementById('watch-desc'); if (dEl) dEl.textContent = v.desc || '';
+
+  if (typeof logActivity === 'function') logActivity('videos', 1);
+
+  // Bölüm, kart, damga, geçmiş verilerini çek
+  await _wLoadData(v);
+
+  // Kaynağa göre oynatıcı kur
+  if (v.source === 'stream') {
+    await _wInitStream(v);
+  } else {
+    _wInitYouTube(v);
+  }
+
+  _wRenderChapters();
+  _wRenderCards();
+  _wRenderNotes();
+
+  // Kart takip döngüsü
+  _w.timer = setInterval(_wTick, 500);
+}
+
+async function _wLoadData(v) {
+  try {
+    const [cards, chaps, notes, prevView] = await Promise.all([
+      sb.from('video_cards').select('*').eq('video_id', v.id).eq('active', true).order('t_sec'),
+      sb.from('video_chapters').select('*').eq('video_id', v.id).order('t_sec').then(r=>r,()=>({data:[]})),
+      currentUser ? sb.from('video_notes').select('*').eq('video_id', v.id).eq('user_id', currentUser.id).order('t_sec').then(r=>r,()=>({data:[]})) : Promise.resolve({data:[]}),
+      currentUser ? sb.from('video_views').select('id, completed').eq('video_id', v.id).eq('user_id', currentUser.id).limit(1).then(r=>r,()=>({data:[]})) : Promise.resolve({data:[]})
+    ]);
+    _w.cards = cards.data || [];
+    _w.chapters = chaps.data || [];
+    _w.notes = notes.data || [];
+    _w.watchedBefore = !!(prevView.data && prevView.data.length); // daha önce izlemiş mi?
+    // Bu kartlar geçmişte cevaplanmış mı? (card_answers)
+    if (currentUser && _w.cards.length) {
+      const { data: ans } = await sb.from('card_answers').select('card_id')
+        .eq('user_id', currentUser.id).in('card_id', _w.cards.map(c=>c.id)).then(r=>r,()=>({data:[]}));
+      (ans||[]).forEach(a => { _w.answered[a.card_id] = true; });
+    }
+  } catch (e) {}
+}
+
+/* ── YouTube adaptörü (IFrame Player API) ── */
+function _wInitYouTube(v) {
+  _w.kind = 'yt';
+  const mount = () => {
+    _w.player = new YT.Player('watch-player', {
+      videoId: ytId(v.video_id),
+      playerVars: { rel: 0, modestbranding: 1, playsinline: 1 },
+      events: {
+        onReady: (e) => { _w.ready = true; _w.duration = e.target.getDuration() || 0; _wStartLog(); },
+        onStateChange: (e) => { _wSyncPlayBtn(e.data === YT.PlayerState.PLAYING); if (e.data === YT.PlayerState.ENDED) _wOnEnded(); }
+      }
+    });
+  };
+  if (window.YT && window.YT.Player) { mount(); }
+  else {
+    window.onYouTubeIframeAPIReady = mount;
+    if (!document.getElementById('yt-api-script')) {
+      const s = document.createElement('script'); s.id = 'yt-api-script';
+      s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
+    }
+  }
+}
+
+/* ── Cloudflare Stream adaptörü (imzalı) ── */
+async function _wInitStream(v) {
+  _w.kind = 'stream';
   try {
     const { data, error } = await sb.functions.invoke('stream-sign', { body: { video_id: v.id } });
     if (error) throw new Error(error.message || 'Sunucuya ulaşılamadı');
-    if (data && data.error === 'premium_required') { showPage('pricing'); return; }
+    if (data && data.error === 'premium_required') { closeWatch(); showPage('pricing'); return; }
     if (data && data.error) throw new Error(data.error);
-
-    _svViewId = data.view_id; _svShownCards = {};
-
-    // Kartları çek
-    let cards = [];
-    try {
-      const { data: cd } = await sb.from('video_cards')
-        .select('*').eq('video_id', v.id).eq('active', true).order('t_sec');
-      cards = cd || [];
-    } catch (e) {}
-
-    const ov = document.createElement('div');
-    ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9000';
-    ov.id = 'stream-modal';
-    ov.innerHTML = `<div class="ui-modal video-modal">
-      <div class="video-modal-head"><b>🔐 ${_escHtml(v.title || '')}</b>
-        <button class="sup-del" onclick="closeStream()">×</button></div>
-      <div class="video-frame" style="position:relative;">
-        <iframe id="sv-frame" src="https://iframe.videodelivery.net/${encodeURIComponent(data.token)}"
-          allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-        <div id="sv-card-overlay" class="sv-card-overlay" style="display:none;"></div>
-      </div></div>`;
-    document.body.appendChild(ov);
-    if (typeof logActivity === 'function') logActivity('videos', 1);
-
-    // Stream SDK'yı yükle ve player'ı bağla (kart motoru + izleme logu için)
-    _loadStreamSdk(() => {
+    _w.viewId = data.view_id;
+    const box = document.getElementById('watch-player');
+    box.innerHTML = `<iframe id="w-sframe" src="https://iframe.videodelivery.net/${encodeURIComponent(data.token)}"
+      style="width:100%;height:100%;border:0;" allow="accelerometer;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>`;
+    _wLoadStreamSdk(() => {
       try {
-        const frame = document.getElementById('sv-frame');
-        _svPlayer = Stream(frame);
-        _svPlayer.addEventListener('timeupdate', () => _svTick(cards));
-        _svPlayer.addEventListener('ended', () => _svLog(true));
-        _svTimer = setInterval(() => _svLog(false), 30000); // 30 sn'de bir konum kaydet
+        _w.player = Stream(document.getElementById('w-sframe'));
+        _w.player.addEventListener('loadedmetadata', () => { _w.ready = true; _w.duration = _w.player.duration || 0; });
+        _w.player.addEventListener('play', () => _wSyncPlayBtn(true));
+        _w.player.addEventListener('pause', () => _wSyncPlayBtn(false));
+        _w.player.addEventListener('ended', _wOnEnded);
       } catch (e) {}
     });
   } catch (e) {
-    uiAlert('Video başlatılamadı: ' + ((e && e.message) || e) + '\n\nStream kurulumu tamamlanmadıysa yönetici ile iletişime geç.');
+    document.getElementById('watch-player').innerHTML =
+      `<div style="padding:40px;text-align:center;color:#fca5a5;">Video başlatılamadı: ${_escHtml((e&&e.message)||e)}</div>`;
   }
 }
-function _loadStreamSdk(cb) {
+function _wLoadStreamSdk(cb) {
   if (window.Stream) { cb(); return; }
   const s = document.createElement('script');
   s.src = 'https://embed.cloudflarestream.com/embed/sdk.latest.js';
   s.onload = cb; document.head.appendChild(s);
 }
-function closeStream() {
-  _svLog(false);
-  if (_svTimer) { clearInterval(_svTimer); _svTimer = null; }
-  _svPlayer = null; _svViewId = null;
-  const m = document.getElementById('stream-modal'); if (m) m.remove();
-}
-/* Konum + izlenme süresini DB'ye yaz (forensic log) */
-async function _svLog(bitti) {
+
+/* ── Ortak oynatıcı kontrolleri (kaynak fark etmez) ── */
+function _wGetTime() {
   try {
-    if (!_svViewId || !_svPlayer || !sb) return;
-    const pos = Math.floor(_svPlayer.currentTime || 0);
-    const upd = { last_pos_sec: pos };
-    if (bitti) upd.completed = true;
-    // watched_sec: kabaca son konum (ileri sarma dahil basit metrik)
-    upd.watched_sec = pos;
-    await sb.from('video_views').update(upd).eq('id', _svViewId);
+    if (_w.kind === 'yt' && _w.player && _w.player.getCurrentTime) return _w.player.getCurrentTime() || 0;
+    if (_w.kind === 'stream' && _w.player) return _w.player.currentTime || 0;
+  } catch (e) {}
+  return 0;
+}
+function _wSeekTo(sec) {
+  try {
+    if (_w.kind === 'yt' && _w.player && _w.player.seekTo) _w.player.seekTo(sec, true);
+    if (_w.kind === 'stream' && _w.player) _w.player.currentTime = sec;
   } catch (e) {}
 }
-/* Her timeupdate'te: zamanı gelen gösterilmemiş kart var mı? */
-function _svTick(cards) {
+function _wPlay() { try { _w.kind==='yt' ? _w.player.playVideo() : _w.player.play(); } catch(e){} }
+function _wPause() { try { _w.kind==='yt' ? _w.player.pauseVideo() : _w.player.pause(); } catch(e){} }
+function _wIsPlaying() {
   try {
-    if (!_svPlayer || !cards || !cards.length) return;
-    const t = _svPlayer.currentTime || 0;
-    for (const card of cards) {
-      if (_svShownCards[card.id]) continue;
-      if (t >= card.t_sec && t < card.t_sec + 3) {
-        _svShownCards[card.id] = true;
-        _svShowCard(card);
-        break;
+    if (_w.kind === 'yt') return _w.player.getPlayerState && _w.player.getPlayerState() === 1;
+    if (_w.kind === 'stream') return _w.player && !_w.player.paused;
+  } catch (e) {}
+  return false;
+}
+function watchSeek(d) { _wSeekTo(Math.max(0, _wGetTime() + d)); }
+function watchTogglePlay() { _wIsPlaying() ? _wPause() : _wPlay(); }
+function watchSetSpeed(r) {
+  try {
+    if (_w.kind === 'yt' && _w.player.setPlaybackRate) _w.player.setPlaybackRate(parseFloat(r));
+    if (_w.kind === 'stream' && _w.player) _w.player.playbackRate = parseFloat(r);
+    localStorage.setItem('ydt_video_speed', r);
+  } catch (e) {}
+}
+function _wSyncPlayBtn(playing) { const b = document.getElementById('wc-play'); if (b) b.textContent = playing ? '⏸' : '▶'; }
+function watchFullscreen() {
+  const box = document.getElementById('watch-player-box');
+  if (!document.fullscreenElement) { box.requestFullscreen && box.requestFullscreen(); }
+  else { document.exitFullscreen && document.exitFullscreen(); }
+}
+
+/* ── Kart takip döngüsü ── */
+function _wTick() {
+  if (!_w.ready) return;
+  const t = _wGetTime();
+  _w.lastPos = t;
+  // Sıkı hoca modu: cevaplanmamış kontrol noktası geçilmeye çalışılırsa geri çek
+  if (_wStrictMode()) {
+    for (const card of _w.cards) {
+      if (card.card_type === 'checkpoint' && !_w.answered[card.id] && t > card.t_sec + 1) {
+        _wSeekTo(card.t_sec); _wShowCard(card); break;
       }
     }
-  } catch (e) {}
-}
-function _svShowCard(card) {
-  const box = document.getElementById('sv-card-overlay'); if (!box) return;
-  try { _svPlayer.pause(); } catch (e) {}
-  const tipIkon = card.card_type === 'quiz' ? '❓' : card.card_type === 'word' ? '🔤' : '💡';
-  let inner = `<div class="sv-card">
-    <div class="sv-card-head">${tipIkon} ${_escHtml(card.title || 'Bilgi')}</div>
-    ${card.body ? `<div class="sv-card-body">${_escHtml(card.body)}</div>` : ''}`;
-  if (card.card_type === 'quiz' && Array.isArray(card.options)) {
-    inner += `<div class="sv-card-opts">` + card.options.map((o, i) =>
-      `<button class="sv-opt" onclick="_svAnswer(this, ${i}, ${card.correct ?? 0})">${_escHtml(o)}</button>`
-    ).join('') + `</div><div id="sv-card-fb" class="sv-card-fb"></div>`;
   }
-  inner += `<button class="set-btn sv-card-continue" onclick="_svResume()">▶ Devam Et</button></div>`;
+  // Zamanı gelen kartlar
+  for (const card of _w.cards) {
+    if (_w.shownCards[card.id]) continue;
+    if (t >= card.t_sec && t < card.t_sec + 2) {
+      _w.shownCards[card.id] = true;
+      _wTriggerCard(card);
+    }
+  }
+  // Aktif bölümü vurgula
+  _wHighlightChapter(t);
+}
+
+function _wCardMode() { return localStorage.getItem('ydt_card_mode') || 'pause'; } // pause | collect
+function _wStrictMode() { return localStorage.getItem('ydt_strict_mode') === '1'; }
+
+function _wTriggerCard(card) {
+  // Tekrar izlemede otomatik duraklatma kapalı → her zaman biriktir
+  const biriktir = _wCardMode() === 'collect' || _w.watchedBefore;
+  if (biriktir && card.card_type !== 'checkpoint') {
+    _w.pending.push(card);
+    _wUpdateBadge();
+  } else {
+    _wShowCard(card);
+    // İlk kez otomatik duraklama bilgisi
+    if (!_w.watchedBefore && _wCardMode() === 'pause' && !localStorage.getItem('ydt_pause_hint_seen')) {
+      _wPauseHint(); localStorage.setItem('ydt_pause_hint_seen', '1');
+    }
+  }
+}
+function _wUpdateBadge() {
+  const b = document.getElementById('watch-cards-badge');
+  const c = document.getElementById('wcb-count');
+  if (!b || !c) return;
+  if (_w.pending.length) { b.style.display = ''; c.textContent = _w.pending.length; }
+  else b.style.display = 'none';
+}
+function watchOpenPanel() {
+  // Biriken kartları sırayla göster (sağ panelde kart sekmesi)
+  watchSideTab('cards', document.querySelector('.wst-tab:nth-child(2)'));
+}
+
+function _wShowCard(card) {
+  const box = document.getElementById('watch-card-overlay'); if (!box) return;
+  _wPause();
+  const renk = { info:'💡', quiz:'❓', poll:'📊', word:'🔤', topic:'📖', checkpoint:'🚧' }[card.card_type] || '💡';
+  let inner = `<div class="sv-card sv-card-${card.card_type}">
+    <div class="sv-card-head">${renk} ${_escHtml(card.title || '')}</div>
+    ${card.body ? `<div class="sv-card-body">${_escHtml(card.body)}</div>` : ''}`;
+  if ((card.card_type === 'quiz' || card.card_type === 'checkpoint' || card.card_type === 'poll') && Array.isArray(card.options)) {
+    inner += '<div class="sv-card-opts">' + card.options.map((o,i) =>
+      `<button class="sv-opt" onclick="_wAnswerCard(${card.id}, ${i}, ${card.correct ?? -1}, '${card.card_type}')">${_escHtml(o)}</button>`
+    ).join('') + '</div><div id="sv-card-fb" class="sv-card-fb"></div>';
+  }
+  const kapatilabilir = card.card_type !== 'checkpoint' || _w.answered[card.id] || !_wStrictMode();
+  inner += kapatilabilir
+    ? `<button class="set-btn sv-card-continue" onclick="_wResumeCard(${card.id})">▶ Devam Et</button></div>`
+    : `<div class="sv-card-lock">🚧 Devam etmek için doğru cevapla</div></div>`;
   box.innerHTML = inner; box.style.display = 'flex';
 }
-function _svAnswer(btn, i, correct) {
+async function _wAnswerCard(cardId, i, correct, tip) {
   const fb = document.getElementById('sv-card-fb');
-  document.querySelectorAll('.sv-opt').forEach(b => b.disabled = true);
-  if (i === correct) { btn.classList.add('ok'); if (fb) fb.textContent = '✅ Doğru! Harikasın.'; }
+  const opts = document.querySelectorAll('.sv-opt');
+  if (tip === 'poll') {
+    // Ankette doğru/yanlış yok — teşekkür et
+    opts.forEach(b => b.disabled = true);
+    opts[i] && opts[i].classList.add('ok');
+    if (fb) fb.textContent = '✅ Cevabın kaydedildi, teşekkürler!';
+    _w.answered[cardId] = true;
+    _wSaveAnswer(cardId, i, true);
+    const cont = document.querySelector('.sv-card-continue'); if (cont) cont.style.display = '';
+    return;
+  }
+  opts.forEach(b => b.disabled = true);
+  const dogru = (i === correct);
+  if (dogru) { opts[i].classList.add('ok'); if (fb) fb.textContent = '✅ Doğru!'; }
   else {
-    btn.classList.add('no');
-    const dg = document.querySelectorAll('.sv-opt')[correct]; if (dg) dg.classList.add('ok');
+    opts[i] && opts[i].classList.add('no');
+    opts[correct] && opts[correct].classList.add('ok');
     if (fb) fb.textContent = '❌ Yanlış — doğrusu işaretlendi.';
   }
+  _w.answered[cardId] = true;
+  _wSaveAnswer(cardId, i, dogru);
   try { logActivity('questions', 1); } catch (e) {}
+  // Checkpoint sıkı modda: sadece doğruysa devam butonu açılır
+  if (tip === 'checkpoint' && _wStrictMode() && !dogru) {
+    if (fb) fb.textContent += ' Tekrar dene ▶';
+    setTimeout(() => { opts.forEach(b => b.disabled = false); opts.forEach(b=>b.classList.remove('no','ok')); }, 1200);
+  } else {
+    const cont = document.querySelector('.sv-card-continue');
+    if (cont) cont.style.display = '';
+    else { const box = document.getElementById('watch-card-overlay'); box.innerHTML += `<button class="set-btn sv-card-continue" onclick="_wResumeCard(${cardId})">▶ Devam Et</button>`; }
+  }
 }
-function _svResume() {
-  const box = document.getElementById('sv-card-overlay');
+async function _wSaveAnswer(cardId, choice, correct) {
+  try {
+    if (!currentUser) return;
+    await sb.from('card_answers').upsert({
+      user_id: currentUser.id, card_id: cardId, choice, correct
+    }, { onConflict: 'user_id,card_id' });
+  } catch (e) {}
+}
+function _wResumeCard(cardId) {
+  const box = document.getElementById('watch-card-overlay');
   if (box) { box.style.display = 'none'; box.innerHTML = ''; }
-  try { _svPlayer.play(); } catch (e) {}
+  // Biriken kuyruktan çıkar
+  _w.pending = _w.pending.filter(c => c.id !== cardId);
+  _wUpdateBadge();
+  _wPlay();
 }
+function _wPauseHint() {
+  const h = document.createElement('div');
+  h.className = 'watch-pause-hint';
+  h.textContent = '⏸ Otomatik duraklatma etkin — Profil → Ayarlar\'dan değiştirebilirsin';
+  document.getElementById('watch-player-box').appendChild(h);
+  setTimeout(() => { h.style.opacity = '0'; }, 3500);
+  setTimeout(() => { h.remove(); }, 5000);
+}
+
+/* ── Bölümler ── */
+function _wRenderChapters() {
+  const box = document.getElementById('wst-chapters'); if (!box) return;
+  if (!_w.chapters.length) { box.innerHTML = '<div class="profile-empty">Bu videoda bölüm işareti yok.</div>'; return; }
+  box.innerHTML = _w.chapters.map(ch => {
+    const mm = Math.floor(ch.t_sec/60), ss = String(ch.t_sec%60).padStart(2,'0');
+    return `<button class="wch-item" data-t="${ch.t_sec}" onclick="_wSeekTo(${ch.t_sec});_wPlay();">
+      <span class="wch-time">${mm}:${ss}</span> <span class="wch-title">${_escHtml(ch.title||'')}</span></button>`;
+  }).join('');
+}
+function _wHighlightChapter(t) {
+  const items = document.querySelectorAll('#wst-chapters .wch-item');
+  let aktif = -1;
+  _w.chapters.forEach((ch, idx) => { if (t >= ch.t_sec) aktif = idx; });
+  items.forEach((el, idx) => el.classList.toggle('active', idx === aktif));
+}
+function _wRenderCards() {
+  const box = document.getElementById('wst-cards'); if (!box) return;
+  if (!_w.cards.length) { box.innerHTML = '<div class="profile-empty">Bu videoda interaktif kart yok.</div>'; return; }
+  box.innerHTML = _w.cards.map(card => {
+    const mm = Math.floor(card.t_sec/60), ss = String(card.t_sec%60).padStart(2,'0');
+    const renk = { info:'💡', quiz:'❓', poll:'📊', word:'🔤', topic:'📖', checkpoint:'🚧' }[card.card_type] || '💡';
+    const done = _w.answered[card.id] ? '✅' : '';
+    return `<button class="wch-item" onclick="_wSeekTo(${card.t_sec});_wPlay();">
+      <span class="wch-time">${mm}:${ss}</span> <span class="wch-title">${renk} ${_escHtml(card.title||card.card_type)} ${done}</span></button>`;
+  }).join('');
+}
+
+/* ── Kişisel damgalar ── */
+function _wRenderNotes() {
+  const box = document.getElementById('wn-list'); if (!box) return;
+  if (!_w.notes.length) { box.innerHTML = '<div class="profile-empty">Henüz damga yok. Video oynarken "+ Ekle" ile bu ana not bırak.</div>'; return; }
+  box.innerHTML = _w.notes.map(n => {
+    const mm = Math.floor(n.t_sec/60), ss = String(n.t_sec%60).padStart(2,'0');
+    return `<div class="wn-item"><button class="wch-time" onclick="_wSeekTo(${n.t_sec});_wPlay();">${mm}:${ss}</button>
+      <span>${_escHtml(n.body||'')}</span>
+      <button class="mail-act danger" onclick="watchDelNote(${n.id})">×</button></div>`;
+  }).join('');
+}
+async function watchAddNote() {
+  const inp = document.getElementById('wn-note'); if (!inp) return;
+  const body = inp.value.trim(); if (!body) return;
+  if (!currentUser) { uiAlert('Not için giriş yapmalısın.'); return; }
+  const t = Math.floor(_wGetTime());
+  try {
+    const { data, error } = await sb.from('video_notes').insert({
+      user_id: currentUser.id, video_id: _w.video.id, t_sec: t, body
+    }).select().single();
+    if (error) throw error;
+    _w.notes.push(data); _w.notes.sort((a,b)=>a.t_sec-b.t_sec);
+    inp.value = ''; _wRenderNotes();
+    toast('📌 Damga eklendi (' + Math.floor(t/60) + ':' + String(t%60).padStart(2,'0') + ')');
+  } catch (e) { uiAlert('Eklenemedi: ' + ((e&&e.message)||e)); }
+}
+async function watchDelNote(id) {
+  try { await sb.from('video_notes').delete().eq('id', id);
+    _w.notes = _w.notes.filter(n => n.id !== id); _wRenderNotes();
+  } catch (e) {}
+}
+
+function watchSideTab(tab, btn) {
+  ['chapters','cards','notes'].forEach(t => {
+    const el = document.getElementById('wst-' + t); if (el) el.style.display = t === tab ? '' : 'none';
+  });
+  document.querySelectorAll('.wst-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+/* ── İzleme logu ── */
+function _wStartLog() {
+  if (_w.kind === 'stream') return; // stream log'u edge function başlattı
+  if (!currentUser) return;
+  sb.from('video_views').insert({
+    user_id: currentUser.id, video_id: _w.video.id
+  }).select('id').single().then(r => { if (r.data) _w.viewId = r.data.id; }, () => {});
+  setInterval(_wSaveProgress, 30000);
+}
+async function _wSaveProgress(bitti) {
+  try {
+    if (!_w.viewId) return;
+    const upd = { last_pos_sec: Math.floor(_w.lastPos), watched_sec: Math.floor(_w.lastPos) };
+    if (bitti === true) upd.completed = true;
+    await sb.from('video_views').update(upd).eq('id', _w.viewId);
+  } catch (e) {}
+}
+function _wOnEnded() {
+  _wSaveProgress(true);
+  // Birikmiş kart var mı? Sıkı modda tamamlanmadan sonraki video kilitli
+  if (_w.pending.length && _wStrictMode()) {
+    watchOpenPanel();
+    toast('🚧 Sonraki videoya geçmeden önce biriken kartları tamamla.');
+    return;
+  }
+  // Sıradaki ders önerisi
+  _wSuggestNext();
+}
+function _wSuggestNext() {
+  const cur = _w.video;
+  const next = videos.find(x => x.num === (cur.num + 1)) || videos[videos.indexOf(cur) + 1];
+  const box = document.getElementById('watch-card-overlay');
+  if (next && box) {
+    box.innerHTML = `<div class="sv-card">
+      <div class="sv-card-head">🎉 Ders tamamlandı!</div>
+      <div class="sv-card-body">Sıradaki: <b>${_escHtml(next.title||'')}</b></div>
+      <button class="set-btn" onclick="_wPlayNext(${videos.indexOf(next)})">▶ Sonraki Derse Geç</button>
+      <button class="set-btn ghost" onclick="closeWatch()" style="margin-top:8px;">Videolara Dön</button></div>`;
+    box.style.display = 'flex';
+  }
+}
+function _wPlayNext(idx) {
+  const v = videos[idx]; if (!v) { closeWatch(); return; }
+  _wCleanup();
+  openWatch(v);
+}
+
+function closeWatch() {
+  _wSaveProgress(false);
+  _wCleanup();
+  showPage('learn');
+  if (typeof learnNav === 'function') learnNav('video');
+}
+function _wCleanup() {
+  try { if (_w.timer) clearInterval(_w.timer); } catch (e) {}
+  try { _wPause(); } catch (e) {}
+  const box = document.getElementById('watch-player'); if (box) box.innerHTML = '';
+  const ov = document.getElementById('watch-card-overlay'); if (ov) { ov.style.display='none'; ov.innerHTML=''; }
+  _w.player = null; _w.timer = null;
+}
+
+/* İzleme sayfası klavye kısayolları */
+document.addEventListener('keydown', function(e) {
+  const wp = document.getElementById('page-watch');
+  if (!wp || !wp.classList.contains('active')) return;
+  if (['INPUT','TEXTAREA','SELECT'].includes((e.target.tagName||''))) return;
+  if (e.code === 'Space') { e.preventDefault(); watchTogglePlay(); }
+  else if (e.code === 'ArrowLeft') { e.preventDefault(); watchSeek(-5); }
+  else if (e.code === 'ArrowRight') { e.preventDefault(); watchSeek(5); }
+  else if (e.key === 'f' || e.key === 'F') { watchFullscreen(); }
+});
+
+/* Kaydedilmiş hız tercihi */
+setTimeout(() => {
+  const sp = localStorage.getItem('ydt_video_speed');
+  const sel = document.getElementById('wc-speed');
+  if (sp && sel) sel.value = sp;
+  // Video izleme tercihleri
+  const cm = document.getElementById('set-card-mode');
+  if (cm) cm.value = localStorage.getItem('ydt_card_mode') || 'pause';
+  const st = document.getElementById('set-strict-mode');
+  if (st) st.checked = localStorage.getItem('ydt_strict_mode') === '1';
+}, 1000);
 
 async function refreshVideosFromDb() {
   try {
@@ -3752,6 +4075,14 @@ function trackPageView(pageId) {
     if (_pvLogged.has(key)) return;
     _pvLogged.add(key);
     _getGeo().then(function (geo) {
+      // Kullanıcının en son access_log kaydına ülke bilgisini işle (giriş anında trigger IP yazar, ülkeyi client tamamlar)
+      try {
+        if (geo && geo.country && currentUser) {
+          sb.from('access_log').update({ country: geo.country })
+            .eq('user_id', currentUser.id).is('country', null)
+            .then(function(){}, function(){});
+        }
+      } catch (e) {}
       sb.from('page_views').insert({
         path: String(pageId || 'home').slice(0, 60),
         user_id: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null,
@@ -4592,7 +4923,8 @@ function renderCvList() {
           ? `<button class="mail-act" onclick="adminVidRestore('${r.id}')">↩️ Geri Al</button>
              <button class="mail-act red" onclick="adminVidPurge('${r.id}')">❌ Temelli Sil</button>`
           : `<button class="mail-act" onclick="adminVidEdit('${r.id}')">✏️</button>
-             ${r.source === 'stream' ? `<button class="mail-act" onclick="adminVidCards('${r.id}', '${_escAttr(r.title||'')}')">🃏 Kartlar</button>` : ''}
+             <button class="mail-act" onclick="adminVidCards('${r.id}', '${_escAttr(r.title||'')}')">🃏 Kartlar</button>
+             <button class="mail-act" onclick="adminVidChapters('${r.id}', '${_escAttr(r.title||'')}')">📌 Bölümler</button>
              <button class="mail-act" onclick="adminVidTogglePremium('${r.id}', ${r.premium ? 'false' : 'true'})">${r.premium ? '🆓 Ücretsiz yap' : '👑 Premium yap'}</button>
              <button class="mail-act red" onclick="adminVidHide('${r.id}')">🗑️ Sil</button>`}
       </div>
@@ -4611,6 +4943,7 @@ function adminVidEdit(id) {
   document.getElementById('cv-title').value = r.title || '';
   document.getElementById('cv-desc').value = r.descr || '';
   document.getElementById('cv-source').value = r.source || 'youtube';
+  adminVidSourceChanged();
   document.getElementById('cv-vid').value = r.video_id || '';
   document.getElementById('cv-thumb').value = r.thumb || '';
   document.getElementById('cv-premium').checked = !!r.premium;
@@ -4634,6 +4967,54 @@ async function adminVidSave() {
 async function adminVidTogglePremium(id, on) {
   try { await sb.from('content_videos').update({ premium: on }).eq('id', id); adminCvReload(); refreshVideosFromDb(); } catch (e) {}
 }
+/* 📌 Bölüm (konu pini) editörü */
+async function adminVidChapters(videoId, title) {
+  let chaps = [];
+  try { const { data } = await sb.from('video_chapters').select('*').eq('video_id', videoId).order('t_sec'); chaps = data || []; } catch (e) {}
+  const ov = document.createElement('div');
+  ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9400'; ov.id = 'vchap-modal';
+  const listHTML = chaps.length ? chaps.map(ch => `
+    <div class="cw-row" style="padding:8px 10px;">
+      <div class="cw-main"><b>${Math.floor(ch.t_sec/60)}:${String(ch.t_sec%60).padStart(2,'0')}</b>
+        <span class="wch-title">${_escHtml(ch.title||'')}</span></div>
+      <div class="cw-acts"><button class="mail-act red" onclick="adminVidChapDel(${ch.id}, '${videoId}', '${_escAttr(title)}')">🗑️</button></div>
+    </div>`).join('') : '<div class="profile-empty">Henüz bölüm yok.</div>';
+  ov.innerHTML = `<div class="ui-modal" style="max-width:560px;max-height:85vh;overflow-y:auto;">
+    <h3 class="ui-modal-title">📌 ${_escHtml(title)} — Bölümler</h3>
+    <p class="pq-hint">Bölümler videonun sağ panelinde görünür; tıklayınca o ana atlar. Konu pinleri, aranabilir ve AI Koç yönlendirmesinde kullanılır.</p>
+    <div style="margin-bottom:14px;">${listHTML}</div>
+    <div class="admin-notif-card">
+      <h3 class="an-h3">➕ Yeni Bölüm</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <input id="vch-min" class="pq-input" type="number" min="0" placeholder="Dk" style="width:70px;">
+        <input id="vch-sec" class="pq-input" type="number" min="0" max="59" placeholder="Sn" style="width:70px;">
+        <input id="vch-title" class="pq-input" placeholder="Bölüm başlığı (örn: Padej'e giriş)" style="flex:1;min-width:180px;">
+      </div>
+      <button class="set-btn" onclick="adminVidChapAdd('${videoId}', '${_escAttr(title)}')">Kaydet</button>
+      <button class="set-btn ghost" onclick="document.getElementById('vchap-modal').remove()">Kapat</button>
+    </div></div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+async function adminVidChapAdd(videoId, title) {
+  const dk = parseInt((document.getElementById('vch-min')||{}).value,10)||0;
+  const sn = parseInt((document.getElementById('vch-sec')||{}).value,10)||0;
+  const bas = (document.getElementById('vch-title')||{}).value.trim();
+  if (!bas) { uiAlert('Bölüm başlığı gir.'); return; }
+  try {
+    const { error } = await sb.from('video_chapters').insert({ video_id: videoId, t_sec: dk*60+sn, title: bas });
+    if (error) throw error;
+    document.getElementById('vchap-modal').remove();
+    toast('📌 Bölüm eklendi.'); adminVidChapters(videoId, title);
+  } catch (e) { uiAlert('Eklenemedi: ' + ((e&&e.message)||e)); }
+}
+async function adminVidChapDel(id, videoId, title) {
+  const ok = await uiConfirm('Bu bölüm silinsin mi?'); if (!ok) return;
+  try { await sb.from('video_chapters').delete().eq('id', id);
+    document.getElementById('vchap-modal').remove(); adminVidChapters(videoId, title);
+  } catch (e) {}
+}
+
 /* 🃏 Zaman damgalı kart editörü */
 async function adminVidCards(videoId, title) {
   let cards = [];
@@ -4660,8 +5041,8 @@ async function adminVidCards(videoId, title) {
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
         <input id="vc-min" class="pq-input" type="number" min="0" placeholder="Dk" style="width:70px;">
         <input id="vc-sec" class="pq-input" type="number" min="0" max="59" placeholder="Sn" style="width:70px;">
-        <select id="vc-type" class="pq-input" style="width:130px;" onchange="document.getElementById('vc-quiz-alan').style.display = this.value==='quiz' ? '' : 'none';">
-          <option value="info">💡 Bilgi</option><option value="quiz">❓ Soru</option><option value="word">🔤 Kelime</option>
+        <select id="vc-type" class="pq-input" style="width:130px;" onchange="document.getElementById('vc-quiz-alan').style.display = ['quiz','poll','checkpoint'].includes(this.value) ? '' : 'none';">
+          <option value="info">💡 Bilgi</option><option value="quiz">❓ Soru</option><option value="poll">📊 Anket</option><option value="word">🔤 Kelime</option><option value="topic">📖 Konu</option><option value="checkpoint">🚧 Kontrol Noktası</option>
         </select>
         <input id="vc-title" class="pq-input" placeholder="Başlık" style="flex:1;min-width:160px;">
       </div>
@@ -4671,7 +5052,7 @@ async function adminVidCards(videoId, title) {
         <input id="vc-o1" class="pq-input" placeholder="Şık 2" style="width:100%;margin-bottom:5px;">
         <input id="vc-o2" class="pq-input" placeholder="Şık 3" style="width:100%;margin-bottom:5px;">
         <input id="vc-o3" class="pq-input" placeholder="Şık 4" style="width:100%;">
-        <p class="pq-hint">İlk şık doğru kabul edilir; oynatıcıda karışık gösterilir.</p>
+        <p class="pq-hint">Soru/Kontrol: ilk şık doğru kabul edilir, karışık gösterilir. Anket: doğru yok, sıra korunur.</p>
       </div>
       <button class="set-btn" style="margin-top:10px;" onclick="adminVidCardAdd('${videoId}', '${_escAttr(title)}')">Kaydet</button>
       <button class="set-btn ghost" style="margin-top:10px;" onclick="document.getElementById('vcard-modal').remove()">Kapat</button>
@@ -4688,13 +5069,17 @@ async function adminVidCardAdd(videoId, title) {
   const govde = (document.getElementById('vc-body')||{}).value.trim();
   if (!bas && !govde) { uiAlert('Başlık veya metin gir.'); return; }
   const row = { video_id: videoId, t_sec: dk*60+sn, card_type: tip, title: bas || null, body: govde || null };
-  if (tip === 'quiz') {
+  if (['quiz','poll','checkpoint'].includes(tip)) {
     const opts = [0,1,2,3].map(i => ((document.getElementById('vc-o'+i)||{}).value || '').trim()).filter(Boolean);
-    if (opts.length < 2) { uiAlert('Soru kartı için en az 2 şık gir.'); return; }
-    // İlk şık doğru; oynatıcıda karıştırıp doğru indexi güncelliyoruz
-    const dogru = opts[0];
-    const karisik = shuffle(opts.slice());
-    row.options = karisik; row.correct = karisik.indexOf(dogru);
+    if (opts.length < 2) { uiAlert('Bu kart tipi için en az 2 şık gir.'); return; }
+    if (tip === 'poll') {
+      // Ankette doğru yok, karıştırma da yok (sıra korunur)
+      row.options = opts; row.correct = -1;
+    } else {
+      const dogru = opts[0];
+      const karisik = shuffle(opts.slice());
+      row.options = karisik; row.correct = karisik.indexOf(dogru);
+    }
   }
   try {
     const { error } = await sb.from('video_cards').insert(row);
@@ -7390,6 +7775,53 @@ function _gscRender(data, fetchedAt) {
     html += '<div class="profile-empty">Henüz veri yok — site yeni indexleniyorsa birkaç gün sürebilir.</div>';
   }
   box.innerHTML = html;
+}
+
+/* ── Admin: Cloudflare Stream doğrudan yükleme ── */
+function adminVidSourceChanged() {
+  const src = (document.getElementById('cv-source')||{}).value;
+  const row = document.getElementById('cv-upload-row');
+  if (row) row.style.display = (src === 'stream') ? '' : 'none';
+}
+async function adminStreamUpload() {
+  const fileInp = document.getElementById('cv-file');
+  const st = document.getElementById('cv-upload-status');
+  if (!fileInp || !fileInp.files || !fileInp.files[0]) { uiAlert('Önce bir video dosyası seç.'); return; }
+  const file = fileInp.files[0];
+  if (st) st.innerHTML = '⏳ Yükleme başlatılıyor...';
+  try {
+    // 1) Edge function'dan tek seferlik yükleme URL'i al (tus/direct upload)
+    const { data, error } = await sb.functions.invoke('stream-upload-url', {
+      body: { name: file.name, size: file.size }
+    });
+    if (error) throw new Error(error.message || 'Yükleme URL alınamadı');
+    if (data && data.error) throw new Error(data.error);
+    const uploadURL = data.uploadURL, uid = data.uid;
+    if (!uploadURL) throw new Error('Yükleme adresi boş döndü');
+
+    // 2) Dosyayı doğrudan Cloudflare'e yükle (progress ile)
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', uploadURL, true);
+      const fd = new FormData(); fd.append('file', file);
+      xhr.upload.onprogress = (ev) => {
+        if (ev.lengthComputable && st) {
+          const pct = Math.round(ev.loaded / ev.total * 100);
+          st.innerHTML = `⏳ Yükleniyor... %${pct}`;
+        }
+      };
+      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error('Yükleme hatası: ' + xhr.status));
+      xhr.onerror = () => reject(new Error('Ağ hatası'));
+      xhr.send(fd);
+    });
+
+    // 3) UID'yi forma yaz
+    const vidInp = document.getElementById('cv-vid'); if (vidInp) vidInp.value = uid;
+    if (st) st.innerHTML = `✅ Yüklendi! Video UID: <b>${uid}</b><br><span style="color:#9ca3af;">Cloudflare işlemeyi bitirince (~1-2 dk) oynatılabilir. Şimdi "Video Ekle"ye bas.</span>`;
+    toast('✅ Video Stream\'e yüklendi');
+  } catch (e) {
+    if (st) st.innerHTML = `<span style="color:#fca5a5;">Hata: ${_escHtml((e&&e.message)||e)}</span>`;
+  }
 }
 
 /* ── Admin: Kurum Yönetimi ── */
