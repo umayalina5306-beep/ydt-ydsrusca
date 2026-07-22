@@ -156,8 +156,44 @@ function settingsTab(key, btn) {
     else if (key === "Üyelik Yönetimi" && typeof uyelikHTML === "function") oth.innerHTML = uyelikHTML();
     else if (key === "Bildirimler" && typeof bildirimAyarlariHTML === "function") oth.innerHTML = bildirimAyarlariHTML();
     else if (key === "Veri Yönetimi" && typeof veriYonetimiHTML === "function") oth.innerHTML = veriYonetimiHTML();
+    else if (key === "Site Ayarları" && typeof siteAyarlariHTML === "function") { oth.innerHTML = siteAyarlariHTML(); if (typeof siteAyarlariInit === "function") setTimeout(siteAyarlariInit, 50); }
     else oth.innerHTML = '<div class="profile-panel"><div class="profile-empty">' + key + ' bölümü yakında eklenecek.</div></div>';
   }
+}
+
+/* 🎛️ Site Ayarları sekmesi (ses + video izleme tercihleri) */
+function siteAyarlariHTML() {
+  return `
+  <div class="profile-panel">
+    <div class="panel-title">🔊 Seslendirme</div>
+    <div class="pq-row2" style="align-items:center;">
+      <span style="font-size:.86rem;">Seslendirme sesi:</span>
+      <select id="set-voice" class="pq-input pq-level" onchange="localStorage.setItem('ydt_voice', this.value); toast('Ses tercihi kaydedildi.');">
+        <option value="auto">Otomatik (en doğal)</option>
+        <option value="female">Kadın</option>
+        <option value="male">Erkek</option>
+      </select>
+    </div>
+  </div>
+  <div class="profile-panel">
+    <div class="panel-title">🎬 Video İzleme Tercihleri</div>
+    <div class="pq-row2" style="align-items:center;margin-bottom:12px;">
+      <span style="font-size:.86rem;">İnteraktif kartlar:</span>
+      <select id="set-card-mode" class="pq-input pq-level" onchange="localStorage.setItem('ydt_card_mode', this.value); toast('Kaydedildi.');">
+        <option value="pause">Anında duraklat</option>
+        <option value="collect">Yanda biriktir (scroll listesi)</option>
+      </select>
+    </div>
+    <label class="cw-check" style="display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="set-strict-mode" onchange="localStorage.setItem('ydt_strict_mode', this.checked?'1':'0'); toast('Kaydedildi.');">
+      <span>🚧 Sıkı hoca modu — kontrol noktası soruları doğru cevaplanmadan video ilerlemez</span>
+    </label>
+  </div>`;
+}
+function siteAyarlariInit() {
+  const v = document.getElementById('set-voice'); if (v) v.value = localStorage.getItem('ydt_voice') || 'auto';
+  const cm = document.getElementById('set-card-mode'); if (cm) cm.value = localStorage.getItem('ydt_card_mode') || 'pause';
+  const st = document.getElementById('set-strict-mode'); if (st) st.checked = localStorage.getItem('ydt_strict_mode') === '1';
 }
 
 // Profilden Kelime Kasası'na git (saved / learned)
