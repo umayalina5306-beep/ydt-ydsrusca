@@ -1288,19 +1288,32 @@ async function _wLoadData(v) {
 /* ── YouTube adaptörü (IFrame Player API) ── */
 function _wInitYouTube(v) {
   _w.kind = 'yt';
+  // Temiz bir hedef div oluştur (YT API div'i iframe'e çevirir, tekrar kullanımda taze olmalı)
+  const host = document.getElementById('watch-player');
+  host.innerHTML = '<div id="yt-target"></div>';
   const mount = () => {
-    _w.player = new YT.Player('watch-player', {
-      videoId: ytId(v.video_id),
-      playerVars: { rel: 0, modestbranding: 1, playsinline: 1 },
-      events: {
-        onReady: (e) => { _w.ready = true; _w.duration = e.target.getDuration() || 0; _wStartLog(); },
-        onStateChange: (e) => { _wSyncPlayBtn(e.data === YT.PlayerState.PLAYING); if (e.data === YT.PlayerState.ENDED) _wOnEnded(); }
-      }
-    });
+    try {
+      _w.player = new YT.Player('yt-target', {
+        width: '100%', height: '100%',
+        videoId: ytId(v.video_id),
+        playerVars: { rel: 0, modestbranding: 1, playsinline: 1, origin: location.origin },
+        events: {
+          onReady: (e) => { _w.ready = true; _w.duration = e.target.getDuration() || 0; _wStartLog(); },
+          onStateChange: (e) => { _wSyncPlayBtn(e.data === 1); if (e.data === 0) _wOnEnded(); },
+          onError: (e) => {
+            host.innerHTML = '<div style="padding:40px;text-align:center;color:#fca5a5;">Bu YouTube videosu oynatılamıyor (kod: ' + e.data + ').<br>Genelde video sahibi gömmeye izin vermemiştir ya da video ID hatalıdır.</div>';
+          }
+        }
+      });
+    } catch (err) {
+      host.innerHTML = '<div style="padding:40px;text-align:center;color:#fca5a5;">Oynatıcı yüklenemedi: ' + (err.message||err) + '</div>';
+    }
   };
   if (window.YT && window.YT.Player) { mount(); }
   else {
-    window.onYouTubeIframeAPIReady = mount;
+    // API henüz yüklenmediyse: script ekle + hazır olunca çağır
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { if (typeof prev === 'function') try{prev();}catch(e){} mount(); };
     if (!document.getElementById('yt-api-script')) {
       const s = document.createElement('script'); s.id = 'yt-api-script';
       s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
