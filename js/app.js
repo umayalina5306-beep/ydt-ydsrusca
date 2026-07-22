@@ -1191,6 +1191,9 @@ function userHasPremium() {
 function renderVideos(){
   const grid = document.getElementById('video-grid'); if (!grid) return;
   const hasPrem = userHasPremium();
+  // Premium/yönetici için üstteki kilit bannerını gizle
+  const banner = document.getElementById('video-lock-banner');
+  if (banner) banner.style.display = hasPrem ? 'none' : '';
   grid.innerHTML = videos.map((v, i) => {
     // Premium kullanıcı için kilit yok
     const kilit = v.locked && !hasPrem;
@@ -1201,7 +1204,7 @@ function renderVideos(){
       <div class="video-thumb" style="${thumb}">
         <div class="video-thumb-num">${v.num || ''}</div>
         ${kilit?'<div class="video-lock-icon">🔒</div>':''}
-        ${v.locked && hasPrem ? '<div class="video-premium-badge">👑 Premium</div>' : ''}
+        ${v.locked && hasPrem ? '<div class="video-premium-badge">👑</div>' : ''}
         <div class="video-play" onclick="${playAct}">
           ${kilit?'🔒':'▶'}
         </div>
@@ -1262,6 +1265,7 @@ async function openWatch(v) {
 
   // Kart takip döngüsü
   _w.timer = setInterval(_wTick, 500);
+  setTimeout(_wShowControls, 500);
 }
 
 async function _wLoadData(v) {
@@ -1296,7 +1300,7 @@ function _wInitYouTube(v) {
       _w.player = new YT.Player('yt-target', {
         width: '100%', height: '100%',
         videoId: ytId(v.video_id),
-        playerVars: { rel: 0, modestbranding: 1, playsinline: 1, origin: location.origin },
+        playerVars: { rel: 0, modestbranding: 1, playsinline: 1, controls: 0, disablekb: 1, iv_load_policy: 3, fs: 0, origin: location.origin },
         events: {
           onReady: (e) => { _w.ready = true; _w.duration = e.target.getDuration() || 0; _wStartLog(); },
           onStateChange: (e) => { _wSyncPlayBtn(e.data === 1); if (e.data === 0) _wOnEnded(); },
@@ -1388,10 +1392,20 @@ function watchSetSpeed(r) {
 }
 function _wSyncPlayBtn(playing) { const b = document.getElementById('wc-play'); if (b) b.textContent = playing ? '⏸' : '▶'; }
 function watchFullscreen() {
-  const box = document.getElementById('watch-player-box');
-  if (!document.fullscreenElement) { box.requestFullscreen && box.requestFullscreen(); }
-  else { document.exitFullscreen && document.exitFullscreen(); }
+  const wrap = document.getElementById('watch-wrap');
+  if (!document.fullscreenElement) {
+    if (wrap.requestFullscreen) wrap.requestFullscreen();
+    else if (wrap.webkitRequestFullscreen) wrap.webkitRequestFullscreen();
+    wrap.classList.add('watch-fs');
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen();
+    wrap.classList.remove('watch-fs');
+  }
 }
+document.addEventListener('fullscreenchange', function() {
+  const wrap = document.getElementById('watch-wrap');
+  if (wrap && !document.fullscreenElement) wrap.classList.remove('watch-fs');
+});
 
 /* ── Kart takip döngüsü ── */
 function _wTick() {
@@ -1437,10 +1451,14 @@ function _wTriggerCard(card) {
 }
 function _wUpdateBadge() {
   const b = document.getElementById('watch-cards-badge');
-  const c = document.getElementById('wcb-count');
-  if (!b || !c) return;
-  if (_w.pending.length) { b.style.display = ''; c.textContent = _w.pending.length; }
-  else b.style.display = 'none';
+  const cnt = document.getElementById('wcb-count');
+  if (b && cnt) {
+    if (_w.pending.length) { b.style.display = ''; cnt.textContent = _w.pending.length; }
+    else b.style.display = 'none';
+  }
+  // Kartlar sekmesi başlığında da rozet göster
+  const tab = document.querySelector('.wst-tab:nth-child(2)');
+  if (tab) tab.innerHTML = '🃏 Kartlar' + (_w.pending.length ? ` <b style="color:#f5d97a">(${_w.pending.length})</b>` : '');
 }
 function watchOpenPanel() {
   // Biriken kartları sırayla göster (sağ panelde kart sekmesi)
@@ -1653,16 +1671,32 @@ function _wCleanup() {
   _w.player = null; _w.timer = null;
 }
 
+/* Kontrol çubuğu otomatik gizle/göster */
+let _wCtrlTimer = null;
+function _wShowControls() {
+  const c = document.getElementById('watch-controls');
+  if (!c) return;
+  c.classList.remove('hidden');
+  if (_wCtrlTimer) clearTimeout(_wCtrlTimer);
+  _wCtrlTimer = setTimeout(() => {
+    if (_wIsPlaying && _wIsPlaying()) c.classList.add('hidden');
+  }, 3000);
+}
+document.addEventListener('mousemove', function(e) {
+  const box = document.getElementById('watch-player-box');
+  if (box && box.contains(e.target)) _wShowControls();
+});
+
 /* İzleme sayfası klavye kısayolları */
 document.addEventListener('keydown', function(e) {
   const wp = document.getElementById('page-watch');
   if (!wp || !wp.classList.contains('active')) return;
   if (['INPUT','TEXTAREA','SELECT'].includes((e.target.tagName||''))) return;
   if (e.code === 'Space') { e.preventDefault(); watchTogglePlay(); }
-  else if (e.code === 'ArrowLeft') { e.preventDefault(); watchSeek(-5); }
+  else if (e.code === 'ArrowLeft')  { e.preventDefault(); watchSeek(-5); }
   else if (e.code === 'ArrowRight') { e.preventDefault(); watchSeek(5); }
   else if (e.key === 'f' || e.key === 'F') { watchFullscreen(); }
-});
+}, true);
 
 /* Kaydedilmiş hız tercihi */
 setTimeout(() => {
@@ -1814,7 +1848,7 @@ async function loadData() {
     if (dbSyn.length) synonymGroups = dbSyn.map(r => ({ grup: r.grup, kelimeler: Array.isArray(r.kelimeler) ? r.kelimeler : JSON.parse(r.kelimeler || '[]') }));
     if (dbAnt.length) antonymPairs = dbAnt.map(r => ({ ru1: r.ru1, tr1: r.tr1, p1: r.p1, ru2: r.ru2, tr2: r.tr2, p2: r.p2 }));
     if (dbFam.length) wordFamilies = dbFam.map(r => ({ kok: r.kok, anlam: r.anlam, kelimeler: Array.isArray(r.kelimeler) ? r.kelimeler : JSON.parse(r.kelimeler || '[]') }));
-    if (dbVid.length) videos = dbVid.map(r => ({ num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb }));
+    if (dbVid.length) videos = dbVid.map(r => ({ id: r.id, num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb }));
   } catch (e) { _logDev('DB içerikleri işlenemedi:', e); }
   // Paragraf soruları (dosya yoksa site yine çalışsın diye ayrı try/catch)
   try {
@@ -4965,16 +4999,33 @@ function adminVidEdit(id) {
 }
 async function adminVidSave() {
   const title = _cwVal('cv-title'); if (!title) { uiAlert('Video başlığı zorunlu.'); return; }
-  const row = { num: parseInt(_cwVal('cv-num'), 10) || null, level: _cwVal('cv-lvl'), title,
+  const id = _cwVal('cv-id');
+  // Sıra numarası: # olmadan, sadece rakam. Boşsa en sona; doluysa akıllı kaydırma.
+  const numRaw = (_cwVal('cv-num') || '').replace(/[^0-9]/g, '');
+  let num = numRaw ? parseInt(numRaw, 10) : null;
+  const mevcut = (_cvRows || []).filter(v => !id || v.id !== id); // düzenlemede kendini hariç tut
+  if (!num) {
+    // Boş → en sona ekle
+    num = mevcut.length ? Math.max(...mevcut.map(v => v.num || 0)) + 1 : 1;
+  } else {
+    // Bu sıra doluysa: o sıradan itibaren hepsini +1 kaydır
+    const cakisma = mevcut.some(v => v.num === num);
+    if (cakisma) {
+      const kaydirilacak = mevcut.filter(v => (v.num || 0) >= num).sort((a,b) => (b.num||0)-(a.num||0));
+      for (const v of kaydirilacak) {
+        await sb.from('content_videos').update({ num: (v.num || 0) + 1 }).eq('id', v.id);
+      }
+    }
+  }
+  const row = { num, level: _cwVal('cv-lvl'), title,
     descr: _cwVal('cv-desc') || null, source: _cwVal('cv-source'), video_id: _cwVal('cv-vid') || null,
     thumb: _cwVal('cv-thumb') || null, premium: document.getElementById('cv-premium').checked, active: true };
-  const id = _cwVal('cv-id');
   try {
     let error;
     if (id) ({ error } = await sb.from('content_videos').update(row).eq('id', id));
     else ({ error } = await sb.from('content_videos').insert(row));
     if (error) throw error;
-    toast('Video kaydedildi.'); adminVidFormClear(); adminCvReload(); refreshVideosFromDb();
+    toast('Video kaydedildi (sıra: ' + num + ').'); adminVidFormClear(); adminCvReload(); refreshVideosFromDb();
   } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
 }
 async function adminVidTogglePremium(id, on) {
