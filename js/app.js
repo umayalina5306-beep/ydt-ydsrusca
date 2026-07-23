@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v96';
+var YDT_SURUM = 'v97';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1237,7 +1237,7 @@ let _w = {
 async function openWatch(v) {
   _w = { video: v, player: null, kind: null, viewId: null, cards: [], chapters: [],
          notes: [], shownCards: {}, answered: {}, pending: [], timer: null,
-         duration: 0, lastPos: 0, ready: false };
+         duration: 0, lastPos: 0, ready: false, activeCard: null, watchedBefore: false };
 
   // Sayfayı göster
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1302,7 +1302,7 @@ function _wInitYouTube(v) {
         videoId: ytId(v.video_id),
         playerVars: { rel: 0, modestbranding: 1, playsinline: 1, controls: 0, disablekb: 1, iv_load_policy: 3, fs: 0, origin: location.origin },
         events: {
-          onReady: (e) => { _w.ready = true; _w.duration = e.target.getDuration() || 0; _wStartLog(); },
+          onReady: (e) => { _w.ready = true; _w.duration = e.target.getDuration() || 0; _wSaveDuration(); _wStartLog(); },
           onStateChange: (e) => { _wSyncPlayBtn(e.data === 1); if (e.data === 0) _wOnEnded(); },
           onError: (e) => {
             host.innerHTML = '<div style="padding:40px;text-align:center;color:#fca5a5;">Bu YouTube videosu oynatılamıyor (kod: ' + e.data + ').<br>Genelde video sahibi gömmeye izin vermemiştir ya da video ID hatalıdır.</div>';
@@ -1340,7 +1340,7 @@ async function _wInitStream(v) {
     _wLoadStreamSdk(() => {
       try {
         _w.player = Stream(document.getElementById('w-sframe'));
-        _w.player.addEventListener('loadedmetadata', () => { _w.ready = true; _w.duration = _w.player.duration || 0; });
+        _w.player.addEventListener('loadedmetadata', () => { _w.ready = true; _w.duration = _w.player.duration || 0; _wSaveDuration(); });
         _w.player.addEventListener('play', () => _wSyncPlayBtn(true));
         _w.player.addEventListener('pause', () => _wSyncPlayBtn(false));
         _w.player.addEventListener('ended', _wOnEnded);
@@ -1356,6 +1356,16 @@ function _wLoadStreamSdk(cb) {
   const s = document.createElement('script');
   s.src = 'https://embed.cloudflarestream.com/embed/sdk.latest.js';
   s.onload = cb; document.head.appendChild(s);
+}
+
+/* Video süresini DB'ye yaz (yalnız yönetici) — kart editöründe süre aşımı uyarısı için */
+async function _wSaveDuration() {
+  try {
+    if (!_w.duration || !_w.video || !currentProfile || !currentProfile.is_admin) return;
+    await sb.from('content_videos')
+      .update({ duration_sec: Math.round(_w.duration) })
+      .eq('id', _w.video.id);
+  } catch (e) {}
 }
 
 /* ── Ortak oynatıcı kontrolleri (kaynak fark etmez) ── */
@@ -1390,7 +1400,11 @@ function watchSetSpeed(r) {
     localStorage.setItem('ydt_video_speed', r);
   } catch (e) {}
 }
-function _wSyncPlayBtn(playing) { const b = document.getElementById('wc-play'); if (b) b.textContent = playing ? '⏸' : '▶'; }
+function _wSyncPlayBtn(playing) {
+  const b = document.getElementById('wc-play');
+  if (b) b.textContent = playing ? '⏸' : '▶';
+  _wShowControls();  // durum değişiminde kontroller görünsün
+}
 function watchFullscreen() {
   const wrap = document.getElementById('watch-wrap');
   if (!document.fullscreenElement) {
@@ -1412,11 +1426,17 @@ function _wTick() {
   if (!_w.ready) return;
   const t = _wGetTime();
   _w.lastPos = t;
-  // Sıkı hoca modu: cevaplanmamış kontrol noktası geçilmeye çalışılırsa geri çek
+  // Bir kart açıkken takip durur (öğrenci kartla meşgul)
+  if (_w.activeCard) return;
+  // 🚧 Sıkı hoca modu: cevaplanmamış kontrol noktasının İLERİSİNE geçilemez.
+  //    Geri gitmek TAMAMEN SERBEST (öğrenci ilgili kısmı tekrar izleyebilsin).
   if (_wStrictMode()) {
     for (const card of _w.cards) {
-      if (card.card_type === 'checkpoint' && !_w.answered[card.id] && t > card.t_sec + 1) {
-        _wSeekTo(card.t_sec); _wShowCard(card); break;
+      if (card.card_type === 'checkpoint' && !_w.answered[card.id] && t > card.t_sec + 1.5) {
+        _wSeekTo(card.t_sec);
+        _w.shownCards[card.id] = true;
+        _wShowCard(card);
+        return;
       }
     }
   }
@@ -1441,6 +1461,7 @@ function _wTriggerCard(card) {
   if (biriktir && card.card_type !== 'checkpoint') {
     _w.pending.push(card);
     _wUpdateBadge();
+    _wRenderCards();
   } else {
     _wShowCard(card);
     // İlk kez otomatik duraklama bilgisi
@@ -1461,62 +1482,135 @@ function _wUpdateBadge() {
   if (tab) tab.innerHTML = '🃏 Kartlar' + (_w.pending.length ? ` <b style="color:#f5d97a">(${_w.pending.length})</b>` : '');
 }
 function watchOpenPanel() {
-  // Biriken kartları sırayla göster (sağ panelde kart sekmesi)
+  _wRenderCards();
   watchSideTab('cards', document.querySelector('.wst-tab:nth-child(2)'));
 }
 
 function _wShowCard(card) {
   const box = document.getElementById('watch-card-overlay'); if (!box) return;
   _wPause();
-  const renk = { info:'💡', quiz:'❓', poll:'📊', word:'🔤', topic:'📖', checkpoint:'🚧' }[card.card_type] || '💡';
+  const ikon = { info:'💡', quiz:'❓', poll:'📊', word:'🔤', topic:'📖', checkpoint:'🚧' }[card.card_type] || '💡';
+  const strict = card.card_type === 'checkpoint' && _wStrictMode() && !_w.answered[card.id];
+
   let inner = `<div class="sv-card sv-card-${card.card_type}">
-    <div class="sv-card-head">${renk} ${_escHtml(card.title || '')}</div>
-    ${card.body ? `<div class="sv-card-body">${_escHtml(card.body)}</div>` : ''}`;
-  if ((card.card_type === 'quiz' || card.card_type === 'checkpoint' || card.card_type === 'poll') && Array.isArray(card.options)) {
+    <div class="sv-card-head">${ikon} ${_escHtml(card.title || '')}</div>`;
+  // body zengin metin (HTML) — ankette gövde yok, soru başlıkta
+  if (card.body && card.card_type !== 'poll') inner += `<div class="sv-card-body">${card.body}</div>`;
+
+  const soruTip = ['quiz','poll','checkpoint'].includes(card.card_type) && Array.isArray(card.options);
+  if (soruTip) {
     inner += '<div class="sv-card-opts">' + card.options.map((o,i) =>
-      `<button class="sv-opt" onclick="_wAnswerCard(${card.id}, ${i}, ${card.correct ?? -1}, '${card.card_type}')">${_escHtml(o)}</button>`
+      `<button class="sv-opt" data-i="${i}" onclick="_wAnswerCard(${card.id}, ${i}, ${card.correct == null ? -1 : card.correct}, '${card.card_type}')">${_escHtml(o)}</button>`
     ).join('') + '</div><div id="sv-card-fb" class="sv-card-fb"></div>';
   }
-  const kapatilabilir = card.card_type !== 'checkpoint' || _w.answered[card.id] || !_wStrictMode();
-  inner += kapatilabilir
-    ? `<button class="set-btn sv-card-continue" onclick="_wResumeCard(${card.id})">▶ Devam Et</button></div>`
-    : `<div class="sv-card-lock">🚧 Devam etmek için doğru cevapla</div></div>`;
-  box.innerHTML = inner; box.style.display = 'flex';
+
+  // Alt bölge: devam butonu HER ZAMAN altta
+  inner += '<div class="sv-card-foot">';
+  if (strict) {
+    inner += '<div class="sv-card-lock">🚧 Devam etmek için doğru cevapla. Emin değilsen videoda geri gidip ilgili kısmı tekrar izleyebilirsin (ileri saramazsın).</div>';
+  } else if (soruTip) {
+    inner += `<button class="set-btn sv-card-continue" style="display:none;" onclick="_wResumeCard(${card.id})">▶ Devam Et</button>`;
+  } else {
+    inner += `<button class="set-btn sv-card-continue" onclick="_wResumeCard(${card.id})">▶ Devam Et</button>`;
+  }
+  inner += '</div></div>';
+
+  box.innerHTML = inner;
+  box.style.display = 'flex';
+  _w.activeCard = card;
 }
+
 async function _wAnswerCard(cardId, i, correct, tip) {
   const fb = document.getElementById('sv-card-fb');
   const opts = document.querySelectorAll('.sv-opt');
+  const card = _w.activeCard;
+  const strict = tip === 'checkpoint' && _wStrictMode();
+
+  // ── 📊 ANKET: doğru/yanlış yok
   if (tip === 'poll') {
-    // Ankette doğru/yanlış yok — teşekkür et
     opts.forEach(b => b.disabled = true);
-    opts[i] && opts[i].classList.add('ok');
-    if (fb) fb.textContent = '✅ Cevabın kaydedildi, teşekkürler!';
+    if (opts[i]) opts[i].classList.add('ok');
     _w.answered[cardId] = true;
-    _wSaveAnswer(cardId, i, true);
+    await _wSaveAnswer(cardId, i, null);
+    if (card && card.show_results !== false) {
+      await _wRenderPollResults(cardId, card.options);
+    } else if (fb) { fb.textContent = '✅ Cevabın kaydedildi, teşekkürler!'; }
     const cont = document.querySelector('.sv-card-continue'); if (cont) cont.style.display = '';
     return;
   }
-  opts.forEach(b => b.disabled = true);
+
   const dogru = (i === correct);
+
+  // ── 🚧 SIKI HOCA MODU: doğru cevap GÖSTERİLMEZ, tekrar cevap hakkı YOK
+  if (strict) {
+    if (dogru) {
+      opts.forEach(b => b.disabled = true);
+      opts[i].classList.add('ok');
+      if (fb) fb.textContent = '✅ Doğru! Devam edebilirsin.';
+      _w.answered[cardId] = true;
+      await _wSaveAnswer(cardId, i, true);
+      try { logActivity('questions', 1); } catch (e) {}
+      const foot = document.querySelector('.sv-card-foot');
+      if (foot) foot.innerHTML = `<button class="set-btn sv-card-continue" onclick="_wResumeCard(${cardId})">▶ Devam Et</button>`;
+    } else {
+      // Yanlış: TÜM şıklar kilitlenir, doğru gösterilmez, geri izlemeye yönlendirilir
+      opts.forEach(b => b.disabled = true);
+      if (opts[i]) opts[i].classList.add('no');
+      const geriSn = Math.max(0, (card && card.t_sec ? card.t_sec : 0) - 45);
+      const mm = Math.floor(geriSn/60), ss = String(geriSn%60).padStart(2,'0');
+      if (fb) fb.innerHTML = `❌ Yanlış. Konuyu tekrar izle, sonra soru yeniden karşına gelecek.
+        <button class="set-btn sv-card-back" onclick="_wResumeCardTemp(${cardId}, ${geriSn})">⏪ ${mm}:${ss}'e dön ve izle</button>`;
+    }
+    return;
+  }
+
+  // ── NORMAL MOD: doğru/yanlış gösterilir
+  opts.forEach(b => b.disabled = true);
   if (dogru) { opts[i].classList.add('ok'); if (fb) fb.textContent = '✅ Doğru!'; }
   else {
-    opts[i] && opts[i].classList.add('no');
-    opts[correct] && opts[correct].classList.add('ok');
+    if (opts[i]) opts[i].classList.add('no');
+    if (opts[correct]) opts[correct].classList.add('ok');
     if (fb) fb.textContent = '❌ Yanlış — doğrusu işaretlendi.';
   }
   _w.answered[cardId] = true;
-  _wSaveAnswer(cardId, i, dogru);
+  await _wSaveAnswer(cardId, i, dogru);
   try { logActivity('questions', 1); } catch (e) {}
-  // Checkpoint sıkı modda: sadece doğruysa devam butonu açılır
-  if (tip === 'checkpoint' && _wStrictMode() && !dogru) {
-    if (fb) fb.textContent += ' Tekrar dene ▶';
-    setTimeout(() => { opts.forEach(b => b.disabled = false); opts.forEach(b=>b.classList.remove('no','ok')); }, 1200);
-  } else {
-    const cont = document.querySelector('.sv-card-continue');
-    if (cont) cont.style.display = '';
-    else { const box = document.getElementById('watch-card-overlay'); box.innerHTML += `<button class="set-btn sv-card-continue" onclick="_wResumeCard(${cardId})">▶ Devam Et</button>`; }
-  }
+  const cont = document.querySelector('.sv-card-continue');
+  if (cont) cont.style.display = '';
 }
+
+/* Sıkı modda "geri dön izle": kartı kapat, geri sar, oynat.
+   Kart zamanına tekrar gelince soru YENİDEN açılır. */
+function _wResumeCardTemp(cardId, geriSn) {
+  const box = document.getElementById('watch-card-overlay');
+  if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+  _w.activeCard = null;
+  delete _w.shownCards[cardId];   // tekrar tetiklensin
+  _wSeekTo(geriSn);
+  _wPlay();
+}
+
+/* 📊 Anket sonuçları: yatay bar + yüzde */
+async function _wRenderPollResults(cardId, options) {
+  try {
+    const { data } = await sb.from('card_answers').select('choice').eq('card_id', cardId);
+    const say = {}; let toplam = 0;
+    (data || []).forEach(r => { if (r.choice != null) { say[r.choice] = (say[r.choice] || 0) + 1; toplam++; } });
+    const box = document.querySelector('.sv-card-opts');
+    if (!box) return;
+    box.innerHTML = (options || []).map((o, i) => {
+      const n = say[i] || 0;
+      const pct = toplam ? Math.round(n / toplam * 100) : 0;
+      return `<div class="poll-res-row">
+        <div class="poll-res-lbl"><span>${_escHtml(o)}</span><b>%${pct}</b></div>
+        <div class="poll-res-track"><div class="poll-res-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+    const fb = document.getElementById('sv-card-fb');
+    if (fb) fb.textContent = `Toplam ${toplam} oy`;
+  } catch (e) {}
+}
+
 async function _wSaveAnswer(cardId, choice, correct) {
   try {
     if (!currentUser) return;
@@ -1525,14 +1619,17 @@ async function _wSaveAnswer(cardId, choice, correct) {
     }, { onConflict: 'user_id,card_id' });
   } catch (e) {}
 }
+
 function _wResumeCard(cardId) {
   const box = document.getElementById('watch-card-overlay');
   if (box) { box.style.display = 'none'; box.innerHTML = ''; }
-  // Biriken kuyruktan çıkar
   _w.pending = _w.pending.filter(c => c.id !== cardId);
+  _w.activeCard = null;
   _wUpdateBadge();
+  _wRenderCards();
   _wPlay();
 }
+
 function _wPauseHint() {
   const h = document.createElement('div');
   h.className = 'watch-pause-hint';
@@ -1561,13 +1658,39 @@ function _wHighlightChapter(t) {
 function _wRenderCards() {
   const box = document.getElementById('wst-cards'); if (!box) return;
   if (!_w.cards.length) { box.innerHTML = '<div class="profile-empty">Bu videoda interaktif kart yok.</div>'; return; }
-  box.innerHTML = _w.cards.map(card => {
+  const IKON = { info:'💡', quiz:'❓', poll:'📊', word:'🔤', topic:'📖', checkpoint:'🚧' };
+  const AD   = { info:'Bilgi', quiz:'Soru', poll:'Anket', word:'Kelime', topic:'Konu', checkpoint:'Kontrol Noktası' };
+  // Bekleyen (birikmiş) kartlar en üstte
+  const bekleyenId = {}; _w.pending.forEach(p => { bekleyenId[p.id] = true; });
+  const sirali = _w.cards.slice().sort((a,b) => (bekleyenId[b.id]?1:0) - (bekleyenId[a.id]?1:0) || a.t_sec - b.t_sec);
+  box.innerHTML = sirali.map(card => {
     const mm = Math.floor(card.t_sec/60), ss = String(card.t_sec%60).padStart(2,'0');
-    const renk = { info:'💡', quiz:'❓', poll:'📊', word:'🔤', topic:'📖', checkpoint:'🚧' }[card.card_type] || '💡';
-    const done = _w.answered[card.id] ? '✅' : '';
-    return `<button class="wch-item" onclick="_wSeekTo(${card.t_sec});_wPlay();">
-      <span class="wch-time">${mm}:${ss}</span> <span class="wch-title">${renk} ${_escHtml(card.title||card.card_type)} ${done}</span></button>`;
+    const ikon = IKON[card.card_type] || '💡';
+    const ad = AD[card.card_type] || 'Kart';
+    const bitti = _w.answered[card.id];
+    const bekliyor = bekleyenId[card.id];
+    const ozet = (card.body || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g,' ').trim().slice(0, 90);
+    return `<div class="wcard wcard-${card.card_type}${bekliyor ? ' wcard-pending' : ''}" onclick="_wOpenCard(${card.id})">
+      <div class="wcard-top">
+        <span class="wcard-type">${ikon} ${ad}</span>
+        <span class="wcard-time">${mm}:${ss}</span>
+      </div>
+      <div class="wcard-title">${_escHtml(card.title || ad)}</div>
+      ${ozet ? `<div class="wcard-desc">${_escHtml(ozet)}${ozet.length >= 90 ? '…' : ''}</div>` : ''}
+      <div class="wcard-foot">
+        ${bekliyor ? '<span class="wcard-badge pending">⏳ Bekliyor</span>' : ''}
+        ${bitti ? '<span class="wcard-badge done">✅ Tamamlandı</span>' : ''}
+        <span class="wcard-open">Kartı aç →</span>
+      </div>
+    </div>`;
   }).join('');
+}
+/* Yan panelden bir kartı doğrudan aç */
+function _wOpenCard(cardId) {
+  const card = _w.cards.find(x => x.id === cardId); if (!card) return;
+  _wSeekTo(card.t_sec);
+  _w.shownCards[card.id] = true;
+  _wShowCard(card);
 }
 
 /* ── Kişisel damgalar ── */
@@ -1576,9 +1699,11 @@ function _wRenderNotes() {
   if (!_w.notes.length) { box.innerHTML = '<div class="profile-empty">Henüz damga yok. Video oynarken "+ Ekle" ile bu ana not bırak.</div>'; return; }
   box.innerHTML = _w.notes.map(n => {
     const mm = Math.floor(n.t_sec/60), ss = String(n.t_sec%60).padStart(2,'0');
-    return `<div class="wn-item"><button class="wch-time" onclick="_wSeekTo(${n.t_sec});_wPlay();">${mm}:${ss}</button>
-      <span>${_escHtml(n.body||'')}</span>
-      <button class="mail-act danger" onclick="watchDelNote(${n.id})">×</button></div>`;
+    return `<div class="wn-item" onclick="_wSeekTo(${n.t_sec});_wPlay();" title="Bu ana git">
+      <div class="wn-top"><span class="wn-time">📌 ${mm}:${ss}</span>
+        <button class="wn-del" onclick="event.stopPropagation();watchDelNote(${n.id})" title="Sil">×</button></div>
+      <div class="wn-body">${_escHtml(n.body||'')}</div>
+    </div>`;
   }).join('');
 }
 async function watchAddNote() {
@@ -1671,20 +1796,36 @@ function _wCleanup() {
   _w.player = null; _w.timer = null;
 }
 
-/* Kontrol çubuğu otomatik gizle/göster */
+/* Kontrol çubuğu otomatik gizle/göster
+   ÖNEMLİ: iframe (YouTube/Stream) fare olaylarını yutar; bu yüzden oynatıcının
+   altına görünmez bir "hover şeridi" koyduk + sayfa genelinde hareket dinleniyor. */
 let _wCtrlTimer = null;
 function _wShowControls() {
-  const c = document.getElementById('watch-controls');
-  if (!c) return;
-  c.classList.remove('hidden');
+  const el = document.getElementById('watch-controls');
+  if (!el) return;
+  el.classList.remove('hidden');
   if (_wCtrlTimer) clearTimeout(_wCtrlTimer);
   _wCtrlTimer = setTimeout(() => {
-    if (_wIsPlaying && _wIsPlaying()) c.classList.add('hidden');
-  }, 3000);
+    // Yalnız video OYNARKEN gizle; duraklatılmışsa hep görünür kalsın
+    if (typeof _wIsPlaying === 'function' && _wIsPlaying() && !_w.activeCard) {
+      el.classList.add('hidden');
+    }
+  }, 3500);
 }
-document.addEventListener('mousemove', function(e) {
-  const box = document.getElementById('watch-player-box');
-  if (box && box.contains(e.target)) _wShowControls();
+/* Sayfa içinde herhangi bir hareket → kontrolleri göster */
+document.addEventListener('mousemove', function() {
+  const wp = document.getElementById('page-watch');
+  if (wp && wp.classList.contains('active')) _wShowControls();
+});
+/* Dokunmatik cihazlar */
+document.addEventListener('touchstart', function() {
+  const wp = document.getElementById('page-watch');
+  if (wp && wp.classList.contains('active')) _wShowControls();
+}, { passive: true });
+/* iframe'e fare girince (pencere odağı kaybı) bile bar görünsün */
+window.addEventListener('blur', function() {
+  const wp = document.getElementById('page-watch');
+  if (wp && wp.classList.contains('active')) _wShowControls();
 });
 
 /* İzleme sayfası klavye kısayolları */
@@ -5080,79 +5221,234 @@ async function adminVidChapDel(id, videoId, title) {
 }
 
 /* 🃏 Zaman damgalı kart editörü */
+/* ── Kart editörü: zengin metin araçları ── */
+function rteCmd(cmd, val) {
+  const ed = document.getElementById('vc-body'); if (ed) ed.focus();
+  try { document.execCommand(cmd, false, val || null); } catch (e) {}
+}
+function rteColor() {
+  const inp = document.getElementById('vc-color');
+  if (inp) inp.click();
+}
+
+let _vcVideoDur = 0;   // seçili videonun süresi (sn) — kart zamanı doğrulaması için
+let _vcOptCount = 0;
+
 async function adminVidCards(videoId, title) {
-  let cards = [];
+  let cards = [], gramNotes = [], vidRow = null;
   try {
-    const { data } = await sb.from('video_cards').select('*').eq('video_id', videoId).order('t_sec');
-    cards = data || [];
+    const [c1, c2, c3] = await Promise.all([
+      sb.from('video_cards').select('*').eq('video_id', videoId).order('t_sec'),
+      sb.from('grammar_notes').select('id, title').order('title').limit(500).then(r => r, () => ({ data: [] })),
+      sb.from('content_videos').select('duration_sec').eq('id', videoId).single().then(r => r, () => ({ data: null }))
+    ]);
+    cards = c1.data || []; gramNotes = c2.data || []; vidRow = c3.data;
   } catch (e) {}
+  _vcVideoDur = (vidRow && vidRow.duration_sec) || 0;
+
+  const TIP_AD = { info:'💡 Bilgi', quiz:'❓ Soru', poll:'📊 Anket', word:'🔤 Kelime', topic:'📖 Konu', checkpoint:'🚧 Kontrol Noktası' };
+  const sureBilgi = _vcVideoDur
+    ? `Video süresi: <b>${Math.floor(_vcVideoDur/60)}:${String(Math.floor(_vcVideoDur%60)).padStart(2,'0')}</b> — bu süreyi aşan kart eklenemez.`
+    : 'Video süresi henüz bilinmiyor (videoyu bir kez izleyince otomatik kaydedilir).';
+
   const ov = document.createElement('div');
   ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9400'; ov.id = 'vcard-modal';
   const listHTML = cards.length ? cards.map(cd => `
     <div class="cw-row" style="padding:8px 10px;">
       <div class="cw-main"><b>${Math.floor(cd.t_sec/60)}:${String(cd.t_sec%60).padStart(2,'0')}</b>
-        <span class="cw-cat">${cd.card_type === 'quiz' ? '❓ Soru' : cd.card_type === 'word' ? '🔤 Kelime' : '💡 Bilgi'}</span>
-        ${_escHtml(cd.title || '')} ${cd.active === false ? '<span class="mail-member no">Pasif</span>' : ''}
-        <div class="err-meta">${_escHtml((cd.body || '').slice(0, 80))}</div></div>
+        <span class="cw-cat">${TIP_AD[cd.card_type] || cd.card_type}</span>
+        ${_escHtml(cd.title || '')}
+        <div class="err-meta">${_escHtml((cd.body || '').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0, 80))}</div></div>
       <div class="cw-acts"><button class="mail-act red" onclick="adminVidCardDel(${cd.id}, '${videoId}', '${_escAttr(title)}')">🗑️</button></div>
     </div>`).join('') : '<div class="profile-empty">Henüz kart yok — aşağıdan ekle.</div>';
-  ov.innerHTML = `<div class="ui-modal" style="max-width:640px;max-height:85vh;overflow-y:auto;">
+
+  ov.innerHTML = `<div class="ui-modal" style="max-width:700px;max-height:88vh;overflow-y:auto;">
     <h3 class="ui-modal-title">🃏 ${_escHtml(title)} — İnteraktif Kartlar</h3>
-    <p class="pq-hint">Video belirtilen saniyeye gelince duraklar ve kart açılır. Soru kartlarında öğrenci cevaplayıp devam eder.</p>
+    <p class="pq-hint">${sureBilgi}</p>
     <div style="margin-bottom:14px;">${listHTML}</div>
     <div class="admin-notif-card">
       <h3 class="an-h3">➕ Yeni Kart</h3>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-        <input id="vc-min" class="pq-input" type="number" min="0" placeholder="Dk" style="width:70px;">
-        <input id="vc-sec" class="pq-input" type="number" min="0" max="59" placeholder="Sn" style="width:70px;">
-        <select id="vc-type" class="pq-input" style="width:130px;" onchange="document.getElementById('vc-quiz-alan').style.display = ['quiz','poll','checkpoint'].includes(this.value) ? '' : 'none';">
-          <option value="info">💡 Bilgi</option><option value="quiz">❓ Soru</option><option value="poll">📊 Anket</option><option value="word">🔤 Kelime</option><option value="topic">📖 Konu</option><option value="checkpoint">🚧 Kontrol Noktası</option>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <input id="vc-min" class="pq-input" type="number" min="0" placeholder="Dk" style="width:72px;">
+        <input id="vc-sec" class="pq-input" type="number" min="0" max="59" placeholder="Sn" style="width:72px;">
+        <select id="vc-type" class="pq-input" style="width:170px;" onchange="adminCardTypeChanged()">
+          <option value="info">💡 Bilgi</option>
+          <option value="quiz">❓ Soru</option>
+          <option value="poll">📊 Anket</option>
+          <option value="word">🔤 Kelime</option>
+          <option value="topic">📖 Konu</option>
+          <option value="checkpoint">🚧 Kontrol Noktası</option>
         </select>
-        <input id="vc-title" class="pq-input" placeholder="Başlık" style="flex:1;min-width:160px;">
+        <input id="vc-title" class="pq-input" placeholder="Başlık / soru metni" style="flex:1;min-width:170px;">
       </div>
-      <textarea id="vc-body" class="an-textarea" rows="2" placeholder="Kart metni (soru kartında soru metni)" style="width:100%;"></textarea>
-      <div id="vc-quiz-alan" style="display:none;margin-top:8px;">
-        <input id="vc-o0" class="pq-input" placeholder="Şık 1 (doğru)" style="width:100%;margin-bottom:5px;">
-        <input id="vc-o1" class="pq-input" placeholder="Şık 2" style="width:100%;margin-bottom:5px;">
-        <input id="vc-o2" class="pq-input" placeholder="Şık 3" style="width:100%;margin-bottom:5px;">
-        <input id="vc-o3" class="pq-input" placeholder="Şık 4" style="width:100%;">
-        <p class="pq-hint">Soru/Kontrol: ilk şık doğru kabul edilir, karışık gösterilir. Anket: doğru yok, sıra korunur.</p>
+
+      <!-- Konu kartı: gramer notundan seç -->
+      <div id="vc-topic-alan" style="display:none;margin-bottom:8px;">
+        <select id="vc-gramnote" class="pq-input" style="width:100%;" onchange="adminCardPickNote(this.value)">
+          <option value="">📖 Mevcut gramer notundan seç…</option>
+          ${gramNotes.map(n => `<option value="${n.id}">${_escHtml(n.title)}</option>`).join('')}
+        </select>
+        <p class="pq-hint">Seçersen notun içeriği aşağı gelir. Yeni yazarsan bu içerik <b>gramer notu olarak da kaydedilir</b>.</p>
       </div>
-      <button class="set-btn" style="margin-top:10px;" onclick="adminVidCardAdd('${videoId}', '${_escAttr(title)}')">Kaydet</button>
-      <button class="set-btn ghost" style="margin-top:10px;" onclick="document.getElementById('vcard-modal').remove()">Kapat</button>
+
+      <!-- Zengin metin editörü -->
+      <div id="vc-body-wrap">
+        <div class="rte-toolbar">
+          <button type="button" class="rte-btn" onclick="rteCmd('bold')" title="Kalın"><b>B</b></button>
+          <button type="button" class="rte-btn" onclick="rteCmd('italic')" title="İtalik"><i>I</i></button>
+          <button type="button" class="rte-btn" onclick="rteCmd('underline')" title="Altı çizili"><u>U</u></button>
+          <button type="button" class="rte-btn" onclick="rteCmd('insertUnorderedList')" title="Liste">• Liste</button>
+          <button type="button" class="rte-btn" onclick="rteCmd('formatBlock','h4')" title="Başlık">H</button>
+          <button type="button" class="rte-btn" onclick="rteCmd('removeFormat')" title="Biçimi temizle">✕</button>
+          <label class="rte-btn" title="Renk">🎨<input type="color" id="vc-color" value="#d4a418"
+            onchange="rteCmd('foreColor', this.value)" style="width:0;height:0;opacity:0;position:absolute;"></label>
+        </div>
+        <div id="vc-body" class="rte-editor" contenteditable="true" data-ph="Kart metni… (kalın, renk, liste kullanabilirsin)"></div>
+      </div>
+
+      <!-- Soru / Anket / Kontrol noktası şıkları -->
+      <div id="vc-quiz-alan" style="display:none;margin-top:12px;">
+        <div id="vc-opts-list"></div>
+        <button type="button" class="mail-act" onclick="adminCardAddOpt()">+ Şık Ekle</button>
+        <p class="pq-hint" id="vc-opts-hint"></p>
+        <label id="vc-poll-results" class="cw-check" style="display:none;margin-top:8px;">
+          <input type="checkbox" id="vc-show-results" checked>
+          <span>📊 Anket sonuçlarını öğrencilere göster (yatay bar + yüzde)</span>
+        </label>
+      </div>
+
+      <div style="margin-top:14px;display:flex;gap:8px;">
+        <button class="set-btn" onclick="adminVidCardAdd('${videoId}', '${_escAttr(title)}')">Kaydet</button>
+        <button class="set-btn ghost" onclick="document.getElementById('vcard-modal').remove()">Kapat</button>
+      </div>
     </div>
   </div>`;
   ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
   document.body.appendChild(ov);
+  adminCardTypeChanged();
 }
-async function adminVidCardAdd(videoId, title) {
-  const dk = parseInt((document.getElementById('vc-min')||{}).value, 10) || 0;
-  const sn = parseInt((document.getElementById('vc-sec')||{}).value, 10) || 0;
-  const tip = (document.getElementById('vc-type')||{}).value || 'info';
-  const bas = (document.getElementById('vc-title')||{}).value.trim();
-  const govde = (document.getElementById('vc-body')||{}).value.trim();
-  if (!bas && !govde) { uiAlert('Başlık veya metin gir.'); return; }
-  const row = { video_id: videoId, t_sec: dk*60+sn, card_type: tip, title: bas || null, body: govde || null };
-  if (['quiz','poll','checkpoint'].includes(tip)) {
-    const opts = [0,1,2,3].map(i => ((document.getElementById('vc-o'+i)||{}).value || '').trim()).filter(Boolean);
-    if (opts.length < 2) { uiAlert('Bu kart tipi için en az 2 şık gir.'); return; }
-    if (tip === 'poll') {
-      // Ankette doğru yok, karıştırma da yok (sıra korunur)
-      row.options = opts; row.correct = -1;
-    } else {
-      const dogru = opts[0];
-      const karisik = shuffle(opts.slice());
-      row.options = karisik; row.correct = karisik.indexOf(dogru);
-    }
+
+function adminCardTypeChanged() {
+  const tip = (document.getElementById('vc-type') || {}).value || 'info';
+  const quizAlan  = document.getElementById('vc-quiz-alan');
+  const topicAlan = document.getElementById('vc-topic-alan');
+  const pollRes   = document.getElementById('vc-poll-results');
+  const hint      = document.getElementById('vc-opts-hint');
+  const bodyWrap  = document.getElementById('vc-body-wrap');
+  const soruTip = ['quiz','poll','checkpoint'].includes(tip);
+
+  if (quizAlan)  quizAlan.style.display  = soruTip ? '' : 'none';
+  if (topicAlan) topicAlan.style.display = (tip === 'topic') ? '' : 'none';
+  if (pollRes)   pollRes.style.display   = (tip === 'poll') ? '' : 'none';
+  if (bodyWrap)  bodyWrap.style.display  = (tip === 'poll') ? 'none' : '';
+
+  const list = document.getElementById('vc-opts-list');
+  if (soruTip && list) {
+    // Tip değişince radyo düğmeleri yeniden kurulmalı (ankette doğru şık yok)
+    list.innerHTML = ''; _vcOptCount = 0;
+    adminCardAddOpt(); adminCardAddOpt();
   }
+  if (hint) {
+    hint.innerHTML = (tip === 'poll')
+      ? 'Ankette <b>doğru cevap yoktur</b>. En az 2, en fazla 6 şık girilebilir.'
+      : 'Soldaki <b>radyo düğmesinden DOĞRU şıkkı seç</b>. En az 2, en fazla 6 şık. Öğrenciye karışık sırayla gösterilir.';
+  }
+}
+
+function adminCardAddOpt() {
+  const list = document.getElementById('vc-opts-list'); if (!list) return;
+  if (list.children.length >= 6) { toast('En fazla 6 şık eklenebilir.'); return; }
+  const tip = (document.getElementById('vc-type') || {}).value;
+  const idx = _vcOptCount++;
+  const row = document.createElement('div');
+  row.className = 'vc-opt-row';
+  row.dataset.idx = idx;
+  const radio = (tip !== 'poll')
+    ? `<input type="radio" name="vc-correct" value="${idx}" class="vc-correct-radio" title="Doğru şık olarak işaretle">`
+    : '<span class="vc-opt-bullet">•</span>';
+  row.innerHTML = `${radio}
+    <input class="pq-input vc-opt-input" placeholder="Şık ${list.children.length + 1}">
+    <button type="button" class="vc-opt-del" onclick="adminCardDelOpt(this)" title="Şıkkı kaldır">×</button>`;
+  list.appendChild(row);
+}
+function adminCardDelOpt(btn) {
+  const list = document.getElementById('vc-opts-list');
+  if (list && list.children.length <= 2) { toast('En az 2 şık bulunmalı.'); return; }
+  btn.closest('.vc-opt-row').remove();
+}
+
+function adminCardPickNote(noteId) {
+  if (!noteId) return;
+  sb.from('grammar_notes').select('title, body').eq('id', noteId).single().then(r => {
+    if (r && r.data) {
+      const t = document.getElementById('vc-title'); if (t && !t.value) t.value = r.data.title || '';
+      const b = document.getElementById('vc-body'); if (b) b.innerHTML = r.data.body || '';
+    }
+  }, () => {});
+}
+
+async function adminVidCardAdd(videoId, title) {
+  const dk  = parseInt((document.getElementById('vc-min') || {}).value, 10) || 0;
+  const sn  = parseInt((document.getElementById('vc-sec') || {}).value, 10) || 0;
+  const tSec = dk * 60 + sn;
+  const tip  = (document.getElementById('vc-type') || {}).value || 'info';
+  const bas  = ((document.getElementById('vc-title') || {}).value || '').trim();
+  const govde = ((document.getElementById('vc-body') || {}).innerHTML || '').trim();
+
+  // ⏱️ Süre aşımı kontrolü
+  if (_vcVideoDur > 0 && tSec > _vcVideoDur) {
+    const vm = Math.floor(_vcVideoDur / 60), vs = String(Math.floor(_vcVideoDur % 60)).padStart(2, '0');
+    uiAlert(`⚠️ Süre aşıldı!\n\nVideo ${vm}:${vs} uzunluğunda, sen ${dk}:${String(sn).padStart(2,'0')} girdin.\nKart video bitiminden sonra açılamaz.`);
+    return;
+  }
+
+  const row = {
+    video_id: videoId, t_sec: tSec, card_type: tip,
+    title: bas || null,
+    body: (tip === 'poll') ? null : (govde || null)
+  };
+
+  if (['quiz','poll','checkpoint'].includes(tip)) {
+    if (tip === 'poll' && !bas) { uiAlert('Anket için soru metnini "Başlık" alanına yaz.'); return; }
+    const rows = [...document.querySelectorAll('#vc-opts-list .vc-opt-row')];
+    const dolu = rows.filter(r => (r.querySelector('.vc-opt-input').value || '').trim());
+    if (dolu.length < 2) { uiAlert('En az 2 şık doldurulmalı.'); return; }
+    if (dolu.length > 6) { uiAlert('En fazla 6 şık olabilir.'); return; }
+
+    if (tip === 'poll') {
+      row.options = dolu.map(r => r.querySelector('.vc-opt-input').value.trim());
+      row.correct = -1;
+      const sr = document.getElementById('vc-show-results');
+      row.show_results = sr ? sr.checked : true;
+    } else {
+      const sel = document.querySelector('input[name="vc-correct"]:checked');
+      if (!sel) { uiAlert('Doğru şıkkı soldaki radyo düğmesinden işaretle.'); return; }
+      const dogruRow = rows.find(r => r.dataset.idx === sel.value);
+      const dogruMetin = dogruRow ? (dogruRow.querySelector('.vc-opt-input').value || '').trim() : '';
+      if (!dogruMetin) { uiAlert('Doğru olarak işaretlediğin şık boş — metnini gir.'); return; }
+      const opts = dolu.map(r => r.querySelector('.vc-opt-input').value.trim());
+      const karisik = shuffle(opts.slice());
+      row.options = karisik;
+      row.correct = karisik.indexOf(dogruMetin);
+    }
+  } else if (!bas && !govde) {
+    uiAlert('Başlık veya metin gir.'); return;
+  }
+
   try {
     const { error } = await sb.from('video_cards').insert(row);
     if (error) throw error;
+    // 📖 Konu kartı yeni yazıldıysa gramer notu olarak da kaydet
+    const secilenNot = (document.getElementById('vc-gramnote') || {}).value;
+    if (tip === 'topic' && bas && govde && !secilenNot) {
+      try { await sb.from('grammar_notes').insert({ title: bas, body: govde }); } catch (e) {}
+    }
     document.getElementById('vcard-modal').remove();
     toast('🃏 Kart eklendi.');
     adminVidCards(videoId, title);
-  } catch (e) { uiAlert('Eklenemedi: ' + ((e&&e.message)||e)); }
+  } catch (e) { uiAlert('Eklenemedi: ' + ((e && e.message) || e)); }
 }
+
 async function adminVidCardDel(id, videoId, title) {
   const ok = await uiConfirm('Bu kart silinsin mi?'); if (!ok) return;
   try { await sb.from('video_cards').delete().eq('id', id);
@@ -5163,8 +5459,29 @@ async function adminVidCardDel(id, videoId, title) {
 async function adminVidHide(id) { try { await sb.from('content_videos').update({ active: false }).eq('id', id); adminCvReload(); refreshVideosFromDb(); } catch (e) {} }
 async function adminVidRestore(id) { try { await sb.from('content_videos').update({ active: true }).eq('id', id); adminCvReload(); refreshVideosFromDb(); } catch (e) {} }
 async function adminVidPurge(id) {
-  if (!(await uiConfirm('Bu video kaydı TEMELLİ silinsin mi? Geri alınamaz.', 'Temelli Sil', { danger: true }))) return;
-  try { await sb.from('content_videos').delete().eq('id', id); adminCvReload(); } catch (e) { uiAlert('Silinemedi.'); }
+  const r = (_cvRows || []).find(x => x.id === id);
+  const stream = r && r.source === 'stream';
+  const mesaj = stream
+    ? 'Bu video TEMELLİ silinsin mi?\n\nCloudflare Stream\'den de kaldırılacak (depolama ücreti durur). Geri alınamaz.'
+    : 'Bu video kaydı TEMELLİ silinsin mi? Geri alınamaz.\n\n(YouTube videosu YouTube\'dan silinmez, yalnız siteden kaldırılır.)';
+  if (!(await uiConfirm(mesaj, 'Temelli Sil', { danger: true }))) return;
+  try {
+    if (stream) {
+      const { data, error } = await sb.functions.invoke('stream-delete', { body: { video_id: id } });
+      if (error) throw new Error(error.message || 'Sunucuya ulaşılamadı');
+      if (data && data.error) throw new Error(data.error);
+      toast(data && data.cf_deleted
+        ? '✅ Video siteden ve Cloudflare Stream\'den silindi.'
+        : '⚠️ Siteden silindi, ancak Stream\'den silinemedi — Cloudflare panelinden kontrol et.');
+    } else {
+      await sb.from('video_cards').delete().eq('video_id', id);
+      await sb.from('video_chapters').delete().eq('video_id', id);
+      await sb.from('video_notes').delete().eq('video_id', id);
+      await sb.from('content_videos').delete().eq('id', id);
+      toast('Video siteden silindi.');
+    }
+    adminCvReload(); refreshVideosFromDb();
+  } catch (e) { uiAlert('Silinemedi: ' + ((e && e.message) || e)); }
 }
 
 /* ============================================================
