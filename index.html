@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=96">
+<link rel="stylesheet" href="css/style.css?v=97">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=96" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=97" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">📚 Eğitim</button></li>
@@ -1938,6 +1938,7 @@
       <div id="watch-desc" class="watch-desc"></div>
       <div id="watch-player-box" class="watch-player-box">
         <div id="watch-player"></div>
+        <div class="watch-hover-zone" onmouseenter="_wShowControls()" onmousemove="_wShowControls()"></div>
         <!-- Gömülü, otomatik gizlenen kontrol çubuğu -->
         <div class="watch-controls" id="watch-controls">
           <button class="wc-btn" onclick="watchSeek(-10)" title="10 sn geri">⏪</button>
@@ -1976,12 +1977,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=96"></script>
-<script defer src="js/auth.js?v=96"></script>
-<script defer src="js/admin.js?v=96"></script>
-<script defer src="js/profile.js?v=96"></script>
-<script defer src="js/extras.js?v=96"></script>
-<script defer src="js/app.js?v=96"></script>
+<script defer src="js/supabase-config.js?v=97"></script>
+<script defer src="js/auth.js?v=97"></script>
+<script defer src="js/admin.js?v=97"></script>
+<script defer src="js/profile.js?v=97"></script>
+<script defer src="js/extras.js?v=97"></script>
+<script defer src="js/app.js?v=97"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
