@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v98';
+var YDT_SURUM = 'v99';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1488,9 +1488,16 @@ function watchOpenPanel() {
   watchSideTab('cards', document.querySelector('.wst-tab:nth-child(2)'));
 }
 
-function _wShowCard(card) {
+function _wShowCard(card, opts) {
   const box = document.getElementById('watch-card-overlay'); if (!box) return;
-  _wPause();
+  opts = opts || {};
+  // Durdurma kuralı:
+  //  • Kontrol noktası HER ZAMAN durdurur (zorunlu).
+  //  • Diğer kartlar yalnızca "anında duraklat" ayarı açıksa durdurur.
+  //  • Yan panelden elle açılan kart (opts.manual) videoyu durdurmaz.
+  const zorunluDur = card.card_type === 'checkpoint';
+  const ayarDur = _wCardMode() === 'pause' && !_w.watchedBefore;
+  if (!opts.manual && (zorunluDur || ayarDur)) _wPause();
   const ikon = { info:'💡', quiz:'❓', poll:'📊', word:'🔤', topic:'📖', checkpoint:'🚧' }[card.card_type] || '💡';
   const strict = card.card_type === 'checkpoint' && _wStrictMode() && !_w.answered[card.id];
 
@@ -1690,37 +1697,74 @@ function _wRenderCards() {
 /* Yan panelden bir kartı doğrudan aç */
 function _wOpenCard(cardId) {
   const card = _w.cards.find(x => x.id === cardId); if (!card) return;
-  _wSeekTo(card.t_sec);
   _w.shownCards[card.id] = true;
-  _wShowCard(card);
+  // Yan panelden elle açma: video oynamaya devam eder (durdurmaz)
+  _wShowCard(card, { manual: true });
 }
 
 /* ── Kişisel damgalar ── */
 function _wRenderNotes() {
   const box = document.getElementById('wn-list'); if (!box) return;
-  if (!_w.notes.length) { box.innerHTML = '<div class="profile-empty">Henüz damga yok. Video oynarken "+ Ekle" ile bu ana not bırak.</div>'; return; }
-  box.innerHTML = _w.notes.map(n => {
-    const mm = Math.floor(n.t_sec/60), ss = String(n.t_sec%60).padStart(2,'0');
-    return `<div class="wn-item" onclick="_wSeekTo(${n.t_sec});_wPlay();" title="Bu ana git">
-      <div class="wn-top"><span class="wn-time">📌 ${mm}:${ss}</span>
-        <button class="wn-del" onclick="event.stopPropagation();watchDelNote(${n.id})" title="Sil">×</button></div>
-      <div class="wn-body">${_escHtml(n.body||'')}</div>
+  if (!_w.notes.length) {
+    box.innerHTML = '<div class="profile-empty">Henüz not yok. Yukarıdan not ekle — istersen videonun bir anına bağla, istersen genel not bırak.</div>';
+    return;
+  }
+  // Zaman damgalı notlar üstte (ana göre sıralı), damgasız notlar altta
+  const damgali = _w.notes.filter(n => n.t_sec != null).sort((a,b) => a.t_sec - b.t_sec);
+  const damgasiz = _w.notes.filter(n => n.t_sec == null);
+  const render = n => {
+    if (n.t_sec != null) {
+      const mm = Math.floor(n.t_sec/60), ss = String(n.t_sec%60).padStart(2,'0');
+      return `<div class="wn-item wn-timed" onclick="_wSeekTo(${n.t_sec});_wPlay();" title="Bu ana git">
+        <div class="wn-top"><span class="wn-time">📌 ${mm}:${ss}</span>
+          <button class="wn-del" onclick="event.stopPropagation();watchDelNote(${n.id})" title="Sil">×</button></div>
+        <div class="wn-body">${_escHtml(n.body||'').replace(/\n/g,'<br>')}</div>
+      </div>`;
+    }
+    return `<div class="wn-item wn-general">
+      <div class="wn-top"><span class="wn-time wn-time-gen">📝 Genel not</span>
+        <button class="wn-del" onclick="watchDelNote(${n.id})" title="Sil">×</button></div>
+      <div class="wn-body">${_escHtml(n.body||'').replace(/\n/g,'<br>')}</div>
     </div>`;
-  }).join('');
+  };
+  box.innerHTML = damgali.map(render).join('') + damgasiz.map(render).join('');
 }
+
+/* Not ekleme kutusunda zaman modu değişince */
+function wnTimeModeChanged() {
+  const mode = (document.getElementById('wn-time-mode') || {}).value;
+  const göster = (mode === 'custom');
+  const mn = document.getElementById('wn-min'), sc = document.getElementById('wn-sec');
+  if (mn) mn.style.display = göster ? '' : 'none';
+  if (sc) sc.style.display = göster ? '' : 'none';
+}
+
 async function watchAddNote() {
   const inp = document.getElementById('wn-note'); if (!inp) return;
-  const body = inp.value.trim(); if (!body) return;
+  const body = (inp.value || '').trim(); if (!body) { uiAlert('Not metni boş olamaz.'); return; }
   if (!currentUser) { uiAlert('Not için giriş yapmalısın.'); return; }
-  const t = Math.floor(_wGetTime());
+
+  const mode = (document.getElementById('wn-time-mode') || {}).value || 'now';
+  let tSec = null;
+  if (mode === 'now') {
+    tSec = Math.floor(_wGetTime());
+  } else if (mode === 'custom') {
+    const mn = parseInt((document.getElementById('wn-min')||{}).value, 10) || 0;
+    const sc = parseInt((document.getElementById('wn-sec')||{}).value, 10) || 0;
+    tSec = mn * 60 + sc;
+  } // mode === 'none' → tSec null (genel not)
+
   try {
     const { data, error } = await sb.from('video_notes').insert({
-      user_id: currentUser.id, video_id: _w.video.id, t_sec: t, body
+      user_id: currentUser.id, video_id: _w.video.id, t_sec: tSec, body
     }).select().single();
     if (error) throw error;
-    _w.notes.push(data); _w.notes.sort((a,b)=>a.t_sec-b.t_sec);
-    inp.value = ''; _wRenderNotes();
-    toast('📌 Damga eklendi (' + Math.floor(t/60) + ':' + String(t%60).padStart(2,'0') + ')');
+    _w.notes.push(data);
+    inp.value = '';
+    _wRenderNotes();
+    toast(tSec != null
+      ? `📌 Not eklendi (${Math.floor(tSec/60)}:${String(tSec%60).padStart(2,'0')})`
+      : '📝 Genel not eklendi');
   } catch (e) { uiAlert('Eklenemedi: ' + ((e&&e.message)||e)); }
 }
 async function watchDelNote(id) {
