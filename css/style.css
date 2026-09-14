@@ -2915,3 +2915,27 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .rte-editor:focus { border-color:var(--gold); }
 .rte-editor:empty:before { content:attr(data-ph); color:#9aa3af; }
 .rte-editor h4 { color:#111; margin:8px 0 4px; }
+
+
+/* ── Video Notları (uzun not + zaman modu) ── */
+.wn-add { margin-bottom:14px; }
+.wn-textarea { width:100%; background:#fff; color:#111; border:1px solid #d0d5dd; border-radius:9px;
+  padding:10px 12px; font-size:.92rem; line-height:1.5; resize:vertical; min-height:52px; font-family:inherit; outline:none; }
+.wn-textarea:focus { border-color:var(--gold,#d4a418); }
+.wn-add-row { display:flex; gap:6px; margin-top:7px; flex-wrap:wrap; }
+.wn-time-mode { flex:1; min-width:150px; }
+.wn-time-inp { width:64px; }
+.wn-add-btn { width:100%; margin-top:8px; }
+/* Not kartları — alta doğru uzar, rahat okunur */
+.wn-item { background:#1a1d27; border:1px solid rgba(255,255,255,.16); border-radius:11px;
+  padding:11px 13px; margin-bottom:10px; box-shadow:0 2px 8px rgba(0,0,0,.22); }
+.wn-item.wn-timed { cursor:pointer; border-left:4px solid var(--gold,#d4a418); }
+.wn-item.wn-timed:hover { background:#232733; }
+.wn-item.wn-general { border-left:4px solid #64748b; }
+.wn-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+.wn-time { font-size:.78rem; font-weight:800; color:var(--gold,#d4a418); font-variant-numeric:tabular-nums; }
+.wn-time-gen { color:#94a3b8; }
+.wn-del { background:transparent; border:none; color:#8b95a5; font-size:1.1rem; cursor:pointer;
+  line-height:1; padding:0 5px; border-radius:5px; }
+.wn-del:hover { color:#f87171; background:rgba(239,68,68,.12); }
+.wn-body { font-size:.9rem; color:#e2e8f0; line-height:1.6; word-break:break-word; white-space:normal; }
