@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=98">
+<link rel="stylesheet" href="css/style.css?v=99">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=98" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=99" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">📚 Eğitim</button></li>
@@ -1958,14 +1958,23 @@
       <div class="watch-side-tabs">
         <button class="wst-tab active" onclick="watchSideTab('chapters',this)">📌 Bölümler</button>
         <button class="wst-tab" onclick="watchSideTab('cards',this)">🃏 Kartlar</button>
-        <button class="wst-tab" onclick="watchSideTab('notes',this)">📝 Damgalarım</button>
+        <button class="wst-tab" onclick="watchSideTab('notes',this)">📝 Notlar</button>
       </div>
       <div id="wst-chapters" class="wst-panel"></div>
       <div id="wst-cards" class="wst-panel" style="display:none;"></div>
       <div id="wst-notes" class="wst-panel" style="display:none;">
         <div class="wn-add">
-          <input id="wn-note" class="pq-input" placeholder="Bu ana not ekle...">
-          <button class="mail-act" onclick="watchAddNote()">+ Ekle</button>
+          <textarea id="wn-note" class="wn-textarea" rows="2" placeholder="Notunu yaz... (uzun olabilir)"></textarea>
+          <div class="wn-add-row">
+            <select id="wn-time-mode" class="pq-input wn-time-mode" onchange="wnTimeModeChanged()">
+              <option value="now">📌 Şu anki ana bağla</option>
+              <option value="custom">⏱️ Belirli bir ana (dk:sn)</option>
+              <option value="none">📝 Zaman damgasız (genel not)</option>
+            </select>
+            <input id="wn-min" class="pq-input wn-time-inp" type="number" min="0" placeholder="Dk" style="display:none;">
+            <input id="wn-sec" class="pq-input wn-time-inp" type="number" min="0" max="59" placeholder="Sn" style="display:none;">
+          </div>
+          <button class="set-btn wn-add-btn" onclick="watchAddNote()">+ Not Ekle</button>
         </div>
         <div id="wn-list"></div>
       </div>
@@ -1977,12 +1986,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=98"></script>
-<script defer src="js/auth.js?v=98"></script>
-<script defer src="js/admin.js?v=98"></script>
-<script defer src="js/profile.js?v=98"></script>
-<script defer src="js/extras.js?v=98"></script>
-<script defer src="js/app.js?v=98"></script>
+<script defer src="js/supabase-config.js?v=99"></script>
+<script defer src="js/auth.js?v=99"></script>
+<script defer src="js/admin.js?v=99"></script>
+<script defer src="js/profile.js?v=99"></script>
+<script defer src="js/extras.js?v=99"></script>
+<script defer src="js/app.js?v=99"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
