@@ -2815,8 +2815,10 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 /* ════════════════════════════════════════════════════════════
    VİDEO İZLEME ARAYÜZÜ v3 (üst nav'a dokunulmaz — sadece sayfa içi)
    ════════════════════════════════════════════════════════════ */
-#page-watch.page { padding:0; }
-.watch-wrap { background:#0a1420; color:#e8edf5; border-radius:14px; overflow:hidden; }
+#page-watch.page { padding:0; margin:0; }
+/* İzleme arayüzü: yüzen kutu değil, tam sayfa oturur (kontrast bozulmaz) */
+.watch-wrap { background:var(--dark,#0d1b2a); color:#e8edf5; border-radius:0; overflow:hidden;
+  min-height:calc(100vh - 72px); margin:0; }
 
 /* Sayfa içi başlık */
 .watch-topbar { display:flex; align-items:center; gap:16px; padding:14px 20px;
@@ -2836,7 +2838,7 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .watch-fs-btn:hover { border-color:var(--gold); color:#fff; }
 
 /* Gövde */
-.watch-body { display:grid; grid-template-columns:1fr 400px; gap:20px; padding:20px; }
+.watch-body { display:grid; grid-template-columns:1fr 400px; gap:20px; padding:22px 28px 40px; background:var(--dark,#0d1b2a); }
 .watch-main { min-width:0; }
 
 /* Oynatıcı */
@@ -3041,3 +3043,11 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 
 /* Mobil */
 @media (max-width:1000px){ .watch-body{grid-template-columns:1fr;} .watch-side{position:static;max-height:none;} .watch-underbar-mid{order:3;width:100%;justify-content:center;} }
+
+/* Kart kapatma X + ders tamamlandı */
+.sv-card { position:relative; }
+.sv-card-x { position:absolute; top:10px; right:12px; width:28px; height:28px; border-radius:8px;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); color:#cbd5e1; cursor:pointer;
+  font-size:1.3rem; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; }
+.sv-card-x:hover { background:var(--red,#cc0000); color:#fff; border-color:var(--red,#cc0000); }
+.sv-card-done { text-align:center; }
