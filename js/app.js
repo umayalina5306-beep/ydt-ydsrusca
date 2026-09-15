@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v101';
+var YDT_SURUM = 'v102';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1271,6 +1271,8 @@ async function openWatch(v) {
 
   _w.timer = setInterval(function(){ _wTick(); _wUpdateProgress(); }, 500);
   setTimeout(_wShowControls, 500);
+  // Alt bar ses ikonunu SVG yap
+  const vb = document.getElementById('wc-vol'); if (vb) vb.innerHTML = _wVolIcon();
 }
 
 /* Önceki/sonraki video kutularını hazırla */
@@ -1322,16 +1324,27 @@ function _wInitYouTube(v) {
   _w.kind = 'yt';
   // Temiz bir hedef div oluştur (YT API div'i iframe'e çevirir, tekrar kullanımda taze olmalı)
   const host = document.getElementById('watch-player');
-  host.innerHTML = '<div id="yt-target"></div>';
+  // YT arayüzünü maskele: üst bilgi barı + kendi büyük başlat butonumuz
+  host.innerHTML = '<div id="yt-target"></div>' +
+    '<div class="yt-mask-top"></div>' +
+    '<div class="yt-bigplay" id="yt-bigplay" onclick="_wYtBigPlay()"><div class="yt-bigplay-btn">▶</div></div>';
   const mount = () => {
     try {
       _w.player = new YT.Player('yt-target', {
         width: '100%', height: '100%',
         videoId: ytId(v.video_id),
-        playerVars: { rel: 0, modestbranding: 1, playsinline: 1, controls: 0, disablekb: 1, iv_load_policy: 3, fs: 0, origin: location.origin },
+        playerVars: {
+          rel: 0, modestbranding: 1, playsinline: 1, controls: 0, disablekb: 1,
+          iv_load_policy: 3, fs: 0, showinfo: 0, cc_load_policy: 0, autohide: 1, origin: location.origin
+        },
         events: {
           onReady: (e) => { _w.ready = true; _w.duration = e.target.getDuration() || 0; _wSaveDuration(); _wStartLog(); },
-          onStateChange: (e) => { _wSyncPlayBtn(e.data === 1); if (e.data === 0) _wOnEnded(); },
+          onStateChange: (e) => {
+            _wSyncPlayBtn(e.data === 1);
+            const bp = document.getElementById('yt-bigplay');
+            if (bp) bp.classList.toggle('hidden', e.data === 1); // oynarken gizle
+            if (e.data === 0) _wOnEnded();
+          },
           onError: (e) => {
             host.innerHTML = '<div style="padding:40px;text-align:center;color:#fca5a5;">Bu YouTube videosu oynatılamıyor (kod: ' + e.data + ').<br>Genelde video sahibi gömmeye izin vermemiştir ya da video ID hatalıdır.</div>';
           }
@@ -1398,6 +1411,11 @@ async function _wSaveDuration() {
   } catch (e) {}
 }
 
+/* Site renginde SVG ses ikonu (emoji yerine — mavi değil altın) */
+function _wVolIcon() {
+  return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>';
+}
+
 /* ── Ortak oynatıcı kontrolleri (kaynak fark etmez) ── */
 function _wGetTime() {
   try {
@@ -1423,6 +1441,10 @@ function _wIsPlaying() {
 }
 function watchSeek(d) { _wSeekTo(Math.max(0, _wGetTime() + d)); }
 function watchTogglePlay() { _wIsPlaying() ? _wPause() : _wPlay(); }
+function _wYtBigPlay() {
+  const bp = document.getElementById('yt-bigplay'); if (bp) bp.classList.add('hidden');
+  _wPlay();
+}
 function watchSetSpeed(r) {
   try {
     if (_w.kind === 'yt' && _w.player.setPlaybackRate) _w.player.setPlaybackRate(parseFloat(r));
@@ -1439,7 +1461,7 @@ function watchSetVolume(v) {
     if (_w.kind === 'stream' && _w.player) _w.player.volume = vol / 100;
   } catch (e) {}
   _w.muted = (vol === 0);
-  const b = document.getElementById('wc-vol'); if (b) b.textContent = vol === 0 ? '🔇' : (vol < 50 ? '🔉' : '🔊');
+  const b = document.getElementById('wc-vol'); if (b) b.innerHTML = vol === 0 ? '🔇' : _wVolIcon();
 }
 function watchToggleMute() {
   const range = document.getElementById('wc-vol-range');
@@ -1616,7 +1638,7 @@ function _wShowCard(card, opts) {
   if (card.card_type === 'word') {
     const w = _w.cards._wordCache && _w.cards._wordCache[card.id];
     const ana = card.title || '';
-    inner += `<span class="sv-word-sound" onclick="speak('${_escAttr(ana)}')">🔊</span>
+    inner += `<span class="sv-word-sound" onclick="speak('${_escAttr(ana)}')">${_wVolIcon()}</span>
       <div class="sv-card-head">${_escHtml(ana)}</div>
       ${card.body ? `<div class="sv-card-body">${card.body}</div>` : ''}
       <button class="set-btn sv-word-add" onclick="_wAddWordToSaved('${_escAttr(ana)}')">+ Kelimeye Ekle</button>`;
@@ -1696,13 +1718,17 @@ function _wCardFootHTML(card, soruTip, strict) {
   return f + '</div>';
 }
 
-/* Kelimeyi kayıtlılara ekle */
+/* Kelimeyi kayıtlılara ekle — kart kelime havuzundan geliyorsa güvenli.
+   toggleSaveWord premium + doğrulama kontrolü yapar; keyfi kelime eklenemez. */
 async function _wAddWordToSaved(ru) {
-  try {
-    if (typeof toggleSaveWord === 'function') { toggleSaveWord(ru); toast('+ Kelime kaydedildi'); return; }
-    if (typeof savedWords !== 'undefined' && savedWords.indexOf(ru) < 0) { savedWords.push(ru); }
-    toast('+ Kelime kaydedildi');
-  } catch (e) {}
+  // Kelimeyi ana havuzda doğrula (yalnız var olan kelime eklenebilir → veri güvenliği)
+  const w = (typeof wordsByRu !== 'undefined' && wordsByRu[ru]) ||
+            (typeof words !== 'undefined' && words.find(x => x.ru === ru));
+  if (!w) { toast('Bu kelime havuzda bulunamadı.'); return; }
+  if (typeof isWordSaved === 'function' && isWordSaved(ru)) { toast('Bu kelime zaten kayıtlı.'); return; }
+  if (typeof toggleSaveWord === 'function') {
+    toggleSaveWord(null, w.ru, w.tr, w.level);
+  }
 }
 
 /* Sıkı mod: "Cevabı Kontrol Et" butonu — seçili şıkkı işle */
@@ -1909,7 +1935,7 @@ function _wRenderCards() {
     const yildiz = _w.answered[card.id] ? 'on' : '';
     const thumb = card.thumb ? `<img class="wcard-thumb" src="${_escAttr(card.thumb)}" alt="">` : '';
     return `<div class="wcard${_w.activeCard&&_w.activeCard.id===card.id?' active':''}" onclick="_wOpenCard(${card.id})">
-      <span class="wcard-sound" onclick="event.stopPropagation();speak('${_escAttr(ana)}')">🔊</span>
+      <span class="wcard-sound" onclick="event.stopPropagation();speak('${_escAttr(ana)}')">${_wVolIcon()}</span>
       <div class="wcard-mid"><div class="wcard-ru">${_escHtml(ana)}</div>
         ${alt?`<div class="wcard-tr">${_escHtml(alt)}</div>`:''}</div>
       ${thumb}
