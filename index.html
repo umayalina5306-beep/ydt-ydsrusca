@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=99">
+<link rel="stylesheet" href="css/style.css?v=100">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=99" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=100" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">📚 Eğitim</button></li>
@@ -1930,55 +1930,105 @@
 <!-- Tam sayfa video izleme arayüzü -->
 <div id="page-watch" class="page">
   <div class="watch-wrap" id="watch-wrap">
-    <div class="watch-main">
-      <div class="watch-top">
-        <button class="watch-back" onclick="closeWatch()">← Geri</button>
-        <span id="watch-title" class="watch-title"></span>
+    <!-- Sayfa içi başlık (mevcut üst nav'ın ALTINDA; nav'a dokunulmaz) -->
+    <div class="watch-topbar">
+      <button class="watch-back" onclick="closeWatch()" title="Geri">‹</button>
+      <div class="watch-head-info">
+        <div class="watch-head-title"><span id="watch-title">Video</span> <span id="watch-level" class="watch-level-badge"></span></div>
+        <div class="watch-head-crumb" id="watch-crumb"></div>
       </div>
-      <div id="watch-desc" class="watch-desc"></div>
-      <div id="watch-player-box" class="watch-player-box">
-        <div id="watch-player"></div>
-        <div class="watch-hover-zone" onmouseenter="_wShowControls()" onmousemove="_wShowControls()"></div>
-        <!-- Gömülü, otomatik gizlenen kontrol çubuğu -->
-        <div class="watch-controls" id="watch-controls">
-          <button class="wc-btn" onclick="watchSeek(-10)" title="10 sn geri">⏪</button>
-          <button class="wc-btn wc-play-btn" id="wc-play" onclick="watchTogglePlay()">⏸</button>
-          <button class="wc-btn" onclick="watchSeek(10)" title="10 sn ileri">⏩</button>
-          <select class="wc-speed" id="wc-speed" onchange="watchSetSpeed(this.value)">
-            <option value="0.75">0.75x</option><option value="1" selected>1x</option>
-            <option value="1.25">1.25x</option><option value="1.5">1.5x</option><option value="2">2x</option>
-          </select>
-          <span class="wc-spacer"></span>
-          <button class="wc-btn" onclick="watchFullscreen()" title="Tam ekran">⛶</button>
-        </div>
-        <div id="watch-card-overlay" class="sv-card-overlay" style="display:none;"></div>
-      </div>
+      <button class="watch-fs-btn" onclick="watchFullscreen()" title="Tam ekran">⛶ Tam Ekran</button>
     </div>
-    <aside class="watch-side" id="watch-side">
-      <div class="watch-side-tabs">
-        <button class="wst-tab active" onclick="watchSideTab('chapters',this)">📌 Bölümler</button>
-        <button class="wst-tab" onclick="watchSideTab('cards',this)">🃏 Kartlar</button>
-        <button class="wst-tab" onclick="watchSideTab('notes',this)">📝 Notlar</button>
-      </div>
-      <div id="wst-chapters" class="wst-panel"></div>
-      <div id="wst-cards" class="wst-panel" style="display:none;"></div>
-      <div id="wst-notes" class="wst-panel" style="display:none;">
-        <div class="wn-add">
-          <textarea id="wn-note" class="wn-textarea" rows="2" placeholder="Notunu yaz... (uzun olabilir)"></textarea>
-          <div class="wn-add-row">
-            <select id="wn-time-mode" class="pq-input wn-time-mode" onchange="wnTimeModeChanged()">
-              <option value="now">📌 Şu anki ana bağla</option>
-              <option value="custom">⏱️ Belirli bir ana (dk:sn)</option>
-              <option value="none">📝 Zaman damgasız (genel not)</option>
+
+    <div class="watch-body">
+      <!-- Sol: oynatıcı -->
+      <div class="watch-main">
+        <div id="watch-player-box" class="watch-player-box">
+          <div id="watch-player"></div>
+          <div class="watch-hover-zone" onmousemove="_wShowControls()"></div>
+          <div id="watch-card-overlay" class="sv-card-overlay" style="display:none;"></div>
+          <!-- Alt kontrol barı (gömülü, otomatik gizlenen) -->
+          <div class="watch-controls" id="watch-controls">
+            <button class="wc-btn wc-play-btn" id="wc-play" onclick="watchTogglePlay()" title="Oynat/Duraklat">⏸</button>
+            <button class="wc-btn" onclick="watchSeek(-10)" title="10 sn geri"><span class="wc-seek">↺<b>10</b></span></button>
+            <button class="wc-btn" onclick="watchSeek(10)" title="10 sn ileri"><span class="wc-seek">↻<b>10</b></span></button>
+            <button class="wc-btn wc-vol" id="wc-vol" onclick="watchToggleMute()" title="Ses">🔊</button>
+            <input type="range" class="wc-vol-range" id="wc-vol-range" min="0" max="100" value="100" oninput="watchSetVolume(this.value)">
+            <span class="wc-time"><span id="wc-cur">0:00</span> / <span id="wc-dur">0:00</span></span>
+            <span class="wc-spacer"></span>
+            <button class="wc-btn" onclick="watchToggleCaption()" id="wc-cc" title="Altyazı">💬</button>
+            <select class="wc-speed" id="wc-speed" onchange="watchSetSpeed(this.value)" title="Hız">
+              <option value="0.75">0.75x</option><option value="1" selected>1.0x</option>
+              <option value="1.25">1.25x</option><option value="1.5">1.5x</option><option value="2">2.0x</option>
             </select>
-            <input id="wn-min" class="pq-input wn-time-inp" type="number" min="0" placeholder="Dk" style="display:none;">
-            <input id="wn-sec" class="pq-input wn-time-inp" type="number" min="0" max="59" placeholder="Sn" style="display:none;">
+            <button class="wc-btn" onclick="watchPiP()" title="Mini oynatıcı">▭</button>
+            <button class="wc-btn" onclick="watchFullscreen()" title="Tam ekran">⛶</button>
+            <div class="wc-progress" id="wc-progress" onclick="watchSeekBar(event)">
+              <div class="wc-progress-fill" id="wc-progress-fill"></div>
+            </div>
           </div>
-          <button class="set-btn wn-add-btn" onclick="watchAddNote()">+ Not Ekle</button>
         </div>
-        <div id="wn-list"></div>
+
+        <!-- Oynatıcı altı: gezinme + aksiyonlar -->
+        <div class="watch-underbar">
+          <button class="watch-nav-box" id="watch-prev" onclick="_wGoAdjacent(-1)">
+            <span class="wnav-ic">‹</span>
+            <span class="wnav-txt"><b>Önceki Video</b><small id="watch-prev-title"></small></span>
+          </button>
+          <div class="watch-underbar-mid">
+            <button class="wu-act" onclick="_wLikeVideo(1)" title="Beğen">👍</button>
+            <button class="wu-act" onclick="_wLikeVideo(-1)" title="Beğenme">👎</button>
+            <button class="wu-act" onclick="_wBookmarkVideo()" title="Kaydet">🔖</button>
+            <button class="wu-act wu-repeat" onclick="_wRepeatLine()">↺ Son cümleyi tekrar et</button>
+          </div>
+          <button class="watch-nav-box watch-nav-next" id="watch-next" onclick="_wGoAdjacent(1)">
+            <span class="wnav-txt right"><b>Sonraki Video</b><small id="watch-next-title"></small></span>
+            <span class="wnav-ic">›</span>
+          </button>
+        </div>
+
+        <!-- Açıklama -->
+        <div class="watch-info-row">
+          <div class="watch-desc-box">
+            <h2 class="watch-desc-title"><span id="watch-desc-h"></span> <span id="watch-level2" class="watch-level-badge"></span></h2>
+            <p class="watch-desc-text" id="watch-desc"></p>
+          </div>
+        </div>
       </div>
-    </aside>
+
+      <!-- Sağ: sekmeli panel -->
+      <aside class="watch-side" id="watch-side">
+        <div class="watch-side-tabs">
+          <button class="wst-tab active" data-tab="chapters" onclick="watchSideTab('chapters',this)">▦ Bölümler</button>
+          <button class="wst-tab" data-tab="cards" onclick="watchSideTab('cards',this)">▣ Kartlar</button>
+          <button class="wst-tab" data-tab="notes" onclick="watchSideTab('notes',this)">🔖 Notlar</button>
+          <button class="wst-tab" data-tab="docs" onclick="watchSideTab('docs',this)">📄 Dökümanlar</button>
+        </div>
+        <div id="wst-chapters" class="wst-panel"></div>
+        <div id="wst-cards" class="wst-panel" style="display:none;">
+          <div class="wcard-filters" id="wcard-filters"></div>
+          <div id="wcard-list"></div>
+        </div>
+        <div id="wst-notes" class="wst-panel" style="display:none;">
+          <div class="wn-add">
+            <div class="wn-add-head">
+              <span>✎ Notlar</span>
+              <button class="wn-time-toggle" id="wn-time-toggle" onclick="wnCycleTimeMode()">📌 Şu ana bağlı</button>
+            </div>
+            <textarea id="wn-note" class="wn-textarea" rows="3" placeholder="Bu video ile ilgili notlarınızı buraya yazın..."></textarea>
+            <div class="wn-add-row" id="wn-custom-row" style="display:none;">
+              <input id="wn-min" class="pq-input wn-time-inp" type="number" min="0" placeholder="Dk">
+              <input id="wn-sec" class="pq-input wn-time-inp" type="number" min="0" max="59" placeholder="Sn">
+            </div>
+            <button class="set-btn wn-add-btn" onclick="watchAddNote()">+ Not Ekle</button>
+          </div>
+          <div id="wn-list"></div>
+        </div>
+        <div id="wst-docs" class="wst-panel" style="display:none;">
+          <div id="wdoc-list"></div>
+        </div>
+      </aside>
+    </div>
   </div>
 </div>
 <footer>
@@ -1986,12 +2036,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=99"></script>
-<script defer src="js/auth.js?v=99"></script>
-<script defer src="js/admin.js?v=99"></script>
-<script defer src="js/profile.js?v=99"></script>
-<script defer src="js/extras.js?v=99"></script>
-<script defer src="js/app.js?v=99"></script>
+<script defer src="js/supabase-config.js?v=100"></script>
+<script defer src="js/auth.js?v=100"></script>
+<script defer src="js/admin.js?v=100"></script>
+<script defer src="js/profile.js?v=100"></script>
+<script defer src="js/extras.js?v=100"></script>
+<script defer src="js/app.js?v=100"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
