@@ -2816,8 +2816,8 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
    VİDEO İZLEME ARAYÜZÜ v3 (üst nav'a dokunulmaz — sadece sayfa içi)
    ════════════════════════════════════════════════════════════ */
 #page-watch.page { padding:0; margin:0; }
-/* İzleme arayüzü: yüzen kutu değil, tam sayfa oturur (kontrast bozulmaz) */
-.watch-wrap { background:var(--dark,#0d1b2a); color:#e8edf5; border-radius:0; overflow:hidden;
+/* İzleme arayüzü: arka plan site rengi (açık krem); kartlar/barlar lacivert → kontrast */
+.watch-wrap { background:var(--off-white,#f5f0e8); color:#e8edf5; border-radius:0; overflow:hidden;
   min-height:calc(100vh - 72px); margin:0; }
 
 /* Sayfa içi başlık */
@@ -2838,7 +2838,7 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .watch-fs-btn:hover { border-color:var(--gold); color:#fff; }
 
 /* Gövde */
-.watch-body { display:grid; grid-template-columns:1fr 400px; gap:20px; padding:22px 28px 40px; background:var(--dark,#0d1b2a); }
+.watch-body { display:grid; grid-template-columns:1fr 400px; gap:20px; padding:22px 28px 40px; background:var(--off-white,#f5f0e8); }
 .watch-main { min-width:0; }
 
 /* Oynatıcı */
@@ -3051,3 +3051,48 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   font-size:1.3rem; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; }
 .sv-card-x:hover { background:var(--red,#cc0000); color:#fff; border-color:var(--red,#cc0000); }
 .sv-card-done { text-align:center; }
+
+/* ═══ v102 düzeltmeleri ═══ */
+/* Kontrol noktası şık seçimi görünür olsun */
+.sv-opt.sel { border-color:var(--gold); background:rgba(201,168,76,.18); box-shadow:0 0 0 2px rgba(201,168,76,.3); }
+.sv-opt.sel .sv-opt-num { background:var(--gold); color:#0d1b2a; }
+
+/* Ders tamamlandı: video kutusunun ortasında (ekranın değil) — overlay zaten player-box içinde */
+.sv-card-overlay.center { justify-content:center; align-items:center; }
+
+/* Ses kaydırıcı + tüm range'ler site rengi (mavi değil) */
+.wc-vol-range { accent-color:var(--gold); }
+.wc-progress-fill { background:var(--gold); }
+.wc-progress-fill::after { background:var(--gold); }
+
+/* YouTube arayüzünü gizle: logo/başlık/paylaş/öneriler görünmesin */
+/* iframe içeriğine CSS ile müdahale edemeyiz ama üstüne şeffaf katman + kendi başlat butonumuz */
+.yt-cover { position:absolute; inset:0; z-index:2; cursor:pointer; background:rgba(0,0,0,.001); }
+.yt-bigplay { position:absolute; inset:0; z-index:3; display:flex; align-items:center; justify-content:center;
+  background:rgba(13,27,42,.45); cursor:pointer; transition:opacity .25s; }
+.yt-bigplay.hidden { opacity:0; pointer-events:none; }
+.yt-bigplay-btn { width:80px; height:80px; border-radius:50%; background:var(--gold); color:#0d1b2a;
+  display:flex; align-items:center; justify-content:center; font-size:2.2rem; box-shadow:0 6px 24px rgba(0,0,0,.4);
+  transition:transform .15s; }
+.yt-bigplay:hover .yt-bigplay-btn { transform:scale(1.08); }
+/* YouTube'un üst bilgi barını ve alt paylaş çubuğunu maskele */
+.yt-mask-top { position:absolute; top:0; left:0; right:0; height:64px; z-index:2; background:transparent; pointer-events:none; }
+.yt-mask-bottom { position:absolute; bottom:0; left:0; right:0; height:0; z-index:2; }
+
+/* Tam ekranda SADECE sol taraf (oynatıcı) scroll'suz; sağ panel kendi içinde scroll */
+.watch-wrap.watch-fs { overflow:hidden; height:100vh; }
+.watch-wrap.watch-fs .watch-body { overflow:hidden; height:calc(100vh - 60px); }
+.watch-wrap.watch-fs .watch-main { overflow:hidden; }
+.watch-wrap.watch-fs .watch-side { overflow-y:auto; }
+
+/* ═══ v102 ek: ses ikonu + buton renkleri ═══ */
+.wcard-sound svg, .sv-word-sound svg { display:block; }
+.wcard-sound { color:var(--gold); }
+.sv-word-sound { color:var(--gold); }
+.wc-vol svg { vertical-align:middle; }
+.wc-vol { color:#fff; }
+.wc-vol:hover { color:var(--gold); }
+/* Kart butonları lacivert zeminde altın vurgu */
+.sv-card .set-btn { background:var(--gold); color:#0d1b2a; border:none; }
+.sv-card .set-btn.ghost { background:transparent; color:#cbd5e1; border:1px solid rgba(255,255,255,.2); }
+.sv-card .set-btn:hover { background:var(--gold-light); }
