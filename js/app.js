@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v100';
+var YDT_SURUM = 'v101';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1661,6 +1661,21 @@ function _wShowCard(card, opts) {
   box.innerHTML = inner + '</div>';
   box.style.display = 'flex';
   _w.activeCard = card;
+  // Manuel açılan (yan panelden) veya durdurmayan kartlar: boş alana tıkla → kapat
+  const strictCp = card.card_type === 'checkpoint' && _wStrictMode() && !_w.answered[card.id];
+  box.onclick = function(e) {
+    if (e.target === box && !strictCp) _wCloseCard();
+  };
+  // Kapatma X'i (sıkı kontrol noktası hariç)
+  if (!strictCp) {
+    const cardEl = box.querySelector('.sv-card');
+    if (cardEl && !cardEl.querySelector('.sv-card-x')) {
+      const x = document.createElement('button');
+      x.className = 'sv-card-x'; x.innerHTML = '×'; x.title = 'Kapat';
+      x.onclick = function(ev) { ev.stopPropagation(); _wCloseCard(); };
+      cardEl.appendChild(x);
+    }
+  }
 }
 
 /* Kart alt bölümü (devam/geri butonları + skip) */
@@ -1909,8 +1924,17 @@ function _wCardStar(cardId, btn) { btn.classList.toggle('on'); /* yıldız: kiş
 /* Yan panelden bir kartı doğrudan aç (video durmaz) */
 function _wOpenCard(cardId) {
   const card = _w.cards.find(x => x.id === cardId); if (!card) return;
+  // Aynı kart zaten açıksa → kapat (toggle)
+  if (_w.activeCard && _w.activeCard.id === cardId) { _wCloseCard(); return; }
   _w.shownCards[card.id] = true;
   _wShowCard(card, { manual: true });
+  _wRenderCards();
+}
+/* Kartı kapat (video oynamaya devam eder; blur kalmaz) */
+function _wCloseCard() {
+  const box = document.getElementById('watch-card-overlay');
+  if (box) { box.style.display = 'none'; box.innerHTML = ''; box.className = 'sv-card-overlay'; }
+  _w.activeCard = null;
   _wRenderCards();
 }
 
@@ -2026,14 +2050,17 @@ function _wSuggestNext() {
   const cur = _w.video;
   const next = videos.find(x => x.num === (cur.num + 1)) || videos[videos.indexOf(cur) + 1];
   const box = document.getElementById('watch-card-overlay');
-  if (next && box) {
-    box.innerHTML = `<div class="sv-card">
-      <div class="sv-card-head">🎉 Ders tamamlandı!</div>
-      <div class="sv-card-body">Sıradaki: <b>${_escHtml(next.title||'')}</b></div>
-      <button class="set-btn" onclick="_wPlayNext(${videos.indexOf(next)})">▶ Sonraki Derse Geç</button>
-      <button class="set-btn ghost" onclick="closeWatch()" style="margin-top:8px;">Videolara Dön</button></div>`;
-    box.style.display = 'flex';
-  }
+  if (!box) return;
+  // Ders tamamlandı kartı EKRAN ORTASINDA (kart panelinin yanında değil)
+  box.className = 'sv-card-overlay center';
+  box.innerHTML = `<div class="sv-card sv-card-done">
+    <div class="sv-card-head" style="justify-content:center;">🎉 Ders tamamlandı!</div>
+    ${next ? `<div class="sv-card-body" style="text-align:center;">Sıradaki ders:<br><b>${_escHtml(next.title||'')}</b></div>
+      <button class="set-btn" style="width:100%;" onclick="_wPlayNext(${videos.indexOf(next)})">▶ Sonraki Derse Geç</button>`
+      : '<div class="sv-card-body" style="text-align:center;">Bu serinin son dersiydi, tebrikler!</div>'}
+    <button class="set-btn ghost" style="width:100%;margin-top:8px;" onclick="_wCloseCard()">Kapat</button></div>`;
+  box.style.display = 'flex';
+  box.onclick = function(e) { if (e.target === box) _wCloseCard(); };
 }
 function _wPlayNext(idx) {
   const v = videos[idx]; if (!v) { closeWatch(); return; }
@@ -5524,7 +5551,12 @@ async function adminVidDocs(videoId, title) {
         </select>
         <input id="vd-title" class="pq-input" placeholder="Döküman başlığı" style="flex:1;min-width:180px;">
       </div>
-      <input id="vd-url" class="pq-input" placeholder="URL (https://...)" style="width:100%;margin-bottom:8px;">
+      <input id="vd-url" class="pq-input" placeholder="URL (https://...) — veya aşağıdan dosya yükle" style="width:100%;margin-bottom:8px;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+        <input type="file" id="vd-file" class="pq-input" style="flex:1;" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.png,.jpg,.jpeg">
+        <button class="mail-act" onclick="adminVidDocUpload()">⬆️ Yükle</button>
+      </div>
+      <div id="vd-upload-status" style="font-size:.82rem;margin-bottom:8px;color:#9ca3af;"></div>
       <input id="vd-descr" class="pq-input" placeholder="Kısa açıklama (isteğe bağlı)" style="width:100%;margin-bottom:10px;">
       <button class="set-btn" onclick="adminVidDocAdd('${videoId}','${_escAttr(title)}')">Ekle</button>
       <button class="set-btn ghost" onclick="document.getElementById('vdoc-modal').remove()" style="margin-left:8px;">Kapat</button>
@@ -5533,6 +5565,32 @@ async function adminVidDocs(videoId, title) {
   ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
   document.body.appendChild(ov);
 }
+/* Döküman dosyası yükle (Supabase Storage → 'docs' bucket) */
+async function adminVidDocUpload() {
+  const fi = document.getElementById('vd-file');
+  const st = document.getElementById('vd-upload-status');
+  if (!fi || !fi.files || !fi.files[0]) { uiAlert('Önce bir dosya seç.'); return; }
+  const file = fi.files[0];
+  if (file.size > 25 * 1024 * 1024) { uiAlert('Dosya en fazla 25 MB olabilir.'); return; }
+  if (st) st.textContent = '⏳ Yükleniyor...';
+  try {
+    const ext = (file.name.split('.').pop() || 'dat').toLowerCase();
+    const path = 'video-docs/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+    const { error } = await sb.storage.from('docs').upload(path, file, { cacheControl: '3600', upsert: false });
+    if (error) throw error;
+    const { data: pub } = sb.storage.from('docs').getPublicUrl(path);
+    const url = pub && pub.publicUrl;
+    if (!url) throw new Error('Genel URL alınamadı');
+    const urlInp = document.getElementById('vd-url'); if (urlInp) urlInp.value = url;
+    const titleInp = document.getElementById('vd-title'); if (titleInp && !titleInp.value) titleInp.value = file.name;
+    const typeSel = document.getElementById('vd-type');
+    if (typeSel) typeSel.value = (ext === 'pdf') ? 'pdf' : 'file';
+    if (st) st.innerHTML = '✅ Yüklendi. Şimdi "Ekle"ye bas.';
+  } catch (e) {
+    if (st) st.innerHTML = '<span style="color:#fca5a5;">Hata: ' + _escHtml((e && e.message) || e) + ' — docs bucket oluşturuldu mu?</span>';
+  }
+}
+
 async function adminVidDocAdd(videoId, title) {
   const dtype = (document.getElementById('vd-type')||{}).value || 'link';
   const dtitle = ((document.getElementById('vd-title')||{}).value||'').trim();
