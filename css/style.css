@@ -3210,3 +3210,11 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .pvv-lvl { font-size:.7rem; background:var(--gold); color:#0d1b2a; padding:1px 7px; border-radius:5px; font-weight:800; margin-left:6px; }
 .pvv-prog { font-size:.8rem; color:var(--gray); }
 .pvv-go { color:var(--gold); font-weight:600; font-size:.85rem; flex-shrink:0; }
+
+/* ═══ v107: Video hata kutusu (sade, sistem detayı yok) ═══ */
+.watch-error { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+  height:100%; padding:40px 24px; text-align:center; color:#e8edf5; }
+.watch-error-ic { font-size:2.4rem; }
+.watch-error-title { font-size:1.15rem; font-weight:700; color:#fff; }
+.watch-error-sub { font-size:.9rem; color:#9fb0c5; max-width:340px; line-height:1.5; }
+.watch-error .set-btn { background:var(--gold); color:#0d1b2a; border:none; margin-top:4px; }
