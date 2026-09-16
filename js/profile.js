@@ -126,6 +126,7 @@ function profileNav(view, btn) {
   const target = document.getElementById("pv-" + view);
   if (target) target.style.display = "block";
   if (view === "tests" && typeof renderTestHistory === "function") renderTestHistory();
+  if (view === "videos" && typeof renderProfileVideos === "function") renderProfileVideos("history");
   if (view === "stats" && typeof renderStatsView === "function") renderStatsView();
   if (view === "analysis" && typeof renderAnalysis === "function") renderAnalysis();
   if (view === "saved" && typeof renderKasaView === "function") renderKasaView("saved");
@@ -140,6 +141,70 @@ function profileNav(view, btn) {
   else { const el = document.getElementById(map[view]); if (el) el.classList.add("active"); }
   window.scrollTo(0, 0);
 }
+
+// Videolarım sekmeleri
+let _pvVideoTab = "history";
+function pvVideoTab(tab, btn) {
+  _pvVideoTab = tab;
+  document.querySelectorAll(".pv-vid-tab").forEach(b => b.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+  renderProfileVideos(tab);
+}
+async function renderProfileVideos(tab) {
+  tab = tab || _pvVideoTab || "history";
+  const box = document.getElementById("pv-vid-list"); if (!box) return;
+  if (typeof currentUser === "undefined" || !currentUser) { box.innerHTML = '<div class="profile-empty">Giriş yapmalısın.</div>'; return; }
+  box.innerHTML = '<div class="admin-loading">Yükleniyor...</div>';
+  try {
+    let rows = [];
+    if (tab === "history") {
+      const { data } = await sb.from("video_views")
+        .select("video_id, last_pos_sec, completed, started_at")
+        .eq("user_id", currentUser.id).order("started_at", { ascending: false }).limit(100);
+      // Aynı videoyu tekilleştir (en son izleme)
+      const seen = {}; (data || []).forEach(r => { if (!seen[r.video_id]) seen[r.video_id] = r; });
+      rows = Object.values(seen);
+    } else if (tab === "saved") {
+      const { data } = await sb.from("video_reactions").select("video_id, updated_at")
+        .eq("user_id", currentUser.id).eq("saved", true).order("updated_at", { ascending: false });
+      rows = data || [];
+    } else if (tab === "liked") {
+      const { data } = await sb.from("video_reactions").select("video_id, updated_at")
+        .eq("user_id", currentUser.id).eq("liked", 1).order("updated_at", { ascending: false });
+      rows = data || [];
+    }
+    if (!rows.length) {
+      const bos = { history:"Henüz video izlemedin.", saved:"Henüz video kaydetmedin.", liked:"Henüz video beğenmedin." };
+      box.innerHTML = `<div class="profile-empty">${bos[tab]}</div>`; return;
+    }
+    // Video başlıklarını al
+    const ids = rows.map(r => r.video_id);
+    const { data: vids } = await sb.from("content_videos").select("id, num, title, level, descr").in("id", ids);
+    const vmap = {}; (vids || []).forEach(v => { vmap[v.id] = v; });
+    box.innerHTML = rows.map(r => {
+      const v = vmap[r.video_id]; if (!v) return "";
+      const ilerleme = (tab === "history" && r.last_pos_sec)
+        ? `<span class="pvv-prog">${r.completed ? "✅ Tamamlandı" : "▶ " + Math.floor(r.last_pos_sec/60) + ":" + String(r.last_pos_sec%60).padStart(2,"0") + " kaldın"}</span>` : "";
+      return `<div class="pvv-item" onclick="_pvOpenVideo('${v.id}')">
+        <div class="pvv-num">${v.num || "•"}</div>
+        <div class="pvv-mid"><div class="pvv-title">${_esc(v.title||"")} <span class="pvv-lvl">${v.level||""}</span></div>
+          ${ilerleme}</div>
+        <span class="pvv-go">İzle →</span></div>`;
+    }).join("");
+  } catch (e) {
+    box.innerHTML = '<div class="profile-empty">Liste alınamadı (altyazi_reaksiyon_istatistik.sql çalıştırıldı mı?).</div>';
+  }
+}
+function _pvOpenVideo(vid) {
+  // Video listesinden bul ve aç
+  if (typeof videos !== "undefined") {
+    const v = videos.find(x => x.id === vid);
+    if (v && typeof openWatch === "function") { openWatch(v); return; }
+  }
+  if (typeof showPage === "function") showPage("learn");
+  if (typeof learnNav === "function") learnNav("video");
+}
+function _esc(s) { return String(s||"").replace(/[&<>"]/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m])); }
 
 // Ayarlar sekmeleri
 function settingsTab(key, btn) {
