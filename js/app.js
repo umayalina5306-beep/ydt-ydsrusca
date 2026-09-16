@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v103';
+var YDT_SURUM = 'v104';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1273,6 +1273,8 @@ async function openWatch(v) {
   setTimeout(_wShowControls, 500);
   // Alt bar ses ikonunu SVG yap
   const vb = document.getElementById('wc-vol'); if (vb) vb.innerHTML = _wVolIcon();
+  // Başlangıçta büyük oynat ikonu göster
+  const bs = document.getElementById('watch-bigstate'); if (bs) { bs.classList.add('show-play'); bs.classList.remove('show-pause','flash'); }
 }
 
 /* Önceki/sonraki video kutularını hazırla */
@@ -1325,9 +1327,7 @@ function _wInitYouTube(v) {
   // Temiz bir hedef div oluştur (YT API div'i iframe'e çevirir, tekrar kullanımda taze olmalı)
   const host = document.getElementById('watch-player');
   // YT arayüzünü maskele: üst bilgi barı + kendi büyük başlat butonumuz
-  host.innerHTML = '<div id="yt-target"></div>' +
-    '<div class="yt-mask-top"></div>' +
-    '<div class="yt-bigplay" id="yt-bigplay" onclick="_wYtBigPlay()"><div class="yt-bigplay-btn"><svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>';
+  host.innerHTML = '<div id="yt-target"></div><div class="yt-mask-top"></div>';
   const mount = () => {
     try {
       _w.player = new YT.Player('yt-target', {
@@ -1341,8 +1341,6 @@ function _wInitYouTube(v) {
           onReady: (e) => { _w.ready = true; _w.duration = e.target.getDuration() || 0; _wSaveDuration(); _wStartLog(); },
           onStateChange: (e) => {
             _wSyncPlayBtn(e.data === 1);
-            const bp = document.getElementById('yt-bigplay');
-            if (bp) bp.classList.toggle('hidden', e.data === 1); // oynarken gizle
             if (e.data === 0) _wOnEnded();
           },
           onError: (e) => {
@@ -1439,12 +1437,12 @@ function _wIsPlaying() {
   } catch (e) {}
   return false;
 }
-function watchSeek(d) { _wSeekTo(Math.max(0, _wGetTime() + d)); }
-function watchTogglePlay() { _wIsPlaying() ? _wPause() : _wPlay(); }
-function _wYtBigPlay() {
-  const bp = document.getElementById('yt-bigplay'); if (bp) bp.classList.add('hidden');
-  _wPlay();
+function watchSeek(d) {
+  if (_wStrictMode()) { toast('🚧 Sıkı hoca modunda ileri/geri sarma kapalı.'); return; }
+  _wSeekTo(Math.max(0, _wGetTime() + d));
 }
+function watchTogglePlay() { _wIsPlaying() ? _wPause() : _wPlay(); }
+
 function watchSetSpeed(r) {
   try {
     if (_w.kind === 'yt' && _w.player.setPlaybackRate) _w.player.setPlaybackRate(parseFloat(r));
@@ -1517,10 +1515,10 @@ function _wUpdateProgress() {
   if (de && dur) de.textContent = fmt(dur);
 }
 function watchSeekBar(ev) {
+  if (_wStrictMode()) { toast('🚧 Sıkı hoca modunda zaman çubuğu kilitli.'); return; }
   const bar = document.getElementById('wc-progress'); if (!bar || !_w.duration) return;
   const rect = bar.getBoundingClientRect();
   const oran = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
-  // Sıkı hoca modunda ileri sarma engeli _wTick'te; burada sadece seek
   _wSeekTo(oran * _w.duration);
 }
 
@@ -1556,7 +1554,28 @@ function _wSyncPlayBtn(playing) {
   if (b) b.textContent = playing ? '⏸' : '▶';
   const box = document.getElementById('watch-player-box');
   if (box) box.classList.toggle('playing', playing);
+  const prog = document.getElementById('wc-progress');
+  if (prog) prog.classList.toggle('locked', _wStrictMode());
+  _wBigState(playing);
   _wShowControls();
+}
+/* Büyük ortadaki durum ikonu:
+   - Oynatıldı → kısa "durdur ikonu flaş" sonra kaybol
+   - Duraklatıldı → "oynat" ikonu görünür kalır */
+let _wBigTimer = null;
+function _wBigState(playing) {
+  const el = document.getElementById('watch-bigstate'); if (!el) return;
+  if (_wBigTimer) { clearTimeout(_wBigTimer); _wBigTimer = null; }
+  if (playing) {
+    // Kısa süre "duraklat" ikonu göster (oynatmaya geçildi geri bildirimi), sonra kaybol
+    el.classList.remove('show-play');
+    el.classList.add('show-pause', 'flash');
+    _wBigTimer = setTimeout(() => { el.classList.remove('show-pause', 'flash'); }, 650);
+  } else {
+    // Duraklatıldı → oynat ikonu kalıcı
+    el.classList.remove('show-pause', 'flash');
+    el.classList.add('show-play');
+  }
 }
 function watchFullscreen() {
   const wrap = document.getElementById('watch-wrap');
@@ -1722,13 +1741,10 @@ function _wShowCard(card, opts) {
 /* Kart alt bölümü (devam/geri butonları + skip) */
 function _wCardFootHTML(card, soruTip, strict) {
   let f = '<div class="sv-card-foot">';
-  // Kontrol noktası: her zaman "Cevabı Kontrol Et" akışı (seç → kontrol et)
+  // Kontrol noktası: şık seçilince anında kontrol edilir (ayrı buton yok)
   if (card.card_type === 'checkpoint') {
-    const geri = (card.back_sec!=null?card.back_sec:Math.max(0,(card.t_sec||0)-45));
-    if (strict) {
-      f += `<button class="sv-card-back-btn" onclick="_wResumeCardTemp(${card.id}, ${geri})">↺ Bölümü Yeniden İzle</button>`;
-    }
-    f += `<button class="set-btn sv-card-continue" id="sv-check-btn" onclick="_wAnswerCheck(${card.id})">Cevabı Kontrol Et →</button>`;
+    // Devam butonu doğru cevaptan sonra JS ile eklenir; başta gizli
+    f += `<button class="set-btn sv-card-continue" style="display:none;" onclick="_wResumeCard(${card.id})">▶ Devam Et</button>`;
     f += '</div>';
     if (strict) f += `<div class="sv-card-skip"><button onclick="_wSkipCheckpoint(${card.id})">» Bu kontrol noktasını geç (Ayarlardan değiştirilebilir)</button></div>`;
     return f;
@@ -1775,14 +1791,6 @@ async function _wAnswerCard(cardId, i, correct, tip) {
   const opts = document.querySelectorAll('.sv-opt');
   const card = _w.activeCard;
   const strict = tip === 'checkpoint' && _wStrictMode();
-
-  // Kontrol noktası: şık tıklama = sadece SEÇİM; gerçek kontrol "Cevabı Kontrol Et" ile
-  if (tip === 'checkpoint' && !_w._checking) {
-    opts.forEach(b => b.classList.remove('sel'));
-    if (opts[i]) opts[i].classList.add('sel');
-    return;
-  }
-  _w._checking = false;
 
   // ── 📊 ANKET: doğru/yanlış yok
   if (tip === 'poll') {
@@ -2176,8 +2184,8 @@ document.addEventListener('keydown', function(e) {
   if (!wp || !wp.classList.contains('active')) return;
   if (['INPUT','TEXTAREA','SELECT'].includes((e.target.tagName||''))) return;
   if (e.code === 'Space') { e.preventDefault(); watchTogglePlay(); }
-  else if (e.code === 'ArrowLeft')  { e.preventDefault(); watchSeek(-5); }
-  else if (e.code === 'ArrowRight') { e.preventDefault(); watchSeek(5); }
+  else if (e.code === 'ArrowLeft')  { e.preventDefault(); if(!_wStrictMode()) _wSeekTo(Math.max(0,_wGetTime()-5)); }
+  else if (e.code === 'ArrowRight') { e.preventDefault(); if(!_wStrictMode()) _wSeekTo(_wGetTime()+5); }
   else if (e.key === 'f' || e.key === 'F') { watchFullscreen(); }
 }, true);
 
