@@ -3111,9 +3111,9 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .yt-bigplay-btn svg { margin-left:3px; }
 
 /* 10 sn ikonları: "10" yazısı okunaklı ve küçük */
-.wc-seek { position:relative; display:inline-flex; align-items:center; justify-content:center; font-size:1.35rem; width:26px; height:26px; }
-.wc-seek b { position:absolute; left:0; right:0; top:56%; transform:translateY(-50%); text-align:center;
-  font-size:.46rem; font-weight:800; letter-spacing:-.3px; }
+.wc-seek { position:relative; display:inline-flex; align-items:center; justify-content:center; font-size:1.5rem; width:28px; height:28px; }
+.wc-seek b { position:absolute; left:0; right:0; top:57%; transform:translateY(-50%); text-align:center;
+  font-size:.4rem; font-weight:800; letter-spacing:-.3px; }
 
 /* CC altyazı butonu */
 .wc-cc-btn svg { display:block; }
@@ -3132,9 +3132,9 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 
 /* ═══ v103: Hız özel dropdown (native select yerine — okunaklı) ═══ */
 .wc-speed-wrap { position:relative; }
-.wc-speed-btn { background:rgba(13,27,42,.45); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
-  border:1px solid rgba(255,255,255,.25); color:#fff; font-weight:600; border-radius:7px; padding:6px 11px;
-  cursor:pointer; font-size:.82rem; white-space:nowrap; }
+.wc-speed-btn { background:transparent; border:1px solid rgba(255,255,255,.28); color:#fff; font-weight:600;
+  border-radius:7px; padding:6px 11px; cursor:pointer; font-size:.82rem; white-space:nowrap; transition:all .15s; }
+.wc-speed-btn:hover { background:rgba(255,255,255,.14); }
 .wc-speed-btn:hover { border-color:var(--gold); }
 .wc-speed-menu { position:absolute; bottom:calc(100% + 8px); right:0; min-width:150px;
   background:rgba(13,27,42,.45); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
@@ -3194,3 +3194,19 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .sv-card-back:hover { background:var(--gold); color:#0d1b2a; }
 .sv-back-ic { display:flex; align-items:center; }
 .sv-card-fb { display:flex; flex-direction:column; align-items:center; }
+
+/* ═══ v106: Profil "Videolarım" sekmeleri ═══ */
+.pv-vid-tabs { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+.pv-vid-tab { background:var(--off-white); border:1px solid rgba(0,0,0,.1); color:var(--gray);
+  border-radius:20px; padding:7px 16px; cursor:pointer; font-size:.85rem; font-weight:600; transition:all .15s; }
+.pv-vid-tab.active { background:var(--gold); border-color:var(--gold); color:#0d1b2a; }
+.pvv-item { display:flex; align-items:center; gap:14px; padding:12px 14px; border-bottom:1px solid rgba(0,0,0,.06);
+  cursor:pointer; transition:background .15s; }
+.pvv-item:hover { background:var(--off-white); }
+.pvv-num { width:34px; height:34px; border-radius:9px; background:var(--dark); color:var(--gold);
+  display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.9rem; flex-shrink:0; }
+.pvv-mid { flex:1; min-width:0; }
+.pvv-title { font-weight:700; color:var(--text); }
+.pvv-lvl { font-size:.7rem; background:var(--gold); color:#0d1b2a; padding:1px 7px; border-radius:5px; font-weight:800; margin-left:6px; }
+.pvv-prog { font-size:.8rem; color:var(--gray); }
+.pvv-go { color:var(--gold); font-weight:600; font-size:.85rem; flex-shrink:0; }
