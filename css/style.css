@@ -3076,8 +3076,11 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   transition:transform .15s; }
 .yt-bigplay:hover .yt-bigplay-btn { transform:scale(1.08); }
 /* YouTube'un üst bilgi barını ve alt paylaş çubuğunu maskele */
-.yt-mask-top { position:absolute; top:0; left:0; right:0; height:64px; z-index:2; background:transparent; pointer-events:none; }
-.yt-mask-bottom { position:absolute; bottom:0; left:0; right:0; height:0; z-index:2; }
+/* YouTube üst başlık/hesap barını maskele (tıklamayı da yut) */
+.yt-mask-top { position:absolute; top:0; left:0; right:0; height:70px; z-index:2;
+  background:linear-gradient(rgba(0,0,0,.001), transparent); pointer-events:auto; }
+/* Video oynarken üst maske tıklamayı yutmasın (kontroller için); sadece duraklatınca aktif */
+.watch-player-box.playing .yt-mask-top { pointer-events:none; }
 
 /* Tam ekranda SADECE sol taraf (oynatıcı) scroll'suz; sağ panel kendi içinde scroll */
 .watch-wrap.watch-fs { overflow:hidden; height:100vh; }
@@ -3096,3 +3099,45 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .sv-card .set-btn { background:var(--gold); color:#0d1b2a; border:none; }
 .sv-card .set-btn.ghost { background:transparent; color:#cbd5e1; border:1px solid rgba(255,255,255,.2); }
 .sv-card .set-btn:hover { background:var(--gold-light); }
+
+/* ═══ v103: kontrol bar ince ayarlar ═══ */
+/* Play büyük buton: minimal, yarı şeffaf */
+.yt-bigplay { background:rgba(13,27,42,.25); }
+.yt-bigplay-btn { width:68px; height:68px; background:rgba(201,168,76,.85); color:#0d1b2a;
+  box-shadow:0 4px 20px rgba(0,0,0,.35); backdrop-filter:blur(2px); }
+.yt-bigplay-btn svg { margin-left:3px; }
+
+/* 10 sn ikonları: "10" yazısı okunaklı ve küçük */
+.wc-seek { position:relative; display:inline-flex; align-items:center; justify-content:center; font-size:1.35rem; width:26px; height:26px; }
+.wc-seek b { position:absolute; left:0; right:0; top:56%; transform:translateY(-50%); text-align:center;
+  font-size:.46rem; font-weight:800; letter-spacing:-.3px; }
+
+/* CC altyazı butonu */
+.wc-cc-btn svg { display:block; }
+.wc-cc-btn { color:#fff; }
+.wc-cc-btn.off { opacity:.45; }
+
+/* Hız seçici: blur şeffaf, okunaklı, site rengi vurgu */
+.wc-speed { background:rgba(13,27,42,.55); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,.25);
+  color:#fff; font-weight:600; }
+.wc-speed option { background:#0d1b2a; color:#fff; font-weight:600; padding:6px; }
+.wc-speed option:checked, .wc-speed option:hover { background:var(--gold); color:#0d1b2a; }
+.wc-speed:focus { border-color:var(--gold); outline:none; }
+
+/* Ders/kart butonlarının içindeki SVG hizası */
+.wc-btn svg { vertical-align:middle; }
+
+/* ═══ v103: Hız özel dropdown (native select yerine — okunaklı) ═══ */
+.wc-speed-wrap { position:relative; }
+.wc-speed-btn { background:rgba(13,27,42,.55); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,.25);
+  color:#fff; font-weight:600; border-radius:7px; padding:6px 11px; cursor:pointer; font-size:.82rem; white-space:nowrap; }
+.wc-speed-btn:hover { border-color:var(--gold); }
+.wc-speed-menu { position:absolute; bottom:calc(100% + 8px); right:0; min-width:150px;
+  background:rgba(13,27,42,.92); backdrop-filter:blur(14px); border:1px solid rgba(255,255,255,.18);
+  border-radius:12px; padding:6px; display:none; flex-direction:column; gap:2px; z-index:20;
+  box-shadow:0 8px 30px rgba(0,0,0,.5); }
+.wc-speed-menu.open { display:flex; }
+.wc-speed-menu button { background:transparent; border:none; color:#e8edf5; text-align:left; padding:9px 14px;
+  border-radius:8px; cursor:pointer; font-size:.86rem; font-weight:500; transition:all .12s; }
+.wc-speed-menu button:hover { background:rgba(201,168,76,.25); color:#fff; }
+.wc-speed-menu button.active { background:var(--gold); color:#0d1b2a; font-weight:700; }
