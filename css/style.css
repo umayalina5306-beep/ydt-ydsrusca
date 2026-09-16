@@ -3034,12 +3034,15 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .wdoc-arrow { color:var(--gold); font-size:1.1rem; }
 
 /* Tam ekran */
-.watch-wrap.watch-fs { position:fixed; inset:0; z-index:99999; border-radius:0; overflow-y:auto; }
-.watch-wrap.watch-fs .watch-body { height:calc(100vh - 60px); }
-.watch-wrap.watch-fs .watch-main { display:flex; flex-direction:column; }
-.watch-wrap.watch-fs .watch-player-box { flex:1; aspect-ratio:auto; border-radius:0; }
+.watch-wrap.watch-fs { position:fixed; inset:0; z-index:99999; border-radius:0; overflow:hidden;
+  background:var(--dark,#0d1b2a); }
+.watch-wrap.watch-fs .watch-topbar { background:var(--dark,#0d1b2a); }
+.watch-wrap.watch-fs .watch-body { height:calc(100vh - 62px); background:var(--dark,#0d1b2a);
+  padding:16px 20px; overflow:hidden; }
+.watch-wrap.watch-fs .watch-main { display:flex; flex-direction:column; overflow:hidden; }
+.watch-wrap.watch-fs .watch-player-box { flex:1; aspect-ratio:auto; border-radius:14px; }
 .watch-wrap.watch-fs .watch-underbar, .watch-wrap.watch-fs .watch-info-row { display:none; }
-.watch-wrap.watch-fs .watch-side { max-height:calc(100vh - 60px); }
+.watch-wrap.watch-fs .watch-side { max-height:calc(100vh - 94px); overflow-y:auto; }
 
 /* Mobil */
 @media (max-width:1000px){ .watch-body{grid-template-columns:1fr;} .watch-side{position:static;max-height:none;} .watch-underbar-mid{order:3;width:100%;justify-content:center;} }
@@ -3134,7 +3137,7 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   cursor:pointer; font-size:.82rem; white-space:nowrap; }
 .wc-speed-btn:hover { border-color:var(--gold); }
 .wc-speed-menu { position:absolute; bottom:calc(100% + 8px); right:0; min-width:150px;
-  background:rgba(13,27,42,.55); -webkit-backdrop-filter:blur(18px) saturate(1.4); backdrop-filter:blur(18px) saturate(1.4);
+  background:rgba(13,27,42,.45); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
   border:1px solid rgba(255,255,255,.22); border-radius:12px; padding:6px; display:none; flex-direction:column; gap:2px; z-index:20;
   box-shadow:0 8px 30px rgba(0,0,0,.5); }
 .wc-speed-menu.open { display:flex; }
@@ -3151,10 +3154,10 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 /* flash: oynatmaya geçince kısa görünüp büyüyerek kaybolan animasyon */
 .watch-bigstate.flash .wbs-circle { animation:wbsFlash .65s ease forwards; }
 @keyframes wbsFlash { 0%{transform:scale(1);opacity:.9} 100%{transform:scale(1.35);opacity:0} }
-.wbs-circle { width:66px; height:66px; border-radius:50%;
-  background:rgba(20,30,45,.4); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+.wbs-circle { width:56px; height:56px; border-radius:50%;
+  background:rgba(20,30,45,.28); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
   display:flex; align-items:center; justify-content:center; transition:transform .18s ease, background .18s; }
-.wbs-circle svg { width:30px; height:30px; color:#fff; display:none; }
+.wbs-circle svg { width:32px; height:32px; color:#fff; display:none; }
 .watch-bigstate.show-play .wbs-play { display:block; margin-left:3px; }
 .watch-bigstate.show-pause .wbs-pause { display:block; }
 /* Mouse video üstüne gelince oynat ikonu hafif büyür */
@@ -3163,3 +3166,31 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 /* Sıkı modda zaman çubuğu kilitli görünüm */
 .wc-progress.locked { cursor:not-allowed; opacity:.6; }
 .wc-progress.locked::after { content:'🔒'; position:absolute; right:-2px; top:-9px; font-size:.7rem; }
+
+/* ═══ v105: Altyazı ═══ */
+.watch-caption { position:absolute; left:50%; bottom:70px; transform:translateX(-50%); z-index:3;
+  max-width:80%; text-align:center; pointer-events:none; }
+.wcap-ru { display:inline-block; background:rgba(0,0,0,.72); color:#fff; font-size:1.15rem; font-weight:600;
+  padding:5px 14px; border-radius:7px; line-height:1.4; margin-bottom:4px; }
+.wcap-tr { display:block; }
+.wcap-tr { display:inline-block; background:rgba(0,0,0,.62); color:#f5d97a; font-size:.98rem;
+  padding:4px 12px; border-radius:7px; line-height:1.4; }
+
+/* Video istatistik kartları (admin) */
+.vstat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.vstat-card { background:var(--off-white); border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:16px 10px; text-align:center; }
+.vstat-ic { font-size:1.5rem; margin-bottom:6px; }
+.vstat-num { font-size:1.5rem; font-weight:800; color:var(--dark); }
+.vstat-lbl { font-size:.76rem; color:var(--gray); margin-top:2px; }
+
+/* Beğen/kaydet aktif durum */
+.wu-act.active { background:var(--gold); color:#0d1b2a; border-color:var(--gold); }
+
+/* ═══ v105: Kontrol noktası yanlış cevap — şık geri-dön ═══ */
+.sv-wrong-msg { color:#fca5a5; font-size:.88rem; text-align:center; margin:14px 0 12px; line-height:1.5; }
+.sv-card-back { display:flex; align-items:center; justify-content:center; gap:9px; width:100%;
+  background:rgba(201,168,76,.12); border:1px solid var(--gold); color:var(--gold);
+  border-radius:11px; padding:12px 16px; cursor:pointer; font-size:.9rem; font-weight:600; transition:all .15s; }
+.sv-card-back:hover { background:var(--gold); color:#0d1b2a; }
+.sv-back-ic { display:flex; align-items:center; }
+.sv-card-fb { display:flex; flex-direction:column; align-items:center; }
