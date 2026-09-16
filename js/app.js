@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v106';
+var YDT_SURUM = 'v107';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1442,9 +1442,25 @@ async function _wInitStream(v) {
       } catch (e) {}
     });
   } catch (e) {
-    document.getElementById('watch-player').innerHTML =
-      `<div style="padding:40px;text-align:center;color:#fca5a5;">Video başlatılamadı: ${_escHtml((e&&e.message)||e)}</div>`;
+    _wShowVideoError(e);
   }
+}
+/* Kullanıcıya sade mesaj; teknik detay yalnız yönetici konsolunda */
+function _wShowVideoError(e) {
+  const teknik = (e && e.message) || String(e || '');
+  // Teknik detayı yalnız yöneticinin görmesi için konsola yaz
+  try { if (currentProfile && currentProfile.is_admin) console.warn('[Video hata detayı - yalnız yönetici]:', teknik); } catch (x) {}
+  const box = document.getElementById('watch-player'); if (!box) return;
+  // Premium/erişim durumu ayrı ele alınır; buradaki mesaj tamamen genel
+  box.innerHTML = `<div class="watch-error">
+    <div class="watch-error-ic">⚠️</div>
+    <div class="watch-error-title">Video şu anda oynatılamıyor</div>
+    <div class="watch-error-sub">Lütfen birazdan tekrar dene. Sorun sürerse destek ekibiyle iletişime geçebilirsin.</div>
+    <button class="set-btn" onclick="_wRetryVideo()">Tekrar Dene</button>
+  </div>`;
+}
+function _wRetryVideo() {
+  if (_w && _w.video) { const v = _w.video; _wCleanup && _wCleanup(); openWatch(v); }
 }
 function _wLoadStreamSdk(cb) {
   if (window.Stream) { cb(); return; }
@@ -5793,6 +5809,15 @@ async function adminVidSubs(videoId, title) {
       <button class="set-btn" onclick="adminVidSubAdd('${videoId}','${_escAttr(title)}')">Ekle</button>
       <button class="set-btn ghost" onclick="document.getElementById('vsub-modal').remove()" style="margin-left:8px;">Kapat</button>
     </div>
+    <div class="admin-notif-card" style="margin-top:12px;">
+      <h3 class="an-h3">📄 Dosya / Toplu İçe Aktarma</h3>
+      <p class="pq-hint">SRT/VTT dosyası yükle <b>veya</b> aşağıya satır satır yapıştır. Biçim:<br>
+        <code>başlangıç | bitiş | Rusça | Türkçe</code> (örn. <code>0:05 | 0:09 | Привет | Merhaba</code>)</p>
+      <input type="file" id="vs-file" class="pq-input" accept=".srt,.vtt,.txt" style="width:100%;margin-bottom:8px;" onchange="adminSubFileLoad(event)">
+      <textarea id="vs-bulk" class="an-textarea" rows="5" placeholder="0:05 | 0:09 | Привет | Merhaba
+0:10 | 0:14 | Как дела | Nasılsın" style="width:100%;font-family:monospace;font-size:.85rem;"></textarea>
+      <button class="set-btn" style="margin-top:8px;" onclick="adminSubBulkImport('${videoId}','${_escAttr(title)}')">İçe Aktar</button>
+    </div>
   </div>`;
   ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
   document.body.appendChild(ov);
@@ -5806,6 +5831,70 @@ async function adminVidSubDefault(videoId, mode) {
   try { await sb.from('content_videos').update({ sub_default: mode }).eq('id', videoId); toast('Varsayılan altyazı modu kaydedildi.'); }
   catch (e) { uiAlert('Kaydedilemedi.'); }
 }
+/* SRT/VTT/txt dosyasını textarea'ya yükle (parse et → satır formatına çevir) */
+function adminSubFileLoad(ev) {
+  const f = ev.target.files && ev.target.files[0]; if (!f) return;
+  const rdr = new FileReader();
+  rdr.onload = () => {
+    const metin = String(rdr.result || '');
+    const satirlar = _parseSrtVtt(metin);
+    const ta = document.getElementById('vs-bulk');
+    if (ta && satirlar.length) {
+      ta.value = satirlar.map(s => `${_fmtT(s.start)} | ${_fmtT(s.end)} | ${s.text} | `).join('\n');
+      toast(satirlar.length + ' satır yüklendi. Türkçe karşılıkları ekleyip İçe Aktar\'a bas.');
+    } else if (ta) {
+      // Düz metin: her satırı olduğu gibi koy
+      ta.value = metin;
+    }
+  };
+  rdr.readAsText(f);
+}
+/* SRT ve VTT ortak parse */
+function _parseSrtVtt(metin) {
+  const out = [];
+  const bloklar = metin.replace(/\r/g,'').split(/\n\n+/);
+  const zaman = /(\d{1,2}:\d{2}(?::\d{2})?[.,]?\d*)\s*-->\s*(\d{1,2}:\d{2}(?::\d{2})?[.,]?\d*)/;
+  bloklar.forEach(b => {
+    const m = b.match(zaman);
+    if (!m) return;
+    const metinSatir = b.split('\n').filter(l => !zaman.test(l) && !/^\d+$/.test(l.trim()) && l.trim() && !/^WEBVTT/i.test(l)).join(' ').trim();
+    out.push({ start: _vttT(m[1]), end: _vttT(m[2]), text: metinSatir });
+  });
+  return out;
+}
+function _vttT(s) {
+  s = s.replace(',', '.');
+  const p = s.split(':').map(parseFloat);
+  if (p.length === 3) return p[0]*3600 + p[1]*60 + p[2];
+  if (p.length === 2) return p[0]*60 + p[1];
+  return parseFloat(s) || 0;
+}
+/* Toplu içe aktar: "start | end | ru | tr" satırları */
+async function adminSubBulkImport(videoId, title) {
+  const ta = document.getElementById('vs-bulk');
+  const metin = (ta && ta.value || '').trim();
+  if (!metin) { uiAlert('Önce dosya yükle veya satır yapıştır.'); return; }
+  const satirlar = metin.split('\n').map(l => l.trim()).filter(Boolean);
+  const kayitlar = [];
+  for (const l of satirlar) {
+    const parca = l.split('|').map(x => x.trim());
+    if (parca.length < 3) continue;
+    const st = _parseT(parca[0]), en = _parseT(parca[1]);
+    if (en <= st) continue;
+    const ru = parca[2] || null, tr = parca[3] || null;
+    if (!ru && !tr) continue;
+    kayitlar.push({ video_id: videoId, start_sec: st, end_sec: en, ru, tr });
+  }
+  if (!kayitlar.length) { uiAlert('Geçerli satır bulunamadı. Biçim: başlangıç | bitiş | Rusça | Türkçe'); return; }
+  try {
+    const { error } = await sb.from('video_subtitles').insert(kayitlar);
+    if (error) throw error;
+    document.getElementById('vsub-modal').remove();
+    toast(kayitlar.length + ' altyazı satırı eklendi.');
+    adminVidSubs(videoId, title);
+  } catch (e) { uiAlert('İçe aktarılamadı: ' + ((e&&e.message)||e)); }
+}
+
 function _parseT(str) {
   str = String(str||'').trim();
   if (str.includes(':')) { const [m,s] = str.split(':').map(x=>parseFloat(x)||0); return m*60+s; }
