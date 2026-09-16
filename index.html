@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=102">
+<link rel="stylesheet" href="css/style.css?v=103">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=102" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=103" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">📚 Eğitim</button></li>
@@ -1956,11 +1956,19 @@
             <input type="range" class="wc-vol-range" id="wc-vol-range" min="0" max="100" value="100" oninput="watchSetVolume(this.value)">
             <span class="wc-time"><span id="wc-cur">0:00</span> / <span id="wc-dur">0:00</span></span>
             <span class="wc-spacer"></span>
-            <button class="wc-btn" onclick="watchToggleCaption()" id="wc-cc" title="Altyazı">💬</button>
-            <select class="wc-speed" id="wc-speed" onchange="watchSetSpeed(this.value)" title="Hız">
-              <option value="0.75">0.75x</option><option value="1" selected>1.0x</option>
-              <option value="1.25">1.25x</option><option value="1.5">1.5x</option><option value="2">2.0x</option>
-            </select>
+            <button class="wc-btn wc-cc-btn" onclick="watchToggleCaption()" id="wc-cc" title="Altyazı"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 4H5a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zM9.5 11.2c-.3-.4-.7-.6-1.2-.6-.9 0-1.5.7-1.5 1.6s.6 1.6 1.5 1.6c.5 0 .9-.2 1.2-.6l1 .8c-.5.7-1.3 1.1-2.2 1.1-1.7 0-3-1.2-3-2.9s1.3-2.9 3-2.9c.9 0 1.7.4 2.2 1.1l-1 .7zm7 0c-.3-.4-.7-.6-1.2-.6-.9 0-1.5.7-1.5 1.6s.6 1.6 1.5 1.6c.5 0 .9-.2 1.2-.6l1 .8c-.5.7-1.3 1.1-2.2 1.1-1.7 0-3-1.2-3-2.9s1.3-2.9 3-2.9c.9 0 1.7.4 2.2 1.1l-1 .7z"/></svg></button>
+            <div class="wc-speed-wrap">
+              <button class="wc-speed-btn" id="wc-speed-btn" onclick="_wToggleSpeedMenu(event)" title="Hız">1.0x ▾</button>
+              <div class="wc-speed-menu" id="wc-speed-menu">
+                <button onclick="_wPickSpeed(0.5)">0.5x</button>
+                <button onclick="_wPickSpeed(0.75)">0.75x</button>
+                <button onclick="_wPickSpeed(1)" class="active">1.0x (Normal)</button>
+                <button onclick="_wPickSpeed(1.25)">1.25x</button>
+                <button onclick="_wPickSpeed(1.5)">1.5x</button>
+                <button onclick="_wPickSpeed(1.75)">1.75x</button>
+                <button onclick="_wPickSpeed(2)">2.0x</button>
+              </div>
+            </div>
             <button class="wc-btn" onclick="watchPiP()" title="Mini oynatıcı">▭</button>
             <button class="wc-btn" onclick="watchFullscreen()" title="Tam ekran">⛶</button>
             <div class="wc-progress" id="wc-progress" onclick="watchSeekBar(event)">
@@ -2036,12 +2044,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=102"></script>
-<script defer src="js/auth.js?v=102"></script>
-<script defer src="js/admin.js?v=102"></script>
-<script defer src="js/profile.js?v=102"></script>
-<script defer src="js/extras.js?v=102"></script>
-<script defer src="js/app.js?v=102"></script>
+<script defer src="js/supabase-config.js?v=103"></script>
+<script defer src="js/auth.js?v=103"></script>
+<script defer src="js/admin.js?v=103"></script>
+<script defer src="js/profile.js?v=103"></script>
+<script defer src="js/extras.js?v=103"></script>
+<script defer src="js/app.js?v=103"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
