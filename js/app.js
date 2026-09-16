@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v105';
+var YDT_SURUM = 'v106';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1261,6 +1261,10 @@ async function openWatch(v) {
 
   await _wLoadData(v);
 
+  // PiP butonu: yalnız Stream videolarında görünür (YouTube iframe'de çalışmaz)
+  const pipBtn = document.querySelector('.wc-btn[onclick="watchPiP()"]');
+  if (pipBtn) pipBtn.style.display = (v.source === 'stream') ? '' : 'none';
+
   if (v.source === 'stream') { await _wInitStream(v); }
   else { _wInitYouTube(v); }
 
@@ -1359,6 +1363,7 @@ async function _wLoadData(v) {
     _w.notes = notes.data || [];
     _w.docs = (docs && docs.data) || [];
     _w.subs = (subs && subs.data) || [];
+    _w.subMode = _w.video.sub_default || 'both'; _w.ccOn = _w.subMode !== 'off';
     _w._reaction = (react && react.data && react.data[0]) || { liked: 0, saved: false };
     _w.watchedBefore = !!(prevView.data && prevView.data.length); // daha önce izlemiş mi?
     // Bu kartlar geçmişte cevaplanmış mı? (card_answers)
@@ -1533,23 +1538,26 @@ function watchToggleMute() {
   else { _w._lastVol = range ? +range.value : 100; watchSetVolume(0); if (range) range.value = 0; }
 }
 /* Altyazı aç/kapa (Stream native; YouTube CC modülü) */
+/* Altyazı modu döngüsü: both → ru → tr → off → both ...
+   Admin varsayılanı _w.subMode olarak açılışta yüklenir. */
 function watchToggleCaption() {
-  _w.ccOn = !_w.ccOn;
+  const modes = ['both', 'ru', 'tr', 'off'];
+  const labels = { both:'Altyazı: Rusça + Türkçe', ru:'Altyazı: Rusça', tr:'Altyazı: Türkçe', off:'Altyazı kapalı' };
+  const cur = _w.subMode || 'both';
+  _w.subMode = modes[(modes.indexOf(cur) + 1) % 4];
+  _w.ccOn = _w.subMode !== 'off';
   const b = document.getElementById('wc-cc'); if (b) b.classList.toggle('off', !_w.ccOn);
-  try {
-    if (_w.kind === 'stream' && _w.player) {
-      const tt = _w.player.textTracks && _w.player.textTracks();
-    }
-  } catch (e) {}
-  toast(_w.ccOn ? 'Altyazı açık' : 'Altyazı kapalı');
+  toast(labels[_w.subMode]);
+  _wUpdateCaption(_wGetTime());
 }
 /* Resim içinde resim */
 function watchPiP() {
   try {
-    const ifr = document.querySelector('#watch-player iframe');
-    if (document.pictureInPictureElement) document.exitPictureInPicture();
-    else if (ifr && ifr.requestPictureInPicture) ifr.requestPictureInPicture();
-    else toast('Bu oynatıcıda mini oynatıcı desteklenmiyor.');
+    if (document.pictureInPictureElement) { document.exitPictureInPicture(); return; }
+    // Stream: gerçek <video> elementi PiP destekler
+    const vid = document.querySelector('#watch-player video');
+    if (vid && vid.requestPictureInPicture) { vid.requestPictureInPicture(); return; }
+    toast('Mini oynatıcı bu videoda kullanılamıyor.');
   } catch (e) { toast('Mini oynatıcı açılamadı.'); }
 }
 /* Progress bar */
@@ -1567,12 +1575,13 @@ function _wUpdateProgress() {
 /* Altyazı: o anki segmenti göster (RU + TR) */
 function _wUpdateCaption(t) {
   const box = document.getElementById('watch-caption'); if (!box) return;
-  if (!_w.ccOn || !_w.subs || !_w.subs.length) { box.style.display = 'none'; return; }
+  const mode = _w.subMode || 'both';
+  if (mode === 'off' || !_w.subs || !_w.subs.length) { box.style.display = 'none'; return; }
   const seg = _w.subs.find(s => t >= s.start_sec && t <= s.end_sec);
   if (!seg) { box.style.display = 'none'; box.innerHTML = ''; return; }
   let html = '';
-  if (seg.ru) html += `<div class="wcap-ru">${_escHtml(seg.ru)}</div>`;
-  if (seg.tr) html += `<div class="wcap-tr">${_escHtml(seg.tr)}</div>`;
+  if ((mode === 'both' || mode === 'ru') && seg.ru) html += `<div class="wcap-ru">${_escHtml(seg.ru)}</div>`;
+  if ((mode === 'both' || mode === 'tr') && seg.tr) html += `<div class="wcap-tr">${_escHtml(seg.tr)}</div>`;
   box.innerHTML = html;
   box.style.display = html ? 'block' : 'none';
 }
@@ -2271,7 +2280,7 @@ setTimeout(() => {
 async function refreshVideosFromDb() {
   try {
     const { data } = await sb.from('content_videos').select('*').eq('active', true).order('num').limit(1000);
-    if (data) { videos = data.map(r => ({ id: r.id, num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb })); renderVideos(); }
+    if (data) { videos = data.map(r => ({ id: r.id, num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb, sub_default: r.sub_default, crumb: r.crumb })); renderVideos(); }
   } catch (e) {}
 }
 async function refreshPqFromDb() {
@@ -2406,7 +2415,7 @@ async function loadData() {
     if (dbSyn.length) synonymGroups = dbSyn.map(r => ({ grup: r.grup, kelimeler: Array.isArray(r.kelimeler) ? r.kelimeler : JSON.parse(r.kelimeler || '[]') }));
     if (dbAnt.length) antonymPairs = dbAnt.map(r => ({ ru1: r.ru1, tr1: r.tr1, p1: r.p1, ru2: r.ru2, tr2: r.tr2, p2: r.p2 }));
     if (dbFam.length) wordFamilies = dbFam.map(r => ({ kok: r.kok, anlam: r.anlam, kelimeler: Array.isArray(r.kelimeler) ? r.kelimeler : JSON.parse(r.kelimeler || '[]') }));
-    if (dbVid.length) videos = dbVid.map(r => ({ id: r.id, num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb }));
+    if (dbVid.length) videos = dbVid.map(r => ({ id: r.id, num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb, sub_default: r.sub_default, crumb: r.crumb }));
   } catch (e) { _logDev('DB içerikleri işlenemedi:', e); }
   // Paragraf soruları (dosya yoksa site yine çalışsın diye ayrı try/catch)
   try {
@@ -5763,6 +5772,15 @@ async function adminVidSubs(videoId, title) {
   ov.innerHTML = `<div class="ui-modal" style="max-width:640px;max-height:88vh;overflow-y:auto;">
     <h3 class="ui-modal-title">💬 ${_escHtml(title)} — Altyazı</h3>
     <p class="pq-hint">Sadece istediğin bölümlere altyazı ekle (örn. AI animasyon kısımları). Boş bırakılan yerlerde altyazı görünmez.</p>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;padding:10px 12px;background:rgba(201,168,76,.06);border-radius:10px;">
+      <span style="font-size:.85rem;">Varsayılan altyazı modu:</span>
+      <select id="vs-default" class="pq-input" style="width:auto;" onchange="adminVidSubDefault('${videoId}', this.value)">
+        <option value="both">🇷🇺+🇹🇷 İkisi birlikte</option>
+        <option value="ru">🇷🇺 Sadece Rusça</option>
+        <option value="tr">🇹🇷 Sadece Türkçe</option>
+        <option value="off">Kapalı başlasın</option>
+      </select>
+    </div>
     <div style="margin-bottom:14px;">${listHTML}</div>
     <div class="admin-notif-card">
       <h3 class="an-h3">➕ Yeni Segment</h3>
@@ -5778,6 +5796,15 @@ async function adminVidSubs(videoId, title) {
   </div>`;
   ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
   document.body.appendChild(ov);
+  // Mevcut varsayılan modu yükle
+  sb.from('content_videos').select('sub_default').eq('id', videoId).single().then(r => {
+    const sel = document.getElementById('vs-default');
+    if (sel && r.data && r.data.sub_default) sel.value = r.data.sub_default;
+  }, () => {});
+}
+async function adminVidSubDefault(videoId, mode) {
+  try { await sb.from('content_videos').update({ sub_default: mode }).eq('id', videoId); toast('Varsayılan altyazı modu kaydedildi.'); }
+  catch (e) { uiAlert('Kaydedilemedi.'); }
 }
 function _parseT(str) {
   str = String(str||'').trim();
