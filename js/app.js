@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v104';
+var YDT_SURUM = 'v105';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1275,6 +1275,7 @@ async function openWatch(v) {
   const vb = document.getElementById('wc-vol'); if (vb) vb.innerHTML = _wVolIcon();
   // Başlangıçta büyük oynat ikonu göster
   const bs = document.getElementById('watch-bigstate'); if (bs) { bs.classList.add('show-play'); bs.classList.remove('show-pause','flash'); }
+  _wSyncReactionUI();
 }
 
 /* Önceki/sonraki video kutularını hazırla */
@@ -1294,23 +1295,71 @@ function _wGoAdjacent(dir) {
   _wCleanup();
   openWatch(hedef);
 }
-function _wLikeVideo(v) { toast(v>0?'👍 Beğendin':'👎 Beğenmedin'); }
-function _wBookmarkVideo() { toast('🔖 Kaydedildi'); }
-function _wRepeatLine() { _wSeekTo(Math.max(0, _wGetTime() - 6)); _wPlay(); }
+async function _wLikeVideo(v) {
+  if (!currentUser) { toast('Giriş yapmalısın.'); return; }
+  const cur = _w._reaction || {};
+  const yeni = (cur.liked === v) ? 0 : v; // aynı butona tekrar → geri al
+  try {
+    await sb.from('video_reactions').upsert(
+      { user_id: currentUser.id, video_id: _w.video.id, liked: yeni, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,video_id' });
+    _w._reaction = Object.assign({}, cur, { liked: yeni });
+    _wSyncReactionUI();
+    toast(yeni === 1 ? '👍 Beğendin' : yeni === -1 ? '👎 Beğenmedin' : 'Geri alındı');
+  } catch (e) { toast('İşlem başarısız.'); }
+}
+async function _wBookmarkVideo() {
+  if (!currentUser) { toast('Giriş yapmalısın.'); return; }
+  const cur = _w._reaction || {};
+  const yeni = !cur.saved;
+  try {
+    await sb.from('video_reactions').upsert(
+      { user_id: currentUser.id, video_id: _w.video.id, saved: yeni, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,video_id' });
+    _w._reaction = Object.assign({}, cur, { saved: yeni });
+    _wSyncReactionUI();
+    toast(yeni ? '🔖 Kaydedildi' : 'Kayıt kaldırıldı');
+  } catch (e) { toast('İşlem başarısız.'); }
+}
+function _wSyncReactionUI() {
+  const r = _w._reaction || {};
+  const box = document.querySelector('.watch-underbar-mid');
+  if (!box) return;
+  const btns = box.querySelectorAll('.wu-act');
+  if (btns[0]) btns[0].classList.toggle('active', r.liked === 1);
+  if (btns[1]) btns[1].classList.toggle('active', r.liked === -1);
+  if (btns[2]) btns[2].classList.toggle('active', !!r.saved);
+}
+/* Son cümleyi tekrar et — altyazı segmentine bağlı */
+function _wRepeatLine() {
+  const t = _wGetTime();
+  if (_w.subs && _w.subs.length) {
+    // Şu anki VEYA hemen önceki segmentin başına dön
+    let hedef = null;
+    for (const s of _w.subs) { if (s.start_sec <= t + 0.3) hedef = s; else break; }
+    if (hedef) { _wSeekTo(hedef.start_sec); _wPlay(); return; }
+  }
+  // Altyazı yoksa 6 sn geri (eski davranış)
+  _wSeekTo(Math.max(0, t - 6)); _wPlay();
+}
 
 async function _wLoadData(v) {
   try {
-    const [cards, chaps, notes, prevView, docs] = await Promise.all([
+    const [cards, chaps, notes, prevView, docs, subs, react] = await Promise.all([
       sb.from('video_cards').select('*').eq('video_id', v.id).eq('active', true).order('t_sec'),
       sb.from('video_chapters').select('*').eq('video_id', v.id).order('t_sec').then(r=>r,()=>({data:[]})),
       currentUser ? sb.from('video_notes').select('*').eq('video_id', v.id).eq('user_id', currentUser.id).order('t_sec').then(r=>r,()=>({data:[]})) : Promise.resolve({data:[]}),
       currentUser ? sb.from('video_views').select('id, completed').eq('video_id', v.id).eq('user_id', currentUser.id).limit(1).then(r=>r,()=>({data:[]})) : Promise.resolve({data:[]}),
-      sb.from('video_docs').select('*').eq('video_id', v.id).order('sort_order').then(r=>r,()=>({data:[]}))
+      sb.from('video_docs').select('*').eq('video_id', v.id).order('sort_order').then(r=>r,()=>({data:[]})),
+      sb.from('video_subtitles').select('*').eq('video_id', v.id).order('start_sec').then(r=>r,()=>({data:[]})),
+      currentUser ? sb.from('video_reactions').select('liked, saved').eq('video_id', v.id).eq('user_id', currentUser.id).limit(1).then(r=>r,()=>({data:[]})) : Promise.resolve({data:[]})
     ]);
     _w.cards = cards.data || [];
     _w.chapters = chaps.data || [];
     _w.notes = notes.data || [];
     _w.docs = (docs && docs.data) || [];
+    _w.subs = (subs && subs.data) || [];
+    _w._reaction = (react && react.data && react.data[0]) || { liked: 0, saved: false };
     _w.watchedBefore = !!(prevView.data && prevView.data.length); // daha önce izlemiş mi?
     // Bu kartlar geçmişte cevaplanmış mı? (card_answers)
     if (currentUser && _w.cards.length) {
@@ -1507,6 +1556,7 @@ function watchPiP() {
 function _wUpdateProgress() {
   if (!_w.ready) return;
   const cur = _wGetTime(), dur = _w.duration || 0;
+  _wUpdateCaption(cur);
   const fill = document.getElementById('wc-progress-fill');
   if (fill && dur) fill.style.width = Math.min(100, cur/dur*100) + '%';
   const fmt = s => Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0');
@@ -1514,6 +1564,19 @@ function _wUpdateProgress() {
   if (ce) ce.textContent = fmt(cur);
   if (de && dur) de.textContent = fmt(dur);
 }
+/* Altyazı: o anki segmenti göster (RU + TR) */
+function _wUpdateCaption(t) {
+  const box = document.getElementById('watch-caption'); if (!box) return;
+  if (!_w.ccOn || !_w.subs || !_w.subs.length) { box.style.display = 'none'; return; }
+  const seg = _w.subs.find(s => t >= s.start_sec && t <= s.end_sec);
+  if (!seg) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  let html = '';
+  if (seg.ru) html += `<div class="wcap-ru">${_escHtml(seg.ru)}</div>`;
+  if (seg.tr) html += `<div class="wcap-tr">${_escHtml(seg.tr)}</div>`;
+  box.innerHTML = html;
+  box.style.display = html ? 'block' : 'none';
+}
+
 function watchSeekBar(ev) {
   if (_wStrictMode()) { toast('🚧 Sıkı hoca modunda zaman çubuğu kilitli.'); return; }
   const bar = document.getElementById('wc-progress'); if (!bar || !_w.duration) return;
@@ -1691,10 +1754,10 @@ function _wShowCard(card, opts) {
     const idx = cps.findIndex(x => x.id === card.id);
     inner += `<div class="sv-card-head" style="justify-content:center;text-align:center;display:block;">📋 Kontrol Noktası</div>
       <div class="sv-card-sub" style="text-align:center;">Videonun devamı için aşağıdaki soruyu doğru cevaplamalısın.</div>
-      <div class="sv-progress-dots">
+      ${cps.length > 1 ? `<div class="sv-progress-dots">
         ${cps.map((_,k)=>`<span class="sv-dot ${k<idx?'done':k===idx?'cur':''}"></span>`).join('')}
         <span class="sv-progress-num">${idx+1}/${cps.length}</span>
-      </div>`;
+      </div>` : ''}`;
   } else {
     const ikon = { info:'💡', quiz:'❓', poll:'📊', topic:'📖' }[card.card_type] || '💡';
     inner += `<div class="sv-card-head">${ikon} ${_escHtml(card.title || '')}</div>`;
@@ -1824,8 +1887,10 @@ async function _wAnswerCard(cardId, i, correct, tip) {
       if (opts[i]) opts[i].classList.add('no');
       const geriSn = (card && card.back_sec != null) ? card.back_sec : Math.max(0, (card && card.t_sec ? card.t_sec : 0) - 45);
       const mm = Math.floor(geriSn/60), ss = String(geriSn%60).padStart(2,'0');
-      if (fb) fb.innerHTML = `❌ Yanlış. Konuyu tekrar izle, sonra soru yeniden karşına gelecek.
-        <button class="set-btn sv-card-back" onclick="_wResumeCardTemp(${cardId}, ${geriSn})">⏪ ${mm}:${ss}'e dön ve izle</button>`;
+      if (fb) fb.innerHTML = `<div class="sv-wrong-msg">Yanlış cevap. Konuyu tekrar izleyip yeniden deneyebilirsin.</div>
+        <button class="sv-card-back" onclick="_wResumeCardTemp(${cardId}, ${geriSn})">
+          <span class="sv-back-ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></span>
+          ${mm}:${ss} — Konuyu Tekrar İzle</button>`;
     }
     return;
   }
@@ -1997,9 +2062,12 @@ function _wOpenCard(cardId) {
 /* Kartı kapat (video oynamaya devam eder; blur kalmaz) */
 function _wCloseCard() {
   const box = document.getElementById('watch-card-overlay');
+  const kapananKart = _w.activeCard;
   if (box) { box.style.display = 'none'; box.innerHTML = ''; box.className = 'sv-card-overlay'; }
   _w.activeCard = null;
   _wRenderCards();
+  // Kart kapatılınca video oynamaya DEVAM ETSİN (sıkı checkpoint zaten kapatılamaz)
+  if (kapananKart) _wPlay();
 }
 
 /* ── Kişisel damgalar ── */
@@ -5463,6 +5531,8 @@ function renderCvList() {
              <button class="mail-act" onclick="adminVidCards('${r.id}', '${_escAttr(r.title||'')}')">🃏 Kartlar</button>
              <button class="mail-act" onclick="adminVidChapters('${r.id}', '${_escAttr(r.title||'')}')">📌 Bölümler</button>
              <button class="mail-act" onclick="adminVidDocs('${r.id}', '${_escAttr(r.title||'')}')">📄 Dökümanlar</button>
+             <button class="mail-act" onclick="adminVidSubs('${r.id}', '${_escAttr(r.title||'')}')">💬 Altyazı</button>
+             <button class="mail-act" onclick="adminVidStats('${r.id}', '${_escAttr(r.title||'')}')">📊 İstatistik</button>
              <button class="mail-act" onclick="adminVidTogglePremium('${r.id}', ${r.premium ? 'false' : 'true'})">${r.premium ? '🆓 Ücretsiz yap' : '👑 Premium yap'}</button>
              <button class="mail-act red" onclick="adminVidHide('${r.id}')">🗑️ Sil</button>`}
       </div>
@@ -5676,6 +5746,89 @@ async function adminVidDocDel(id, videoId, title) {
   try { await sb.from('video_docs').delete().eq('id', id);
     document.getElementById('vdoc-modal').remove(); adminVidDocs(videoId, title);
   } catch (e) {}
+}
+
+/* 💬 Altyazı Yönetimi (segment bazlı RU/TR) */
+async function adminVidSubs(videoId, title) {
+  let subs = [];
+  try { const { data } = await sb.from('video_subtitles').select('*').eq('video_id', videoId).order('start_sec'); subs = data || []; } catch (e) {}
+  const ov = document.createElement('div');
+  ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9400'; ov.id = 'vsub-modal';
+  const listHTML = subs.length ? subs.map(s => `
+    <div class="cw-row" style="padding:8px 11px;">
+      <div class="cw-main"><b>${_fmtT(s.start_sec)}–${_fmtT(s.end_sec)}</b>
+        <div class="err-meta">🇷🇺 ${_escHtml(s.ru||'')}<br>🇹🇷 ${_escHtml(s.tr||'')}</div></div>
+      <div class="cw-acts"><button class="mail-act red" onclick="adminVidSubDel(${s.id},'${videoId}','${_escAttr(title)}')">🗑️</button></div>
+    </div>`).join('') : '<div class="profile-empty">Henüz altyazı segmenti yok.</div>';
+  ov.innerHTML = `<div class="ui-modal" style="max-width:640px;max-height:88vh;overflow-y:auto;">
+    <h3 class="ui-modal-title">💬 ${_escHtml(title)} — Altyazı</h3>
+    <p class="pq-hint">Sadece istediğin bölümlere altyazı ekle (örn. AI animasyon kısımları). Boş bırakılan yerlerde altyazı görünmez.</p>
+    <div style="margin-bottom:14px;">${listHTML}</div>
+    <div class="admin-notif-card">
+      <h3 class="an-h3">➕ Yeni Segment</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <input id="vs-start" class="pq-input" placeholder="Başlangıç (sn veya dk:sn)" style="flex:1;min-width:130px;">
+        <input id="vs-end" class="pq-input" placeholder="Bitiş (sn veya dk:sn)" style="flex:1;min-width:130px;">
+      </div>
+      <input id="vs-ru" class="pq-input" placeholder="🇷🇺 Rusça altyazı" style="width:100%;margin-bottom:8px;">
+      <input id="vs-tr" class="pq-input" placeholder="🇹🇷 Türkçe altyazı" style="width:100%;margin-bottom:10px;">
+      <button class="set-btn" onclick="adminVidSubAdd('${videoId}','${_escAttr(title)}')">Ekle</button>
+      <button class="set-btn ghost" onclick="document.getElementById('vsub-modal').remove()" style="margin-left:8px;">Kapat</button>
+    </div>
+  </div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+function _parseT(str) {
+  str = String(str||'').trim();
+  if (str.includes(':')) { const [m,s] = str.split(':').map(x=>parseFloat(x)||0); return m*60+s; }
+  return parseFloat(str) || 0;
+}
+function _fmtT(sec) { return Math.floor(sec/60) + ':' + String(Math.floor(sec%60)).padStart(2,'0'); }
+async function adminVidSubAdd(videoId, title) {
+  const st = _parseT((document.getElementById('vs-start')||{}).value);
+  const en = _parseT((document.getElementById('vs-end')||{}).value);
+  const ru = ((document.getElementById('vs-ru')||{}).value||'').trim();
+  const tr = ((document.getElementById('vs-tr')||{}).value||'').trim();
+  if (en <= st) { uiAlert('Bitiş, başlangıçtan büyük olmalı.'); return; }
+  if (!ru && !tr) { uiAlert('En az bir dilde altyazı gir.'); return; }
+  try {
+    const { error } = await sb.from('video_subtitles').insert({ video_id: videoId, start_sec: st, end_sec: en, ru: ru||null, tr: tr||null });
+    if (error) throw error;
+    document.getElementById('vsub-modal').remove(); toast('💬 Altyazı eklendi.'); adminVidSubs(videoId, title);
+  } catch (e) { uiAlert('Eklenemedi: ' + ((e&&e.message)||e)); }
+}
+async function adminVidSubDel(id, videoId, title) {
+  const ok = await uiConfirm('Bu altyazı segmenti silinsin mi?'); if (!ok) return;
+  try { await sb.from('video_subtitles').delete().eq('id', id);
+    document.getElementById('vsub-modal').remove(); adminVidSubs(videoId, title);
+  } catch (e) {}
+}
+
+/* 📊 Video İstatistikleri */
+async function adminVidStats(videoId, title) {
+  const ov = document.createElement('div');
+  ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9400'; ov.id = 'vstat-modal';
+  ov.innerHTML = `<div class="ui-modal" style="max-width:520px;"><h3 class="ui-modal-title">📊 ${_escHtml(title)} — İstatistik</h3>
+    <div id="vstat-body"><div class="admin-loading">Yükleniyor...</div></div>
+    <button class="set-btn ghost" style="margin-top:14px;" onclick="document.getElementById('vstat-modal').remove()">Kapat</button></div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+  try {
+    const { data } = await sb.from('video_stats').select('*').eq('video_id', videoId).single();
+    const s = data || {};
+    const kart = (ik, ad, deg) => `<div class="vstat-card"><div class="vstat-ic">${ik}</div><div class="vstat-num">${deg||0}</div><div class="vstat-lbl">${ad}</div></div>`;
+    document.getElementById('vstat-body').innerHTML = `<div class="vstat-grid">
+      ${kart('👁️','Toplam İzlenme',s.izlenme)}
+      ${kart('👤','Tekil İzleyici',s.tekil_izleyici)}
+      ${kart('✅','Tamamlayan',s.tamamlanan)}
+      ${kart('👍','Beğeni',s.begeni)}
+      ${kart('👎','Beğenmeme',s.begenmeme)}
+      ${kart('🔖','Kaydedilme',s.kaydedilme)}
+    </div>`;
+  } catch (e) {
+    document.getElementById('vstat-body').innerHTML = '<div class="profile-empty">İstatistik alınamadı (altyazi_reaksiyon_istatistik.sql çalıştırıldı mı?).</div>';
+  }
 }
 
 async function adminVidCards(videoId, title) {
