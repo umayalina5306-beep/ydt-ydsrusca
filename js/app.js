@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v102';
+var YDT_SURUM = 'v103';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1327,7 +1327,7 @@ function _wInitYouTube(v) {
   // YT arayüzünü maskele: üst bilgi barı + kendi büyük başlat butonumuz
   host.innerHTML = '<div id="yt-target"></div>' +
     '<div class="yt-mask-top"></div>' +
-    '<div class="yt-bigplay" id="yt-bigplay" onclick="_wYtBigPlay()"><div class="yt-bigplay-btn">▶</div></div>';
+    '<div class="yt-bigplay" id="yt-bigplay" onclick="_wYtBigPlay()"><div class="yt-bigplay-btn"><svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>';
   const mount = () => {
     try {
       _w.player = new YT.Player('yt-target', {
@@ -1452,6 +1452,23 @@ function watchSetSpeed(r) {
     localStorage.setItem('ydt_video_speed', r);
   } catch (e) {}
 }
+function _wToggleSpeedMenu(ev) {
+  if (ev) ev.stopPropagation();
+  const m = document.getElementById('wc-speed-menu'); if (m) m.classList.toggle('open');
+}
+function _wPickSpeed(r) {
+  watchSetSpeed(r);
+  const btn = document.getElementById('wc-speed-btn'); if (btn) btn.textContent = r + 'x ▾';
+  const menu = document.getElementById('wc-speed-menu');
+  if (menu) {
+    menu.classList.remove('open');
+    menu.querySelectorAll('button').forEach(b => b.classList.toggle('active', parseFloat(b.textContent) === r));
+  }
+}
+document.addEventListener('click', function(e) {
+  const wrap = document.querySelector('.wc-speed-wrap');
+  if (wrap && !wrap.contains(e.target)) { const m = document.getElementById('wc-speed-menu'); if (m) m.classList.remove('open'); }
+});
 
 /* Ses kontrolü */
 function watchSetVolume(v) {
@@ -1471,7 +1488,7 @@ function watchToggleMute() {
 /* Altyazı aç/kapa (Stream native; YouTube CC modülü) */
 function watchToggleCaption() {
   _w.ccOn = !_w.ccOn;
-  const b = document.getElementById('wc-cc'); if (b) b.style.opacity = _w.ccOn ? '1' : '.45';
+  const b = document.getElementById('wc-cc'); if (b) b.classList.toggle('off', !_w.ccOn);
   try {
     if (_w.kind === 'stream' && _w.player) {
       const tt = _w.player.textTracks && _w.player.textTracks();
@@ -1537,7 +1554,9 @@ function wnCycleTimeMode() {
 function _wSyncPlayBtn(playing) {
   const b = document.getElementById('wc-play');
   if (b) b.textContent = playing ? '⏸' : '▶';
-  _wShowControls();  // durum değişiminde kontroller görünsün
+  const box = document.getElementById('watch-player-box');
+  if (box) box.classList.toggle('playing', playing);
+  _wShowControls();
 }
 function watchFullscreen() {
   const wrap = document.getElementById('watch-wrap');
@@ -1703,13 +1722,18 @@ function _wShowCard(card, opts) {
 /* Kart alt bölümü (devam/geri butonları + skip) */
 function _wCardFootHTML(card, soruTip, strict) {
   let f = '<div class="sv-card-foot">';
-  if (strict) {
-    f += `<button class="sv-card-back-btn" onclick="_wResumeCardTemp(${card.id}, ${(card.back_sec!=null?card.back_sec:Math.max(0,(card.t_sec||0)-45))})">↺ Bölümü Yeniden İzle</button>
-      <button class="set-btn sv-card-continue" onclick="_wAnswerCheck(${card.id})">Cevabı Kontrol Et →</button>`;
+  // Kontrol noktası: her zaman "Cevabı Kontrol Et" akışı (seç → kontrol et)
+  if (card.card_type === 'checkpoint') {
+    const geri = (card.back_sec!=null?card.back_sec:Math.max(0,(card.t_sec||0)-45));
+    if (strict) {
+      f += `<button class="sv-card-back-btn" onclick="_wResumeCardTemp(${card.id}, ${geri})">↺ Bölümü Yeniden İzle</button>`;
+    }
+    f += `<button class="set-btn sv-card-continue" id="sv-check-btn" onclick="_wAnswerCheck(${card.id})">Cevabı Kontrol Et →</button>`;
     f += '</div>';
-    f += `<div class="sv-card-skip"><button onclick="_wSkipCheckpoint(${card.id})">» Bu kontrol noktasını geç (Ayarlardan değiştirilebilir)</button></div>`;
+    if (strict) f += `<div class="sv-card-skip"><button onclick="_wSkipCheckpoint(${card.id})">» Bu kontrol noktasını geç (Ayarlardan değiştirilebilir)</button></div>`;
     return f;
   }
+  // Diğer soru tipleri (quiz): şık tıklayınca hemen işlenir, devam gizli başlar
   if (soruTip) {
     f += `<button class="set-btn sv-card-continue" style="display:none;" onclick="_wResumeCard(${card.id})">▶ Devam Et</button>`;
   } else {
@@ -1752,8 +1776,8 @@ async function _wAnswerCard(cardId, i, correct, tip) {
   const card = _w.activeCard;
   const strict = tip === 'checkpoint' && _wStrictMode();
 
-  // Sıkı checkpoint: şık tıklama = sadece SEÇİM; işlem "Cevabı Kontrol Et" ile
-  if (strict && !_w._checking) {
+  // Kontrol noktası: şık tıklama = sadece SEÇİM; gerçek kontrol "Cevabı Kontrol Et" ile
+  if (tip === 'checkpoint' && !_w._checking) {
     opts.forEach(b => b.classList.remove('sel'));
     if (opts[i]) opts[i].classList.add('sel');
     return;
@@ -1809,8 +1833,14 @@ async function _wAnswerCard(cardId, i, correct, tip) {
   _w.answered[cardId] = true;
   await _wSaveAnswer(cardId, i, dogru);
   try { logActivity('questions', 1); } catch (e) {}
-  const cont = document.querySelector('.sv-card-continue');
-  if (cont) cont.style.display = '';
+  // Checkpoint (normal mod): "Cevabı Kontrol Et" butonunu "Devam Et"e dönüştür
+  if (tip === 'checkpoint') {
+    const foot = document.querySelector('.sv-card-foot');
+    if (foot) foot.innerHTML = `<button class="set-btn sv-card-continue" onclick="_wResumeCard(${cardId})">▶ Devam Et</button>`;
+  } else {
+    const cont = document.querySelector('.sv-card-continue');
+    if (cont) cont.style.display = '';
+  }
 }
 
 /* Sıkı modda "geri dön izle": kartı kapat, geri sar, oynat.
@@ -2154,8 +2184,7 @@ document.addEventListener('keydown', function(e) {
 /* Kaydedilmiş hız tercihi */
 setTimeout(() => {
   const sp = localStorage.getItem('ydt_video_speed');
-  const sel = document.getElementById('wc-speed');
-  if (sp && sel) sel.value = sp;
+  if (sp) { const btn = document.getElementById('wc-speed-btn'); if (btn) btn.textContent = sp + 'x ▾'; }
   // Video izleme tercihleri
   const cm = document.getElementById('set-card-mode');
   if (cm) cm.value = localStorage.getItem('ydt_card_mode') || 'pause';
