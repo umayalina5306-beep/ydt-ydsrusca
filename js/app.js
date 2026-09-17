@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v107';
+var YDT_SURUM = 'v108';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1567,14 +1567,25 @@ function watchToggleCaption() {
   _wUpdateCaption(_wGetTime());
 }
 /* Resim içinde resim */
-function watchPiP() {
+async function watchPiP() {
   try {
-    if (document.pictureInPictureElement) { document.exitPictureInPicture(); return; }
-    // Stream: gerçek <video> elementi PiP destekler
-    const vid = document.querySelector('#watch-player video');
-    if (vid && vid.requestPictureInPicture) { vid.requestPictureInPicture(); return; }
-    toast('Mini oynatıcı bu videoda kullanılamıyor.');
-  } catch (e) { toast('Mini oynatıcı açılamadı.'); }
+    if (document.pictureInPictureElement) { await document.exitPictureInPicture(); return; }
+    // 1) Sayfada gerçek <video> varsa (Stream bazı modlarda expose eder)
+    const vid = document.querySelector('#watch-player video, #w-sframe');
+    const realVideo = document.querySelector('#watch-player video');
+    if (realVideo && realVideo.requestPictureInPicture) { await realVideo.requestPictureInPicture(); return; }
+    // 2) Stream SDK üzerinden dene
+    if (_w.kind === 'stream' && _w.player) {
+      // Cloudflare Stream player'ın kendi iframe'i; PiP'i iframe içinden tetiklemek için postMessage
+      try {
+        const ifr = document.getElementById('w-sframe');
+        if (ifr && ifr.requestPictureInPicture) { await ifr.requestPictureInPicture(); return; }
+      } catch (e) {}
+    }
+    toast('Mini oynatıcı yalnız premium (Stream) videolarda ve destekleyen tarayıcılarda çalışır.');
+  } catch (e) {
+    toast('Mini oynatıcı bu tarayıcıda açılamadı.');
+  }
 }
 /* Progress bar */
 function _wUpdateProgress() {
@@ -1618,13 +1629,84 @@ function _wRenderDocs() {
     return;
   }
   const ikon = { pdf:'📕', link:'🔗', file:'📎' };
-  box.innerHTML = _w.docs.map(d => `
-    <a class="wdoc-item" href="${_escAttr(d.url)}" target="_blank" rel="noopener">
+  box.innerHTML = _w.docs.map((d, i) => {
+    // PDF/dosya → site içi görüntüleyicide aç; salt bağlantı → yeni sekme
+    const icAcilir = (d.doc_type === 'pdf' || d.doc_type === 'file');
+    const tik = icAcilir ? `onclick="_wOpenDoc(${i})"` : `onclick="window.open('${_escAttr(d.url)}','_blank')"`;
+    return `<div class="wdoc-item" ${tik}>
       <div class="wdoc-ic">${ikon[d.doc_type] || '📄'}</div>
       <div class="wdoc-info"><div class="wdoc-title">${_escHtml(d.title)}</div>
         ${d.descr ? `<div class="wdoc-desc">${_escHtml(d.descr)}</div>` : ''}</div>
-      <span class="wdoc-arrow">→</span>
-    </a>`).join('');
+      <span class="wdoc-arrow">${icAcilir ? '⤢' : '↗'}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ── Döküman görüntüleyici (lacivert alan içinde, büyüme animasyonlu) ── */
+let _wDocZoom = 1, _wDocOpenIdx = -1;
+function _wOpenDoc(i) {
+  const d = _w.docs[i]; if (!d) return;
+  // Aynı dökümana tekrar tıklanırsa kapat (toggle)
+  if (_wDocOpenIdx === i) { _wCloseDoc(); return; }
+  _wDocOpenIdx = i; _wDocZoom = 1;
+  let ov = document.getElementById('wdoc-viewer');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'wdoc-viewer'; ov.className = 'wdoc-viewer';
+    // Görüntüleyici sağ panelin (lacivert alan) içine yerleşir
+    const side = document.getElementById('watch-side') || document.body;
+    side.appendChild(ov);
+  }
+  ov.innerHTML = `
+    <div class="wdv-bar">
+      <div class="wdv-title">📄 ${_escHtml(d.title)}</div>
+      <div class="wdv-tools">
+        <button class="wdv-btn" onclick="_wDocZoomBy(-0.2)" title="Uzaklaştır">−</button>
+        <span class="wdv-zoom" id="wdv-zoom">%100</span>
+        <button class="wdv-btn" onclick="_wDocZoomBy(0.2)" title="Yakınlaştır">+</button>
+        <a class="wdv-btn" href="${_escAttr(d.url)}" download target="_blank" title="İndir">⬇</a>
+        <button class="wdv-btn wdv-close" onclick="_wCloseDoc()" title="Kapat">✕</button>
+      </div>
+    </div>
+    <div class="wdv-body" id="wdv-body">
+      <div class="wdv-inner" id="wdv-inner" style="transform:scale(1);">
+        ${_wDocEmbed(d)}
+      </div>
+    </div>`;
+  // Büyüme animasyonu
+  ov.classList.remove('open'); void ov.offsetWidth; ov.classList.add('open');
+  _wRenderDocs(); // aktif işaretini güncelle
+}
+function _wDocEmbed(d) {
+  const url = d.url || '';
+  const isPdf = d.doc_type === 'pdf' || /\.pdf($|\?)/i.test(url);
+  if (isPdf) {
+    return `<iframe class="wdv-frame" src="${_escAttr(url)}#toolbar=0&navpanes=0" title="PDF"></iframe>`;
+  }
+  // Görsel dosyalar
+  if (/\.(png|jpe?g|gif|webp)($|\?)/i.test(url)) {
+    return `<img class="wdv-img" src="${_escAttr(url)}" alt="${_escAttr(d.title)}">`;
+  }
+  // Diğer dosyalar (docx/xlsx vb.) → Office/Google görüntüleyici ile göm
+  const gv = 'https://docs.google.com/gview?embedded=1&url=' + encodeURIComponent(url);
+  return `<iframe class="wdv-frame" src="${_escAttr(gv)}" title="Döküman"></iframe>`;
+}
+function _wDocZoomBy(delta) {
+  _wDocZoom = Math.max(0.4, Math.min(3, _wDocZoom + delta));
+  const inner = document.getElementById('wdv-inner');
+  const lbl = document.getElementById('wdv-zoom');
+  if (inner) inner.style.transform = 'scale(' + _wDocZoom + ')';
+  if (lbl) lbl.textContent = '%' + Math.round(_wDocZoom * 100);
+}
+function _wCloseDoc() {
+  const ov = document.getElementById('wdoc-viewer');
+  if (ov) {
+    ov.classList.remove('open');
+    ov.classList.add('closing');
+    setTimeout(() => { if (ov) ov.remove(); }, 220); // küçülme animasyonu bitince kaldır
+  }
+  _wDocOpenIdx = -1;
+  _wRenderDocs();
 }
 
 /* Not zaman modu (3'lü döngü: şu an → belirli an → genel) */
