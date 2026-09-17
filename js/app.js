@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v110';
+var YDT_SURUM = 'v111';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1679,11 +1679,12 @@ function _wOpenDoc(i) {
   } else {
     list.appendChild(ov);
   }
+  // Aktif kartı işaretle (listeyi yeniden ÇİZMEDEN — yoksa viewer silinir)
+  list.querySelectorAll('.wdoc-item').forEach((el, idx) => el.classList.toggle('active', idx === i));
   // Aşağı doğru açılma animasyonu (yükseklik 0 → tam)
   void ov.offsetWidth; ov.classList.add('open');
-  _wRenderDocs();
   // Açılan viewer görünür olsun diye panele kaydır
-  setTimeout(() => { try { ov.scrollIntoView({ behavior:'smooth', block:'nearest' }); } catch(e){} }, 100);
+  setTimeout(() => { try { ov.scrollIntoView({ behavior:'smooth', block:'nearest' }); } catch(e){} }, 120);
 }
 function _wDocEmbed(d) {
   const url = d.url || '';
@@ -1713,11 +1714,12 @@ function _wCloseDoc() {
   const ov = document.getElementById('wdoc-viewer');
   if (ov) {
     ov.classList.remove('open');  // yükseklik tam → 0 (yukarı kapanma animasyonu)
-    setTimeout(() => { if (ov && ov.parentNode) ov.remove(); }, 300);
+    setTimeout(() => { if (ov && ov.parentNode) ov.remove(); }, 320);
   }
   _wDocOpenIdx = -1;
-  // Liste yeniden çizilince alttaki dökümanlar yukarı kayar
-  setTimeout(() => { if (_wDocOpenIdx === -1) _wRenderDocs(); }, 300);
+  // Aktif işaretini temizle (listeyi yeniden çizmeye gerek yok)
+  const list = document.getElementById('wdoc-list');
+  if (list) list.querySelectorAll('.wdoc-item').forEach(el => el.classList.remove('active'));
 }
 
 /* Not zaman modu (3'lü döngü: şu an → belirli an → genel) */
