@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v109';
+var YDT_SURUM = 'v110';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1649,14 +1649,13 @@ function _wOpenDoc(i) {
   // Aynı dökümana tekrar tıklanırsa kapat (toggle)
   if (_wDocOpenIdx === i) { _wCloseDoc(); return; }
   _wDocOpenIdx = i; _wDocZoom = 1;
-  let ov = document.getElementById('wdoc-viewer');
-  if (!ov) {
-    ov = document.createElement('div');
-    ov.id = 'wdoc-viewer'; ov.className = 'wdoc-viewer';
-    // Görüntüleyici geniş izleme alanına (oynatıcı bölgesi) yerleşir — tüm alanı kaplar
-    const host = document.getElementById('watch-main') || document.querySelector('.watch-main') || document.body;
-    host.appendChild(ov);
-  }
+  // Önceki viewer'ı kaldır
+  const eski = document.getElementById('wdoc-viewer');
+  if (eski) eski.remove();
+  // Viewer'ı DÖKÜMANLAR LİSTESİNİN İÇİNE, akış içinde ekle (panel aşağı uzar — absolute değil)
+  const list = document.getElementById('wdoc-list'); if (!list) return;
+  const ov = document.createElement('div');
+  ov.id = 'wdoc-viewer'; ov.className = 'wdoc-viewer';
   ov.innerHTML = `
     <div class="wdv-bar">
       <div class="wdv-title">📄 ${_escHtml(d.title)}</div>
@@ -1669,13 +1668,22 @@ function _wOpenDoc(i) {
       </div>
     </div>
     <div class="wdv-body" id="wdv-body">
-      <div class="wdv-inner" id="wdv-inner" style="transform:scale(1);">
+      <div class="wdv-inner" id="wdv-inner">
         ${_wDocEmbed(d)}
       </div>
     </div>`;
-  // Büyüme animasyonu
-  ov.classList.remove('open'); void ov.offsetWidth; ov.classList.add('open');
-  _wRenderDocs(); // aktif işaretini güncelle
+  // Tıklanan dökümanın hemen ALTINA ekle (o kart açılmış gibi)
+  const items = list.querySelectorAll('.wdoc-item');
+  if (items[i] && items[i].nextSibling) {
+    list.insertBefore(ov, items[i].nextSibling);
+  } else {
+    list.appendChild(ov);
+  }
+  // Aşağı doğru açılma animasyonu (yükseklik 0 → tam)
+  void ov.offsetWidth; ov.classList.add('open');
+  _wRenderDocs();
+  // Açılan viewer görünür olsun diye panele kaydır
+  setTimeout(() => { try { ov.scrollIntoView({ behavior:'smooth', block:'nearest' }); } catch(e){} }, 100);
 }
 function _wDocEmbed(d) {
   const url = d.url || '';
@@ -1693,21 +1701,23 @@ function _wDocEmbed(d) {
 }
 function _wDocZoomBy(delta) {
   _wDocZoom = Math.max(0.5, Math.min(3, _wDocZoom + delta));
-  const inner = document.getElementById('wdv-inner');
   const lbl = document.getElementById('wdv-zoom');
-  // Zoom: iç içeriği büyüt (genişlik %); iframe/görsel büyür, dış kutu scroll eder
-  if (inner) inner.style.width = (_wDocZoom * 100) + '%';
+  const frame = document.querySelector('#wdv-inner .wdv-frame');
+  const img = document.querySelector('#wdv-inner .wdv-img');
+  // Zoom: PDF frame yüksekliğini / görsel genişliğini artır (dış kutu scroll eder)
+  if (frame) frame.style.height = Math.round(360 * _wDocZoom) + 'px';
+  if (img) img.style.width = (_wDocZoom * 100) + '%';
   if (lbl) lbl.textContent = '%' + Math.round(_wDocZoom * 100);
 }
 function _wCloseDoc() {
   const ov = document.getElementById('wdoc-viewer');
   if (ov) {
-    ov.classList.remove('open');
-    ov.classList.add('closing');
-    setTimeout(() => { if (ov) ov.remove(); }, 220); // küçülme animasyonu bitince kaldır
+    ov.classList.remove('open');  // yükseklik tam → 0 (yukarı kapanma animasyonu)
+    setTimeout(() => { if (ov && ov.parentNode) ov.remove(); }, 300);
   }
   _wDocOpenIdx = -1;
-  _wRenderDocs();
+  // Liste yeniden çizilince alttaki dökümanlar yukarı kayar
+  setTimeout(() => { if (_wDocOpenIdx === -1) _wRenderDocs(); }, 300);
 }
 
 /* Not zaman modu (3'lü döngü: şu an → belirli an → genel) */
