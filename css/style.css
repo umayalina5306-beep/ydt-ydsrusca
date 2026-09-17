@@ -3218,3 +3218,26 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .watch-error-title { font-size:1.15rem; font-weight:700; color:#fff; }
 .watch-error-sub { font-size:.9rem; color:#9fb0c5; max-width:340px; line-height:1.5; }
 .watch-error .set-btn { background:var(--gold); color:#0d1b2a; border:none; margin-top:4px; }
+
+/* ═══ v108: Video döküman görüntüleyici (lacivert alan içinde, animasyonlu) ═══ */
+.wdoc-item { cursor:pointer; }
+.wdoc-viewer { position:absolute; inset:0; z-index:30; background:var(--dark,#0d1b2a);
+  display:flex; flex-direction:column; border-radius:14px; overflow:hidden;
+  transform:scale(.92); opacity:0; transition:transform .22s cubic-bezier(.2,.8,.3,1), opacity .22s ease;
+  box-shadow:0 8px 40px rgba(0,0,0,.5); }
+.wdoc-viewer.open { transform:scale(1); opacity:1; }
+.wdoc-viewer.closing { transform:scale(.92); opacity:0; }
+.wdv-bar { display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:10px 14px; background:#0a1420; border-bottom:1px solid rgba(255,255,255,.1); flex-shrink:0; }
+.wdv-title { font-size:.9rem; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.wdv-tools { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.wdv-btn { display:flex; align-items:center; justify-content:center; min-width:32px; height:32px;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); color:#e8edf5;
+  border-radius:8px; cursor:pointer; font-size:1rem; text-decoration:none; padding:0 8px; transition:all .15s; }
+.wdv-btn:hover { background:var(--gold); color:#0d1b2a; border-color:var(--gold); }
+.wdv-close:hover { background:var(--red,#cc0000); color:#fff; border-color:var(--red,#cc0000); }
+.wdv-zoom { font-size:.78rem; color:#9fb0c5; min-width:44px; text-align:center; font-variant-numeric:tabular-nums; }
+.wdv-body { flex:1; overflow:auto; background:#1a1d27; padding:12px; }
+.wdv-inner { transform-origin:top center; transition:transform .15s ease; min-height:100%; }
+.wdv-frame { width:100%; height:70vh; min-height:480px; border:0; border-radius:8px; background:#fff; display:block; }
+.wdv-img { width:100%; height:auto; border-radius:8px; display:block; }
