@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v108';
+var YDT_SURUM = 'v109';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1653,9 +1653,9 @@ function _wOpenDoc(i) {
   if (!ov) {
     ov = document.createElement('div');
     ov.id = 'wdoc-viewer'; ov.className = 'wdoc-viewer';
-    // Görüntüleyici sağ panelin (lacivert alan) içine yerleşir
-    const side = document.getElementById('watch-side') || document.body;
-    side.appendChild(ov);
+    // Görüntüleyici geniş izleme alanına (oynatıcı bölgesi) yerleşir — tüm alanı kaplar
+    const host = document.getElementById('watch-main') || document.querySelector('.watch-main') || document.body;
+    host.appendChild(ov);
   }
   ov.innerHTML = `
     <div class="wdv-bar">
@@ -1692,10 +1692,11 @@ function _wDocEmbed(d) {
   return `<iframe class="wdv-frame" src="${_escAttr(gv)}" title="Döküman"></iframe>`;
 }
 function _wDocZoomBy(delta) {
-  _wDocZoom = Math.max(0.4, Math.min(3, _wDocZoom + delta));
+  _wDocZoom = Math.max(0.5, Math.min(3, _wDocZoom + delta));
   const inner = document.getElementById('wdv-inner');
   const lbl = document.getElementById('wdv-zoom');
-  if (inner) inner.style.transform = 'scale(' + _wDocZoom + ')';
+  // Zoom: iç içeriği büyüt (genişlik %); iframe/görsel büyür, dış kutu scroll eder
+  if (inner) inner.style.width = (_wDocZoom * 100) + '%';
   if (lbl) lbl.textContent = '%' + Math.round(_wDocZoom * 100);
 }
 function _wCloseDoc() {
