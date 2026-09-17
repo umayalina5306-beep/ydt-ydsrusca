@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v111';
+var YDT_SURUM = 'v112';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1690,7 +1690,7 @@ function _wDocEmbed(d) {
   const url = d.url || '';
   const isPdf = d.doc_type === 'pdf' || /\.pdf($|\?)/i.test(url);
   if (isPdf) {
-    return `<iframe class="wdv-frame" src="${_escAttr(url)}#toolbar=0&navpanes=0" title="PDF"></iframe>`;
+    return `<iframe class="wdv-frame" data-baseurl="${_escAttr(url)}" src="${_escAttr(url)}#zoom=100&toolbar=0&navpanes=0" title="PDF"></iframe>`;
   }
   // Görsel dosyalar
   if (/\.(png|jpe?g|gif|webp)($|\?)/i.test(url)) {
@@ -1701,13 +1701,22 @@ function _wDocEmbed(d) {
   return `<iframe class="wdv-frame" src="${_escAttr(gv)}" title="Döküman"></iframe>`;
 }
 function _wDocZoomBy(delta) {
-  _wDocZoom = Math.max(0.5, Math.min(3, _wDocZoom + delta));
+  _wDocZoom = Math.max(0.5, Math.min(3, +(_wDocZoom + delta).toFixed(2)));
   const lbl = document.getElementById('wdv-zoom');
   const frame = document.querySelector('#wdv-inner .wdv-frame');
   const img = document.querySelector('#wdv-inner .wdv-img');
-  // Zoom: PDF frame yüksekliğini / görsel genişliğini artır (dış kutu scroll eder)
-  if (frame) frame.style.height = Math.round(360 * _wDocZoom) + 'px';
-  if (img) img.style.width = (_wDocZoom * 100) + '%';
+  if (frame) {
+    // PDF: tarayıcının yerleşik görüntüleyicisine #zoom= parametresiyle söyle (gerçek yakınlaşma)
+    const base = frame.getAttribute('data-baseurl') || frame.src.split('#')[0];
+    if (!frame.getAttribute('data-baseurl')) frame.setAttribute('data-baseurl', base);
+    const yuzde = Math.round(_wDocZoom * 100);
+    frame.src = base + '#zoom=' + yuzde + '&toolbar=0&navpanes=0';
+  }
+  if (img) {
+    // Görsel: aynı kaynak → gerçek transform scale
+    img.style.transformOrigin = 'top left';
+    img.style.transform = 'scale(' + _wDocZoom + ')';
+  }
   if (lbl) lbl.textContent = '%' + Math.round(_wDocZoom * 100);
 }
 function _wCloseDoc() {
