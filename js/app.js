@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v117';
+var YDT_SURUM = 'v118';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1390,7 +1390,12 @@ function _wInitYouTube(v) {
           iv_load_policy: 3, fs: 0, showinfo: 0, cc_load_policy: 0, autohide: 1, origin: location.origin
         },
         events: {
-          onReady: (e) => { _w.ready = true; _w.duration = e.target.getDuration() || 0; _wSaveDuration(); _wStartLog(); },
+          onReady: (e) => {
+            _w.ready = true; _w.duration = e.target.getDuration() || 0; _wSaveDuration(); _wStartLog();
+            // YouTube'un kendi altyazısını kapat (bizim altyazı sistemimiz devrede)
+            try { e.target.unloadModule('captions'); e.target.unloadModule('cc'); } catch (x) {}
+            try { e.target.setOption('captions', 'track', {}); } catch (x) {}
+          },
           onStateChange: (e) => {
             _wSyncPlayBtn(e.data === 1);
             if (e.data === 0) _wOnEnded();
@@ -1900,13 +1905,28 @@ function _wTick() {
 function _wCardMode() { return localStorage.getItem('ydt_card_mode') || 'pause'; } // pause | collect
 function _wStrictMode() { return localStorage.getItem('ydt_strict_mode') === '1'; }
 
+/* Yan paneldeki kartı 2 kez parlat (site rengi, yazı okunaklı kalır) */
+function _wFlashCard(cardId) {
+  try {
+    const el = document.querySelector('.wcard[data-cid="' + cardId + '"]');
+    if (!el) return;
+    el.classList.remove('wcard-flash'); void el.offsetWidth;
+    el.classList.add('wcard-flash');
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    setTimeout(() => el.classList.remove('wcard-flash'), 1100);
+  } catch (e) {}
+}
 function _wTriggerCard(card) {
+  // Kart zamanı geldi → yan paneldeki ilgili kartı site renginde parlat (dikkat çeksin)
+  _wFlashCard(card.id);
   // Tekrar izlemede otomatik duraklatma kapalı → her zaman biriktir
   const biriktir = _wCardMode() === 'collect' || _w.watchedBefore;
   if (biriktir && card.card_type !== 'checkpoint') {
     _w.pending.push(card);
     _wUpdateBadge();
     _wRenderCards();
+    // Yeni gelen kartı minimal animasyonla vurgula
+    setTimeout(() => _wFlashCard(card.id), 60);
   } else {
     _wShowCard(card);
     // İlk kez otomatik duraklama bilgisi
@@ -2247,8 +2267,13 @@ function _wRenderCards() {
       : ({info:'Bilgi',quiz:'Soru',poll:'Anket',topic:'Konu',checkpoint:'Kontrol'}[card.card_type]||'');
     const yildiz = _w.answered[card.id] ? 'on' : '';
     const thumb = card.thumb ? `<img class="wcard-thumb" src="${_escAttr(card.thumb)}" alt="">` : '';
-    return `<div class="wcard${_w.activeCard&&_w.activeCard.id===card.id?' active':''}" onclick="_wOpenCard(${card.id})">
-      <span class="wcard-sound" onclick="event.stopPropagation();speak('${_escAttr(ana)}')">${_wVolIcon()}</span>
+    // SADECE kelime kartında ses butonu; diğerlerinde tip ikonu
+    const IKON = { info:'💡', quiz:'❓', poll:'📊', topic:'📖', checkpoint:'🚧' };
+    const solIkon = card.card_type === 'word'
+      ? `<span class="wcard-sound" onclick="event.stopPropagation();speak('${_escAttr(ana)}')">${_wVolIcon()}</span>`
+      : `<span class="wcard-typeic">${IKON[card.card_type]||'💡'}</span>`;
+    return `<div class="wcard${_w.activeCard&&_w.activeCard.id===card.id?' active':''}" data-cid="${card.id}" onclick="_wOpenCard(${card.id})">
+      ${solIkon}
       <div class="wcard-mid"><div class="wcard-ru">${_escHtml(ana)}</div>
         ${alt?`<div class="wcard-tr">${_escHtml(alt)}</div>`:''}</div>
       ${thumb}
@@ -2429,7 +2454,8 @@ function _wPlayNext(idx) {
   if (_wNextTimer) { clearInterval(_wNextTimer); _wNextTimer = null; }
   const v = videos[idx]; if (!v) { closeWatch(); return; }
   _wCleanup();
-  openWatch(v);
+  // Oynatıcı tam temizlensin, sonra yeni video kurulsun (YouTube "video yüklenemedi" hatasını önler)
+  setTimeout(() => openWatch(v), 350);
 }
 
 function closeWatch() {
@@ -2440,6 +2466,8 @@ function closeWatch() {
 }
 function _wCleanup() {
   if (_wNextTimer) { clearInterval(_wNextTimer); _wNextTimer = null; }
+  // YouTube player'ı düzgün yok et (sonraki videoda çakışma/hata olmasın)
+  try { if (_w.kind === 'yt' && _w.player && _w.player.destroy) _w.player.destroy(); } catch (e) {}
   try { if (_w.timer) clearInterval(_w.timer); } catch (e) {}
   try { _wPause(); } catch (e) {}
   const box = document.getElementById('watch-player'); if (box) box.innerHTML = '';
@@ -6055,8 +6083,8 @@ function adminSubFileLoad(ev) {
     const satirlar = _parseSrtVtt(metin);
     const ta = document.getElementById('vs-bulk');
     if (ta && satirlar.length) {
-      ta.value = satirlar.map(s => `${_fmtT(s.start)} | ${_fmtT(s.end)} | ${s.text} | `).join('\n');
-      toast(satirlar.length + ' satır yüklendi. Türkçe karşılıkları ekleyip İçe Aktar\'a bas.');
+      ta.value = satirlar.map(s => `${_fmtT(s.start)} | ${_fmtT(s.end)} | ${s.ru} | ${s.tr}`).join('\n');
+      toast(satirlar.length + ' satır yüklendi (Rusça + Türkçe ayrıldı). İçe Aktar\'a bas.');
     } else if (ta) {
       // Düz metin: her satırı olduğu gibi koy
       ta.value = metin;
@@ -6072,8 +6100,11 @@ function _parseSrtVtt(metin) {
   bloklar.forEach(b => {
     const m = b.match(zaman);
     if (!m) return;
-    const metinSatir = b.split('\n').filter(l => !zaman.test(l) && !/^\d+$/.test(l.trim()) && l.trim() && !/^WEBVTT/i.test(l)).join(' ').trim();
-    out.push({ start: _vttT(m[1]), end: _vttT(m[2]), text: metinSatir });
+    const metinSatirlar = b.split('\n').filter(l => !zaman.test(l) && !/^\d+$/.test(l.trim()) && l.trim() && !/^WEBVTT/i.test(l));
+    // İlk satır = Rusça, ikinci satır = Türkçe (varsa)
+    const ru = (metinSatirlar[0] || '').trim();
+    const tr = (metinSatirlar.slice(1).join(' ') || '').trim();
+    out.push({ start: _vttT(m[1]), end: _vttT(m[2]), ru, tr });
   });
   return out;
 }
