@@ -219,7 +219,7 @@ function settingsTab(key, btn) {
     if (key === "Güvenlik" && typeof guvenlikHTML === "function") oth.innerHTML = guvenlikHTML();
     else if (key === "Çalışma Ayarları" && typeof calismaAyarlariHTML === "function") oth.innerHTML = calismaAyarlariHTML();
     else if (key === "Üyelik Yönetimi" && typeof uyelikHTML === "function") oth.innerHTML = uyelikHTML();
-    else if (key === "Bildirimler" && typeof bildirimAyarlariHTML === "function") oth.innerHTML = bildirimAyarlariHTML();
+    else if (key === "Bildirimler" && typeof bildirimAyarlariHTML === "function") { oth.innerHTML = bildirimAyarlariHTML(); if (typeof renderNotifFullList === "function") setTimeout(renderNotifFullList, 50); }
     else if (key === "Veri Yönetimi" && typeof veriYonetimiHTML === "function") oth.innerHTML = veriYonetimiHTML();
     else if (key === "Site Ayarları" && typeof siteAyarlariHTML === "function") { oth.innerHTML = siteAyarlariHTML(); if (typeof siteAyarlariInit === "function") setTimeout(siteAyarlariInit, 50); }
     else oth.innerHTML = '<div class="profile-panel"><div class="profile-empty">' + key + ' bölümü yakında eklenecek.</div></div>';
