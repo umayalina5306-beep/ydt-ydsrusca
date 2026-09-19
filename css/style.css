@@ -2844,10 +2844,13 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 /* Oynatıcı */
 .watch-player-box { position:relative; width:100%; aspect-ratio:16/9; background:#000; border-radius:12px; overflow:hidden; }
 #watch-player, #watch-player iframe, #yt-target, #yt-target iframe { width:100%; height:100%; border:0; display:block; }
-.watch-hover-zone { position:absolute; left:0; right:0; bottom:0; height:120px; z-index:3; }
+.watch-hover-zone { position:absolute; left:0; right:0; bottom:0; height:120px; z-index:4; }
+/* Tam alan tıklama katmanı: iframe pointer-events:none olduğu için oynat/duraklatı yakalar.
+   Kontroller (z-index:5+) ve kart overlay (z-index:6) bunun ÜSTÜNDE kalır. */
+.watch-clicklayer { position:absolute; inset:0; z-index:2; cursor:pointer; background:transparent; }
 
 /* Alt kontrol barı */
-.watch-controls { position:absolute; left:0; right:0; bottom:0; z-index:4; display:flex; align-items:center;
+.watch-controls { position:absolute; left:0; right:0; bottom:0; z-index:5; display:flex; align-items:center;
   gap:9px; padding:26px 16px 12px; background:linear-gradient(transparent, rgba(0,0,0,.85)); transition:opacity .4s; }
 .watch-controls.hidden { opacity:0; pointer-events:none; }
 .wc-btn { background:transparent; border:none; color:#fff; cursor:pointer; font-size:1.1rem; padding:5px 8px;
