@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v112';
+var YDT_SURUM = 'v114';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1656,13 +1656,14 @@ function _wOpenDoc(i) {
   const list = document.getElementById('wdoc-list'); if (!list) return;
   const ov = document.createElement('div');
   ov.id = 'wdoc-viewer'; ov.className = 'wdoc-viewer';
+  const zoomBtns = `<button class="wdv-btn" onclick="_wDocZoomBy(-0.2)" title="Uzaklaştır">−</button>
+        <span class="wdv-zoom" id="wdv-zoom">%100</span>
+        <button class="wdv-btn" onclick="_wDocZoomBy(0.2)" title="Yakınlaştır">+</button>`;
   ov.innerHTML = `
     <div class="wdv-bar">
       <div class="wdv-title">📄 ${_escHtml(d.title)}</div>
       <div class="wdv-tools">
-        <button class="wdv-btn" onclick="_wDocZoomBy(-0.2)" title="Uzaklaştır">−</button>
-        <span class="wdv-zoom" id="wdv-zoom">%100</span>
-        <button class="wdv-btn" onclick="_wDocZoomBy(0.2)" title="Yakınlaştır">+</button>
+        ${zoomBtns}
         <a class="wdv-btn" href="${_escAttr(d.url)}" download target="_blank" title="İndir">⬇</a>
         <button class="wdv-btn wdv-close" onclick="_wCloseDoc()" title="Kapat">✕</button>
       </div>
@@ -1690,7 +1691,12 @@ function _wDocEmbed(d) {
   const url = d.url || '';
   const isPdf = d.doc_type === 'pdf' || /\.pdf($|\?)/i.test(url);
   if (isPdf) {
-    return `<iframe class="wdv-frame" data-baseurl="${_escAttr(url)}" src="${_escAttr(url)}#zoom=100&toolbar=0&navpanes=0" title="PDF"></iframe>`;
+    // Kendi PDF görüntüleyicimiz: canvas'a render, +/− zoom + mouse-drag pan (her cihazda çalışır)
+    setTimeout(() => _wPdfInit(url), 50);
+    return `<div class="wpdf-wrap" id="wpdf-wrap">
+      <div class="wpdf-scroll" id="wpdf-scroll"><div id="wpdf-pages" class="wpdf-pages"></div></div>
+      <div class="wpdf-loading" id="wpdf-loading">PDF yükleniyor…</div>
+    </div>`;
   }
   // Görsel dosyalar
   if (/\.(png|jpe?g|gif|webp)($|\?)/i.test(url)) {
@@ -1700,20 +1706,72 @@ function _wDocEmbed(d) {
   const gv = 'https://docs.google.com/gview?embedded=1&url=' + encodeURIComponent(url);
   return `<iframe class="wdv-frame" src="${_escAttr(gv)}" title="Döküman"></iframe>`;
 }
+
+/* ── Kendi PDF görüntüleyici (PDF.js lib + canvas) ── */
+let _wPdfDoc = null, _wPdfScale = 1.2, _wPdfUrl = '';
+function _wPdfLoadLib(cb) {
+  if (window.pdfjsLib) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  s.onload = () => {
+    try { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; } catch(e){}
+    cb();
+  };
+  s.onerror = () => cb(true);
+  document.head.appendChild(s);
+}
+async function _wPdfInit(url) {
+  _wPdfUrl = url; _wPdfScale = 1.2;
+  _wPdfLoadLib(async (hata) => {
+    const loading = document.getElementById('wpdf-loading');
+    if (hata) { if (loading) loading.textContent = 'PDF görüntüleyici yüklenemedi. İndirerek açabilirsin.'; return; }
+    try {
+      _wPdfDoc = await window.pdfjsLib.getDocument(url).promise;
+      await _wPdfRender();
+      if (loading) loading.style.display = 'none';
+      _wPdfSetupPan();
+    } catch (e) {
+      if (loading) loading.textContent = 'PDF açılamadı: ' + ((e&&e.message)||e);
+    }
+  });
+}
+async function _wPdfRender() {
+  const wrap = document.getElementById('wpdf-pages'); if (!wrap || !_wPdfDoc) return;
+  wrap.innerHTML = '';
+  for (let n = 1; n <= _wPdfDoc.numPages; n++) {
+    const page = await _wPdfDoc.getPage(n);
+    const viewport = page.getViewport({ scale: _wPdfScale });
+    const canvas = document.createElement('canvas');
+    canvas.className = 'wpdf-canvas';
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    wrap.appendChild(canvas);
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+  }
+}
+function _wPdfSetupPan() {
+  const sc = document.getElementById('wpdf-scroll'); if (!sc) return;
+  let down = false, sx = 0, sy = 0, sl = 0, st = 0;
+  sc.addEventListener('mousedown', e => { down = true; sx = e.clientX; sy = e.clientY; sl = sc.scrollLeft; st = sc.scrollTop; sc.classList.add('grabbing'); });
+  window.addEventListener('mousemove', e => { if (!down) return; sc.scrollLeft = sl - (e.clientX - sx); sc.scrollTop = st - (e.clientY - sy); });
+  window.addEventListener('mouseup', () => { down = false; sc.classList.remove('grabbing'); });
+  // Ctrl+tekerlek ile zoom
+  sc.addEventListener('wheel', e => {
+    if (e.ctrlKey) { e.preventDefault(); _wPdfZoom(e.deltaY < 0 ? 0.15 : -0.15); }
+  }, { passive: false });
+}
+async function _wPdfZoom(delta) {
+  _wPdfScale = Math.max(0.5, Math.min(4, +(_wPdfScale + delta).toFixed(2)));
+  const lbl = document.getElementById('wdv-zoom');
+  if (lbl) lbl.textContent = '%' + Math.round(_wPdfScale / 1.2 * 100);
+  await _wPdfRender();
+}
 function _wDocZoomBy(delta) {
+  // PDF açıksa kendi PDF zoom'umuzu kullan
+  if (document.getElementById('wpdf-wrap')) { _wPdfZoom(delta * 0.6); return; }
   _wDocZoom = Math.max(0.5, Math.min(3, +(_wDocZoom + delta).toFixed(2)));
   const lbl = document.getElementById('wdv-zoom');
-  const frame = document.querySelector('#wdv-inner .wdv-frame');
   const img = document.querySelector('#wdv-inner .wdv-img');
-  if (frame) {
-    // PDF: tarayıcının yerleşik görüntüleyicisine #zoom= parametresiyle söyle (gerçek yakınlaşma)
-    const base = frame.getAttribute('data-baseurl') || frame.src.split('#')[0];
-    if (!frame.getAttribute('data-baseurl')) frame.setAttribute('data-baseurl', base);
-    const yuzde = Math.round(_wDocZoom * 100);
-    frame.src = base + '#zoom=' + yuzde + '&toolbar=0&navpanes=0';
-  }
   if (img) {
-    // Görsel: aynı kaynak → gerçek transform scale
     img.style.transformOrigin = 'top left';
     img.style.transform = 'scale(' + _wDocZoom + ')';
   }
