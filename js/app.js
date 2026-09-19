@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v116';
+var YDT_SURUM = 'v117';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1275,8 +1275,6 @@ async function openWatch(v) {
 
   _w.timer = setInterval(function(){ _wTick(); _wUpdateProgress(); }, 500);
   setTimeout(_wShowControls, 500);
-  // Alt bar ses ikonunu SVG yap
-  const vb = document.getElementById('wc-vol'); if (vb) vb.innerHTML = _wVolIcon();
   // Başlangıçta büyük oynat ikonu göster
   const bs = document.getElementById('watch-bigstate'); if (bs) { bs.classList.add('show-play'); bs.classList.remove('show-pause','flash'); }
   _wSyncReactionUI();
@@ -2390,23 +2388,45 @@ function _wOnEnded() {
   // Sıradaki ders önerisi
   _wSuggestNext();
 }
+let _wNextTimer = null, _wNextCountdown = 0;
 function _wSuggestNext() {
   const cur = _w.video;
   const next = videos.find(x => x.num === (cur.num + 1)) || videos[videos.indexOf(cur) + 1];
   const box = document.getElementById('watch-card-overlay');
   if (!box) return;
-  // Ders tamamlandı kartı EKRAN ORTASINDA (kart panelinin yanında değil)
   box.className = 'sv-card-overlay center';
-  box.innerHTML = `<div class="sv-card sv-card-done">
-    <div class="sv-card-head" style="justify-content:center;">🎉 Ders tamamlandı!</div>
-    ${next ? `<div class="sv-card-body" style="text-align:center;">Sıradaki ders:<br><b>${_escHtml(next.title||'')}</b></div>
-      <button class="set-btn" style="width:100%;" onclick="_wPlayNext(${videos.indexOf(next)})">▶ Sonraki Derse Geç</button>`
-      : '<div class="sv-card-body" style="text-align:center;">Bu serinin son dersiydi, tebrikler!</div>'}
-    <button class="set-btn ghost" style="width:100%;margin-top:8px;" onclick="_wCloseCard()">Kapat</button></div>`;
-  box.style.display = 'flex';
-  box.onclick = function(e) { if (e.target === box) _wCloseCard(); };
+  if (next) {
+    const idx = videos.indexOf(next);
+    box.innerHTML = `<div class="sv-card sv-card-done">
+      <div class="sv-card-head" style="justify-content:center;">🎉 Ders tamamlandı!</div>
+      <div class="sv-card-body" style="text-align:center;">Sıradaki ders:<br><b>${_escHtml(next.title||'')}</b>
+        <div class="wnext-count" id="wnext-count">3 sn içinde geçiliyor…</div></div>
+      <button class="set-btn" style="width:100%;" onclick="_wPlayNext(${idx})">▶ Şimdi Geç</button>
+      <button class="set-btn ghost" style="width:100%;margin-top:8px;" onclick="_wCancelNext()">İptal / Kapat</button></div>`;
+    box.style.display = 'flex';
+    // 3 sn geri sayımlı otomatik geçiş
+    _wNextCountdown = 3;
+    _wNextTimer = setInterval(() => {
+      _wNextCountdown--;
+      const el = document.getElementById('wnext-count');
+      if (_wNextCountdown <= 0) { _wPlayNext(idx); return; }
+      if (el) el.textContent = _wNextCountdown + ' sn içinde geçiliyor…';
+    }, 1000);
+  } else {
+    box.innerHTML = `<div class="sv-card sv-card-done">
+      <div class="sv-card-head" style="justify-content:center;">🎉 Ders tamamlandı!</div>
+      <div class="sv-card-body" style="text-align:center;">Bu serinin son dersiydi, tebrikler!</div>
+      <button class="set-btn ghost" style="width:100%;margin-top:8px;" onclick="_wCloseCard()">Kapat</button></div>`;
+    box.style.display = 'flex';
+  }
+  box.onclick = function(e) { if (e.target === box) _wCancelNext(); };
+}
+function _wCancelNext() {
+  if (_wNextTimer) { clearInterval(_wNextTimer); _wNextTimer = null; }
+  _wCloseCard();
 }
 function _wPlayNext(idx) {
+  if (_wNextTimer) { clearInterval(_wNextTimer); _wNextTimer = null; }
   const v = videos[idx]; if (!v) { closeWatch(); return; }
   _wCleanup();
   openWatch(v);
@@ -2419,6 +2439,7 @@ function closeWatch() {
   if (typeof learnNav === 'function') learnNav('video');
 }
 function _wCleanup() {
+  if (_wNextTimer) { clearInterval(_wNextTimer); _wNextTimer = null; }
   try { if (_w.timer) clearInterval(_w.timer); } catch (e) {}
   try { _wPause(); } catch (e) {}
   const box = document.getElementById('watch-player'); if (box) box.innerHTML = '';
@@ -4701,6 +4722,7 @@ function _addXP(n) { try { localStorage.setItem('ydt_xp', String(getXP() + n)); 
 
 function checkTasks() {
   const done = _tasksDone(); let changed = false;
+  const tamamlanan = []; let toplamXp = 0;
   const scan = (defs, period) => {
     defs.forEach(t => {
       const key = period + ':' + t.id;
@@ -4708,13 +4730,19 @@ function checkTasks() {
       let v = 0; try { v = t.val(); } catch (e) {}
       if (v >= t.target) {
         done[key] = true; changed = true; _addXP(t.xp);
-        if (typeof createNotification === 'function') createNotification('🎯 Görev tamamlandı: ' + t.t, '+' + t.xp + ' XP kazandın!', 'success');
-        if (typeof toast === 'function') toast('🎯 Görev tamamlandı: ' + t.t + ' (+' + t.xp + ' XP)');
+        tamamlanan.push(t.t); toplamXp += t.xp;
       }
     });
   };
   scan(TASKS_DAILY, _todayKey());
   scan(TASKS_WEEKLY, _weekId());
+  // Peş peşe değil TEK birleşik bildirim (birden fazla görev aynı anda bitse bile)
+  if (tamamlanan.length) {
+    const bas = tamamlanan.length === 1 ? '🎯 Görev tamamlandı' : '🎯 ' + tamamlanan.length + ' görev tamamlandı';
+    const gvd = tamamlanan.join(', ') + ' · +' + toplamXp + ' XP';
+    if (typeof createNotification === 'function' && (typeof notifPref !== 'function' || notifPref('tasks'))) createNotification(bas, gvd, 'success');
+    if (typeof toast === 'function') toast(bas + ' (+' + toplamXp + ' XP)');
+  }
   if (changed) { _saveTasksDone(done); const b = document.getElementById('tasks-body'); if (b && b.innerHTML) renderTasksView(); }
 }
 if (typeof window !== 'undefined') window.checkTasks = checkTasks;
