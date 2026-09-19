@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v118';
+var YDT_SURUM = 'v119';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1236,8 +1236,8 @@ let _w = {
 
 async function openWatch(v) {
   _w = { video: v, player: null, kind: null, viewId: null, cards: [], chapters: [],
-         notes: [], docs: [], shownCards: {}, answered: {}, pending: [], timer: null,
-         duration: 0, lastPos: 0, ready: false, activeCard: null, watchedBefore: false,
+         notes: [], docs: [], shownCards: {}, answered: {}, pending: [], timer: null, _revealed: {},
+         duration: 0, lastPos: 0, ready: false, activeCard: null, watchedBefore: false, _ytRetried: false,
          cardFilter: 'all', muted: false, ccOn: true };
 
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1376,6 +1376,7 @@ async function _wLoadData(v) {
 /* ── YouTube adaptörü (IFrame Player API) ── */
 function _wInitYouTube(v) {
   _w.kind = 'yt';
+  if (!_w._ytRetried) _w._ytRetried = false;
   // Temiz bir hedef div oluştur (YT API div'i iframe'e çevirir, tekrar kullanımda taze olmalı)
   const host = document.getElementById('watch-player');
   // YT arayüzünü maskele: üst bilgi barı + kendi büyük başlat butonumuz
@@ -1401,7 +1402,14 @@ function _wInitYouTube(v) {
             if (e.data === 0) _wOnEnded();
           },
           onError: (e) => {
-            host.innerHTML = '<div style="padding:40px;text-align:center;color:#fca5a5;">Bu YouTube videosu oynatılamıyor (kod: ' + e.data + ').<br>Genelde video sahibi gömmeye izin vermemiştir ya da video ID hatalıdır.</div>';
+            // Kod 2/5 genelde player çakışması (otomatik geçiş sonrası) → bir kez yeniden dene
+            if ((e.data === 2 || e.data === 5) && !_w._ytRetried) {
+              _w._ytRetried = true;
+              try { if (_w.player && _w.player.destroy) _w.player.destroy(); } catch (x) {}
+              setTimeout(() => { try { _wInitYouTube(v); } catch (x) {} }, 400);
+              return;
+            }
+            host.innerHTML = '<div style="padding:40px;text-align:center;color:#fca5a5;">Bu video şu anda oynatılamıyor. Videolara dönüp tekrar deneyebilirsin.</div>';
           }
         }
       });
@@ -1890,7 +1898,15 @@ function _wTick() {
       }
     }
   }
-  // Zamanı gelen kartlar
+  // Kartları yan panelde zamanı gelince BELİRT (reveal) — video geri-ileri gitse de tutarlı
+  let yeniReveal = false;
+  for (const card of _w.cards) {
+    if (!_w._revealed[card.id] && t >= card.t_sec) {
+      _w._revealed[card.id] = true; yeniReveal = true;
+      _wRevealCard(card.id);  // panele ekle + flash
+    }
+  }
+  // Zamanı gelen kartları TETİKLE (overlay göster/biriktir) — sadece ilk geçişte
   for (const card of _w.cards) {
     if (_w.shownCards[card.id]) continue;
     if (t >= card.t_sec && t < card.t_sec + 2) {
@@ -1898,8 +1914,15 @@ function _wTick() {
       _wTriggerCard(card);
     }
   }
-  // Aktif bölümü vurgula
   _wHighlightChapter(t);
+}
+/* Kartı yan panelde belirt (tek tek yerleşir + turuncu flash) */
+function _wRevealCard(cardId) {
+  // Panel açıksa listeyi güncelle (yeni kart eklenir)
+  const box = document.getElementById('wcard-list');
+  if (box) _wRenderCards();
+  // Flash: kısa gecikme (DOM'a eklensin), sonra parlat
+  setTimeout(() => _wFlashCard(cardId), 80);
 }
 
 function _wCardMode() { return localStorage.getItem('ydt_card_mode') || 'pause'; } // pause | collect
@@ -1917,19 +1940,13 @@ function _wFlashCard(cardId) {
   } catch (e) {}
 }
 function _wTriggerCard(card) {
-  // Kart zamanı geldi → yan paneldeki ilgili kartı site renginde parlat (dikkat çeksin)
-  _wFlashCard(card.id);
-  // Tekrar izlemede otomatik duraklatma kapalı → her zaman biriktir
+  // Kart panelde zaten _wRevealCard ile belirdi+parladı. Burada sadece overlay/biriktirme.
   const biriktir = _wCardMode() === 'collect' || _w.watchedBefore;
   if (biriktir && card.card_type !== 'checkpoint') {
     _w.pending.push(card);
     _wUpdateBadge();
-    _wRenderCards();
-    // Yeni gelen kartı minimal animasyonla vurgula
-    setTimeout(() => _wFlashCard(card.id), 60);
   } else {
     _wShowCard(card);
-    // İlk kez otomatik duraklama bilgisi
     if (!_w.watchedBefore && _wCardMode() === 'pause' && !localStorage.getItem('ydt_pause_hint_seen')) {
       _wPauseHint(); localStorage.setItem('ydt_pause_hint_seen', '1');
     }
@@ -1943,12 +1960,12 @@ function _wUpdateBadge() {
     else b.style.display = 'none';
   }
   // Kartlar sekmesi başlığında da rozet göster
-  const tab = document.querySelector('.wst-tab:nth-child(2)');
-  if (tab) tab.innerHTML = '🃏 Kartlar' + (_w.pending.length ? ` <b style="color:#f5d97a">(${_w.pending.length})</b>` : '');
+  const tab = document.querySelector('.wst-tab[data-tab="cards"]');
+  if (tab) tab.innerHTML = '▣ Kartlar' + (_w.pending.length ? ` <b style="color:#f5d97a">(${_w.pending.length})</b>` : '');
 }
 function watchOpenPanel() {
   _wRenderCards();
-  watchSideTab('cards', document.querySelector('.wst-tab:nth-child(2)'));
+  watchSideTab('cards', document.querySelector('.wst-tab[data-tab="cards"]'));
 }
 
 function _wShowCard(card, opts) {
@@ -2252,13 +2269,19 @@ function _wRenderCards() {
     ].filter(x => x[0]==='all' || x[2]>0)
      .map(([k,ad,n]) => `<button class="wcf-chip${f===k?' active':''}" onclick="_wCardFilter('${k}')">${ad} (${n})</button>`).join('');
   }
-  // Filtrelenmiş kartlar
+  // Filtrelenmiş kartlar (zamanı gelmiş olanlar görünür; gelmemişler gizli — tek tek belirir)
   let list = _w.cards.slice().sort((a,b)=>a.t_sec-b.t_sec);
   if (f === 'word') list = list.filter(c=>c.card_type==='word');
   else if (f === 'phrase') list = list.filter(c=>c.subcat==='phrase'||c.card_type==='info');
   else if (f === 'grammar') list = list.filter(c=>c.card_type==='topic'||c.subcat==='grammar');
 
-  box.innerHTML = list.map(card => {
+  const suan = _w.ready ? _wGetTime() : 0;
+  const gorunen = list.filter(card => _w._revealed && _w._revealed[card.id]);
+  if (!gorunen.length) {
+    box.innerHTML = '<div class="profile-empty">Video ilerledikçe kartlar burada belirecek. ✨</div>';
+    return;
+  }
+  box.innerHTML = gorunen.map(card => {
     const mm = Math.floor(card.t_sec/60), ss = String(card.t_sec%60).padStart(2,'0');
     // Kelime kartında ru/tr göster; diğerlerinde başlık
     const ana = card.title || '';
@@ -2280,7 +2303,7 @@ function _wRenderCards() {
       <button class="wcard-star ${yildiz}" onclick="event.stopPropagation();_wCardStar(${card.id},this)">★</button>
       <span class="wcard-time">${mm}:${ss}</span>
     </div>`;
-  }).join('') || '<div class="profile-empty">Bu filtrede kart yok.</div>';
+  }).join('');
 }
 function _wCardFilter(k) { _w.cardFilter = k; _wRenderCards(); }
 function _wCardStar(cardId, btn) { btn.classList.toggle('on'); /* yıldız: kişisel işaret (ileride kaydedilebilir) */ }
@@ -2454,8 +2477,8 @@ function _wPlayNext(idx) {
   if (_wNextTimer) { clearInterval(_wNextTimer); _wNextTimer = null; }
   const v = videos[idx]; if (!v) { closeWatch(); return; }
   _wCleanup();
-  // Oynatıcı tam temizlensin, sonra yeni video kurulsun (YouTube "video yüklenemedi" hatasını önler)
-  setTimeout(() => openWatch(v), 350);
+  // Oynatıcı tam temizlensin, sonra yeni video kurulsun (YouTube çakışma hatasını önler)
+  setTimeout(() => openWatch(v), 600);
 }
 
 function closeWatch() {
@@ -4050,7 +4073,30 @@ function bildirimAyarlariHTML() {
     <h3 class="set-h3">🧹 Bildirimleri Yönet</h3>
     <button class="set-btn ghost" onclick="markAllNotifRead()">Tümünü okundu yap</button>
     <button class="set-btn ghost" onclick="clearReadNotifs()" style="margin-left:8px;">Okunmuşları temizle</button>
+  </div>
+  <div class="profile-panel set-panel">
+    <h3 class="set-h3">📋 Tüm Bildirimlerim</h3>
+    <div id="notif-full-list"><div class="admin-loading">Yükleniyor...</div></div>
   </div>`;
+}
+/* Ayarlar → Bildirimler: tüm bildirimleri listele */
+async function renderNotifFullList() {
+  const box = document.getElementById('notif-full-list'); if (!box) return;
+  if (!sb || !currentUser) { box.innerHTML = '<div class="profile-empty">Giriş yapmalısın.</div>'; return; }
+  try {
+    const { data } = await sb.from('notifications').select('*')
+      .eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(100);
+    if (!data || !data.length) { box.innerHTML = '<div class="profile-empty">Henüz bildirim yok.</div>'; return; }
+    box.innerHTML = data.map(n => {
+      const tarih = new Date(n.created_at).toLocaleDateString('tr-TR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      return `<div class="nfl-item ${n.is_read?'':'unread'}">
+        <div class="nfl-main"><div class="nfl-title">${_escHtml(n.title||'')}</div>
+          ${n.body?`<div class="nfl-body">${_escHtml(n.body)}</div>`:''}
+          <div class="nfl-date">${tarih}</div></div>
+        <button class="nfl-del" onclick="deleteNotif(${n.id}); setTimeout(renderNotifFullList,300)" title="Sil">×</button>
+      </div>`;
+    }).join('');
+  } catch (e) { box.innerHTML = '<div class="profile-empty">Bildirimler yüklenemedi.</div>'; }
 }
 
 /* ============================================================
@@ -7010,12 +7056,16 @@ async function migrateLocalDailySummary() {
 async function checkActivityNotifications() {
   try {
     if (!sb || !currentUser) return;
-    // Throttle: son 7 günde activity_reminder gönderilmiş mi?
+    // Yerel throttle: bu cihazda son 3 günde gönderildiyse hiç sorma (DB gecikse bile tekrar yok)
+    const lkey = 'ydt_actremind_' + currentUser.id;
+    const sonLocal = localStorage.getItem(lkey);
+    if (sonLocal && (Date.now() - parseInt(sonLocal, 10)) < 3 * 86400000) return;
+    // DB throttle: son 7 günde activity_reminder gönderilmiş mi? (okunmuş/silinmiş olsa bile say)
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
     const { data: recent } = await sb.from('notifications')
       .select('id').eq('user_id', currentUser.id)
       .eq('type', 'activity_reminder').gte('created_at', weekAgo).limit(1);
-    if (recent && recent.length > 0) return;
+    if (recent && recent.length > 0) { localStorage.setItem(lkey, String(Date.now())); return; }
     // Son answer_log kaydını bul
     const { data: lastAct } = await sb.from('answer_log')
       .select('created_at').eq('user_id', currentUser.id)
@@ -7034,6 +7084,7 @@ async function checkActivityNotifications() {
       body: msg,
       type: 'activity_reminder'
     });
+    localStorage.setItem(lkey, String(Date.now()));  // tekrarı engelle
     if (typeof loadNotifications === 'function') setTimeout(loadNotifications, 800);
   } catch (e) {}
 }
