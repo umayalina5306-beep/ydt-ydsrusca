@@ -3226,7 +3226,7 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   border-radius:12px; overflow:hidden; margin:8px 0 10px;
   max-height:0; opacity:0; transition:max-height .32s cubic-bezier(.2,.8,.3,1), opacity .28s ease, margin .28s ease;
   box-shadow:0 4px 20px rgba(0,0,0,.35); }
-.wdoc-viewer.open { max-height:640px; opacity:1; }
+.wdoc-viewer.open { max-height:78vh; opacity:1; }
 .wdv-bar { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;
   padding:9px 11px; background:#0a1420; border-bottom:1px solid rgba(255,255,255,.1); flex-shrink:0; }
 .wdv-title { font-size:.82rem; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:80px; }
@@ -3237,7 +3237,16 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .wdv-btn:hover { background:var(--gold); color:#0d1b2a; border-color:var(--gold); }
 .wdv-close:hover { background:var(--red,#cc0000); color:#fff; border-color:var(--red,#cc0000); }
 .wdv-zoom { font-size:.78rem; color:#9fb0c5; min-width:44px; text-align:center; font-variant-numeric:tabular-nums; }
-.wdv-body { overflow:auto; background:#1a1d27; padding:10px; max-height:560px; }
+.wdv-body { overflow:auto; background:#1a1d27; padding:8px; max-height:70vh; }
 .wdv-inner { width:100%; overflow:auto; }
 .wdv-frame { width:100%; height:440px; border:0; border-radius:8px; background:#fff; display:block; }
+.wdv-frame.wdv-pdfjs { height:66vh; min-height:420px; }
 .wdv-img { width:100%; height:auto; border-radius:8px; display:block; }
+
+/* ═══ v114: Kendi PDF görüntüleyici (canvas + pan + zoom) ═══ */
+.wpdf-wrap { position:relative; width:100%; }
+.wpdf-scroll { width:100%; max-height:64vh; overflow:auto; cursor:grab; background:#333; border-radius:8px; }
+.wpdf-scroll.grabbing { cursor:grabbing; }
+.wpdf-pages { display:flex; flex-direction:column; align-items:center; gap:10px; padding:10px; width:max-content; min-width:100%; }
+.wpdf-canvas { display:block; box-shadow:0 2px 10px rgba(0,0,0,.4); background:#fff; max-width:none; }
+.wpdf-loading { text-align:center; color:#9fb0c5; padding:30px; font-size:.9rem; }
