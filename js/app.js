@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v115';
+var YDT_SURUM = 'v116';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1429,15 +1429,19 @@ async function _wInitStream(v) {
     _w.viewId = data.view_id;
     const box = document.getElementById('watch-player');
     // İmzalı videolar customer-<KOD>.cloudflarestream.com'dan oynar (edge function embed_url döndürür)
-    const src = data.embed_url || `https://iframe.cloudflarestream.com/${encodeURIComponent(data.token)}`;
+    let src = data.embed_url || `https://iframe.cloudflarestream.com/${encodeURIComponent(data.token)}`;
+    // Cloudflare'in KENDİ arayüzünü kapat: controls=false (play butonu + zaman barı gizlenir)
+    // Sadece bizim overlay + alt kontrol barımız kalır.
+    src += (src.includes('?') ? '&' : '?') + 'controls=false&defaultTextTrack=off';
     box.innerHTML = `<iframe id="w-sframe" src="${src}"
-      style="width:100%;height:100%;border:0;" allow="accelerometer;encrypted-media;gyroscope;picture-in-picture;autoplay" allowfullscreen></iframe>`;
+      style="width:100%;height:100%;border:0;pointer-events:none;" allow="accelerometer;encrypted-media;gyroscope;picture-in-picture;autoplay" allowfullscreen></iframe>`;
     _wLoadStreamSdk(() => {
       try {
         _w.player = Stream(document.getElementById('w-sframe'));
         _w.player.addEventListener('loadedmetadata', () => { _w.ready = true; _w.duration = _w.player.duration || 0; _wSaveDuration(); });
         _w.player.addEventListener('play', () => _wSyncPlayBtn(true));
         _w.player.addEventListener('pause', () => _wSyncPlayBtn(false));
+        _w.player.addEventListener('timeupdate', () => { /* progress _wUpdateProgress ile */ });
         _w.player.addEventListener('ended', _wOnEnded);
       } catch (e) {}
     });
@@ -1570,19 +1574,24 @@ function watchToggleCaption() {
 async function watchPiP() {
   try {
     if (document.pictureInPictureElement) { await document.exitPictureInPicture(); return; }
-    // 1) Sayfada gerçek <video> varsa (Stream bazı modlarda expose eder)
-    const vid = document.querySelector('#watch-player video, #w-sframe');
-    const realVideo = document.querySelector('#watch-player video');
-    if (realVideo && realVideo.requestPictureInPicture) { await realVideo.requestPictureInPicture(); return; }
-    // 2) Stream SDK üzerinden dene
+    // Cloudflare Stream SDK'nın kendi PiP komutu (iframe içindeki video'yu tetikler)
     if (_w.kind === 'stream' && _w.player) {
-      // Cloudflare Stream player'ın kendi iframe'i; PiP'i iframe içinden tetiklemek için postMessage
+      // SDK postMessage: requestPictureInPicture
       try {
         const ifr = document.getElementById('w-sframe');
-        if (ifr && ifr.requestPictureInPicture) { await ifr.requestPictureInPicture(); return; }
+        if (ifr && ifr.contentWindow) {
+          ifr.contentWindow.postMessage({ event: 'requestPictureInPicture' }, '*');
+        }
+        // Bazı sürümlerde SDK doğrudan destekler
+        if (typeof _w.player.requestPictureInPicture === 'function') {
+          await _w.player.requestPictureInPicture(); return;
+        }
       } catch (e) {}
+      // Son çare: iframe pointer-events'i geçici aç, tarayıcı PiP dene
+      toast('Mini oynatıcıyı başlatmak için videoya sağ tıklayıp "Resim içinde resim" seçebilirsin.');
+      return;
     }
-    toast('Mini oynatıcı yalnız premium (Stream) videolarda ve destekleyen tarayıcılarda çalışır.');
+    toast('Mini oynatıcı yalnız premium videolarda çalışır.');
   } catch (e) {
     toast('Mini oynatıcı bu tarayıcıda açılamadı.');
   }
