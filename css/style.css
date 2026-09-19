@@ -3256,3 +3256,20 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 
 /* ═══ v117: Video sonu otomatik geçiş sayacı ═══ */
 .wnext-count { font-size:.8rem; color:var(--gold); margin-top:8px; font-weight:600; }
+
+/* ═══ v118: Kart parlama + yerleşme animasyonu ═══ */
+/* Kart zamanı gelince 2 kez parla (site altın rengi, yazılar okunaklı kalır) */
+@keyframes wcardFlash {
+  0%   { box-shadow:0 0 0 0 rgba(201,168,76,0); border-color:rgba(255,255,255,.1); }
+  25%  { box-shadow:0 0 14px 3px rgba(201,168,76,.7); border-color:var(--gold); }
+  50%  { box-shadow:0 0 0 0 rgba(201,168,76,0); border-color:rgba(255,255,255,.1); }
+  75%  { box-shadow:0 0 14px 3px rgba(201,168,76,.7); border-color:var(--gold); }
+  100% { box-shadow:0 0 0 0 rgba(201,168,76,0); border-color:rgba(255,255,255,.1); }
+}
+.wcard-flash { animation:wcardFlash 1s ease; }
+/* Yeni kart yerleşme (minimal aşağıdan belirme) */
+@keyframes wcardIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+.wcard { animation:wcardIn .28s ease; }
+/* Kelime dışı kartlarda tip ikonu (ses butonu yerine) */
+.wcard-typeic { width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.06);
+  display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
