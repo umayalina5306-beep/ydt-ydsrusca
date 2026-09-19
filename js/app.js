@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v114';
+var YDT_SURUM = 'v115';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1721,15 +1721,23 @@ function _wPdfLoadLib(cb) {
   document.head.appendChild(s);
 }
 async function _wPdfInit(url) {
-  _wPdfUrl = url; _wPdfScale = 1.2;
+  _wPdfUrl = url; _wPdfScale = 1;
   _wPdfLoadLib(async (hata) => {
     const loading = document.getElementById('wpdf-loading');
     if (hata) { if (loading) loading.textContent = 'PDF görüntüleyici yüklenemedi. İndirerek açabilirsin.'; return; }
     try {
       _wPdfDoc = await window.pdfjsLib.getDocument(url).promise;
+      // İlk açılış: sayfayı görüntü alanına SIĞDIR (tam sayfa görünsün)
+      const p1 = await _wPdfDoc.getPage(1);
+      const vp1 = p1.getViewport({ scale: 1 });
+      const sc = document.getElementById('wpdf-scroll');
+      const alanW = (sc ? sc.clientWidth : 360) - 24; // padding payı
+      _wPdfScale = Math.max(0.3, Math.min(2, alanW / vp1.width));
       await _wPdfRender();
       if (loading) loading.style.display = 'none';
       _wPdfSetupPan();
+      const lbl = document.getElementById('wdv-zoom');
+      if (lbl) lbl.textContent = 'Sığdır';
     } catch (e) {
       if (loading) loading.textContent = 'PDF açılamadı: ' + ((e&&e.message)||e);
     }
@@ -1738,14 +1746,22 @@ async function _wPdfInit(url) {
 async function _wPdfRender() {
   const wrap = document.getElementById('wpdf-pages'); if (!wrap || !_wPdfDoc) return;
   wrap.innerHTML = '';
+  // Keskinlik için cihaz piksel oranı (retina/yüksek DPI ekranlarda net)
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
   for (let n = 1; n <= _wPdfDoc.numPages; n++) {
     const page = await _wPdfDoc.getPage(n);
     const viewport = page.getViewport({ scale: _wPdfScale });
     const canvas = document.createElement('canvas');
     canvas.className = 'wpdf-canvas';
-    canvas.width = viewport.width; canvas.height = viewport.height;
+    // Canvas gerçek çözünürlük = viewport × dpr; CSS boyutu = viewport (görünüm aynı, piksel yoğun)
+    canvas.width = Math.floor(viewport.width * dpr);
+    canvas.height = Math.floor(viewport.height * dpr);
+    canvas.style.width = Math.floor(viewport.width) + 'px';
+    canvas.style.height = Math.floor(viewport.height) + 'px';
     wrap.appendChild(canvas);
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    await page.render({ canvasContext: ctx, viewport }).promise;
   }
 }
 function _wPdfSetupPan() {
