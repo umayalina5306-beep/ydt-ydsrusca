@@ -3172,11 +3172,12 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 
 /* ═══ v105: Altyazı ═══ */
 .watch-caption { position:absolute; left:50%; bottom:70px; transform:translateX(-50%); z-index:3;
-  max-width:80%; text-align:center; pointer-events:none; }
-.wcap-ru { display:inline-block; background:rgba(0,0,0,.72); color:#fff; font-size:1.15rem; font-weight:600;
-  padding:5px 14px; border-radius:7px; line-height:1.4; margin-bottom:4px; }
-.wcap-tr { display:block; }
-.wcap-tr { display:inline-block; background:rgba(0,0,0,.62); color:#f5d97a; font-size:.98rem;
+  max-width:82%; text-align:center; pointer-events:none;
+  display:flex; flex-direction:column; align-items:center; gap:4px; }
+/* Rusça ÜSTTE, Türkçe ALTTA — her biri kendi satırında (yan yana değil) */
+.wcap-ru { display:table; margin:0 auto; background:rgba(0,0,0,.78); color:#fff; font-size:1.15rem; font-weight:600;
+  padding:5px 14px; border-radius:7px; line-height:1.4; }
+.wcap-tr { display:table; margin:0 auto; background:rgba(0,0,0,.66); color:#f5d97a; font-size:.98rem;
   padding:4px 12px; border-radius:7px; line-height:1.4; }
 
 /* Video istatistik kartları (admin) */
@@ -3273,3 +3274,13 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 /* Kelime dışı kartlarda tip ikonu (ses butonu yerine) */
 .wcard-typeic { width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.06);
   display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+
+/* ═══ v119: Ayarlar bildirim listesi ═══ */
+.nfl-item { display:flex; gap:10px; align-items:flex-start; padding:11px 12px; border-bottom:1px solid rgba(0,0,0,.06); }
+.nfl-item.unread { background:#fff9ec; border-left:3px solid var(--gold); }
+.nfl-main { flex:1; min-width:0; }
+.nfl-title { font-weight:700; color:var(--text); font-size:.92rem; }
+.nfl-body { font-size:.84rem; color:var(--gray); margin-top:3px; line-height:1.4; }
+.nfl-date { font-size:.72rem; color:#9aa3af; margin-top:4px; }
+.nfl-del { background:transparent; border:none; color:#c0c6cf; font-size:1.3rem; cursor:pointer; line-height:1; padding:0 4px; }
+.nfl-del:hover { color:var(--red,#cc0000); }
