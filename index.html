@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=120">
+<link rel="stylesheet" href="css/style.css?v=121">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=120" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=121" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -2020,13 +2020,13 @@
       <!-- Sağ: sekmeli panel -->
       <aside class="watch-side" id="watch-side">
         <div class="watch-side-tabs">
-          <button class="wst-tab active" data-tab="cards" onclick="watchSideTab('cards',this)">▣ Kartlar</button>
+          <button class="wst-tab active" data-tab="subs" onclick="watchSideTab('subs',this)">💬 Altyazılar</button>
+          <button class="wst-tab" data-tab="cards" onclick="watchSideTab('cards',this)">▣ Kartlar</button>
           <button class="wst-tab" data-tab="chapters" onclick="watchSideTab('chapters',this)">▦ Bölümler</button>
           <button class="wst-tab" data-tab="notes" onclick="watchSideTab('notes',this)">🔖 Notlar</button>
           <button class="wst-tab" data-tab="docs" onclick="watchSideTab('docs',this)">📄 Dökümanlar</button>
-          <button class="wst-tab" data-tab="subs" onclick="watchSideTab('subs',this)">💬 Altyazılar</button>
         </div>
-        <div id="wst-cards" class="wst-panel">
+        <div id="wst-cards" class="wst-panel" style="display:none;">
           <div class="wcard-filters" id="wcard-filters"></div>
           <div id="wcard-list"></div>
         </div>
@@ -2049,7 +2049,7 @@
         <div id="wst-docs" class="wst-panel" style="display:none;">
           <div id="wdoc-list"></div>
         </div>
-        <div id="wst-subs" class="wst-panel" style="display:none;">
+        <div id="wst-subs" class="wst-panel">
           <div id="wsub-list"></div>
         </div>
       </aside>
@@ -2061,12 +2061,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=120"></script>
-<script defer src="js/auth.js?v=120"></script>
-<script defer src="js/admin.js?v=120"></script>
-<script defer src="js/profile.js?v=120"></script>
-<script defer src="js/extras.js?v=120"></script>
-<script defer src="js/app.js?v=120"></script>
+<script defer src="js/supabase-config.js?v=121"></script>
+<script defer src="js/auth.js?v=121"></script>
+<script defer src="js/admin.js?v=121"></script>
+<script defer src="js/profile.js?v=121"></script>
+<script defer src="js/extras.js?v=121"></script>
+<script defer src="js/app.js?v=121"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
