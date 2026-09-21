@@ -3261,16 +3261,14 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 /* ═══ v118: Kart parlama + yerleşme animasyonu ═══ */
 /* Kart zamanı gelince 2 kez parla (site altın rengi, yazılar okunaklı kalır) */
 @keyframes wcardFlash {
-  0%   { box-shadow:0 0 0 0 rgba(201,168,76,0); border-color:rgba(255,255,255,.1); }
-  25%  { box-shadow:0 0 14px 3px rgba(201,168,76,.7); border-color:var(--gold); }
-  50%  { box-shadow:0 0 0 0 rgba(201,168,76,0); border-color:rgba(255,255,255,.1); }
-  75%  { box-shadow:0 0 14px 3px rgba(201,168,76,.7); border-color:var(--gold); }
-  100% { box-shadow:0 0 0 0 rgba(201,168,76,0); border-color:rgba(255,255,255,.1); }
+  0%   { box-shadow:0 0 0 0 rgba(201,168,76,0); }
+  50%  { box-shadow:0 0 16px 4px rgba(201,168,76,.8); border-color:var(--gold); }
+  100% { box-shadow:0 0 0 0 rgba(201,168,76,0); }
 }
-.wcard-flash { animation:wcardFlash 1s ease; }
+.wcard-flash { animation:wcardFlash .6s ease; }
 /* Yeni kart yerleşme (minimal aşağıdan belirme) */
-@keyframes wcardIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
-.wcard { animation:wcardIn .28s ease; }
+@keyframes wcardSlideIn { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
+.wcard { animation:wcardSlideIn .35s cubic-bezier(.2,.8,.3,1); }
 /* Kelime dışı kartlarda tip ikonu (ses butonu yerine) */
 .wcard-typeic { width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.06);
   display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
@@ -3284,3 +3282,30 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .nfl-date { font-size:.72rem; color:#9aa3af; margin-top:4px; }
 .nfl-del { background:transparent; border:none; color:#c0c6cf; font-size:1.3rem; cursor:pointer; line-height:1; padding:0 4px; }
 .nfl-del:hover { color:var(--red,#cc0000); }
+
+/* ═══ v120: Altyazılar sekmesi + tıklanabilir kelime + detaylı kelime kartı ═══ */
+.wsub-line { display:flex; gap:10px; align-items:flex-start; padding:9px 4px; border-bottom:1px solid rgba(255,255,255,.06); }
+.wsub-time { background:rgba(201,168,76,.14); border:1px solid rgba(201,168,76,.3); color:var(--gold);
+  border-radius:7px; padding:3px 8px; font-size:.72rem; font-weight:700; cursor:pointer; flex-shrink:0; font-variant-numeric:tabular-nums; }
+.wsub-time:hover { background:var(--gold); color:#0d1b2a; }
+.wsub-text { font-size:1rem; line-height:1.7; color:#e8edf5; font-family:'Noto Sans',sans-serif; }
+.wsub-word { background:transparent; border:none; color:#e8edf5; font:inherit; cursor:pointer;
+  padding:1px 2px; border-radius:4px; transition:all .12s; border-bottom:1px dashed rgba(201,168,76,.4); }
+.wsub-word:hover { background:rgba(201,168,76,.22); color:#fff; border-bottom-color:var(--gold); }
+
+/* Detaylı kelime kartı (altyazıdan açılan) */
+.sv-card-word { width:360px; }
+.sv-word-head { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.sv-word-ru { font-size:1.5rem; font-weight:800; color:#fff; font-family:'Noto Sans',sans-serif; }
+.sv-word-sound { width:34px; height:34px; border-radius:50%; background:rgba(201,168,76,.15); color:var(--gold);
+  border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
+.sv-word-sound.sm { width:26px; height:26px; }
+.sv-word-sound:hover { background:var(--gold); color:#0d1b2a; }
+.svw-badges { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.svw-badge { font-size:.72rem; font-weight:700; padding:3px 9px; border-radius:6px; background:rgba(255,255,255,.08); color:#cbd5e1; }
+.svw-lvl { background:var(--gold); color:#0d1b2a; }
+.svw-cat { background:rgba(139,92,246,.2); color:#a78bfa; }
+.svw-add { width:100%; margin-top:6px; background:var(--gold); color:#0d1b2a; border:none; border-radius:10px;
+  padding:11px; font-weight:700; cursor:pointer; font-size:.9rem; transition:all .15s; }
+.svw-add:hover { background:var(--gold-light,#e8c96a); }
+.svw-add.saved { background:rgba(34,197,94,.2); color:#4ade80; }
