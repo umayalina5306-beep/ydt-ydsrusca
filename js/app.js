@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v120';
+var YDT_SURUM = 'v121';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1272,6 +1272,7 @@ async function openWatch(v) {
   _wRenderCards();
   _wRenderNotes();
   _wRenderDocs();
+  _wRenderSubs();
 
   _w.timer = setInterval(function(){ _wTick(); _wUpdateProgress(); }, 500);
   setTimeout(_wShowControls, 500);
@@ -1916,16 +1917,35 @@ function _wTick() {
   }
   _wHighlightChapter(t);
 }
-/* Kartı yan panelde belirt (tek tek yerleşir + turuncu flash) */
+/* Kartı yan panelde belirt: hangi sekmede olursak olalım Kartlar'a geç, kart kayarak gelir, kayma bitince parlar */
 function _wRevealCard(cardId) {
-  // Panel listesini güncelle (yeni kart eklenir) — kart CSS ile sağdan sola kayarak gelir
-  const box = document.getElementById('wcard-list');
-  if (box) _wRenderCards();
-  // Yeni gelen kartı görünür yap + hafifçe kaydır
+  // Kullanıcı başka sekmedeyse otomatik Kartlar sekmesine geç
+  const cardsPanel = document.getElementById('wst-cards');
+  const cardsGizli = cardsPanel && cardsPanel.style.display === 'none';
+  if (cardsGizli) watchSideTab('cards', document.querySelector('.wst-tab[data-tab="cards"]'));
+  const box = document.getElementById('wcard-list'); if (!box) return;
+  // "Kart yok" mesajı varsa temizle
+  const bos = box.querySelector('.profile-empty'); if (bos) box.innerHTML = '';
+  // Zaten ekliyse tekrar ekleme
+  if (box.querySelector('.wcard[data-cid="' + cardId + '"]')) { _wFlashCard(cardId); return; }
+  const card = _w.cards.find(x => x.id === cardId); if (!card) return;
+  // SADECE yeni kartın HTML'ini üret ve ekle (diğerleri yerinde kalır — komple yenileme YOK)
+  const html = _wCardItemHTML(card);
+  // Zaman sırasına göre doğru yere ekle
+  const mevcut = [...box.querySelectorAll('.wcard')];
+  const tmp = document.createElement('div'); tmp.innerHTML = html;
+  const yeniEl = tmp.firstElementChild;
+  let eklendi = false;
+  for (const el of mevcut) {
+    const t = parseInt(el.getAttribute('data-t') || '0', 10);
+    if (card.t_sec < t) { box.insertBefore(yeniEl, el); eklendi = true; break; }
+  }
+  if (!eklendi) box.appendChild(yeniEl);
+  // Kayma animasyonu (~350ms) bitince parlat
   setTimeout(() => {
-    const el = document.querySelector('.wcard[data-cid="' + cardId + '"]');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, 80);
+    yeniEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    _wFlashCard(cardId);
+  }, 380);
 }
 
 function _wCardMode() { return localStorage.getItem('ydt_card_mode') || 'pause'; } // pause | collect
@@ -1938,7 +1958,7 @@ function _wFlashCard(cardId) {
     if (!el) return;
     el.classList.remove('wcard-flash'); void el.offsetWidth;
     el.classList.add('wcard-flash');
-    setTimeout(() => el.classList.remove('wcard-flash'), 600);
+    setTimeout(() => el.classList.remove('wcard-flash'), 1400);
   } catch (e) {}
 }
 function _wTriggerCard(card) {
@@ -1961,9 +1981,9 @@ function _wUpdateBadge() {
     if (_w.pending.length) { b.style.display = ''; cnt.textContent = _w.pending.length; }
     else b.style.display = 'none';
   }
-  // Kartlar sekmesi başlığında da rozet göster
+  // Kartlar sekmesi başlığı sabit (parantez sayı kaldırıldı)
   const tab = document.querySelector('.wst-tab[data-tab="cards"]');
-  if (tab) tab.innerHTML = '▣ Kartlar' + (_w.pending.length ? ` <b style="color:#f5d97a">(${_w.pending.length})</b>` : '');
+  if (tab && tab.innerHTML.indexOf('Kartlar') < 0) tab.innerHTML = '▣ Kartlar';
 }
 function watchOpenPanel() {
   _wRenderCards();
@@ -2316,6 +2336,24 @@ function _wHighlightChapter(t) {
   items.forEach((el, idx) => el.classList.toggle('active', idx === aktif));
 }
 
+/* Tek bir kart satırının HTML'i (hem toplu render hem tekil reveal kullanır) */
+function _wCardItemHTML(card) {
+  const mm = Math.floor(card.t_sec/60), ss = String(card.t_sec%60).padStart(2,'0');
+  const ana = card.title || '';
+  const alt = ({info:'Bilgi',quiz:'Soru',poll:'Anket',topic:'Konu',checkpoint:'Kontrol'}[card.card_type]||'');
+  const yildiz = _w.answered[card.id] ? 'on' : '';
+  const thumb = card.thumb ? `<img class="wcard-thumb" src="${_escAttr(card.thumb)}" alt="">` : '';
+  const IKON = { info:'💡', quiz:'❓', poll:'📊', topic:'📖', checkpoint:'🚧' };
+  const solIkon = `<span class="wcard-typeic">${IKON[card.card_type]||'💡'}</span>`;
+  return `<div class="wcard${_w.activeCard&&_w.activeCard.id===card.id?' active':''}" data-cid="${card.id}" data-t="${card.t_sec}" onclick="_wOpenCard(${card.id})">
+    ${solIkon}
+    <div class="wcard-mid"><div class="wcard-ru">${_escHtml(ana)}</div>
+      ${alt?`<div class="wcard-tr">${_escHtml(alt)}</div>`:''}</div>
+    ${thumb}
+    <button class="wcard-star ${yildiz}" onclick="event.stopPropagation();_wCardStar(${card.id},this)">★</button>
+    <span class="wcard-time">${mm}:${ss}</span>
+  </div>`;
+}
 function _wRenderCards() {
   const box = document.getElementById('wcard-list'); if (!box) return;
   const filterBox = document.getElementById('wcard-filters');
@@ -2332,7 +2370,7 @@ function _wRenderCards() {
   const f = _w.cardFilter || 'all';
   if (filterBox) {
     filterBox.innerHTML = [
-      ['all','Tümü',say.all],['word','Kelimeler',say.word],
+      ['all','Tümü',say.all],
       ['phrase','İfadeler',say.phrase],['grammar','Dilbilgisi',say.grammar]
     ].filter(x => x[0]==='all' || x[2]>0)
      .map(([k,ad,n]) => `<button class="wcf-chip${f===k?' active':''}" onclick="_wCardFilter('${k}')">${ad} (${n})</button>`).join('');
@@ -2349,29 +2387,7 @@ function _wRenderCards() {
     box.innerHTML = '<div class="profile-empty">Video ilerledikçe kartlar burada belirecek. ✨</div>';
     return;
   }
-  box.innerHTML = gorunen.map(card => {
-    const mm = Math.floor(card.t_sec/60), ss = String(card.t_sec%60).padStart(2,'0');
-    // Kelime kartında ru/tr göster; diğerlerinde başlık
-    const ana = card.title || '';
-    const alt = card.card_type === 'word'
-      ? (card.body||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,40)
-      : ({info:'Bilgi',quiz:'Soru',poll:'Anket',topic:'Konu',checkpoint:'Kontrol'}[card.card_type]||'');
-    const yildiz = _w.answered[card.id] ? 'on' : '';
-    const thumb = card.thumb ? `<img class="wcard-thumb" src="${_escAttr(card.thumb)}" alt="">` : '';
-    // SADECE kelime kartında ses butonu; diğerlerinde tip ikonu
-    const IKON = { info:'💡', quiz:'❓', poll:'📊', topic:'📖', checkpoint:'🚧' };
-    const solIkon = card.card_type === 'word'
-      ? `<span class="wcard-sound" onclick="event.stopPropagation();speak('${_escAttr(ana)}')">${_wVolIcon()}</span>`
-      : `<span class="wcard-typeic">${IKON[card.card_type]||'💡'}</span>`;
-    return `<div class="wcard${_w.activeCard&&_w.activeCard.id===card.id?' active':''}" data-cid="${card.id}" onclick="_wOpenCard(${card.id})">
-      ${solIkon}
-      <div class="wcard-mid"><div class="wcard-ru">${_escHtml(ana)}</div>
-        ${alt?`<div class="wcard-tr">${_escHtml(alt)}</div>`:''}</div>
-      ${thumb}
-      <button class="wcard-star ${yildiz}" onclick="event.stopPropagation();_wCardStar(${card.id},this)">★</button>
-      <span class="wcard-time">${mm}:${ss}</span>
-    </div>`;
-  }).join('');
+  box.innerHTML = gorunen.map(card => _wCardItemHTML(card)).join('');
 }
 function _wCardFilter(k) { _w.cardFilter = k; _wRenderCards(); }
 function _wCardStar(cardId, btn) { btn.classList.toggle('on'); /* yıldız: kişisel işaret (ileride kaydedilebilir) */ }
@@ -2490,11 +2506,11 @@ function _wRenderSubs() {
     const mm = Math.floor(s.start_sec/60), ss = String(Math.floor(s.start_sec%60)).padStart(2,'0');
     // Rusça metni kelimelere böl; her kelime tıklanabilir buton
     const kelimeler = s.ru.split(/(\s+)/).map(parca => {
-      if (/^\s+$/.test(parca)) return parca;
-      // Noktalama işaretlerini kelimeden ayır
-      const m = parca.match(/^([«»"'(]*)([\wа-яёА-ЯЁ-]+)([.,!?;:»"')]*)$/);
-      if (!m) return _escHtml(parca);
-      const [, on, kelime, son] = m;
+      if (/^\s+$/.test(parca) || !parca) return parca;
+      // Baştaki/sondaki noktalama + tireleri ayır; ortada SADECE Rusça harf (+ kelime içi tek tire)
+      const m = parca.match(/^([^а-яёА-ЯЁ]*)([а-яёА-ЯЁ]+(?:-[а-яёА-ЯЁ]+)*)([^а-яёА-ЯЁ]*)$/);
+      if (!m) return _escHtml(parca);  // Rusça harf içermeyen parça (—, sayı, noktalama) düz metin
+      const on = m[1], kelime = m[2], son = m[3];
       return _escHtml(on) + `<button class="wsub-word" onclick="_wSubWordClick('${_escAttr(kelime)}', ${s.start_sec})">${_escHtml(kelime)}</button>` + _escHtml(son);
     }).join('');
     return `<div class="wsub-line">
