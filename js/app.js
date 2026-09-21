@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v119';
+var YDT_SURUM = 'v120';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1918,25 +1918,27 @@ function _wTick() {
 }
 /* Kartı yan panelde belirt (tek tek yerleşir + turuncu flash) */
 function _wRevealCard(cardId) {
-  // Panel açıksa listeyi güncelle (yeni kart eklenir)
+  // Panel listesini güncelle (yeni kart eklenir) — kart CSS ile sağdan sola kayarak gelir
   const box = document.getElementById('wcard-list');
   if (box) _wRenderCards();
-  // Flash: kısa gecikme (DOM'a eklensin), sonra parlat
-  setTimeout(() => _wFlashCard(cardId), 80);
+  // Yeni gelen kartı görünür yap + hafifçe kaydır
+  setTimeout(() => {
+    const el = document.querySelector('.wcard[data-cid="' + cardId + '"]');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 80);
 }
 
 function _wCardMode() { return localStorage.getItem('ydt_card_mode') || 'pause'; } // pause | collect
 function _wStrictMode() { return localStorage.getItem('ydt_strict_mode') === '1'; }
 
-/* Yan paneldeki kartı 2 kez parlat (site rengi, yazı okunaklı kalır) */
+/* Kartı 1 kez parlat (tıklandığında — site rengi, yazı okunaklı kalır) */
 function _wFlashCard(cardId) {
   try {
     const el = document.querySelector('.wcard[data-cid="' + cardId + '"]');
     if (!el) return;
     el.classList.remove('wcard-flash'); void el.offsetWidth;
     el.classList.add('wcard-flash');
-    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    setTimeout(() => el.classList.remove('wcard-flash'), 1100);
+    setTimeout(() => el.classList.remove('wcard-flash'), 600);
   } catch (e) {}
 }
 function _wTriggerCard(card) {
@@ -1966,6 +1968,72 @@ function _wUpdateBadge() {
 function watchOpenPanel() {
   _wRenderCards();
   watchSideTab('cards', document.querySelector('.wst-tab[data-tab="cards"]'));
+}
+
+/* Altyazı kelimesine tıklanınca açılan detaylı kelime kartı (kelime bankasındaki tüm etiketlerle) */
+function _wShowWordCard(kelime, w) {
+  const box = document.getElementById('watch-card-overlay'); if (!box) return;
+  _wPause();
+  box.className = 'sv-card-overlay';
+  const esc = (typeof _escHtml === 'function') ? _escHtml : (x => x);
+  const escA = (typeof _escAttr === 'function') ? _escAttr : (x => x);
+
+  if (!w) {
+    // Bankada yok — yalın gösterim
+    box.innerHTML = `<div class="sv-card sv-card-word">
+      <button class="sv-card-x" onclick="_wCloseWordCard()">×</button>
+      <div class="sv-word-head"><span class="sv-word-ru">${esc(kelime)}</span>
+        <button class="sv-word-sound" onclick="speak('${escA(kelime)}')">${_wVolIcon()}</button></div>
+      <div class="sv-word-mean" style="color:#8b9bb0;">Bu kelime henüz sözlükte kayıtlı değil.</div>
+    </div>`;
+    box.style.display = 'flex';
+    box.onclick = (e) => { if (e.target === box) _wCloseWordCard(); };
+    _w.activeCard = { _wordOnly: true };
+    return;
+  }
+
+  // Etiket rozetleri (kelime bankasındaki mantık)
+  const genderMap = { 'м':'м (eril)','ж':'ж (dişil)','с':'с (nötr)','мн':'мн (çoğul)','м/ж':'м/ж (ortak)' };
+  const gCls = ({'м':'gender-m','ж':'gender-f','с':'gender-n','мн':'gender-pl','м/ж':'gender-mf'})[w.cinsiyet] || 'gender-v';
+  const rozetler = [];
+  if (w.level) rozetler.push(`<span class="svw-badge svw-lvl">${esc(w.level)}</span>`);
+  if (w.cat) rozetler.push(`<span class="svw-badge svw-cat">${esc(w.cat)}</span>`);
+  if (w.cinsiyet) rozetler.push(`<span class="svw-badge word-gender ${gCls}">${esc(genderMap[w.cinsiyet]||w.cinsiyet)}</span>`);
+  if (w.tip) rozetler.push(`<span class="svw-badge ${w.tip==='СВ'?'word-tip-cv':'word-tip-ncv'}">${esc(w.tip)}</span>`);
+  if (w.padej) rozetler.push(`<span class="svw-badge word-padej">${esc(w.padej)}</span>`);
+  if (w.hal) rozetler.push(`<span class="svw-badge">${esc(w.hal)}</span>`);
+
+  const kayitli = (typeof isWordSaved === 'function' && isWordSaved(w.ru));
+
+  box.innerHTML = `<div class="sv-card sv-card-word">
+    <button class="sv-card-x" onclick="_wCloseWordCard()">×</button>
+    <div class="sv-word-head">
+      <span class="sv-word-ru">${esc(w.ru)}</span>
+      <button class="sv-word-sound" onclick="speak('${escA(w.ru)}')">${_wVolIcon()}</button>
+    </div>
+    ${w.p||w.pron?`<div class="sv-word-ipa">${esc(w.p||w.pron)}</div>`:''}
+    <div class="svw-badges">${rozetler.join('')}</div>
+    <div class="sv-word-mean">${esc(w.tr||'')}</div>
+    ${w.ornek?`<div class="sv-word-ex">
+      <div class="sv-word-ex-lbl">Örnek Cümle</div>
+      <div class="sv-word-ex-ru"><button class="sv-word-sound sm" onclick="speak('${escA(w.ornek)}')">${_wVolIcon()}</button> ${esc(w.ornek)}</div>
+      ${w.ornekTr?`<div class="sv-word-ex-tr">${esc(w.ornekTr)}</div>`:''}
+    </div>`:''}
+    ${w.not||w.note?`<div class="sv-word-note-lbl">Not</div><div class="sv-word-note">${esc(w.not||w.note)}</div>`:''}
+    <button class="svw-add ${kayitli?'saved':''}" onclick="_wAddWordToSaved('${escA(w.ru)}')" title="Kelimeye ekle">
+      ${kayitli?'✓ Eklendi':'+ Kelimeye Ekle'}
+    </button>
+  </div>`;
+  box.style.display = 'flex';
+  box.onclick = (e) => { if (e.target === box) _wCloseWordCard(); };
+  _w.activeCard = { _wordOnly: true };
+}
+/* Kelime kartını kapat → video devam */
+function _wCloseWordCard() {
+  const box = document.getElementById('watch-card-overlay');
+  if (box) { box.style.display = 'none'; box.innerHTML = ''; box.className = 'sv-card-overlay'; }
+  _w.activeCard = null;
+  _wPlay();
 }
 
 function _wShowCard(card, opts) {
@@ -2311,11 +2379,12 @@ function _wCardStar(cardId, btn) { btn.classList.toggle('on'); /* yıldız: kiş
 /* Yan panelden bir kartı doğrudan aç (video durmaz) */
 function _wOpenCard(cardId) {
   const card = _w.cards.find(x => x.id === cardId); if (!card) return;
+  // Tıklanınca kart 1 kez parlasın
+  _wFlashCard(cardId);
   // Aynı kart zaten açıksa → kapat (toggle)
   if (_w.activeCard && _w.activeCard.id === cardId) { _wCloseCard(); return; }
   _w.shownCards[card.id] = true;
   _wShowCard(card, { manual: true });
-  _wRenderCards();
 }
 /* Kartı kapat (video oynamaya devam eder; blur kalmaz) */
 function _wCloseCard() {
@@ -2400,12 +2469,52 @@ async function watchDelNote(id) {
 }
 
 function watchSideTab(tab, btn) {
-  ['chapters','cards','notes','docs'].forEach(t => {
+  ['chapters','cards','notes','docs','subs'].forEach(t => {
     const el = document.getElementById('wst-' + t); if (el) el.style.display = t === tab ? '' : 'none';
   });
   document.querySelectorAll('.wst-tab').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   else { const tb = document.querySelector('.wst-tab[data-tab="'+tab+'"]'); if (tb) tb.classList.add('active'); }
+  if (tab === 'subs') _wRenderSubs();
+}
+
+/* ── Altyazılar sekmesi: Rusça altyazılar, her kelime tıklanabilir ── */
+function _wRenderSubs() {
+  const box = document.getElementById('wsub-list'); if (!box) return;
+  const subs = (_w.subs || []).filter(s => s.ru && s.ru.trim());
+  if (!subs.length) {
+    box.innerHTML = '<div class="profile-empty">Bu videoda Rusça altyazı yok.</div>';
+    return;
+  }
+  box.innerHTML = subs.map(s => {
+    const mm = Math.floor(s.start_sec/60), ss = String(Math.floor(s.start_sec%60)).padStart(2,'0');
+    // Rusça metni kelimelere böl; her kelime tıklanabilir buton
+    const kelimeler = s.ru.split(/(\s+)/).map(parca => {
+      if (/^\s+$/.test(parca)) return parca;
+      // Noktalama işaretlerini kelimeden ayır
+      const m = parca.match(/^([«»"'(]*)([\wа-яёА-ЯЁ-]+)([.,!?;:»"')]*)$/);
+      if (!m) return _escHtml(parca);
+      const [, on, kelime, son] = m;
+      return _escHtml(on) + `<button class="wsub-word" onclick="_wSubWordClick('${_escAttr(kelime)}', ${s.start_sec})">${_escHtml(kelime)}</button>` + _escHtml(son);
+    }).join('');
+    return `<div class="wsub-line">
+      <button class="wsub-time" onclick="_wSeekTo(${s.start_sec});_wPlay();">${mm}:${ss}</button>
+      <div class="wsub-text">${kelimeler}</div>
+    </div>`;
+  }).join('');
+}
+/* Altyazıdaki Rusça kelimeye tıklanınca: video dur + kelime kartı aç */
+function _wSubWordClick(kelime, tSec) {
+  _wPause();
+  // Kelimeyi bankada ara (çekimli olabilir → önce tam, sonra kök)
+  let w = (typeof wordsByRu !== 'undefined') && (wordsByRu[kelime] || wordsByRu[kelime.toLowerCase()]);
+  if (!w && typeof words !== 'undefined') {
+    const kl = kelime.toLowerCase();
+    const kok = kl.slice(0, Math.max(3, Math.ceil(kl.length * 0.6)));
+    w = words.find(x => x.ru && x.ru.toLowerCase() === kl) ||
+        words.find(x => x.ru && x.ru.toLowerCase().startsWith(kok));
+  }
+  _wShowWordCard(kelime, w);
 }
 
 /* ── İzleme logu ── */
@@ -6286,7 +6395,6 @@ async function adminVidCards(videoId, title) {
           <option value="info">💡 Bilgi</option>
           <option value="quiz">❓ Soru</option>
           <option value="poll">📊 Anket</option>
-          <option value="word">🔤 Kelime</option>
           <option value="topic">📖 Konu</option>
           <option value="checkpoint">🚧 Kontrol Noktası</option>
         </select>
