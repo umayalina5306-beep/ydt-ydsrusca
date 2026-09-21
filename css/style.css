@@ -2838,7 +2838,7 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 .watch-fs-btn:hover { border-color:var(--gold); color:#fff; }
 
 /* Gövde */
-.watch-body { display:grid; grid-template-columns:1fr 400px; gap:20px; padding:22px 28px 40px; background:var(--off-white,#f5f0e8); }
+.watch-body { display:grid; grid-template-columns:1fr 412px; gap:20px; padding:22px 28px 40px; background:var(--off-white,#f5f0e8); }
 .watch-main { min-width:0; }
 
 /* Oynatıcı */
@@ -2898,8 +2898,8 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   display:flex; flex-direction:column; height:fit-content; max-height:calc(100vh - 100px); overflow:hidden;
   position:sticky; top:14px; }
 .watch-side-tabs { display:flex; border-bottom:1px solid rgba(255,255,255,.09); padding:6px 4px 0; }
-.wst-tab { flex:1; background:transparent; border:none; color:#8b9bb0; padding:12px 4px; cursor:pointer;
-  font-size:.8rem; font-weight:600; border-bottom:2px solid transparent; transition:all .15s; white-space:nowrap; }
+.wst-tab { flex:1; background:transparent; border:none; color:#8b9bb0; padding:12px 2px; cursor:pointer;
+  font-size:.78rem; font-weight:600; border-bottom:2px solid transparent; transition:all .15s; white-space:nowrap; }
 .wst-tab:hover { color:#e8edf5; }
 .wst-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
 .wst-panel { padding:16px; overflow-y:auto; }
@@ -3260,14 +3260,15 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
 
 /* ═══ v118: Kart parlama + yerleşme animasyonu ═══ */
 /* Kart zamanı gelince 2 kez parla (site altın rengi, yazılar okunaklı kalır) */
+/* Kart parlaması: tıklanınca nasıl hafif sarımsı parlıyorsa öyle. Araba sinyali x2 ritmi (~1.36sn, 1 kez). */
 @keyframes wcardFlash {
-  0%   { box-shadow:0 0 0 0 rgba(201,168,76,0); }
-  50%  { box-shadow:0 0 16px 4px rgba(201,168,76,.8); border-color:var(--gold); }
-  100% { box-shadow:0 0 0 0 rgba(201,168,76,0); }
+  0%   { background:#101f30; box-shadow:0 0 0 0 rgba(201,168,76,0); border-color:rgba(255,255,255,.1); }
+  50%  { background:rgba(201,168,76,.18); box-shadow:0 0 16px 3px rgba(201,168,76,.6); border-color:var(--gold); }
+  100% { background:#101f30; box-shadow:0 0 0 0 rgba(201,168,76,0); border-color:rgba(255,255,255,.1); }
 }
-.wcard-flash { animation:wcardFlash .6s ease; }
-/* Yeni kart yerleşme (minimal aşağıdan belirme) */
-@keyframes wcardSlideIn { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
+.wcard-flash { animation:wcardFlash 1.36s ease-in-out; }
+/* Yeni kart yerleşme: sağdan sola kayma */
+@keyframes wcardSlideIn { from { opacity:0; transform:translateX(44px); } to { opacity:1; transform:translateX(0); } }
 .wcard { animation:wcardSlideIn .35s cubic-bezier(.2,.8,.3,1); }
 /* Kelime dışı kartlarda tip ikonu (ses butonu yerine) */
 .wcard-typeic { width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.06);
