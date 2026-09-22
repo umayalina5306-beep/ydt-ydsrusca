@@ -130,6 +130,7 @@ function renderAdminUsers(list) {
           <button class="mail-act" onclick="adminUserDetail('${u.id}')">🔍 Detay</button>
           <button class="mail-act" onclick="adminUserNotify('${u.id}', '${(u.display_name||'').replace(/'/g,'')}')">🔔 Bildirim</button>
           <button class="mail-act" onclick="adminUserResetPw('${u.email||''}')">🔑 Şifre Sıfırlama Maili</button>
+          <button class="mail-act" onclick="tkResendVerify('${u.email||''}')">✉️ Onay Maili Gönder</button>
           <button class="mail-act" onclick="adminUserChangeEmail('${u.id}', '${u.email||''}')">📧 E-posta Değiştir</button>
           ${(_isSuper() && !u.is_admin) ? `<select class="role-select" onchange="adminSetRole('${u.id}', this.value, '${(u.display_name||'').replace(/'/g,'')}')">
             <option value="user" ${(!u.role||u.role==='user')?'selected':''}>Rol: Kullanıcı</option>
