@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v127';
+var YDT_SURUM = 'v128';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -4995,7 +4995,7 @@ async function admSentDelete(id) {
    ============================================================ */
 let _errLogged = 0;
 let _errLastMsg = '';
-async function logError(message, source) {
+async function logError(message, source, detail) {
   try {
     if (_errLogged >= 25) return; // oturum başına en fazla 25 kayıt (döngüsel hata patlamasına karşı)
     const _m = String(message || '').slice(0, 600);
@@ -5004,13 +5004,28 @@ async function logError(message, source) {
     if (typeof sb === 'undefined' || !sb) return;
     _errLogged++;
     var _uid = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null;
-    const { error: _insErr } = await sb.from('error_log').insert({
+    // Tarayıcı/cihaz özeti (kaynağı daha net göstermek için)
+    var tarayici = '';
+    try {
+      var ua = navigator.userAgent;
+      var b = /Edg/.test(ua)?'Edge':/Chrome/.test(ua)?'Chrome':/Firefox/.test(ua)?'Firefox':/Safari/.test(ua)?'Safari':'?';
+      var os = /Windows/.test(ua)?'Windows':/Android/.test(ua)?'Android':/iPhone|iPad/.test(ua)?'iOS':/Mac/.test(ua)?'macOS':/Linux/.test(ua)?'Linux':'?';
+      tarayici = b + '/' + os;
+    } catch (e) {}
+    const insObj = {
       user_id: _uid,
-      message: String(message || '').slice(0, 600),
+      message: _m,
       source: String(source || '').slice(0, 200),
-      url: (location.pathname + location.hash).slice(0, 200)
-    });
-    if (_insErr && typeof console !== 'undefined') console.warn('[Hata kaydı yazılamadı]', _insErr.message, '— error_log_acik.sql çalıştırıldı mı?');
+      url: (location.pathname + location.hash).slice(0, 200),
+      detail: (detail ? String(detail).slice(0, 500) + ' · ' : '') + tarayici + ' · ' + (location.href || '').slice(0, 120)
+    };
+    let { error: _insErr } = await sb.from('error_log').insert(insObj);
+    // detail kolonu yoksa (eski şema) onsuz tekrar dene
+    if (_insErr && /detail/.test(_insErr.message || '')) {
+      delete insObj.detail;
+      ({ error: _insErr } = await sb.from('error_log').insert(insObj));
+    }
+    if (_insErr && typeof console !== 'undefined') console.warn('[Hata kaydı yazılamadı]', _insErr.message);
   } catch (e) {}
 }
 /* Panelden tek tıkla hata-kayıt sistemini test et: sonucu açıkça söyler */
@@ -5035,10 +5050,14 @@ function pwToggle(btn, id) {
 if (typeof window !== 'undefined') {
   window.logError = logError;
   window.addEventListener('error', function (ev) {
-    logError(ev.message || 'script error', (ev.filename || '') + ':' + (ev.lineno || ''));
+    var kaynak = (ev.filename || '') + ':' + (ev.lineno || '') + ':' + (ev.colno || '');
+    var stk = (ev.error && ev.error.stack) ? String(ev.error.stack).split('\n')[1] || '' : '';
+    logError(ev.message || 'script error', kaynak, stk.trim());
   });
   window.addEventListener('unhandledrejection', function (ev) {
-    var r = ev.reason; logError((r && (r.message || String(r))) || 'promise error', 'unhandledrejection');
+    var r = ev.reason;
+    var stk = (r && r.stack) ? String(r.stack).split('\n')[1] || '' : '';
+    logError((r && (r.message || String(r))) || 'promise error', 'unhandledrejection', stk.trim());
   });
 }
 
@@ -5060,7 +5079,8 @@ async function adminLoadErrors(showAll) {
     box.innerHTML = foot + data.map(e => {
       const d = new Date(e.created_at);
       return `<div class="err-row"><div class="err-msg">${_escHtml(e.message)} <button class="mail-act red err-del" onclick="adminErrDelete('${e.id}')">🗑️</button></div>
-        <div class="err-meta">${_escHtml(e.source || '')} · ${_escHtml((e.user_id || '').slice(0,8))} · ${d.toLocaleString('tr-TR')}</div></div>`;
+        <div class="err-meta">📍 ${_escHtml(e.source || '—')}${e.url?' · '+_escHtml(e.url):''} · 👤 ${_escHtml((e.user_id || 'anonim').slice(0,8))} · ${d.toLocaleString('tr-TR')}</div>
+        ${e.detail?`<div class="err-meta" style="opacity:.7;">🔎 ${_escHtml(e.detail)}</div>`:''}</div>`;
     }).join('');
   } catch (e) { box.innerHTML = '<div class="profile-empty">Hata kayıtları alınamadı (error_log.sql çalıştırıldı mı?).</div>'; }
 }
@@ -5097,7 +5117,7 @@ function trackPageView(pageId) {
       // Kullanıcının en son access_log kaydına ülke bilgisini işle (giriş anında trigger IP yazar, ülkeyi client tamamlar)
       try {
         if (geo && geo.country && currentUser) {
-          sb.from('access_log').update({ country: geo.country })
+          sb.from('access_log').update({ country: geo.country, city: geo.city })
             .eq('user_id', currentUser.id).is('country', null)
             .then(function(){}, function(){});
         }
@@ -6862,7 +6882,10 @@ async function adminUserDetail(id, showAll) {
       sb.from('test_results').select('id', { count: 'exact', head: true }).eq('user_id', id),
       sb.from('activity_log').select('kind, amount, created_at').eq('user_id', id).gte('created_at', new Date(Date.now() - 14 * 86400000).toISOString()).limit(1000)
     ]);
-    const rows = (logs.data || []).map(l => `<div class="udet-log"><span class="udet-ip">${_escHtml(l.ip || '—')}</span> <span class="cw-cat">${_escHtml(l.country || '')}</span> <span class="cw-cat">${_escHtml(l.fp || '')}</span><div class="err-meta">${_escHtml((l.ua || '').slice(0, 110))} · ${new Date(l.created_at).toLocaleString('tr-TR')}</div></div>`).join('');
+    const rows = (logs.data || []).map(l => {
+      const konum = [l.city, l.country].filter(Boolean).join(', ') || '—';
+      return `<div class="udet-log"><span class="udet-ip">${_escHtml(l.ip || '—')}</span> <span class="cw-cat">📍 ${_escHtml(konum)}</span> <span class="cw-cat">${_escHtml(l.fp || '')}</span><div class="err-meta">${_escHtml((l.ua || '').slice(0, 110))} · ${new Date(l.created_at).toLocaleString('tr-TR')}</div></div>`;
+    }).join('');
     // Son 14 gün aktivite özeti
     const AK = { testsDone: '📝 Test', questions: '❓ Soru', wordsLearned: '🧠 Öğrenilen', wordsSaved: '📦 Kaydedilen', dailyReviews: '🔁 Günlük Tekrar', pomodoros: '🍅 Pomodoro', videos: '🎬 Video', focusMin: '⏱️ Odak dk' };
     const agg = {};
@@ -6872,7 +6895,7 @@ async function adminUserDetail(id, showAll) {
       : '<div class="err-meta">Son 14 günde kayıtlı aktivite yok. (activity_log kuruluysa bundan sonra birikir.)</div>';
     box.innerHTML = `<div class="udet-stats">Çözülen test (DB): <b>${tests.count ?? '—'}</b></div>
       <h5 class="udet-h5">Son 14 Gün Aktivite</h5>${actHtml}
-      <h5 class="udet-h5">Erişimler (IP · ülke · parmak izi · cihaz) ${showAll ? '— tümü (' + (logs.data || []).length + ')' : '— son 8'}</h5>
+      <h5 class="udet-h5">Erişimler (IP · konum · parmak izi · cihaz) ${showAll ? '— tümü (' + (logs.data || []).length + ')' : '— son 8'}</h5>
       ${rows || '<div class="profile-empty">Henüz erişim kaydı yok.</div>'}
       ${showAll ? '' : `<button class="mail-act" style="margin-top:8px;" onclick="adminUserDetail('${id}', true)">📜 Tüm Giriş Kayıtlarını Gör</button>`}`;
   } catch (e) { box.innerHTML = '<div class="profile-empty">Detay alınamadı (access_log.sql + activity_log.sql çalıştırıldı mı?).</div>'; }
