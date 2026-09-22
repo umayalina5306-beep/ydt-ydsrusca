@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v126';
+var YDT_SURUM = 'v127';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1261,10 +1261,6 @@ async function openWatch(v) {
 
   await _wLoadData(v);
 
-  // PiP butonu: yalnız Stream videolarında görünür (YouTube iframe'de çalışmaz)
-  const pipBtn = document.querySelector('.wc-btn[onclick="watchPiP()"]');
-  if (pipBtn) pipBtn.style.display = (v.source === 'stream') ? '' : 'none';
-
   if (v.source === 'stream') { await _wInitStream(v); }
   else { _wInitYouTube(v); }
 
@@ -1583,25 +1579,6 @@ function watchToggleCaption() {
   _wUpdateCaption(_wGetTime());
 }
 /* Resim içinde resim */
-async function watchPiP() {
-  // Tarayıcı güvenliği: iframe (Stream/YouTube) içindeki video'ya JS'ten erişilemez,
-  // bu yüzden PiP programatik açılamaz. Kullanıcıya doğru yolu göster.
-  try {
-    if (document.pictureInPictureElement) { await document.exitPictureInPicture(); return; }
-  } catch (e) {}
-  const box = document.getElementById('watch-player-box');
-  if (!box) return;
-  // Kısa bir ipucu balonu göster
-  let ip = document.getElementById('wpip-hint');
-  if (ip) ip.remove();
-  ip = document.createElement('div');
-  ip.id = 'wpip-hint'; ip.className = 'wpip-hint';
-  ip.innerHTML = '📺 Mini oynatıcı için videoya <b>sağ tıkla</b> → <b>"Resim içinde resim"</b> seç.';
-  box.appendChild(ip);
-  setTimeout(() => { ip.style.opacity = '0'; }, 3500);
-  setTimeout(() => { if (ip) ip.remove(); }, 4200);
-}
-
 /* Progress bar */
 function _wUpdateProgress() {
   if (!_w.ready) return;
