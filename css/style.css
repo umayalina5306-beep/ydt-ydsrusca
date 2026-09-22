@@ -3312,3 +3312,9 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   padding:11px; font-weight:700; cursor:pointer; font-size:.9rem; transition:all .15s; }
 .svw-add:hover { background:var(--gold-light,#e8c96a); }
 .svw-add.saved { background:rgba(34,197,94,.2); color:#4ade80; }
+
+/* PiP ipucu balonu */
+.wpip-hint { position:absolute; bottom:70px; left:50%; transform:translateX(-50%); z-index:8;
+  background:rgba(13,27,42,.92); color:#e8edf5; padding:10px 16px; border-radius:10px; font-size:.85rem;
+  border:1px solid rgba(201,168,76,.4); transition:opacity .6s ease; max-width:90%; text-align:center; }
+.wpip-hint b { color:var(--gold); }
