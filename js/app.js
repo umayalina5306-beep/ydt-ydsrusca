@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v125';
+var YDT_SURUM = 'v126';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1584,34 +1584,24 @@ function watchToggleCaption() {
 }
 /* Resim içinde resim */
 async function watchPiP() {
+  // Tarayıcı güvenliği: iframe (Stream/YouTube) içindeki video'ya JS'ten erişilemez,
+  // bu yüzden PiP programatik açılamaz. Kullanıcıya doğru yolu göster.
   try {
     if (document.pictureInPictureElement) { await document.exitPictureInPicture(); return; }
-    if (_w.kind === 'stream' && _w.player) {
-      // 1) SDK'nın kendi PiP metodu (varsa)
-      if (typeof _w.player.requestPictureInPicture === 'function') {
-        try { await _w.player.requestPictureInPicture(); return; } catch (e) {}
-      }
-      // 2) Stream SDK bir <video> expose ediyorsa doğrudan
-      try {
-        const v = _w.player.video || (_w.player.el && _w.player.el.querySelector && _w.player.el.querySelector('video'));
-        if (v && v.requestPictureInPicture) { await v.requestPictureInPicture(); return; }
-      } catch (e) {}
-      // 3) iframe'i geçici tıklanabilir yap → tarayıcı otomatik PiP komutu
-      const ifr = document.getElementById('w-sframe');
-      if (ifr) {
-        ifr.style.pointerEvents = 'auto';
-        try { ifr.contentWindow.postMessage({ event: 'requestPictureInPicture' }, '*'); } catch (e) {}
-        setTimeout(() => { if (ifr) ifr.style.pointerEvents = 'none'; }, 200);
-      }
-      toast('Mini oynatıcı açılıyor…');
-      return;
-    }
-    // YouTube: iframe PiP genelde desteklenmez
-    toast('Mini oynatıcı yalnız premium videolarda çalışır.');
-  } catch (e) {
-    toast('Mini oynatıcı bu tarayıcıda desteklenmiyor.');
-  }
+  } catch (e) {}
+  const box = document.getElementById('watch-player-box');
+  if (!box) return;
+  // Kısa bir ipucu balonu göster
+  let ip = document.getElementById('wpip-hint');
+  if (ip) ip.remove();
+  ip = document.createElement('div');
+  ip.id = 'wpip-hint'; ip.className = 'wpip-hint';
+  ip.innerHTML = '📺 Mini oynatıcı için videoya <b>sağ tıkla</b> → <b>"Resim içinde resim"</b> seç.';
+  box.appendChild(ip);
+  setTimeout(() => { ip.style.opacity = '0'; }, 3500);
+  setTimeout(() => { if (ip) ip.remove(); }, 4200);
 }
+
 /* Progress bar */
 function _wUpdateProgress() {
   if (!_w.ready) return;
@@ -9553,11 +9543,23 @@ function adminVidSourceChanged() {
   const row = document.getElementById('cv-upload-row');
   if (row) row.style.display = (src === 'stream') ? '' : 'none';
 }
+let _streamUploading = false;
 async function adminStreamUpload() {
+  if (_streamUploading) { toast('Zaten bir yükleme sürüyor, lütfen bekle.'); return; }
   const fileInp = document.getElementById('cv-file');
   const st = document.getElementById('cv-upload-status');
   if (!fileInp || !fileInp.files || !fileInp.files[0]) { uiAlert('Önce bir video dosyası seç.'); return; }
   const file = fileInp.files[0];
+  // Aynı dosya son 30 sn içinde yüklendiyse uyar (çift yükleme koruması)
+  const imza = file.name + '|' + file.size;
+  if (_streamLastUpload && _streamLastUpload.imza === imza && (Date.now() - _streamLastUpload.t) < 30000) {
+    uiAlert('Bu dosyayı az önce yükledin. Aynı videoyu tekrar yüklemek istediğinden emin misin? İstiyorsan 30 saniye bekleyip tekrar dene.');
+    return;
+  }
+  _streamUploading = true;
+  // Yükle butonunu kilitle
+  const upBtn = document.querySelector('button[onclick="adminStreamUpload()"]');
+  if (upBtn) { upBtn.disabled = true; upBtn.style.opacity = '.5'; }
   if (st) st.innerHTML = '⏳ Yükleme başlatılıyor...';
   try {
     // 1) Edge function'dan tek seferlik yükleme URL'i al (tus/direct upload)
@@ -9591,8 +9593,14 @@ async function adminStreamUpload() {
     toast('✅ Video Stream\'e yüklendi');
   } catch (e) {
     if (st) st.innerHTML = `<span style="color:#fca5a5;">Hata: ${_escHtml((e&&e.message)||e)}</span>`;
+  } finally {
+    _streamUploading = false;
+    _streamLastUpload = { imza: (file ? file.name + '|' + file.size : ''), t: Date.now() };
+    const ub = document.querySelector('button[onclick="adminStreamUpload()"]');
+    if (ub) { ub.disabled = false; ub.style.opacity = '1'; }
   }
 }
+let _streamLastUpload = null;
 
 /* ── Admin: Kurum Yönetimi ── */
 async function adminKurumLoad() {
