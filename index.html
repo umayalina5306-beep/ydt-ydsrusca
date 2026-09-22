@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=123">
+<link rel="stylesheet" href="css/style.css?v=124">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=123" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=124" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -1621,7 +1621,12 @@
               <button class="set-btn" style="margin-top:8px;" onclick="adminStreamUpload()">⬆️ Stream'e Yükle</button>
               <div id="cv-upload-status" style="margin-top:8px;font-size:.85rem;"></div>
             </div>
-            <input id="cv-thumb" class="pq-input" placeholder="Kapak görseli URL (boşsa otomatik/varsayılan)" autocomplete="off">
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input id="cv-thumb" class="pq-input" style="flex:1;" placeholder="Kapak görseli URL (boşsa otomatik/varsayılan)" autocomplete="off">
+              <input type="file" id="cv-thumb-file" accept="image/*" style="display:none;" onchange="adminThumbUpload(event)">
+              <button type="button" class="mail-act" onclick="document.getElementById('cv-thumb-file').click()">🖼️ Yükle</button>
+            </div>
+            <div id="cv-thumb-status" style="font-size:.8rem;color:#9ca3af;margin-top:4px;"></div>
             <label class="cw-check"><input type="checkbox" id="cv-premium"> 👑 Premium video (yalnız premium üyeler izler)</label>
             <div><button class="set-btn" id="cv-save-btn" onclick="adminVidSave()">Video Ekle</button>
             <button class="set-btn ghost" onclick="adminVidFormClear()" style="margin-left:8px;">Temizle</button></div>
@@ -2061,12 +2066,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=123"></script>
-<script defer src="js/auth.js?v=123"></script>
-<script defer src="js/admin.js?v=123"></script>
-<script defer src="js/profile.js?v=123"></script>
-<script defer src="js/extras.js?v=123"></script>
-<script defer src="js/app.js?v=123"></script>
+<script defer src="js/supabase-config.js?v=124"></script>
+<script defer src="js/auth.js?v=124"></script>
+<script defer src="js/admin.js?v=124"></script>
+<script defer src="js/profile.js?v=124"></script>
+<script defer src="js/extras.js?v=124"></script>
+<script defer src="js/app.js?v=124"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
