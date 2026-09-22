@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v123';
+var YDT_SURUM = 'v124';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1586,26 +1586,30 @@ function watchToggleCaption() {
 async function watchPiP() {
   try {
     if (document.pictureInPictureElement) { await document.exitPictureInPicture(); return; }
-    // Cloudflare Stream SDK'nın kendi PiP komutu (iframe içindeki video'yu tetikler)
     if (_w.kind === 'stream' && _w.player) {
-      // SDK postMessage: requestPictureInPicture
+      // 1) SDK'nın kendi PiP metodu (varsa)
+      if (typeof _w.player.requestPictureInPicture === 'function') {
+        try { await _w.player.requestPictureInPicture(); return; } catch (e) {}
+      }
+      // 2) Stream SDK bir <video> expose ediyorsa doğrudan
       try {
-        const ifr = document.getElementById('w-sframe');
-        if (ifr && ifr.contentWindow) {
-          ifr.contentWindow.postMessage({ event: 'requestPictureInPicture' }, '*');
-        }
-        // Bazı sürümlerde SDK doğrudan destekler
-        if (typeof _w.player.requestPictureInPicture === 'function') {
-          await _w.player.requestPictureInPicture(); return;
-        }
+        const v = _w.player.video || (_w.player.el && _w.player.el.querySelector && _w.player.el.querySelector('video'));
+        if (v && v.requestPictureInPicture) { await v.requestPictureInPicture(); return; }
       } catch (e) {}
-      // Son çare: iframe pointer-events'i geçici aç, tarayıcı PiP dene
-      toast('Mini oynatıcıyı başlatmak için videoya sağ tıklayıp "Resim içinde resim" seçebilirsin.');
+      // 3) iframe'i geçici tıklanabilir yap → tarayıcı otomatik PiP komutu
+      const ifr = document.getElementById('w-sframe');
+      if (ifr) {
+        ifr.style.pointerEvents = 'auto';
+        try { ifr.contentWindow.postMessage({ event: 'requestPictureInPicture' }, '*'); } catch (e) {}
+        setTimeout(() => { if (ifr) ifr.style.pointerEvents = 'none'; }, 200);
+      }
+      toast('Mini oynatıcı açılıyor…');
       return;
     }
+    // YouTube: iframe PiP genelde desteklenmez
     toast('Mini oynatıcı yalnız premium videolarda çalışır.');
   } catch (e) {
-    toast('Mini oynatıcı bu tarayıcıda açılamadı.');
+    toast('Mini oynatıcı bu tarayıcıda desteklenmiyor.');
   }
 }
 /* Progress bar */
@@ -2364,24 +2368,20 @@ function _wRenderCards() {
     box.innerHTML = '<div class="profile-empty">Bu videoda kart yok.</div>';
     return;
   }
-  // Filtre çipleri (Tümü / Kelimeler / İfadeler / Dilbilgisi)
-  const say = { all:_w.cards.length,
-    word:_w.cards.filter(c=>c.card_type==='word').length,
-    phrase:_w.cards.filter(c=>c.subcat==='phrase'||c.card_type==='info').length,
-    grammar:_w.cards.filter(c=>c.card_type==='topic'||c.subcat==='grammar').length };
+  // Filtre çipleri: KART TİPLERİYLE AYNI (Tümü / Bilgi / Soru / Anket / Konu / Kontrol)
+  const TIP_AD = { info:'💡 Bilgi', quiz:'❓ Soru', poll:'📊 Anket', topic:'📖 Konu', checkpoint:'🚧 Kontrol' };
+  const say = {};
+  ['info','quiz','poll','topic','checkpoint'].forEach(t => { say[t] = _w.cards.filter(c=>c.card_type===t).length; });
   const f = _w.cardFilter || 'all';
   if (filterBox) {
-    filterBox.innerHTML = [
-      ['all','Tümü',say.all],
-      ['phrase','İfadeler',say.phrase],['grammar','Dilbilgisi',say.grammar]
-    ].filter(x => x[0]==='all' || x[2]>0)
+    const cipler = [['all','Tümü',_w.cards.length]];
+    ['info','quiz','poll','topic','checkpoint'].forEach(t => { if (say[t]>0) cipler.push([t, TIP_AD[t], say[t]]); });
+    filterBox.innerHTML = cipler
      .map(([k,ad,n]) => `<button class="wcf-chip${f===k?' active':''}" onclick="_wCardFilter('${k}')">${ad} (${n})</button>`).join('');
   }
-  // Filtrelenmiş kartlar (zamanı gelmiş olanlar görünür; gelmemişler gizli — tek tek belirir)
+  // Filtrele: kart tipine göre
   let list = _w.cards.slice().sort((a,b)=>a.t_sec-b.t_sec);
-  if (f === 'word') list = list.filter(c=>c.card_type==='word');
-  else if (f === 'phrase') list = list.filter(c=>c.subcat==='phrase'||c.card_type==='info');
-  else if (f === 'grammar') list = list.filter(c=>c.card_type==='topic'||c.subcat==='grammar');
+  if (f !== 'all') list = list.filter(c => c.card_type === f);
 
   const suan = _w.ready ? _wGetTime() : 0;
   const gorunen = list.filter(card => _w._revealed && _w._revealed[card.id]);
@@ -5974,7 +5974,11 @@ function renderCvList() {
         ${r.active === false
           ? `<button class="mail-act" onclick="adminVidRestore('${r.id}')">↩️ Geri Al</button>
              <button class="mail-act red" onclick="adminVidPurge('${r.id}')">❌ Temelli Sil</button>`
-          : `<button class="mail-act" onclick="adminVidEdit('${r.id}')">✏️</button>
+          : `<button class="mail-act" onclick="adminVidMoveEdge('${r.id}','top')" title="En başa">⏫</button>
+             <button class="mail-act" onclick="adminVidMove('${r.id}',-1)" title="Yukarı">🔼</button>
+             <button class="mail-act" onclick="adminVidMove('${r.id}',1)" title="Aşağı">🔽</button>
+             <button class="mail-act" onclick="adminVidMoveEdge('${r.id}','bottom')" title="En sona">⏬</button>
+             <button class="mail-act" onclick="adminVidEdit('${r.id}')">✏️</button>
              <button class="mail-act" onclick="adminVidCards('${r.id}', '${_escAttr(r.title||'')}')">🃏 Kartlar</button>
              <button class="mail-act" onclick="adminVidChapters('${r.id}', '${_escAttr(r.title||'')}')">📌 Bölümler</button>
              <button class="mail-act" onclick="adminVidDocs('${r.id}', '${_escAttr(r.title||'')}')">📄 Dökümanlar</button>
@@ -6005,6 +6009,29 @@ function adminVidEdit(id) {
   const btn = document.getElementById('cv-save-btn'); if (btn) btn.textContent = 'Değişiklikleri Kaydet';
   document.getElementById('cv-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
+/* Video kapak görseli yükle (Supabase Storage 'docs' bucket) */
+async function adminThumbUpload(ev) {
+  const fi = ev.target;
+  const st = document.getElementById('cv-thumb-status');
+  if (!fi.files || !fi.files[0]) return;
+  const file = fi.files[0];
+  if (file.size > 5 * 1024 * 1024) { uiAlert('Kapak en fazla 5 MB olabilir.'); return; }
+  if (st) st.textContent = '⏳ Yükleniyor...';
+  try {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = 'video-thumbs/' + Date.now() + '_' + Math.random().toString(36).slice(2,7) + '.' + ext;
+    const { error } = await sb.storage.from('docs').upload(path, file, { cacheControl: '3600', upsert: false });
+    if (error) throw error;
+    const { data: pub } = sb.storage.from('docs').getPublicUrl(path);
+    const url = pub && pub.publicUrl;
+    if (!url) throw new Error('URL alınamadı');
+    const inp = document.getElementById('cv-thumb'); if (inp) inp.value = url;
+    if (st) st.innerHTML = '✅ Kapak yüklendi.';
+  } catch (e) {
+    if (st) st.innerHTML = '<span style="color:#fca5a5;">Yüklenemedi: ' + _escHtml((e&&e.message)||e) + '</span>';
+  }
+}
+
 async function adminVidSave() {
   const title = _cwVal('cv-title'); if (!title) { uiAlert('Video başlığı zorunlu.'); return; }
   const id = _cwVal('cv-id');
@@ -6041,13 +6068,43 @@ async function adminVidSave() {
 /* Videoları num sırasına göre 1,2,3… olarak yeniden numaralandır (boşlukları kapatır, çakışmayı giderir) */
 async function _adminVidRenumber() {
   try {
-    const { data } = await sb.from('content_videos').select('id, num, created_at').order('num', { nullsFirst: false }).order('created_at');
+    // Sadece AKTİF videoları num sırasına göre 1,2,3… yap (pasif/silinmişlere dokunma)
+    const { data } = await sb.from('content_videos').select('id, num, created_at')
+      .eq('active', true).order('num', { nullsFirst: false }).order('created_at');
     if (!data) return;
     let sira = 1;
     for (const v of data) {
       if (v.num !== sira) { await sb.from('content_videos').update({ num: sira }).eq('id', v.id); }
       sira++;
     }
+  } catch (e) {}
+}
+/* Videoyu yukarı/aşağı taşı (sıra takası) */
+async function adminVidMove(id, yon) {
+  const aktif = (_cvRows || []).filter(v => v.active !== false).sort((a,b) => (a.num||0)-(b.num||0));
+  const idx = aktif.findIndex(v => v.id === id);
+  if (idx < 0) return;
+  const hedef = idx + yon;
+  if (hedef < 0 || hedef >= aktif.length) return;
+  const a = aktif[idx], b = aktif[hedef];
+  try {
+    await sb.from('content_videos').update({ num: b.num }).eq('id', a.id);
+    await sb.from('content_videos').update({ num: a.num }).eq('id', b.id);
+    await adminCvReload(); refreshVideosFromDb();
+  } catch (e) {}
+}
+/* Videoyu en başa / en sona taşı */
+async function adminVidMoveEdge(id, nereye) {
+  const aktif = (_cvRows || []).filter(v => v.active !== false).sort((a,b) => (a.num||0)-(b.num||0));
+  const idx = aktif.findIndex(v => v.id === id);
+  if (idx < 0) return;
+  const [tasinan] = aktif.splice(idx, 1);
+  if (nereye === 'top') aktif.unshift(tasinan); else aktif.push(tasinan);
+  try {
+    for (let i = 0; i < aktif.length; i++) {
+      await sb.from('content_videos').update({ num: i + 1 }).eq('id', aktif[i].id);
+    }
+    await adminCvReload(); refreshVideosFromDb();
   } catch (e) {}
 }
 async function adminVidTogglePremium(id, on) {
@@ -6729,7 +6786,15 @@ async function adminVidCardDel(id, videoId, title) {
 }
 
 async function adminVidHide(id) { try { await sb.from('content_videos').update({ active: false }).eq('id', id); await _adminVidRenumber(); await adminCvReload(); refreshVideosFromDb(); } catch (e) {} }
-async function adminVidRestore(id) { try { await sb.from('content_videos').update({ active: true }).eq('id', id); adminCvReload(); refreshVideosFromDb(); } catch (e) {} }
+async function adminVidRestore(id) {
+  try {
+    // Geri alınan video en sona eklensin (eski num'ı korunmuş olabilir ama çakışmayı renumber çözer)
+    const aktif = (_cvRows || []).filter(v => v.active !== false);
+    const sonNum = aktif.length ? Math.max(...aktif.map(v => v.num || 0)) + 1 : 1;
+    await sb.from('content_videos').update({ active: true, num: sonNum }).eq('id', id);
+    await _adminVidRenumber(); await adminCvReload(); refreshVideosFromDb();
+  } catch (e) {}
+}
 async function adminVidPurge(id) {
   const r = (_cvRows || []).find(x => x.id === id);
   const stream = r && r.source === 'stream';
