@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v122';
+var YDT_SURUM = 'v123';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -2697,6 +2697,12 @@ async function refreshPqFromDb() {
 const LEARN_PAGES = ['words', 'grammar', 'quiz', 'video'];
 
 function showPage(id){
+  // İzleme sayfasından başka yere geçiliyorsa videoyu DURDUR (PiP eklenene kadar)
+  const wp = document.getElementById('page-watch');
+  if (wp && wp.classList.contains('active') && id !== 'watch') {
+    try { if (typeof _wPause === 'function') _wPause(); } catch (e) {}
+    try { if (typeof _wCleanup === 'function') _wCleanup(); } catch (e) {}
+  }
   // Eğitim sayfaları learn düzeninde açılır (geriye uyumluluk: eski linkler çalışmaya devam eder)
   if (LEARN_PAGES.includes(id)) {
     _openLearn(id);
@@ -6027,8 +6033,22 @@ async function adminVidSave() {
     if (id) ({ error } = await sb.from('content_videos').update(row).eq('id', id));
     else ({ error } = await sb.from('content_videos').insert(row));
     if (error) throw error;
-    toast('Video kaydedildi (sıra: ' + num + ').'); adminVidFormClear(); adminCvReload(); refreshVideosFromDb();
+    await _adminVidRenumber();  // sıraları 1,2,3… olarak sıkılaştır (boşlukları kapat)
+    toast('Video kaydedildi.'); adminVidFormClear(); await adminCvReload(); refreshVideosFromDb();
   } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
+}
+
+/* Videoları num sırasına göre 1,2,3… olarak yeniden numaralandır (boşlukları kapatır, çakışmayı giderir) */
+async function _adminVidRenumber() {
+  try {
+    const { data } = await sb.from('content_videos').select('id, num, created_at').order('num', { nullsFirst: false }).order('created_at');
+    if (!data) return;
+    let sira = 1;
+    for (const v of data) {
+      if (v.num !== sira) { await sb.from('content_videos').update({ num: sira }).eq('id', v.id); }
+      sira++;
+    }
+  } catch (e) {}
 }
 async function adminVidTogglePremium(id, on) {
   try { await sb.from('content_videos').update({ premium: on }).eq('id', id); adminCvReload(); refreshVideosFromDb(); } catch (e) {}
@@ -6371,7 +6391,7 @@ async function adminVidCards(videoId, title) {
   try {
     const [c1, c2, c3, c4] = await Promise.all([
       sb.from('video_cards').select('*').eq('video_id', videoId).order('t_sec'),
-      sb.from('grammar_notes').select('id, title').order('title').limit(500).then(r => r, () => ({ data: [] })),
+      sb.from('content_grammar').select('id, title').eq('active', true).order('title').limit(500).then(r => r, () => ({ data: [] })),
       sb.from('content_videos').select('duration_sec').eq('id', videoId).single().then(r => r, () => ({ data: null })),
       sb.from('video_chapters').select('id, t_sec, title').eq('video_id', videoId).order('t_sec').then(r => r, () => ({ data: [] }))
     ]);
@@ -6614,7 +6634,7 @@ function adminCardDelOpt(btn) {
 
 function adminCardPickNote(noteId) {
   if (!noteId) return;
-  sb.from('grammar_notes').select('title, body').eq('id', noteId).single().then(r => {
+  sb.from('content_grammar').select('title, body').eq('id', noteId).single().then(r => {
     if (r && r.data) {
       const t = document.getElementById('vc-title'); if (t && !t.value) t.value = r.data.title || '';
       const b = document.getElementById('vc-body'); if (b) b.innerHTML = r.data.body || '';
@@ -6692,7 +6712,7 @@ async function adminVidCardAdd(videoId, title) {
     if (error) throw error;
     const secilenNot = (document.getElementById('vc-gramnote') || {}).value;
     if (tip === 'topic' && bas && govde && !secilenNot && !_vcEditId) {
-      try { await sb.from('grammar_notes').insert({ title: bas, body: govde }); } catch (e) {}
+      try { await sb.from('content_grammar').insert({ title: bas, body: govde, category: 'genel', active: true }); } catch (e) {}
     }
     document.getElementById('vcard-modal').remove();
     toast(_vcEditId ? '✏️ Kart güncellendi.' : '🃏 Kart eklendi.');
@@ -6708,7 +6728,7 @@ async function adminVidCardDel(id, videoId, title) {
   } catch (e) {}
 }
 
-async function adminVidHide(id) { try { await sb.from('content_videos').update({ active: false }).eq('id', id); adminCvReload(); refreshVideosFromDb(); } catch (e) {} }
+async function adminVidHide(id) { try { await sb.from('content_videos').update({ active: false }).eq('id', id); await _adminVidRenumber(); await adminCvReload(); refreshVideosFromDb(); } catch (e) {} }
 async function adminVidRestore(id) { try { await sb.from('content_videos').update({ active: true }).eq('id', id); adminCvReload(); refreshVideosFromDb(); } catch (e) {} }
 async function adminVidPurge(id) {
   const r = (_cvRows || []).find(x => x.id === id);
@@ -6722,9 +6742,13 @@ async function adminVidPurge(id) {
       const { data, error } = await sb.functions.invoke('stream-delete', { body: { video_id: id } });
       if (error) throw new Error(error.message || 'Sunucuya ulaşılamadı');
       if (data && data.error) throw new Error(data.error);
-      toast(data && data.cf_deleted
-        ? '✅ Video siteden ve Cloudflare Stream\'den silindi.'
-        : '⚠️ Siteden silindi, ancak Stream\'den silinemedi — Cloudflare panelinden kontrol et.');
+      if (data && data.cf_deleted) {
+        toast('✅ Video siteden ve Stream\'den silindi.');
+      } else {
+        // Stream silinemedi — nedenini yönetici konsoluna yaz
+        try { if (currentProfile && currentProfile.is_admin) console.warn('[Stream silme hatası]:', data && data.cf_error); } catch(x){}
+        toast('⚠️ Siteden silindi; Stream\'den silme başarısız (konsola bak).');
+      }
     } else {
       await sb.from('video_cards').delete().eq('video_id', id);
       await sb.from('video_chapters').delete().eq('video_id', id);
@@ -6732,7 +6756,7 @@ async function adminVidPurge(id) {
       await sb.from('content_videos').delete().eq('id', id);
       toast('Video siteden silindi.');
     }
-    adminCvReload(); refreshVideosFromDb();
+    await _adminVidRenumber(); await adminCvReload(); refreshVideosFromDb();
   } catch (e) { uiAlert('Silinemedi: ' + ((e && e.message) || e)); }
 }
 
@@ -8684,7 +8708,7 @@ function plQuizCheck() {
 let _gNotes = [];
 async function loadGrammarNotes() {
   try {
-    const { data } = await sb.from('grammar_notes').select('*').eq('active', true).order('sort').limit(500);
+    const { data } = await sb.from('content_grammar').select('*').eq('active', true).order('sort').limit(500);
     _gNotes = data || [];
   } catch (e) { _gNotes = []; }
   const box = document.getElementById('gn-site-list'); if (!box) return;
@@ -8699,7 +8723,7 @@ async function loadGrammarNotes() {
 /* ---- Panel: Gramer Notları CRUD ---- */
 let _gnRows = [];
 async function adminGnInit() {
-  try { const { data } = await sb.from('grammar_notes').select('*').order('sort'); _gnRows = data || []; }
+  try { const { data } = await sb.from('content_grammar').select('*').order('sort'); _gnRows = data || []; }
   catch (e) { _gnRows = []; }
   const box = document.getElementById('gn-list'); if (!box) return;
   box.innerHTML = _gnRows.length ? _gnRows.map(n => `
@@ -8741,17 +8765,17 @@ async function adminGnSave() {
   const id = (document.getElementById('gn-id') || {}).value;
   try {
     let error;
-    if (id) ({ error } = await sb.from('grammar_notes').update({ title, body }).eq('id', id));
-    else ({ error } = await sb.from('grammar_notes').insert({ title, body, active: true }));
+    if (id) ({ error } = await sb.from('content_grammar').update({ title, body }).eq('id', id));
+    else ({ error } = await sb.from('content_grammar').insert({ title, body, category: 'genel', active: true }));
     if (error) throw error;
     toast('Not kaydedildi.');
     adminGnClear(); adminGnInit(); loadGrammarNotes();
   } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e) + ' — gramer_merkezi.sql çalıştırıldı mı?'); }
 }
-async function adminGnFlag(id, aktif) { try { await sb.from('grammar_notes').update({ active: aktif }).eq('id', id); adminGnInit(); loadGrammarNotes(); } catch (e) {} }
+async function adminGnFlag(id, aktif) { try { await sb.from('content_grammar').update({ active: aktif }).eq('id', id); adminGnInit(); loadGrammarNotes(); } catch (e) {} }
 async function adminGnPurge(id) {
   if (!(await uiConfirm('Bu not temelli silinsin mi?', 'Temelli Sil', { danger: true }))) return;
-  try { await sb.from('grammar_notes').delete().eq('id', id); adminGnInit(); loadGrammarNotes(); } catch (e) {}
+  try { await sb.from('content_grammar').delete().eq('id', id); adminGnInit(); loadGrammarNotes(); } catch (e) {}
 }
 setTimeout(function () { try { if (typeof sb !== 'undefined' && sb) loadGrammarNotes(); } catch (e) {} }, 1400);
 
