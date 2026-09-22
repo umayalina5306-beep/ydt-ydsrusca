@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v121';
+var YDT_SURUM = 'v122';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1941,11 +1941,13 @@ function _wRevealCard(cardId) {
     if (card.t_sec < t) { box.insertBefore(yeniEl, el); eklendi = true; break; }
   }
   if (!eklendi) box.appendChild(yeniEl);
-  // Kayma animasyonu (~350ms) bitince parlat
+  yeniEl.classList.add('wcard-new');  // sadece yeni kart kayarak gelir
+  setTimeout(() => { yeniEl.classList.remove('wcard-new'); }, 380);
+  // Kayma animasyonu bitince parlat
   setTimeout(() => {
     yeniEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     _wFlashCard(cardId);
-  }, 380);
+  }, 390);
 }
 
 function _wCardMode() { return localStorage.getItem('ydt_card_mode') || 'pause'; } // pause | collect
@@ -1958,7 +1960,7 @@ function _wFlashCard(cardId) {
     if (!el) return;
     el.classList.remove('wcard-flash'); void el.offsetWidth;
     el.classList.add('wcard-flash');
-    setTimeout(() => el.classList.remove('wcard-flash'), 1400);
+    setTimeout(() => el.classList.remove('wcard-flash'), 720);
   } catch (e) {}
 }
 function _wTriggerCard(card) {
