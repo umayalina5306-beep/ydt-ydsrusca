@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v124';
+var YDT_SURUM = 'v125';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -5960,8 +5960,12 @@ function renderCvList() {
     <button class="mail-tab ${cvTab==='trash'?'active':''}" onclick="cvSetTab('trash')">🗑️ Silinenler (${del.length})</button>
   </div>`;
   const list = cvTab === 'active' ? act : del;
-  if (!list.length) { box.innerHTML = tabs + '<div class="profile-empty">' + (cvTab === 'active' ? 'Aktif video yok.' : 'Silinen video yok.') + '</div>'; return; }
-  box.innerHTML = tabs + list.map(r => `
+  // Çöp kutusundaysak "Boşalt" butonu
+  const bosaltBtn = (cvTab === 'trash' && del.length)
+    ? `<div style="margin-bottom:10px;"><button class="set-btn red" onclick="adminVidEmptyTrash()">🗑️ Çöp Kutusunu Boşalt (${del.length}) — Stream'den de siler</button></div>`
+    : '';
+  if (!list.length) { box.innerHTML = tabs + bosaltBtn + '<div class="profile-empty">' + (cvTab === 'active' ? 'Aktif video yok.' : 'Silinen video yok.') + '</div>'; return; }
+  box.innerHTML = tabs + bosaltBtn + list.map(r => `
     <div class="cw-row ${r.active === false ? 'off' : ''}">
       <div class="cv-thumbbox">${r.thumb ? `<img src="${_escAttr(r.thumb)}" alt="">` : '🎬'}</div>
       <div class="cw-main" style="flex:1;"><b>#${r.num || '-'} ${_escHtml(r.title)}</b> <span class="kv-lvl">${r.level || ''}</span>
@@ -6795,6 +6799,34 @@ async function adminVidRestore(id) {
     await _adminVidRenumber(); await adminCvReload(); refreshVideosFromDb();
   } catch (e) {}
 }
+/* Çöp kutusunu boşalt: silinen (pasif) tüm videoları TEMELLİ sil (Stream dahil) */
+async function adminVidEmptyTrash() {
+  const del = (_cvRows || []).filter(r => r.active === false);
+  if (!del.length) { toast('Çöp kutusu zaten boş.'); return; }
+  const streamSayi = del.filter(r => r.source === 'stream').length;
+  const mesaj = `Çöp kutusundaki ${del.length} video TEMELLİ silinsin mi?` +
+    (streamSayi ? `\n\n${streamSayi} tanesi Cloudflare Stream'den de kaldırılacak (depolama ücreti durur).` : '') +
+    '\n\nBu işlem geri alınamaz.';
+  if (!(await uiConfirm(mesaj, 'Çöp Kutusunu Boşalt', { danger: true }))) return;
+  let ok = 0, hata = 0;
+  for (const v of del) {
+    try {
+      if (v.source === 'stream') {
+        const { data, error } = await sb.functions.invoke('stream-delete', { body: { video_id: v.id } });
+        if (error || (data && data.error)) { hata++; continue; }
+      } else {
+        await sb.from('video_cards').delete().eq('video_id', v.id);
+        await sb.from('video_chapters').delete().eq('video_id', v.id);
+        await sb.from('video_notes').delete().eq('video_id', v.id);
+        await sb.from('content_videos').delete().eq('id', v.id);
+      }
+      ok++;
+    } catch (e) { hata++; }
+  }
+  await adminCvReload(); refreshVideosFromDb();
+  await uiAlert(`${ok} video kalıcı silindi.` + (hata ? ` ${hata} tanesinde sorun oldu.` : ''), 'Çöp Kutusu');
+}
+
 async function adminVidPurge(id) {
   const r = (_cvRows || []).find(x => x.id === id);
   const stream = r && r.source === 'stream';
@@ -7268,40 +7300,51 @@ async function migrateLocalDailySummary() {
 /* ─── Bildirim Motoru (kural bazlı, AI yok) ───
    Login sonrası çalışır; 3+ gün aktivite yoksa site bildirimi ekler.
    Aynı hafta içinde tekrar göndermez (throttle). */
+let _actNotifCalisiyor = false;
 async function checkActivityNotifications() {
   try {
     if (!sb || !currentUser) return;
-    // Yerel throttle: bu cihazda son 3 günde gönderildiyse hiç sorma (DB gecikse bile tekrar yok)
+    if (_actNotifCalisiyor) return;  // aynı oturumda eşzamanlı çağrıları engelle (race koruması)
+    _actNotifCalisiyor = true;
+
     const lkey = 'ydt_actremind_' + currentUser.id;
+    // Yerel throttle: bu cihazda son 24 saatte kontrol edildiyse hiç sorma
     const sonLocal = localStorage.getItem(lkey);
-    if (sonLocal && (Date.now() - parseInt(sonLocal, 10)) < 3 * 86400000) return;
-    // DB throttle: son 7 günde activity_reminder gönderilmiş mi? (okunmuş/silinmiş olsa bile say)
-    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    if (sonLocal && (Date.now() - parseInt(sonLocal, 10)) < 86400000) { _actNotifCalisiyor = false; return; }
+    // Kontrolü yaptık işaretle (insert olsa da olmasa da 24 saat tekrar sorma)
+    localStorage.setItem(lkey, String(Date.now()));
+
+    // DB throttle: son 5 günde activity_reminder gönderilmiş mi?
+    const fiveAgo = new Date(Date.now() - 5 * 86400000).toISOString();
     const { data: recent } = await sb.from('notifications')
       .select('id').eq('user_id', currentUser.id)
-      .eq('type', 'activity_reminder').gte('created_at', weekAgo).limit(1);
-    if (recent && recent.length > 0) { localStorage.setItem(lkey, String(Date.now())); return; }
-    // Son answer_log kaydını bul
-    const { data: lastAct } = await sb.from('answer_log')
-      .select('created_at').eq('user_id', currentUser.id)
-      .order('created_at', { ascending: false }).limit(1);
-    if (!lastAct || !lastAct.length) return;
-    const today = new Date().toISOString().slice(0, 10);
-    const lastDate = new Date(lastAct[0].created_at).toISOString().slice(0, 10);
-    const daysSince = Math.floor((new Date(today) - new Date(lastDate)) / 86400000);
-    if (daysSince < 3) return;
+      .eq('type', 'activity_reminder').gte('created_at', fiveAgo).limit(1);
+    if (recent && recent.length > 0) { _actNotifCalisiyor = false; return; }
+
+    // Son aktivite: HEM answer_log HEM activity_log'a bak (en güncel olan)
+    let sonTarih = null;
+    try {
+      const { data: a } = await sb.from('answer_log').select('created_at').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(1);
+      if (a && a.length) sonTarih = new Date(a[0].created_at);
+    } catch (e) {}
+    try {
+      const { data: b } = await sb.from('activity_log').select('created_at').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(1);
+      if (b && b.length) { const t = new Date(b[0].created_at); if (!sonTarih || t > sonTarih) sonTarih = t; }
+    } catch (e) {}
+    if (!sonTarih) { _actNotifCalisiyor = false; return; }
+
+    const daysSince = Math.floor((Date.now() - sonTarih.getTime()) / 86400000);
+    if (daysSince < 3) { _actNotifCalisiyor = false; return; }  // çalışma yakınsa hiç gönderme
+
     const msg = daysSince >= 7
       ? `${daysSince} gündür çalışma kaydın yok. Rusçan seni bekliyor! Küçük bir test bile fark yaratır 🎯`
       : `${daysSince} gündür görünmüyorsun. Bir test çözmek sadece 2 dakika sürer ⏱️`;
     await sb.from('notifications').insert({
-      user_id: currentUser.id,
-      title: '👋 Seninle zaman geçirelim!',
-      body: msg,
-      type: 'activity_reminder'
+      user_id: currentUser.id, title: '👋 Seninle zaman geçirelim!', body: msg, type: 'activity_reminder'
     });
-    localStorage.setItem(lkey, String(Date.now()));  // tekrarı engelle
     if (typeof loadNotifications === 'function') setTimeout(loadNotifications, 800);
-  } catch (e) {}
+    _actNotifCalisiyor = false;
+  } catch (e) { _actNotifCalisiyor = false; }
 }
 
 /* ============================================================
@@ -9579,9 +9622,11 @@ async function adminKurumLoad() {
         </div>
         <div class="cw-acts">
           <button class="mail-act" onclick="adminKurumSetAdmin('${k.id}','${_escAttr(k.name)}')">👤 Admin Ata</button>
+          <button class="mail-act" onclick="adminKurumMembers('${k.id}','${_escAttr(k.name)}')">👥 Üyeler</button>
           <button class="mail-act danger" onclick="adminKurumToggle('${k.id}',${k.active})">
             ${k.active ? '⏸ Dondur' : '▶ Aktifleştir'}
           </button>
+          <button class="mail-act red" onclick="adminKurumDelete('${k.id}','${_escAttr(k.name)}')">🗑️ Sil</button>
         </div>
       </div>`;
     }).join('');
@@ -9625,6 +9670,68 @@ async function adminKurumToggle(kurumId, aktif) {
     await sb.from('kurumlar').update({ active: !aktif }).eq('id', kurumId);
     toast(aktif ? 'Kurum donduruldu.' : 'Kurum aktifleştirildi.');
     await adminKurumLoad();
+  } catch (e) { uiAlert('İşlem başarısız: ' + ((e&&e.message)||e)); }
+}
+
+/* Kurumu tamamen sil (üyelerin kurum bağı kopar, öğretmen atamaları silinir) */
+async function adminKurumDelete(kurumId, kurumAdi) {
+  const { data: uyeler } = await sb.from('profiles').select('id').eq('kurum_id', kurumId);
+  const uyeSayi = (uyeler || []).length;
+  const ok = await uiConfirm(
+    `"${kurumAdi}" kurumu TAMAMEN silinsin mi?` +
+    (uyeSayi ? `\n\n${uyeSayi} üyenin kurum bağı kopacak (hesapları silinmez, sadece kurumdan çıkar).` : '') +
+    '\n\nBu işlem geri alınamaz.', 'Kurumu Sil', { danger: true });
+  if (!ok) return;
+  try {
+    // Üyeleri kurumdan çıkar (rol kurum/ogretmen ise user yap)
+    await sb.from('profiles').update({ kurum_id: null, role: 'user' })
+      .eq('kurum_id', kurumId).in('role', ['kurum','ogretmen']);
+    await sb.from('profiles').update({ kurum_id: null }).eq('kurum_id', kurumId);
+    // Öğretmen atamaları (varsa)
+    try { await sb.from('kurum_atama').delete().eq('kurum_id', kurumId); } catch (e) {}
+    // Kurumu sil
+    const { error } = await sb.from('kurumlar').delete().eq('id', kurumId);
+    if (error) throw error;
+    toast('✅ Kurum silindi: ' + kurumAdi);
+    staffLog('kurum_sil', null, { kurum_id: kurumId, kurum_adi: kurumAdi });
+    await adminKurumLoad();
+  } catch (e) { uiAlert('Silinemedi: ' + ((e&&e.message)||e)); }
+}
+
+/* Kurum üyelerini görüntüle + çıkar */
+async function adminKurumMembers(kurumId, kurumAdi) {
+  let uyeler = [];
+  try {
+    const { data } = await sb.from('profiles').select('id, display_name, email, role')
+      .eq('kurum_id', kurumId).order('role');
+    uyeler = data || [];
+  } catch (e) {}
+  const ROL = { kurum:'👑 Kurum Admin', ogretmen:'👩‍🏫 Öğretmen', destek:'🛠️ Destek', user:'🎓 Öğrenci' };
+  const ov = document.createElement('div');
+  ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9400'; ov.id = 'kmem-modal';
+  const listHTML = uyeler.length ? uyeler.map(u => `
+    <div class="cw-row" style="padding:9px 11px;">
+      <div class="cw-main"><b>${_escHtml(u.display_name||u.email||'—')}</b> <span class="cw-cat">${ROL[u.role]||u.role}</span>
+        <div class="err-meta">${_escHtml(u.email||'')}</div></div>
+      <div class="cw-acts"><button class="mail-act red" onclick="adminKurumRemoveMember('${u.id}','${_escAttr(u.display_name||u.email)}','${kurumId}','${_escAttr(kurumAdi)}')">Çıkar</button></div>
+    </div>`).join('') : '<div class="profile-empty">Bu kurumda üye yok.</div>';
+  ov.innerHTML = `<div class="ui-modal" style="max-width:560px;max-height:85vh;overflow-y:auto;">
+    <h3 class="ui-modal-title">👥 ${_escHtml(kurumAdi)} — Üyeler (${uyeler.length})</h3>
+    <div>${listHTML}</div>
+    <button class="set-btn ghost" style="margin-top:14px;" onclick="document.getElementById('kmem-modal').remove()">Kapat</button>
+  </div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+async function adminKurumRemoveMember(userId, ad, kurumId, kurumAdi) {
+  const ok = await uiConfirm(`${ad} kurumdan çıkarılsın mı? Hesabı silinmez, sadece kurumdan çıkar.`);
+  if (!ok) return;
+  try {
+    await sb.from('profiles').update({ kurum_id: null, role: 'user' }).eq('id', userId);
+    try { await sb.from('kurum_atama').delete().or(`teacher_id.eq.${userId},student_id.eq.${userId}`); } catch (e) {}
+    toast('Üye kurumdan çıkarıldı.');
+    document.getElementById('kmem-modal').remove();
+    adminKurumMembers(kurumId, kurumAdi);
   } catch (e) { uiAlert('İşlem başarısız: ' + ((e&&e.message)||e)); }
 }
 
