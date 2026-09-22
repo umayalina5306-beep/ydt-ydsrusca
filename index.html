@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=126">
+<link rel="stylesheet" href="css/style.css?v=127">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -48,7 +48,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=126" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=127" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -163,7 +163,7 @@
         </div>
         <div class="kb-search">
           <span class="kb-search-ic">🔍</span>
-          <input type="text" id="kb-search-input" placeholder="Sözlükte ara... (Rusça veya Türkçe)" oninput="kbSearch(this.value)" autocomplete="off">
+          <input type="search" id="kb-search-input" placeholder="Sözlükte ara... (Rusça veya Türkçe)" oninput="kbSearch(this.value)" autocomplete="off" data-lpignore="true" data-form-type="other">
           <button class="kb-search-clear" id="kb-search-clear" onclick="kbClear()" style="display:none;">✕</button>
         </div>
       </div>
@@ -241,10 +241,10 @@
     <div class="sozluk-search-wrap">
       <div class="sozluk-input-wrap">
         <span class="sozluk-icon">🔍</span>
-        <input type="text" id="sozluk-input" class="sozluk-input"
+        <input type="search" id="sozluk-input" class="sozluk-input"
           placeholder="Rusça veya Türkçe kelime yazın... (örn: читать, okumak)"
           oninput="sozlukAra(this.value)"
-          autocomplete="off" autocorrect="off" spellcheck="false">
+          autocomplete="off" data-lpignore="true" data-form-type="other" autocorrect="off" spellcheck="false">
         <button class="sozluk-clear" onclick="sozlukTemizle()" id="sozluk-clear-btn" style="display:none;">✕</button>
       </div>
       <div id="sozluk-info" class="sozluk-info">Aramak istediğiniz kelimeyi yukarıya yazın.</div>
@@ -262,10 +262,10 @@
     <div class="sozluk-search-wrap" id="level-search-wrap" style="margin-bottom:16px;">
       <div class="sozluk-input-wrap">
         <span class="sozluk-icon">🔍</span>
-        <input type="text" id="level-search-input" class="sozluk-input"
+        <input type="search" id="level-search-input" class="sozluk-input"
           placeholder="Bu seviyede ara... (Rusça veya Türkçe)"
           oninput="levelAra(this.value)"
-          autocomplete="off" autocorrect="off" spellcheck="false">
+          autocomplete="off" data-lpignore="true" data-form-type="other" autocorrect="off" spellcheck="false">
         <button class="sozluk-clear" onclick="levelTemizle()" id="level-search-clear" style="display:none;">✕</button>
       </div>
     </div>
@@ -330,7 +330,7 @@
 
     <div class="kasa-search">
       <span class="kasa-search-ic">🔍</span>
-      <input type="text" id="kasa-search-input" placeholder="Rusça veya Türkçe ara..." oninput="bankSearch(this.value)" autocomplete="off">
+      <input type="search" id="kasa-search-input" placeholder="Rusça veya Türkçe ara..." oninput="bankSearch(this.value)" autocomplete="off" data-lpignore="true" data-form-type="other">
     </div>
 
     <div class="cat-tabs" id="bank-level-tabs">
@@ -580,7 +580,7 @@
               </label>
               <div class="rev-search-wrap">
                 <span class="rev-search-ic">🔍</span>
-                <input type="text" id="rev-filter" class="rev-search" placeholder="Rusça, Türkçe veya açıklama ara…" oninput="renderReviewWords()" autocomplete="off">
+                <input type="search" id="rev-filter" class="rev-search" placeholder="Rusça, Türkçe veya açıklama ara…" oninput="renderReviewWords()" autocomplete="off" data-lpignore="true" data-form-type="other">
               </div>
             </div>
 
@@ -731,7 +731,7 @@
           </label>
           <div class="rev-search-wrap tb-search-wrap">
             <span class="rev-search-ic">🔍</span>
-            <input type="text" id="tb-search" class="rev-search" placeholder="Kelime ara (Rusça/Türkçe)…" oninput="tbSearch(this.value)" autocomplete="off">
+            <input type="search" id="tb-search" class="rev-search" placeholder="Kelime ara (Rusça/Türkçe)…" oninput="tbSearch(this.value)" autocomplete="off" data-lpignore="true" data-form-type="other">
           </div>
         </div>
         <div class="tb-pool-bar">
@@ -791,7 +791,7 @@
       <h3 class="an-h3">📐 Padej Çekim Laboratuvarı</h3>
       <p class="pq-hint">Bir isim seç, 6 hâlin tablosunu gör; sonra alıştırmayla pekiştir.</p>
       <div class="pq-row2" style="position:relative;">
-        <input id="pl-search" class="pq-input" placeholder="İsim ara... (Rusça veya Türkçe)" autocomplete="off" oninput="plSearch(this.value)">
+        <input id="pl-search" class="pq-input" placeholder="İsim ara... (Rusça veya Türkçe)" autocomplete="off" data-lpignore="true" data-form-type="other" oninput="plSearch(this.value)">
         <button class="set-btn ghost" onclick="plRandom()">🎲 Rastgele</button>
       </div>
       <div id="pl-results" class="pl-results"></div>
@@ -1218,7 +1218,7 @@
           <div class="acc-cols">
             <div class="acc-col">
               <label class="settings-label">Ad Soyad</label>
-              <input id="settings-name" class="settings-input" type="text" placeholder="Adınız" autocomplete="off">
+              <input id="settings-name" class="settings-input" type="search" placeholder="Adınız" autocomplete="off" data-lpignore="true" data-form-type="other">
               <label class="settings-label">Kullanıcı Adı</label>
               <input id="settings-username" class="settings-input" type="text" placeholder="kullaniciadi" disabled>
               <label class="settings-label">E-posta</label>
@@ -1329,7 +1329,7 @@
         <div id="av-users" class="admin-view" style="display:none;">
           <h2 class="profile-h2">Kullanıcılar</h2>
           <p class="profile-sub">Üyeleri görüntüle, planlarını yönet.</p>
-          <input id="admin-search" class="admin-search" placeholder="🔍 İsim veya e-posta ara..." oninput="filterAdminUsers(this.value)" autocomplete="off">
+          <input id="admin-search" class="admin-search" placeholder="🔍 İsim veya e-posta ara..." oninput="filterAdminUsers(this.value)" autocomplete="off" data-lpignore="true" data-form-type="other">
           <div id="admin-users" class="admin-users"></div>
         </div>
 
@@ -1341,8 +1341,8 @@
           <div class="admin-notif-card">
             <h3 class="an-h3">✏️ Kelime Ekle / Düzenle</h3>
             <div class="pq-row2">
-              <input id="cw-ru" class="pq-input" placeholder="Rusça kelime *" autocomplete="off">
-              <input id="cw-tr" class="pq-input" placeholder="Türkçe anlam *" autocomplete="off">
+              <input id="cw-ru" class="pq-input" placeholder="Rusça kelime *" autocomplete="off" data-lpignore="true" data-form-type="other">
+              <input id="cw-tr" class="pq-input" placeholder="Türkçe anlam *" autocomplete="off" data-lpignore="true" data-form-type="other">
             </div>
             <div class="pq-row2">
               <select id="cw-cat" class="pq-input" onchange="cwCatChanged()"><option>isim</option><option>fiil</option><option>sıfat</option><option>zarf</option><option>zamir</option><option>edat</option><option>bağlaç</option></select>
@@ -1359,15 +1359,15 @@
               <div id="cw-cekim-row" style="display:none; margin-top:8px;">
                 <p class="pq-hint" style="margin-bottom:6px;">🧩 Çekim tablosu (otomatik üretilir — yanlışsa düzelt, boş bırakırsan kural kullanılır):</p>
                 <div class="cw-cekim-grid">
-                  <input id="ck-rp" class="pq-input" placeholder="Р.п." autocomplete="off">
-                  <input id="ck-dp" class="pq-input" placeholder="Д.п." autocomplete="off">
-                  <input id="ck-vp" class="pq-input" placeholder="В.п." autocomplete="off">
-                  <input id="ck-tp" class="pq-input" placeholder="Т.п." autocomplete="off">
-                  <input id="ck-pp" class="pq-input" placeholder="П.п." autocomplete="off">
+                  <input id="ck-rp" class="pq-input" placeholder="Р.п." autocomplete="off" data-lpignore="true" data-form-type="other">
+                  <input id="ck-dp" class="pq-input" placeholder="Д.п." autocomplete="off" data-lpignore="true" data-form-type="other">
+                  <input id="ck-vp" class="pq-input" placeholder="В.п." autocomplete="off" data-lpignore="true" data-form-type="other">
+                  <input id="ck-tp" class="pq-input" placeholder="Т.п." autocomplete="off" data-lpignore="true" data-form-type="other">
+                  <input id="ck-pp" class="pq-input" placeholder="П.п." autocomplete="off" data-lpignore="true" data-form-type="other">
                 </div>
               </div>
-            <input id="cw-ornek" class="pq-input" placeholder="Örnek cümle (Rusça, opsiyonel)" autocomplete="off">
-            <input id="cw-ornektr" class="pq-input" placeholder="Örnek cümle (Türkçe, opsiyonel)" autocomplete="off">
+            <input id="cw-ornek" class="pq-input" placeholder="Örnek cümle (Rusça, opsiyonel)" autocomplete="off" data-lpignore="true" data-form-type="other">
+            <input id="cw-ornektr" class="pq-input" placeholder="Örnek cümle (Türkçe, opsiyonel)" autocomplete="off" data-lpignore="true" data-form-type="other">
             <label class="cw-check"><input type="checkbox" id="cw-premium"> Premium içerik (yalnız premium üyeler görür — ileride)</label>
             <div><button class="set-btn" id="cw-save-btn" onclick="adminWordSave()">Kelime Ekle</button>
             <button class="set-btn ghost" onclick="adminWordFormClear()" style="margin-left:8px;">Temizle</button></div>
@@ -1431,7 +1431,7 @@
           <div class="admin-notif-card">
             <h3 class="an-h3">📋 Kelime Listesi (DB)</h3>
             <div class="pq-row2">
-              <input class="pq-input" placeholder="🔍 Rusça veya Türkçe ara..." oninput="cwSet('q', this.value)" autocomplete="off">
+              <input class="pq-input" placeholder="🔍 Rusça veya Türkçe ara..." oninput="cwSet('q', this.value)" autocomplete="off" data-lpignore="true" data-form-type="other">
               <select class="pq-input pq-level" onchange="cwSet('level', this.value)"><option value="all">Tümü</option><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
               <select class="pq-input" style="max-width:130px;" onchange="cwState.cat=this.value;cwState.page=1;renderCwList();">
                 <option value="all">Tür: Hepsi</option><option value="isim">İsim</option><option value="fiil">Fiil</option>
@@ -1457,7 +1457,7 @@
           <p class="profile-sub">Tüm kullanıcılara veya seçtiklerine bildirim yolla.</p>
           <div class="admin-notif-card">
             <h3 class="an-h3">🔔 Bildirim Gönder</h3>
-            <input id="an-title" class="admin-search" placeholder="Bildirim başlığı" autocomplete="off">
+            <input id="an-title" class="admin-search" placeholder="Bildirim başlığı" autocomplete="off" data-lpignore="true" data-form-type="other">
             <textarea id="an-body" class="an-textarea" placeholder="Bildirim mesajı..."></textarea>
             <div class="an-target">
               <label><input type="radio" name="an-tgt" value="all" checked onchange="anTargetChange()"> Tüm kullanıcılar</label>
@@ -1496,12 +1496,12 @@
           <h4 class="pq-h4">Tek Soru Ekle</h4>
           <div class="pq-row2">
             <select id="pq-level" class="pq-input pq-level"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
-            <input id="pq-q" class="pq-input" placeholder="Soru metni" autocomplete="off">
+            <input id="pq-q" class="pq-input" placeholder="Soru metni" autocomplete="off" data-lpignore="true" data-form-type="other">
           </div>
-          <input id="pq-o0" class="pq-input" placeholder="Şık 1" autocomplete="off">
-          <input id="pq-o1" class="pq-input" placeholder="Şık 2" autocomplete="off">
-          <input id="pq-o2" class="pq-input" placeholder="Şık 3" autocomplete="off">
-          <input id="pq-o3" class="pq-input" placeholder="Şık 4" autocomplete="off">
+          <input id="pq-o0" class="pq-input" placeholder="Şık 1" autocomplete="off" data-lpignore="true" data-form-type="other">
+          <input id="pq-o1" class="pq-input" placeholder="Şık 2" autocomplete="off" data-lpignore="true" data-form-type="other">
+          <input id="pq-o2" class="pq-input" placeholder="Şık 3" autocomplete="off" data-lpignore="true" data-form-type="other">
+          <input id="pq-o3" class="pq-input" placeholder="Şık 4" autocomplete="off" data-lpignore="true" data-form-type="other">
           <div class="pq-correct">Doğru şık:
             <label><input type="radio" name="pq-correct" value="0">1</label>
             <label><input type="radio" name="pq-correct" value="1">2</label>
@@ -1549,7 +1549,7 @@
         <div class="pq-block">
           <h4 class="pq-h4">Mevcut Sorular</h4>
           <div class="pq-row2">
-            <input class="pq-input" placeholder="🔍 Soru metninde ara..." oninput="pqlSet('q', this.value)" autocomplete="off">
+            <input class="pq-input" placeholder="🔍 Soru metninde ara..." oninput="pqlSet('q', this.value)" autocomplete="off" data-lpignore="true" data-form-type="other">
             <select class="pq-input pq-level" onchange="pqlSet('level', this.value)"><option value="all">Tümü</option><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
           </div>
           <div id="pql-list"><div class="profile-empty">Yükleniyor...</div></div>
@@ -1566,21 +1566,21 @@
             <input type="hidden" id="cpq-id">
             <div class="pq-row2">
               <select id="cpq-lvl" class="pq-input pq-level"><option>A1</option><option>A2</option><option selected>B1</option><option>B2</option><option>C1</option></select>
-              <input id="cpq-konu" class="pq-input" placeholder="Konu (örn: Günlük yaşam)" autocomplete="off">
+              <input id="cpq-konu" class="pq-input" placeholder="Konu (örn: Günlük yaşam)" autocomplete="off" data-lpignore="true" data-form-type="other">
             </div>
             <textarea id="cpq-para" class="an-textarea" placeholder="Paragraf (Rusça metin) *"></textarea>
-            <input id="cpq-soru" class="pq-input" placeholder="Soru (Türkçe) *" autocomplete="off">
-            <input id="cpq-o0" class="pq-input" placeholder="Şık 1" autocomplete="off">
-            <input id="cpq-o1" class="pq-input" placeholder="Şık 2" autocomplete="off">
-            <input id="cpq-o2" class="pq-input" placeholder="Şık 3" autocomplete="off">
-            <input id="cpq-o3" class="pq-input" placeholder="Şık 4" autocomplete="off">
+            <input id="cpq-soru" class="pq-input" placeholder="Soru (Türkçe) *" autocomplete="off" data-lpignore="true" data-form-type="other">
+            <input id="cpq-o0" class="pq-input" placeholder="Şık 1" autocomplete="off" data-lpignore="true" data-form-type="other">
+            <input id="cpq-o1" class="pq-input" placeholder="Şık 2" autocomplete="off" data-lpignore="true" data-form-type="other">
+            <input id="cpq-o2" class="pq-input" placeholder="Şık 3" autocomplete="off" data-lpignore="true" data-form-type="other">
+            <input id="cpq-o3" class="pq-input" placeholder="Şık 4" autocomplete="off" data-lpignore="true" data-form-type="other">
             <div class="pq-correct">Doğru şık:
               <label><input type="radio" name="cpq-correct" value="0">1</label>
               <label><input type="radio" name="cpq-correct" value="1">2</label>
               <label><input type="radio" name="cpq-correct" value="2">3</label>
               <label><input type="radio" name="cpq-correct" value="3">4</label>
             </div>
-            <input id="cpq-acik" class="pq-input" placeholder="Açıklama (opsiyonel — cevabın gerekçesi)" autocomplete="off">
+            <input id="cpq-acik" class="pq-input" placeholder="Açıklama (opsiyonel — cevabın gerekçesi)" autocomplete="off" data-lpignore="true" data-form-type="other">
             <div><button class="set-btn" id="cpq-save-btn" onclick="adminPqSave()">Soru Ekle</button>
             <button class="set-btn ghost" onclick="adminPqFormClear()" style="margin-left:8px;">Temizle</button></div>
           </div>
@@ -1606,14 +1606,14 @@
             <h3 class="an-h3">✏️ Video Ekle / Düzenle</h3>
             <input type="hidden" id="cv-id">
             <div class="pq-row2">
-              <input id="cv-num" class="pq-input pq-level" type="number" min="1" placeholder="Sıra (boş=sona)" autocomplete="off">
+              <input id="cv-num" class="pq-input pq-level" type="number" min="1" placeholder="Sıra (boş=sona)" autocomplete="off" data-lpignore="true" data-form-type="other">
               <select id="cv-lvl" class="pq-input pq-level"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
-              <input id="cv-title" class="pq-input" placeholder="Video başlığı *" autocomplete="off">
+              <input id="cv-title" class="pq-input" placeholder="Video başlığı *" autocomplete="off" data-lpignore="true" data-form-type="other">
             </div>
-            <input id="cv-desc" class="pq-input" placeholder="Kısa açıklama" autocomplete="off">
+            <input id="cv-desc" class="pq-input" placeholder="Kısa açıklama" autocomplete="off" data-lpignore="true" data-form-type="other">
             <div class="pq-row2">
               <select id="cv-source" class="pq-input" onchange="adminVidSourceChanged()"><option value="youtube">YouTube (ücretsiz)</option><option value="stream">Cloudflare Stream (ücretli)</option></select>
-              <input id="cv-vid" class="pq-input" placeholder="Video ID (YouTube ID veya Stream UID)" autocomplete="off">
+              <input id="cv-vid" class="pq-input" placeholder="Video ID (YouTube ID veya Stream UID)" autocomplete="off" data-lpignore="true" data-form-type="other">
             </div>
             <div id="cv-upload-row" style="display:none;background:rgba(212,164,24,.06);border:1px dashed rgba(212,164,24,.4);border-radius:10px;padding:12px;margin:8px 0;">
               <div style="font-size:.85rem;margin-bottom:8px;">🎬 <b>Doğrudan Yükleme</b> — Video dosyasını buraya bırak, otomatik Stream'e yüklensin ve UID gelsin:</div>
@@ -1622,7 +1622,7 @@
               <div id="cv-upload-status" style="margin-top:8px;font-size:.85rem;"></div>
             </div>
             <div style="display:flex;gap:8px;align-items:center;">
-              <input id="cv-thumb" class="pq-input" style="flex:1;" placeholder="Kapak görseli URL (boşsa otomatik/varsayılan)" autocomplete="off">
+              <input id="cv-thumb" class="pq-input" style="flex:1;" placeholder="Kapak görseli URL (boşsa otomatik/varsayılan)" autocomplete="off" data-lpignore="true" data-form-type="other">
               <input type="file" id="cv-thumb-file" accept="image/*" style="display:none;" onchange="adminThumbUpload(event)">
               <button type="button" class="mail-act" onclick="document.getElementById('cv-thumb-file').click()">🖼️ Yükle</button>
             </div>
@@ -1646,7 +1646,7 @@
             <input type="hidden" id="rc-id">
             <div class="pq-row2">
               <select id="rc-type" class="pq-input"><option value="film">🎬 Film</option><option value="dizi">📺 Dizi</option><option value="anime">🌸 Anime</option><option value="kitap">📚 Kitap</option></select>
-              <input id="rc-title" class="pq-input" placeholder="Başlık *" autocomplete="off">
+              <input id="rc-title" class="pq-input" placeholder="Başlık *" autocomplete="off" data-lpignore="true" data-form-type="other">
               <select id="rc-level" class="pq-input pq-level"><option>A1</option><option selected>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
             </div>
             <div class="rte-bar">
@@ -1674,10 +1674,10 @@
             <div id="rc-desc" class="rte-area" contenteditable="true" data-ph="Neden izlenmeli/okunmalı? (2-3 cümle)"></div>
             <textarea id="rc-desc-ru" class="an-textarea" placeholder="Açıklama (Rusça — RU modunda gösterilir, opsiyonel)"></textarea>
             <div class="pq-row2">
-              <input id="rc-thumb" class="pq-input" placeholder="Afiş/kapak görseli URL (opsiyonel)" autocomplete="off">
-              <input id="rc-trailer" class="pq-input" placeholder="YouTube fragman ID (opsiyonel)" autocomplete="off">
+              <input id="rc-thumb" class="pq-input" placeholder="Afiş/kapak görseli URL (opsiyonel)" autocomplete="off" data-lpignore="true" data-form-type="other">
+              <input id="rc-trailer" class="pq-input" placeholder="YouTube fragman ID (opsiyonel)" autocomplete="off" data-lpignore="true" data-form-type="other">
             </div>
-            <input id="rc-link" class="pq-input" placeholder="Nerede izlenir/alınır linki (opsiyonel)" autocomplete="off">
+            <input id="rc-link" class="pq-input" placeholder="Nerede izlenir/alınır linki (opsiyonel)" autocomplete="off" data-lpignore="true" data-form-type="other">
             <div><button class="set-btn" id="rc-save-btn" onclick="adminRcSave()">Öneri Ekle</button>
             <button class="set-btn ghost" onclick="adminRcFormClear()" style="margin-left:8px;">Temizle</button></div>
           </div>
@@ -1721,7 +1721,7 @@
             <h3 class="an-h3">✏️ Not Ekle / Düzenle</h3>
             <input type="hidden" id="gr-id">
             <div class="pq-row2">
-              <input id="gr-title" class="pq-input" placeholder="Başlık *" autocomplete="off">
+              <input id="gr-title" class="pq-input" placeholder="Başlık *" autocomplete="off" data-lpignore="true" data-form-type="other">
               <select id="gr-level" class="pq-input pq-level"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
               <select id="gr-cat" class="pq-input"><option value="genel">Genel</option><option value="padej">Padej</option><option value="fiil">Fiiller</option><option value="cümle">Cümle Yapısı</option></select>
             </div>
@@ -1987,7 +1987,6 @@
                 <button onclick="_wPickSpeed(2)">2.0x</button>
               </div>
             </div>
-            <button class="wc-btn" onclick="watchPiP()" title="Mini oynatıcı">▭</button>
             <button class="wc-btn" onclick="watchFullscreen()" title="Tam ekran">⛶</button>
             <div class="wc-progress" id="wc-progress" onclick="watchSeekBar(event)">
               <div class="wc-progress-fill" id="wc-progress-fill"></div>
@@ -2066,12 +2065,12 @@
 </footer>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=126"></script>
-<script defer src="js/auth.js?v=126"></script>
-<script defer src="js/admin.js?v=126"></script>
-<script defer src="js/profile.js?v=126"></script>
-<script defer src="js/extras.js?v=126"></script>
-<script defer src="js/app.js?v=126"></script>
+<script defer src="js/supabase-config.js?v=127"></script>
+<script defer src="js/auth.js?v=127"></script>
+<script defer src="js/admin.js?v=127"></script>
+<script defer src="js/profile.js?v=127"></script>
+<script defer src="js/extras.js?v=127"></script>
+<script defer src="js/app.js?v=127"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
