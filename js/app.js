@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v129';
+var YDT_SURUM = 'v130';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -9790,4 +9790,96 @@ async function adminSaveExamDates() {
     uiAlert('Sınav tarihleri kaydedildi ✅');
     await fetchExamDates(); // Floating widget'ı güncelle
   } catch (e) { uiAlert('Kaydedilemedi: ' + (e.message || e)); }
+}
+
+/* ============================================================
+   YASAL METİNLER + ÇEREZ ONAYI (KVKK uyumlu)
+   ============================================================ */
+const LEGAL_TEXTS = {
+  kvkk: {
+    baslik: 'KVKK Aydınlatma Metni',
+    html: `<h2>Kişisel Verilerin Korunması Aydınlatma Metni</h2>
+      <p>6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, YDT-YDS Rusça Platformu ("Platform") olarak veri sorumlusu sıfatıyla, kişisel verilerinizi aşağıda açıklanan çerçevede işlemekteyiz.</p>
+      <h3>İşlenen Kişisel Veriler</h3>
+      <p>Kimlik ve iletişim bilgileri (ad, e-posta), üyelik ve kullanım verileri (çözülen testler, ilerleme, tercihler), teknik veriler (IP adresi, yaklaşık konum, tarayıcı/cihaz bilgisi, giriş kayıtları).</p>
+      <h3>İşleme Amaçları</h3>
+      <p>Üyelik işlemlerinin yürütülmesi, eğitim hizmetinin sunulması ve kişiselleştirilmesi, ilerleme takibi, güvenliğin sağlanması (yetkisiz erişimin önlenmesi), yasal yükümlülüklerin yerine getirilmesi.</p>
+      <h3>Hukuki Sebep</h3>
+      <p>Verileriniz; sözleşmenin kurulması/ifası, meşru menfaat, açık rızanız ve kanuni yükümlülük hukuki sebeplerine dayanılarak işlenir.</p>
+      <h3>Veri Aktarımı</h3>
+      <p>Verileriniz, hizmetin sunulması için gerekli olan yurt içi/yurt dışı barındırma ve altyapı hizmet sağlayıcılarına, gerekli teknik ve idari tedbirler alınarak aktarılabilir. Verileriniz üçüncü kişilere pazarlama amacıyla satılmaz.</p>
+      <h3>Haklarınız</h3>
+      <p>KVKK md. 11 uyarınca; verilerinizin işlenip işlenmediğini öğrenme, düzeltilmesini/silinmesini isteme, işlemenin sınırlandırılmasını talep etme ve itiraz etme haklarına sahipsiniz. Talepleriniz için platform üzerinden bizimle iletişime geçebilirsiniz.</p>
+      <p class="legal-date">Son güncelleme: 2026</p>`
+  },
+  gizlilik: {
+    baslik: 'Gizlilik Politikası',
+    html: `<h2>Gizlilik Politikası</h2>
+      <p>Platform, kullanıcılarının gizliliğine önem verir. Bu politika, hangi verilerin toplandığını ve nasıl korunduğunu açıklar.</p>
+      <h3>Toplanan Veriler</h3>
+      <p>Hesap oluştururken verdiğiniz ad ve e-posta; platformu kullanırken oluşan ilerleme, test sonuçları ve tercihler; güvenlik amacıyla giriş kayıtları (IP, yaklaşık konum, cihaz).</p>
+      <h3>Verilerin Kullanımı</h3>
+      <p>Verileriniz yalnızca eğitim hizmetini sunmak, deneyiminizi iyileştirmek ve hesabınızın güvenliğini korumak için kullanılır.</p>
+      <h3>Güvenlik</h3>
+      <p>Verileriniz şifreli bağlantılar üzerinden iletilir ve yetkilendirme kurallarıyla korunur. Şifreleriniz geri döndürülemez şekilde saklanır.</p>
+      <h3>Veri Saklama</h3>
+      <p>Verileriniz, hesabınız aktif olduğu sürece ve yasal saklama süreleri boyunca tutulur. Hesabınızı silmek isterseniz talep edebilirsiniz.</p>
+      <p class="legal-date">Son güncelleme: 2026</p>`
+  },
+  cerez: {
+    baslik: 'Çerez Politikası',
+    html: `<h2>Çerez Politikası</h2>
+      <p>Platform, çalışması için gerekli olan çerezleri (cookies) ve benzeri teknolojileri kullanır.</p>
+      <h3>Kullanılan Çerez Türleri</h3>
+      <p><b>Zorunlu Çerezler:</b> Oturum yönetimi, güvenlik (bot koruması) ve temel işlevler için gereklidir; devre dışı bırakılamaz.</p>
+      <p><b>İşlevsel Çerezler:</b> Tercihlerinizi (tema, ayarlar) hatırlamak için kullanılır.</p>
+      <p><b>Analitik:</b> Sitenin nasıl kullanıldığını anlamak için anonim istatistikler toplanabilir.</p>
+      <h3>Çerez Yönetimi</h3>
+      <p>Tarayıcı ayarlarınızdan çerezleri silebilir veya engelleyebilirsiniz; ancak zorunlu çerezler engellenirse site düzgün çalışmayabilir.</p>
+      <p class="legal-date">Son güncelleme: 2026</p>`
+  },
+  kullanim: {
+    baslik: 'Kullanım Koşulları',
+    html: `<h2>Kullanım Koşulları</h2>
+      <p>Platformu kullanarak aşağıdaki koşulları kabul etmiş sayılırsınız.</p>
+      <h3>Hesap</h3>
+      <p>Hesabınızın güvenliğinden siz sorumlusunuz. Hesabınızı başkasıyla paylaşmamalısınız.</p>
+      <h3>İçerik</h3>
+      <p>Platformdaki tüm eğitim içerikleri (kelimeler, testler, videolar, kitapçıklar) telif hakkıyla korunmaktadır; izinsiz kopyalanamaz veya dağıtılamaz.</p>
+      <h3>Kullanım</h3>
+      <p>Platformu yalnızca kişisel eğitim amacıyla, yasalara uygun şekilde kullanabilirsiniz. Sistemin işleyişini bozmaya yönelik girişimler yasaktır.</p>
+      <h3>Değişiklikler</h3>
+      <p>Bu koşullar zaman zaman güncellenebilir. Güncel sürüm her zaman bu sayfada yer alır.</p>
+      <p class="legal-date">Son güncelleme: 2026</p>`
+  }
+};
+function showLegal(tip) {
+  const t = LEGAL_TEXTS[tip]; if (!t) return;
+  const box = document.getElementById('legal-content');
+  const modal = document.getElementById('legal-modal');
+  if (box) box.innerHTML = t.html;
+  if (modal) modal.style.display = 'flex';
+}
+function closeLegal() {
+  const modal = document.getElementById('legal-modal');
+  if (modal) modal.style.display = 'none';
+}
+/* Çerez onayı */
+function cookieConsent(kabul) {
+  try { localStorage.setItem('ydt_cookie_consent', kabul ? 'all' : 'essential'); } catch (e) {}
+  const b = document.getElementById('cookie-banner');
+  if (b) b.style.display = 'none';
+}
+function _initCookieBanner() {
+  try {
+    if (!localStorage.getItem('ydt_cookie_consent')) {
+      const b = document.getElementById('cookie-banner');
+      if (b) setTimeout(() => { b.style.display = 'flex'; }, 1200);
+    }
+  } catch (e) {}
+}
+if (typeof window !== 'undefined') {
+  window.showLegal = showLegal; window.closeLegal = closeLegal; window.cookieConsent = cookieConsent;
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _initCookieBanner);
+  else _initCookieBanner();
 }
