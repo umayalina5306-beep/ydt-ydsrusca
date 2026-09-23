@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v128';
+var YDT_SURUM = 'v129';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -881,15 +881,6 @@ function startQuiz(){
   reviewReturnTo = null;
   const _rb = document.querySelector('#quiz-setup [data-reveal].active'); quizReveal = _rb ? _rb.dataset.reveal : 'instant';
   // Paragraf soruları ayrı havuzdan gelir (kelime değil)
-  if (quizSettings.type === 'cloze') {
-    // Kök eşleşmesi: "книга" cümlede "книгу" olarak geçse de yakalar
-    quizPool = quizPool.filter(w => {
-      if (!w.ornek || !w.ru) return false;
-      const kok = w.ru.toLowerCase().slice(0, Math.max(3, Math.ceil(w.ru.length * 0.6)));
-      return w.ornek.toLowerCase().includes(kok);
-    });
-    if (quizPool.length < 4) { uiAlert('Bu seçimde örnek cümleli yeterli kelime yok. Farklı seviye/kategori dene.'); return; }
-  }
   if (quizSettings.type === 'paragraf') {
     let pool = (paragraphQuestions || []).slice();
     if (quizSettings.level !== 'hepsi') pool = pool.filter(p => p.level === quizSettings.level);
@@ -913,6 +904,15 @@ function startQuiz(){
   // Kategori filtresi
   if (quizSettings.cat !== 'hepsi') {
     pool = pool.filter(w => w.cat === quizSettings.cat);
+  }
+  // Cloze (boşluk doldurma): sadece örnek cümlesi olan kelimeler (kök eşleşmesiyle)
+  if (quizSettings.type === 'cloze') {
+    pool = pool.filter(w => {
+      if (!w.ornek || !w.ru) return false;
+      const kok = w.ru.toLowerCase().slice(0, Math.max(3, Math.ceil(w.ru.length * 0.6)));
+      return w.ornek.toLowerCase().includes(kok);
+    });
+    if (pool.length < 4) { uiAlert('Bu seçimde örnek cümleli yeterli kelime yok. Farklı seviye/kategori dene.'); showSetup(); return; }
   }
   if (pool.length < 4) {
     toast('Bu seviye/kategori kombinasyonunda yeterli kelime yok.');
@@ -6861,7 +6861,22 @@ async function logAccessOnce() {
     if (typeof currentUser === 'undefined' || !currentUser || !sb) return;
     if (sessionStorage.getItem('ydt_al_done')) return;
     sessionStorage.setItem('ydt_al_done', '1');
-    await sb.functions.invoke('log-access', { body: { fp: _fingerprint() } });
+    // Client geo'sunu da gönder (edge function server IP'sinden farklı olabilir; şehir client'tan gelir)
+    let geo = null;
+    try { geo = await _getGeo(); } catch (e) {}
+    const { data: alRes } = await sb.functions.invoke('log-access', {
+      body: { fp: _fingerprint(), city: geo ? geo.city : null, country: geo ? geo.country : null }
+    });
+    // Edge function şehri yazmadıysa, en son access_log kaydını client geo'suyla güncelle
+    if (geo && geo.city) {
+      try {
+        const { data: son } = await sb.from('access_log').select('id, city')
+          .eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(1);
+        if (son && son[0] && !son[0].city) {
+          await sb.from('access_log').update({ city: geo.city, country: geo.country }).eq('id', son[0].id);
+        }
+      } catch (e) {}
+    }
   } catch (e) {}
 }
 setTimeout(function () { try { logAccessOnce(); } catch (e) {} }, 3000);
