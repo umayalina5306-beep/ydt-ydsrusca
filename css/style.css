@@ -3318,3 +3318,32 @@ body.focus-mode #pomo-fab { box-shadow: 0 0 0 4px rgba(212,160,23,0.25); }
   background:rgba(13,27,42,.92); color:#e8edf5; padding:10px 16px; border-radius:10px; font-size:.85rem;
   border:1px solid rgba(201,168,76,.4); transition:opacity .6s ease; max-width:90%; text-align:center; }
 .wpip-hint b { color:var(--gold); }
+
+/* ═══ v130: KVKK/Çerez/Yasal ═══ */
+.footer-links { margin-top:8px; font-size:.82rem; opacity:.85; }
+.footer-links a { color:inherit; cursor:pointer; text-decoration:none; opacity:.8; }
+.footer-links a:hover { opacity:1; text-decoration:underline; color:var(--gold); }
+/* Çerez banner */
+.cookie-banner { position:fixed; bottom:0; left:0; right:0; z-index:9500; background:var(--dark,#0d1b2a);
+  border-top:2px solid var(--gold); padding:16px 22px; display:flex; align-items:center; justify-content:space-between;
+  gap:20px; flex-wrap:wrap; box-shadow:0 -4px 20px rgba(0,0,0,.3); }
+.cookie-text { color:#e8edf5; font-size:.9rem; flex:1; min-width:260px; line-height:1.5; }
+.cookie-text a { color:var(--gold); cursor:pointer; text-decoration:underline; }
+.cookie-acts { display:flex; gap:10px; flex-shrink:0; }
+.cookie-btn { padding:10px 20px; border-radius:9px; font-weight:700; cursor:pointer; font-size:.88rem; border:none; }
+.cookie-accept { background:var(--gold); color:#0d1b2a; }
+.cookie-accept:hover { background:var(--gold-light,#e8c96a); }
+.cookie-reject { background:transparent; color:#cbd5e1; border:1px solid rgba(255,255,255,.3); }
+.cookie-reject:hover { background:rgba(255,255,255,.1); }
+/* Yasal modal */
+.legal-modal-overlay { position:fixed; inset:0; z-index:9600; background:rgba(0,0,0,.6); display:flex;
+  align-items:center; justify-content:center; padding:20px; }
+.legal-modal { background:#fff; border-radius:16px; max-width:640px; width:100%; max-height:85vh; overflow-y:auto;
+  padding:32px 30px; position:relative; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+.legal-close { position:absolute; top:16px; right:18px; background:#f0f0f0; border:none; width:34px; height:34px;
+  border-radius:9px; cursor:pointer; font-size:1.1rem; color:#555; }
+.legal-close:hover { background:var(--red,#cc0000); color:#fff; }
+.legal-modal h2 { color:var(--dark,#0d1b2a); font-size:1.4rem; margin-bottom:16px; }
+.legal-modal h3 { color:var(--dark,#0d1b2a); font-size:1.05rem; margin:18px 0 6px; }
+.legal-modal p { color:#444; line-height:1.6; margin-bottom:10px; font-size:.92rem; }
+.legal-modal .legal-date { margin-top:20px; font-size:.8rem; color:#999; font-style:italic; }
