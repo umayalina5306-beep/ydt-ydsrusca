@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v131';
+var YDT_SURUM = 'v132';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1348,7 +1348,7 @@ async function _wLoadData(v) {
       sb.from('video_cards').select('*').eq('video_id', v.id).eq('active', true).order('t_sec'),
       sb.from('video_chapters').select('*').eq('video_id', v.id).order('t_sec').then(r=>r,()=>({data:[]})),
       currentUser ? sb.from('video_notes').select('*').eq('video_id', v.id).eq('user_id', currentUser.id).order('t_sec').then(r=>r,()=>({data:[]})) : Promise.resolve({data:[]}),
-      currentUser ? sb.from('video_views').select('id, completed').eq('video_id', v.id).eq('user_id', currentUser.id).limit(1).then(r=>r,()=>({data:[]})) : Promise.resolve({data:[]}),
+      currentUser ? sb.from('video_views').select('id, completed, last_pos_sec').eq('video_id', v.id).eq('user_id', currentUser.id).order('created_at',{ascending:false}).limit(1).then(r=>r,()=>({data:[]})) : Promise.resolve({data:[]}),
       sb.from('video_docs').select('*').eq('video_id', v.id).order('sort_order').then(r=>r,()=>({data:[]})),
       sb.from('video_subtitles').select('*').eq('video_id', v.id).order('start_sec').then(r=>r,()=>({data:[]})),
       currentUser ? sb.from('video_reactions').select('liked, saved').eq('video_id', v.id).eq('user_id', currentUser.id).limit(1).then(r=>r,()=>({data:[]})) : Promise.resolve({data:[]})
@@ -1361,6 +1361,9 @@ async function _wLoadData(v) {
     _w.subMode = _w.video.sub_default || 'both'; _w.ccOn = _w.subMode !== 'off';
     _w._reaction = (react && react.data && react.data[0]) || { liked: 0, saved: false };
     _w.watchedBefore = !!(prevView.data && prevView.data.length); // daha önce izlemiş mi?
+    // Kaldığı yer: tamamlanmamışsa ve anlamlı bir noktadaysa devam ettir
+    const pv = prevView.data && prevView.data[0];
+    _w.resumeFrom = (pv && !pv.completed && pv.last_pos_sec > 5) ? Math.floor(pv.last_pos_sec) : 0;
     // Bu kartlar geçmişte cevaplanmış mı? (card_answers)
     if (currentUser && _w.cards.length) {
       const { data: ans } = await sb.from('card_answers').select('card_id')
@@ -1390,9 +1393,9 @@ function _wInitYouTube(v) {
         events: {
           onReady: (e) => {
             _w.ready = true; _w.duration = e.target.getDuration() || 0; _wSaveDuration(); _wStartLog();
-            // YouTube'un kendi altyazısını kapat (bizim altyazı sistemimiz devrede)
             try { e.target.unloadModule('captions'); e.target.unloadModule('cc'); } catch (x) {}
             try { e.target.setOption('captions', 'track', {}); } catch (x) {}
+            _wResumePlayback();  // kaldığı yerden devam
           },
           onStateChange: (e) => {
             _wSyncPlayBtn(e.data === 1);
@@ -1446,7 +1449,7 @@ async function _wInitStream(v) {
     _wLoadStreamSdk(() => {
       try {
         _w.player = Stream(document.getElementById('w-sframe'));
-        _w.player.addEventListener('loadedmetadata', () => { _w.ready = true; _w.duration = _w.player.duration || 0; _wSaveDuration(); });
+        _w.player.addEventListener('loadedmetadata', () => { _w.ready = true; _w.duration = _w.player.duration || 0; _wSaveDuration(); _wResumePlayback(); });
         _w.player.addEventListener('play', () => _wSyncPlayBtn(true));
         _w.player.addEventListener('pause', () => _wSyncPlayBtn(false));
         _w.player.addEventListener('timeupdate', () => { /* progress _wUpdateProgress ile */ });
@@ -2502,6 +2505,18 @@ function _wSubWordClick(kelime, tSec) {
   _wShowWordCard(kelime, w);
 }
 
+/* Kaldığı yerden devam ettir (video hazır olunca) */
+function _wResumePlayback() {
+  if (!_w.resumeFrom || _w.resumeFrom < 5) return;
+  const sn = _w.resumeFrom;
+  // Videonun sonuna çok yakınsa baştan başlat
+  if (_w.duration && sn > _w.duration - 10) { _w.resumeFrom = 0; return; }
+  try { _wSeekTo(sn); } catch (e) {}
+  const dk = Math.floor(sn / 60), ss = String(sn % 60).padStart(2, '0');
+  if (typeof toast === 'function') toast('▶ Kaldığın yerden devam: ' + dk + ':' + ss);
+  _w.resumeFrom = 0; // bir kez uygula
+}
+
 /* ── İzleme logu ── */
 function _wStartLog() {
   if (_w.kind === 'stream') return; // stream log'u edge function başlattı
@@ -2661,7 +2676,7 @@ async function refreshPqFromDb() {
 
 // NAV
 /* Eğitim Merkezi'nde toplanan sayfalar: tek nav butonu + sol sidebar düzeni */
-const LEARN_PAGES = ['words', 'grammar', 'quiz', 'video'];
+const LEARN_PAGES = ['words', 'grammar', 'works', 'grammarworks', 'quiz', 'video'];
 
 function showPage(id){
   // İzleme sayfasından başka yere geçiliyorsa videoyu DURDUR (PiP eklenene kadar)
@@ -2670,6 +2685,8 @@ function showPage(id){
     try { if (typeof _wPause === 'function') _wPause(); } catch (e) {}
     try { if (typeof _wCleanup === 'function') _wCleanup(); } catch (e) {}
   }
+  // Yönetim panelinde floating widget'ları (pomodoro + sınav sayacı) gizle
+  try { document.body.classList.toggle('admin-acik', id === 'admin'); } catch (e) {}
   // Eğitim sayfaları learn düzeninde açılır (geriye uyumluluk: eski linkler çalışmaya devam eder)
   if (LEARN_PAGES.includes(id)) {
     _openLearn(id);
@@ -2707,23 +2724,28 @@ function learnNav(sub, btn) {
   _learnCurrent = sub;
   const host = document.getElementById('learn-content');
   if (!host) return;
-  // İlgili sayfa div'ini learn içine taşı (DOM taşıma: tüm id/event'ler korunur)
   const pg = document.getElementById('page-' + sub);
   if (pg && pg.parentElement !== host) host.appendChild(pg);
-  // Learn içindeki sayfaları yönet
   LEARN_PAGES.forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('active', p === sub);
   });
-  // Sidebar vurgusu
+  // Sidebar vurgusu — quiz/grammarworks alt sayfalarındayken "Çalışmalar" vurgulu kalsın
   document.querySelectorAll('#learn-layout .psb-item').forEach(b => b.classList.remove('active'));
-  const sb2 = btn || document.getElementById('lsb-' + sub);
+  let sbId = 'lsb-' + sub;
+  if (sub === 'works' || sub === 'quiz' || sub === 'grammarworks') sbId = 'lsb-works';
+  const sb2 = btn || document.getElementById(sbId);
   if (sb2) sb2.classList.add('active');
   // Sayfa özel tetikleyiciler
   if (sub === 'quiz' && typeof showSetup === 'function') showSetup();
-  if (sub === 'grammar' && typeof tfYeni === 'function') setTimeout(tfYeni, 200);
+  if (sub === 'grammarworks' && typeof tfYeni === 'function') setTimeout(tfYeni, 200);
   if (typeof trackPageView === 'function') trackPageView(sub);
 }
+/* Çalışmalar kartlarından yönlendirme */
+function worksGo(hedef) {
+  learnNav(hedef, null);
+}
+if (typeof window !== 'undefined') window.worksGo = worksGo;
 
 // AUTH
 function openAuth(tab){
@@ -5137,9 +5159,23 @@ function trackPageView(pageId) {
 
 async function _visitData(days) {
   const since = new Date(); since.setDate(since.getDate() - days);
-  const { data } = await sb.from('page_views').select('path, created_at, referrer, country, city')
-    .gte('created_at', since.toISOString()).order('created_at', { ascending: false }).limit(5000);
-  return data || [];
+  const sinceIso = since.toISOString();
+  // Sayfalama ile TÜM kayıtları çek (Supabase 1000 satır sınırını aşar)
+  const out = [];
+  let from = 0; const step = 1000;
+  while (true) {
+    const { data, error } = await sb.from('page_views')
+      .select('path, created_at, referrer, country, city')
+      .gte('created_at', sinceIso)
+      .order('created_at', { ascending: false })
+      .range(from, from + step - 1);
+    if (error) break;
+    out.push.apply(out, data || []);
+    if (!data || data.length < step) break;
+    from += step;
+    if (from > 50000) break; // güvenlik freni
+  }
+  return out;
 }
 function _visitAggregate(rows) {
   const byDay = {}, byPage = {};
@@ -5171,7 +5207,7 @@ async function renderVisitsFull() {
     const { byDay, byPage, total } = _visitAggregate(rows);
     const today = new Date().toISOString().slice(0,10);
     const week = Object.keys(byDay).filter(k => k >= new Date(Date.now() - 7*86400000).toISOString().slice(0,10)).reduce((a,k) => a + byDay[k], 0);
-    const pageNames = { home:'Ana Sayfa', words:'Kelimeler', quiz:'Testler', review:'Tekrar', testbuilder:'Test Oluştur', video:'Videolar', pricing:'Fiyatlar', profile:'Profil', admin:'Yönetim', placement:'Seviye Sınavı' };
+    const pageNames = { home:'Ana Sayfa', words:'Kelimeler', works:'Çalışmalar', quiz:'Testler', grammarworks:'Gramer Çalışmaları', grammar:'Gramer', review:'Tekrar', testbuilder:'Test Oluştur', video:'Videolar', pricing:'Fiyatlar', profile:'Profil', admin:'Yönetim', placement:'Seviye Sınavı' };
     const top = Object.entries(byPage).sort((a,b) => b[1]-a[1]).slice(0,8);
     const maxP = Math.max(1, ...(top.map(t => t[1])));
     box.innerHTML = `<div class="st-cards">
