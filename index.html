@@ -49,7 +49,7 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=131">
+<link rel="stylesheet" href="css/style.css?v=132">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -72,7 +72,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=131" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=132" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -166,7 +166,7 @@
           <div class="psb-section-title">📚 EĞİTİM MERKEZİ</div>
           <button class="psb-item active" id="lsb-words"   onclick="learnNav('words',this)"><span class="psb-ic">🔤</span> <span>Kelimeler</span></button>
           <button class="psb-item" id="lsb-grammar" onclick="learnNav('grammar',this)"><span class="psb-ic">📖</span> <span>Gramer</span></button>
-          <button class="psb-item" id="lsb-quiz"    onclick="learnNav('quiz',this)"><span class="psb-ic">📝</span> <span>Testler</span></button>
+          <button class="psb-item" id="lsb-works"   onclick="learnNav('works',this)"><span class="psb-ic">📝</span> <span>Çalışmalar</span></button>
           <button class="psb-item" id="lsb-video"   onclick="learnNav('video',this)"><span class="psb-ic">🎬</span> <span>Video Dersler</span></button>
         </div>
       </div>
@@ -383,11 +383,38 @@
 </div>
 
 <!-- ===== QUIZ ===== -->
+<!-- ÇALIŞMALAR ara sayfası (Testler + Gramer Çalışmaları kartları) -->
+<div id="page-works" class="page">
+  <div class="works-wrap">
+    <h1 class="works-title">Çalışmalar</h1>
+    <p class="works-sub">Konuları pekiştirmek, bilgilerini ölçmek ve daha fazla pratik yapmak için aşağıdaki bölümlerden birini seçebilirsin.</p>
+    <div class="works-cards">
+      <div class="works-card" onclick="worksGo('quiz')">
+        <div class="works-card-ic">
+          <svg viewBox="0 0 24 24" width="52" height="52" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="17" rx="2"></rect><line x1="7" y1="9" x2="13" y2="9"></line><line x1="7" y1="13" x2="13" y2="13"></line><line x1="7" y1="17" x2="10" y2="17"></line><circle cx="18" cy="17" r="4" fill="currentColor" stroke="none" opacity="0.25"></circle><polyline points="16.5 17 17.7 18.2 20 15.8" stroke-width="2"></polyline></svg>
+        </div>
+        <h2 class="works-card-title">Testler</h2>
+        <p class="works-card-desc">Bilgini ölç, eksiklerini gör, ilerlemeni takip et.</p>
+        <div class="works-card-cta"><span class="works-arrow">→</span> Testlere Git</div>
+      </div>
+      <div class="works-card" onclick="worksGo('grammarworks')">
+        <div class="works-card-ic">
+          <svg viewBox="0 0 24 24" width="52" height="52" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10.5 5 8 4.5 4 5v13c4-.5 6.5 0 8 1.5"></path><path d="M12 6.5C13.5 5 16 4.5 20 5v13c-4-.5-6.5 0-8 1.5"></path><line x1="12" y1="6.5" x2="12" y2="19.5"></line></svg>
+        </div>
+        <h2 class="works-card-title">Gramer Çalışmaları</h2>
+        <p class="works-card-desc">Konuları pekiştirmek için ek alıştırmalar yap.</p>
+        <div class="works-card-cta"><span class="works-arrow">→</span> Gramer Çalışmalarına Git</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="page-quiz" class="page">
   <div class="quiz-wrap">
 
     <!-- QUIZ SETUP -->
     <div id="quiz-setup">
+      <div class="works-back-row"><button class="works-back" onclick="learnNav('works')">← Çalışmalar</button></div>
       <div class="quiz-header">
         <h2>Test <span>Çöz</span></h2>
         <p>Test türünü, kategoriyi ve soru sayısını seç.</p>
@@ -804,10 +831,22 @@
 </div>
 
 <!-- ===== VIDEO ===== -->
+<!-- GRAMER sayfası (boş — e-kitap altyapısı için ayrıldı) -->
 <div id="page-grammar" class="page">
   <section class="words-section" style="max-width:1180px; margin:0 auto; padding:28px 20px 48px;">
     <div class="words-header"><div>
       <h2>Gramer <span>Merkezi</span></h2>
+      <p>Ünite kitapçıkları ve interaktif gramer içerikleri yakında burada olacak.</p>
+    </div></div>
+    <div class="profile-empty" style="margin-top:30px;">📖 Bu bölüm yapım aşamasında.</div>
+  </section>
+</div>
+
+<div id="page-grammarworks" class="page">
+  <section class="words-section" style="max-width:1180px; margin:0 auto; padding:28px 20px 48px;">
+    <div class="works-back-row"><button class="works-back" onclick="learnNav('works')">← Çalışmalar</button></div>
+    <div class="words-header"><div>
+      <h2>Gramer <span>Çalışmaları</span></h2>
       <p>Padej çekimleri, konu notları ve gramer alıştırmaları — YDS'nin kalbi burada.</p>
     </div></div>
 
@@ -2115,12 +2154,12 @@
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=131"></script>
-<script defer src="js/auth.js?v=131"></script>
-<script defer src="js/admin.js?v=131"></script>
-<script defer src="js/profile.js?v=131"></script>
-<script defer src="js/extras.js?v=131"></script>
-<script defer src="js/app.js?v=131"></script>
+<script defer src="js/supabase-config.js?v=132"></script>
+<script defer src="js/auth.js?v=132"></script>
+<script defer src="js/admin.js?v=132"></script>
+<script defer src="js/profile.js?v=132"></script>
+<script defer src="js/extras.js?v=132"></script>
+<script defer src="js/app.js?v=132"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
