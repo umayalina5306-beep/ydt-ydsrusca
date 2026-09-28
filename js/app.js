@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v132';
+var YDT_SURUM = 'v133';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -2739,6 +2739,10 @@ function learnNav(sub, btn) {
   // Sayfa özel tetikleyiciler
   if (sub === 'quiz' && typeof showSetup === 'function') showSetup();
   if (sub === 'grammarworks' && typeof tfYeni === 'function') setTimeout(tfYeni, 200);
+  // E-kitap: Gramer sekmesinde okuyucu + sol modül ağacı
+  const ekTree = document.getElementById('ek-tree');
+  if (ekTree) ekTree.style.display = sub === 'grammar' ? '' : 'none';
+  if (sub === 'grammar' && typeof ekOpen === 'function') setTimeout(ekOpen, 30);
   if (typeof trackPageView === 'function') trackPageView(sub);
 }
 /* Çalışmalar kartlarından yönlendirme */
