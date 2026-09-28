@@ -281,7 +281,7 @@ function ekParseAct(tipStr, body, ln, res) {
   return act;
 }
 function ekParseItem(it, res, govdeMi) {
-  const o = { ln: it.ln, prompt: [], opts: [], ans: null, tf: null, alan: {}, adimlar: [] };
+  const o = { ln: it.ln, prompt: [], opts: [], ans: null, tf: null, alan: {}, adimlar: [], raw: (it.lines || []).slice() };
   it.lines.forEach(l => {
     const s = l.trim(); if (!s && !govdeMi) return;
     let m;
@@ -314,6 +314,7 @@ let _ekActSeq = 0;              // hiç sıfırlanmaz → kimlikler sayfa geneli
 const EK_ACT = {};              // etkinlik çalışma verisi: id → { blanks:[], items:[], act }
 const EK_SCOPE = { reader: [], admin: [] };
 let _ekScope = 'reader';
+let _ekCurKey = '';
 
 function ekBlankInput(ctx, alts) {
   const reg = EK_ACT[ctx.act];
@@ -384,9 +385,10 @@ function ekTableHTML(rows, ctx) {
 /* ---------- Etkinlik ---------- */
 function ekActEl(act) {
   const id = 'a' + (++_ekActSeq);
-  const reg = EK_ACT[id] = { blanks: [], items: [], act };
+  const reg = EK_ACT[id] = { blanks: [], items: [], act, key: _ekCurKey, scope: _ekScope };
   EK_SCOPE[_ekScope].push(id);
-  const faz2 = EK_FAZ2.has(act.tip) || (act.tip === 'es-zit' && !act.items.some(it => it.opts.length));
+  const motor = ekEngineKind(act) && ekEngineInit(reg, ekEngineKind(act));
+  const faz2 = !motor && (EK_FAZ2.has(act.tip) || (act.tip === 'es-zit' && !act.items.some(it => it.opts.length)));
   const a = act.alanlar;
   let h = `<div class="ek-act" data-act="${id}">
     <div class="ek-act-h"><span class="ek-ic">${EK_IC.etkinlik}</span><span class="ek-act-tip">${EK_TIPLER[act.tip]}</span>
@@ -395,9 +397,11 @@ function ekActEl(act) {
   if (a['durum']) h += `<div class="ek-act-durum">${ekInline(a['durum'])}</div>`;
   if (a['örnekler']) h += `<div class="ek-act-ornekler">${ekInline(a['örnekler'])}</div>`;
   if (a['ses']) h += `<div class="ek-act-ses"><button class="ek-say ek-say-lg" data-ek="speak" data-t="${ekEsc(a['ses'])}">${EK_IC.ses}<span>Dinle</span></button></div>`;
-  if (act.metin) h += `<div class="ek-act-metin">${act.metin.split(/\n\s*\n/).map(p => `<p>${ekInline(p.replace(/\n/g, ' '))}</p>`).join('')}</div>`;
+  if (act.metin) h += act.tip === 'kanit-goster' ? ekKanitHTML(id, act.metin)
+    : `<div class="ek-act-metin">${act.metin.split(/\n\s*\n/).map(p => `<p>${ekInline(p.replace(/\n/g, ' '))}</p>`).join('')}</div>`;
   if (a['kontrol-listesi']) h += `<ul class="ek-act-kl">${a['kontrol-listesi'].split('|').map(x => `<li>${ekInline(x.trim())}</li>`).join('')}</ul>`;
 
+  if (motor) { h += `<div class="ek-act-body">${ekEngineBody(id)}</div></div>`; return ekEl(h); }
   if (faz2) {
     h += `<div class="ek-act-body">${ekFaz2Preview(act)}</div></div>`;
     return ekEl(h);
@@ -414,6 +418,7 @@ function ekActEl(act) {
     <div class="ek-act-f">
       ${girisVar ? `<button class="ek-btn" data-ek="check" data-a="${id}">Kontrol et</button>` : ''}
       ${(girisVar || items.some(it => it.opts.length || it.tf != null)) ? `<button class="ek-btn ghost" data-ek="reveal" data-a="${id}">Cevapları göster</button>` : ''}
+      ${act.tip === 'kanit-goster' ? `<button class="ek-btn ghost" data-ek="kanitchk" data-a="${id}">Kanıtı kontrol et</button>` : ''}
       <span class="ek-act-skor" id="ek-skor-${id}"></span>
     </div></div>`;
   return ekEl(h);
@@ -530,6 +535,7 @@ function ekCheckAct(actId) {
   Object.keys(itemOk).forEach(n => ekFeedback(actId, +n, itemOk[n]));
   const toplam = root.querySelectorAll('input.ek-blank').length, dogru = root.querySelectorAll('input.ek-blank.ok').length;
   const sk = document.getElementById('ek-skor-' + actId); if (sk && toplam) sk.textContent = dogru + ' / ' + toplam + ' doğru';
+  if (toplam) ekLog(actId, dogru === toplam);
 }
 function ekRevealAct(actId) {
   const reg = EK_ACT[actId]; if (!reg) return;
@@ -550,7 +556,7 @@ function ekChoose(actId, n, k) {
   const btns = document.querySelectorAll(`.ek-act[data-act="${actId}"] .ek-it[data-i="${n}"] .ek-opt`);
   const ok = it.opts[k] && it.opts[k].ok;
   btns.forEach((b, j) => { b.classList.remove('ok', 'no'); if (j === k) b.classList.add(ok ? 'ok' : 'no'); });
-  ekFeedback(actId, n, ok);
+  ekFeedback(actId, n, ok); ekLog(actId, ok);
 }
 function ekTF(actId, n, v) {
   const reg = EK_ACT[actId]; const it = reg && reg.items[n]; if (!it) return;
@@ -558,7 +564,7 @@ function ekTF(actId, n, v) {
   document.querySelectorAll(`.ek-act[data-act="${actId}"] .ek-it[data-i="${n}"] .ek-opt`).forEach(b => {
     b.classList.remove('ok', 'no'); if (b.dataset.v === v) b.classList.add(ok ? 'ok' : 'no');
   });
-  ekFeedback(actId, n, ok);
+  ekFeedback(actId, n, ok); ekLog(actId, ok);
 }
 
 /* Cevap anahtarı üretimi */
@@ -593,9 +599,374 @@ function ekActAnswers(act) {
 }
 
 /* ============================================================
+   FAZ 2 · ETKİLEŞİM MOTORLARI
+   sıralama · eşleştirme · gruplama · metinde tıklama · adım adım · telaffuz
+   Hepsi tıklayarak (dokunmatik uyumlu) ve sürükle-bırakla çalışır.
+   ============================================================ */
+const EK_MOTOR = {
+  'cumle-sirala': 'order', 'dinle-sirala': 'order', 'diyalog-sirala': 'order', 'kelime-olustur': 'order',
+  'eslestir': 'match', 'es-zit': 'match', 'kurala-bagla': 'group', 'kelime-ailesi': 'group',
+  'hata-bul': 'text', 'metin-analiz': 'text', 'hata-duzelt': 'text', 'adim-adim': 'adim', 'telaffuz': 'tel'
+};
+let EK_DRAG = null;
+function ekTemizMetin(s) {
+  return String(s || '').replace(/\{(?:мн|м|ж|с)\*?(?:=[^:{}]+)?:([^{}]+)\}/g, (m, x) => x.replace(/\[([^\]]*)\]/g, '$1'))
+    .replace(/\{=[^:{}]+:([^{}]+)\}/g, '$1').replace(/\*\*|==/g, '');
+}
+function ekFarkliKaristir(n) {
+  const base = [...Array(n).keys()]; if (n < 2) return base;
+  for (let t = 0; t < 6; t++) { const k = ekKaristir(base); if (k.some((v, i) => v !== i)) return k; }
+  return base.reverse();
+}
+function ekEngineKind(act) {
+  const k = EK_MOTOR[act.tip]; if (!k) return null;
+  if (act.tip === 'es-zit' && act.items.some(it => it.opts.length)) return null;   // seçmeli biçimli eş/zıt
+  return k;
+}
+/* Etkinlik verisinden motor durumunu kur; kurulamazsa null (önizlemeye düşer) */
+function ekEngineInit(reg, kind) {
+  const act = reg.act, lead = (act.lead || []).map(l => l.trim()).filter(Boolean);
+  const eng = { kind, items: [] };
+  if (kind === 'order') {
+    const kaynak = act.items.length ? act.items : [{ prompt: lead, alan: {}, raw: lead }];
+    kaynak.forEach(it => {
+      let parts = [], correct = null, target = null;
+      if (act.tip === 'kelime-olustur') {
+        const s = it.alan['parçalar'] || ''; const [l, r] = s.split('=>');
+        parts = String(l || '').split(',').map(x => x.trim()).filter(Boolean);
+        target = (r || '').trim() || parts.join('');
+      } else if (act.tip === 'diyalog-sirala') {
+        parts = it.prompt.map(x => x.trim()).filter(x => /^-\s*/.test(x)).map(x => x.replace(/^-\s*/, ''));
+        correct = parts.slice();
+      } else {
+        parts = it.prompt.join(' ').split('|').map(x => x.trim()).filter(Boolean);
+        correct = parts.slice();
+      }
+      if (parts.length < 2) return;
+      eng.items.push({ parts, correct, target, pool: ekFarkliKaristir(parts.length), ans: [], ses: it.alan['ses'], ipucu: it.alan['ipucu'], neden: it.alan['neden'], dialog: act.tip === 'diyalog-sirala' });
+    });
+  } else if (kind === 'match') {
+    const pairs = lead.filter(l => / = /.test(l)).map(l => { const i = l.indexOf(' = '); return [l.slice(0, i).trim(), l.slice(i + 3).trim()]; });
+    if (pairs.length < 2) return null;
+    eng.items.push({ lefts: pairs.map(p => p[0]), rights: pairs.map(p => p[1]), order: ekFarkliKaristir(pairs.length), slots: pairs.map(() => null), sel: null });
+  } else if (kind === 'group') {
+    const groups = [], chips = [];
+    lead.forEach(l => { const m = l.match(/^\[([^\]]+)\]\s*(.*)$/); if (!m) return; groups.push(m[1].trim());
+      m[2].split(',').map(x => x.trim()).filter(Boolean).forEach(t => chips.push({ t, g: groups.length - 1 })); });
+    if (groups.length < 2 || !chips.length) return null;
+    eng.items.push({ groups, chips, order: ekKaristir([...chips.keys()]), place: chips.map(() => null), sel: null });
+  } else if (kind === 'text') {
+    const kaynak = act.items.length ? act.items : [{ prompt: lead, alan: {} }];
+    kaynak.forEach(it => {
+      const txt = ekTemizMetin(it.prompt.join(' '));
+      const toks = []; const re = /\[\[([^\]]+)\]\]|([A-Za-zА-Яа-яЁёÇĞİÖŞÜçğıöşü]+(?:-[A-Za-zА-Яа-яЁёÇĞİÖŞÜçğıöşü]+)*)/g;
+      let m, last = 0;
+      while ((m = re.exec(txt))) {
+        if (m.index > last) toks.push({ t: txt.slice(last, m.index), w: false });
+        if (m[1] !== undefined) { const p = m[1].split('=>'); toks.push({ t: p[0].trim(), w: true, target: true, fix: p[1] ? p[1].trim() : null }); }
+        else toks.push({ t: m[2], w: true, target: false });
+        last = re.lastIndex;
+      }
+      if (last < txt.length) toks.push({ t: txt.slice(last), w: false });
+      if (!toks.some(t => t.target)) return;
+      eng.items.push({ toks, sel: new Set(), fixv: {}, checked: false, neden: it.alan['neden'], duzelt: act.tip === 'hata-duzelt' });
+    });
+  } else if (kind === 'adim') {
+    act.items.forEach(it => {
+      const steps = []; let cur = null;
+      (it.raw || []).forEach(l => {
+        const s = l.trim(); if (!s) return; let m;
+        if ((m = s.match(/^adım:\s*(.*)$/i))) { if (cur) steps.push(cur); cur = { text: m[1], opts: [] }; }
+        else if ((m = s.match(/^\[( |x|X)\]\s*(.*)$/)) && cur) cur.opts.push({ t: m[2], ok: m[1].toLowerCase() === 'x' });
+        else if (cur && !/^[a-zçğıöşü-]+:/i.test(s)) cur.text += ' ' + s;
+      });
+      if (cur) steps.push(cur);
+      steps.forEach(st => { st.blanks = []; const re = /\{\{([^}]+)\}\}/g; let m; while ((m = re.exec(st.text))) st.blanks.push(m[1].split('|').map(x => x.trim())); });
+      if (steps.length) eng.items.push({ steps, done: 0, wrong: null });
+    });
+  } else if (kind === 'tel') {
+    act.items.forEach(it => { const t = ekTemizMetin(it.prompt.join(' ').trim()); if (t) eng.items.push({ t, url: null, rec: null, self: null }); });
+  }
+  if (!eng.items.length) return null;
+  reg.eng = eng;
+  return eng;
+}
+function ekChip(t, attrs, cls) { return `<span class="ek-chip ek-chip-btn ${cls || ''}" draggable="true" ${attrs}>${ekInline(t)}</span>`; }
+function ekEngInner(id, n) {
+  const reg = EK_ACT[id], eng = reg.eng, st = eng.items[n];
+  const A = `data-a="${id}" data-i="${n}"`;
+  if (eng.kind === 'order') {
+    const lineCls = st.dialog ? 'ek-chip-line' : '';
+    const ans = st.ans.map(k => ekChip(st.parts[k], `data-ek="ord" ${A} data-k="${k}" data-w="ans"`, lineCls)).join('');
+    const pool = st.pool.map(k => ekChip(st.parts[k], `data-ek="ord" ${A} data-k="${k}" data-w="pool"`, lineCls)).join('');
+    return `<div class="ek-ord-ans${st.dialog ? ' dlg' : ''}" data-dz="ans">${ans || `<span class="ek-dz-ph">${st.dialog ? 'Satırları buraya doğru sırayla yerleştir' : 'Parçaları buraya sırayla yerleştir'}</span>`}</div>
+      <div class="ek-ord-pool${st.dialog ? ' dlg' : ''}" data-dz="pool">${pool}</div>`;
+  }
+  if (eng.kind === 'match') {
+    const yerlesen = new Set(st.slots.filter(x => x != null));
+    const rows = st.lefts.map((l, i) => {
+      const k = st.slots[i];
+      return `<div class="ek-mt-row"><span class="ek-mt-l">${ekInline(l)}</span>
+        <span class="ek-mt-slot${k == null ? '' : ' full'}" data-ek="mslot" ${A} data-s="${i}" data-dz="slot">${k == null ? '<span class="ek-dz-ph">buraya</span>' : ekChip(st.rights[k], `data-ek="mpick" ${A} data-k="${k}" data-w="slot"`)}</span></div>`;
+    }).join('');
+    const pool = st.order.filter(k => !yerlesen.has(k)).map(k => ekChip(st.rights[k], `data-ek="mpick" ${A} data-k="${k}" data-w="pool"`, st.sel === k ? 'sel' : '')).join('');
+    return `<div class="ek-mt-rows">${rows}</div><div class="ek-mt-pool" data-dz="pool">${pool || '<span class="ek-dz-ph">Hepsi yerleştirildi</span>'}</div>`;
+  }
+  if (eng.kind === 'group') {
+    const boxes = st.groups.map((g, gi) => `<div class="ek-gr-box" data-ek="gbox" ${A} data-g="${gi}" data-dz="g">
+        <div class="ek-gr-h">${ekInline(g)}</div>
+        <div class="ek-gr-items">${st.chips.map((c, k) => st.place[k] === gi ? ekChip(c.t, `data-ek="gpick" ${A} data-k="${k}" data-w="g"`) : '').join('') || '<span class="ek-dz-ph">buraya bırak</span>'}</div></div>`).join('');
+    const pool = st.order.filter(k => st.place[k] == null).map(k => ekChip(st.chips[k].t, `data-ek="gpick" ${A} data-k="${k}" data-w="pool"`, st.sel === k ? 'sel' : '')).join('');
+    return `<div class="ek-gr-boxes">${boxes}</div><div class="ek-gr-pool" data-dz="pool">${pool || '<span class="ek-dz-ph">Hepsi yerleştirildi</span>'}</div>`;
+  }
+  if (eng.kind === 'text') {
+    return `<div class="ek-tx">${st.toks.map((t, k) => {
+      if (!t.w) return ekEsc(t.t);
+      const secili = st.sel.has(k);
+      let cls = 'ek-tok' + (secili ? ' sel' : '');
+      if (st.checked) { if (secili && t.target) cls += ' ok'; else if (secili) cls += ' no'; else if (t.target) cls += ' miss'; }
+      let h = `<span class="${cls}" data-ek="tok" ${A} data-k="${k}">${ekEsc(t.t)}</span>`;
+      if (st.duzelt && secili) h += ` <input class="ek-blank ek-fix" data-a="${id}" data-i="${n}" data-k="${k}" value="${ekEsc(st.fixv[k] || '')}" placeholder="doğrusu" autocomplete="off" spellcheck="false" style="width:${Math.max(6, t.t.length + 2)}ch">`;
+      return h;
+    }).join('')}</div>`;
+  }
+  if (eng.kind === 'adim') {
+    return st.steps.map((s, k) => {
+      if (k > st.done) return '';
+      const solved = k < st.done;
+      let body;
+      if (s.opts.length) {
+        body = `<div class="ek-opts">${s.opts.map((o, j) => `<button class="ek-opt${solved && o.ok ? ' ok' : ''}${st.wrong === k + ':' + j ? ' no' : ''}" data-ek="stepopt" ${A} data-s="${k}" data-o="${j}"${solved ? ' disabled' : ''}>${ekInline(o.t)}</button>`).join('')}</div>`;
+      } else if (s.blanks.length) {
+        let bi = 0;
+        const t = s.text.replace(/\{\{([^}]+)\}\}/g, () => `<input class="ek-blank${solved ? ' ok' : ''}" data-sb="${bi++}" ${solved ? 'disabled' : ''} autocomplete="off" spellcheck="false" style="width:9ch">`);
+        body = `<div class="ek-step-t">${t}</div>${solved ? '' : `<button class="ek-btn sm" data-ek="stepchk" ${A} data-s="${k}">Kontrol et</button>`}`;
+      } else body = solved ? '' : `<button class="ek-btn sm" data-ek="stepnext" ${A} data-s="${k}">Devam</button>`;
+      return `<div class="ek-step${solved ? ' solved' : ''}"><div class="ek-step-h"><span class="ek-step-no">${k + 1}</span>${s.opts.length || !s.blanks.length ? ekInline(s.text) : 'Yazın'}</div>${body}</div>`;
+    }).join('') + (st.done >= st.steps.length ? '<div class="ek-ok-t" style="margin-top:6px">Tüm adımlar tamamlandı.</div>' : '');
+  }
+  if (eng.kind === 'tel') {
+    return `<div class="ek-tel">
+      <button class="ek-say" data-ek="speak" data-t="${ekEsc(st.t)}" title="Dinle">${EK_IC.ses}</button>
+      <span class="ek-tel-t">${ekInline(st.t)}</span>
+      <button class="ek-btn sm${st.rec ? ' rec' : ''}" data-ek="rec" ${A}>${st.rec ? 'Durdur' : (st.url ? 'Tekrar kaydet' : 'Kaydet')}</button>
+      ${st.url ? `<button class="ek-btn sm ghost" data-ek="play" ${A}>Kaydımı dinle</button>
+        <span class="ek-tel-self">${st.self == null ? `<button class="ek-btn sm ghost" data-ek="self" ${A} data-v="1">İyi söyledim</button><button class="ek-btn sm ghost" data-ek="self" ${A} data-v="0">Tekrar çalışmalıyım</button>` : (st.self ? '<span class="ek-ok-t">İyi</span>' : '<span class="ek-no-t">Tekrar çalışılacak</span>')}</span>` : ''}
+    </div>`;
+  }
+  return '';
+}
+function ekEngineBody(id) {
+  const reg = EK_ACT[id], eng = reg.eng, cok = eng.items.length > 1;
+  let h = '';
+  eng.items.forEach((st, n) => {
+    let bas = '';
+    if (st.ses) bas += `<button class="ek-say" data-ek="speak" data-t="${ekEsc(st.ses)}" title="Dinle">${EK_IC.ses}</button>`;
+    if (st.ipucu) bas += `<span class="ek-it-ipucu" style="margin:0">İpucu: ${ekInline(st.ipucu)}</span>`;
+    h += `<div class="ek-it" data-i="${n}">${(cok || bas) ? `<div class="ek-it-q">${cok ? `<span class="ek-it-no">${n + 1}.</span>` : ''}${bas}</div>` : ''}
+      <div class="ek-eng ek-eng-${eng.kind}" data-a="${id}" data-i="${n}">${ekEngInner(id, n)}</div><div class="ek-it-fb"></div></div>`;
+  });
+  if (eng.kind !== 'adim' && eng.kind !== 'tel') {
+    h += `<div class="ek-act-f"><button class="ek-btn" data-ek="echeck" data-a="${id}">Kontrol et</button>
+      <button class="ek-btn ghost" data-ek="eshow" data-a="${id}">Cevapları göster</button>
+      <button class="ek-btn ghost" data-ek="ereset" data-a="${id}">Sıfırla</button><span class="ek-act-skor" id="ek-skor-${id}"></span></div>`;
+  }
+  return h;
+}
+function ekEngRefresh(id, n) {
+  const box = document.querySelector(`.ek-eng[data-a="${id}"][data-i="${n}"]`);
+  if (box) { box.innerHTML = ekEngInner(id, n); box.classList.remove('ok', 'no'); }
+  const fb = document.querySelector(`.ek-act[data-act="${id}"] .ek-it[data-i="${n}"] .ek-it-fb`); if (fb) fb.innerHTML = '';
+}
+function ekEngFb(id, n, ok, msg) {
+  const box = document.querySelector(`.ek-eng[data-a="${id}"][data-i="${n}"]`); if (box) { box.classList.toggle('ok', ok); box.classList.toggle('no', !ok); }
+  const fb = document.querySelector(`.ek-act[data-act="${id}"] .ek-it[data-i="${n}"] .ek-it-fb`);
+  const reg = EK_ACT[id], st = reg.eng.items[n], kural = reg.act.kural;
+  if (fb) fb.innerHTML = ok ? '<span class="ek-ok-t">Doğru</span>' : `<span class="ek-no-t">${msg || 'Yanlış'}</span>` +
+    (st.neden ? `<div class="ek-neden">${ekInline(st.neden)}</div>` : '') +
+    (kural ? `<button class="ek-btn ghost sm" data-ek="kural" data-no="${ekEsc(kural)}">Kuralı gör (${ekEsc(kural)})</button>` : '');
+}
+/* Kontrol */
+function ekEngCheck(id) {
+  const reg = EK_ACT[id]; if (!reg || !reg.eng) return;
+  const eng = reg.eng; let hepsi = true, dogruSay = 0, toplam = 0;
+  eng.items.forEach((st, n) => {
+    let ok = false, msg = '';
+    if (eng.kind === 'order') {
+      if (st.target != null) ok = ekNorm(st.ans.map(k => st.parts[k]).join('')) === ekNorm(st.target);
+      else ok = st.ans.length === st.correct.length && st.ans.every((k, j) => ekNorm(st.parts[k]) === ekNorm(st.correct[j]));
+      if (!ok && st.target == null && st.pool.length) msg = 'Eksik parça var';
+      toplam++; if (ok) dogruSay++;
+    } else if (eng.kind === 'match') {
+      const box = document.querySelector(`.ek-eng[data-a="${id}"][data-i="${n}"]`);
+      st.slots.forEach((k, i) => { toplam++; const d = k === i; if (d) dogruSay++;
+        const el = box && box.querySelectorAll('.ek-mt-slot')[i]; if (el) { el.classList.toggle('ok', d); el.classList.toggle('no', !d); } });
+      ok = st.slots.every((k, i) => k === i); if (!ok && st.slots.some(k => k == null)) msg = 'Boş kalan eşleşme var';
+      ekEngFbOnly(id, n, ok, msg); if (!ok) hepsi = false; return;
+    } else if (eng.kind === 'group') {
+      const box = document.querySelector(`.ek-eng[data-a="${id}"][data-i="${n}"]`);
+      st.chips.forEach((c, k) => { toplam++; const d = st.place[k] === c.g; if (d) dogruSay++;
+        const el = box && box.querySelector(`.ek-chip[data-k="${k}"]`); if (el && st.place[k] != null) { el.classList.toggle('ok', d); el.classList.toggle('no', !d); } });
+      ok = st.chips.every((c, k) => st.place[k] === c.g); if (!ok && st.place.some(x => x == null)) msg = 'Yerleştirilmemiş öğe var';
+      ekEngFbOnly(id, n, ok, msg); if (!ok) hepsi = false; return;
+    } else if (eng.kind === 'text') {
+      st.checked = true;
+      const hedef = st.toks.map((t, k) => t.target ? k : -1).filter(k => k >= 0);
+      ok = hedef.every(k => st.sel.has(k)) && [...st.sel].every(k => st.toks[k].target);
+      if (ok && st.duzelt) ok = hedef.every(k => st.toks[k].fix == null || ekNorm(st.fixv[k]) === ekNorm(st.toks[k].fix));
+      toplam++; if (ok) dogruSay++;
+      const box = document.querySelector(`.ek-eng[data-a="${id}"][data-i="${n}"]`); if (box) box.innerHTML = ekEngInner(id, n);
+      if (st.duzelt && box) hedef.forEach(k => { const inp = box.querySelector(`.ek-fix[data-k="${k}"]`); if (inp && st.toks[k].fix != null) inp.classList.add(ekNorm(st.fixv[k]) === ekNorm(st.toks[k].fix) ? 'ok' : 'no'); });
+      if (!ok && hedef.some(k => !st.sel.has(k))) msg = 'Bulunmamış olanlar var';
+    }
+    if (!ok) hepsi = false;
+    ekEngFb(id, n, ok, msg);
+  });
+  const sk = document.getElementById('ek-skor-' + id); if (sk) sk.textContent = dogruSay + ' / ' + toplam + ' doğru';
+  ekLog(id, hepsi);
+}
+function ekEngFbOnly(id, n, ok, msg) { ekEngFb(id, n, ok, msg); }
+function ekEngShow(id) {
+  const reg = EK_ACT[id]; if (!reg || !reg.eng) return;
+  reg.eng.items.forEach((st, n) => {
+    if (reg.eng.kind === 'order') {
+      if (st.target != null) {           // hedefi oluşturan parçaları bul
+        const bul = (kalan, kullan) => { if (!kalan) return kullan; for (let k = 0; k < st.parts.length; k++) { if (kullan.includes(k)) continue; const p = st.parts[k];
+          if (ekNorm(kalan).startsWith(ekNorm(p))) { const r = bul(kalan.slice(p.length), kullan.concat(k)); if (r) return r; } } return null; };
+        const yol = bul(st.target, []) || [];
+        st.ans = yol; st.pool = [...st.parts.keys()].filter(k => !yol.includes(k));
+      } else { st.ans = st.correct.map(c => st.parts.findIndex((p, k) => p === c)); st.pool = []; }
+    } else if (reg.eng.kind === 'match') { st.slots = st.lefts.map((l, i) => i); st.sel = null; }
+    else if (reg.eng.kind === 'group') { st.place = st.chips.map(c => c.g); st.sel = null; }
+    else if (reg.eng.kind === 'text') { st.sel = new Set(st.toks.map((t, k) => t.target ? k : -1).filter(k => k >= 0)); st.toks.forEach((t, k) => { if (t.fix) st.fixv[k] = t.fix; }); st.checked = false; }
+    ekEngRefresh(id, n);
+    const box = document.querySelector(`.ek-eng[data-a="${id}"][data-i="${n}"]`); if (box) box.classList.add('shown');
+  });
+}
+function ekEngReset(id) {
+  const reg = EK_ACT[id]; if (!reg) return;
+  ekEngineInit(reg, reg.eng.kind);
+  reg.eng.items.forEach((st, n) => ekEngRefresh(id, n));
+  const sk = document.getElementById('ek-skor-' + id); if (sk) sk.textContent = '';
+  document.querySelectorAll(`.ek-eng[data-a="${id}"]`).forEach(b => b.classList.remove('shown'));
+}
+/* Tıklama etkileşimleri */
+function ekEngClick(t) {
+  const id = t.dataset.a, n = +t.dataset.i, reg = EK_ACT[id]; if (!reg || !reg.eng) return false;
+  const st = reg.eng.items[n], a = t.dataset.ek, k = +t.dataset.k;
+  if (a === 'ord') {
+    if (t.dataset.w === 'pool') { st.pool = st.pool.filter(x => x !== k); st.ans.push(k); }
+    else { st.ans = st.ans.filter(x => x !== k); st.pool.push(k); }
+  } else if (a === 'mpick') {
+    if (t.dataset.w === 'slot') { const i = st.slots.indexOf(k); if (i > -1) st.slots[i] = null; st.sel = null; }
+    else st.sel = st.sel === k ? null : k;
+  } else if (a === 'mslot') {
+    if (t.closest('.ek-chip')) return true;
+    const s = +t.dataset.s; if (st.sel == null) return true;
+    st.slots[s] = st.sel; st.sel = null;
+  } else if (a === 'gpick') {
+    if (t.dataset.w === 'g') { st.place[k] = null; st.sel = null; }
+    else st.sel = st.sel === k ? null : k;
+  } else if (a === 'gbox') {
+    if (t.closest('.ek-chip') || st.sel == null) return true;
+    st.place[st.sel] = +t.dataset.g; st.sel = null;
+  } else if (a === 'tok') {
+    if (st.sel.has(k)) st.sel.delete(k); else st.sel.add(k); st.checked = false;
+  } else if (a === 'stepopt') {
+    const s = +t.dataset.s, o = +t.dataset.o, step = st.steps[s];
+    if (step.opts[o].ok) { st.done = s + 1; st.wrong = null; if (st.done >= st.steps.length) ekLog(id, true); }
+    else { st.wrong = s + ':' + o; ekLog(id, false); }
+  } else if (a === 'stepchk') {
+    const s = +t.dataset.s, step = st.steps[s];
+    const box = t.closest('.ek-step'); const ins = box ? [...box.querySelectorAll('input[data-sb]')] : [];
+    const ok = ins.length && ins.every((inp, j) => (step.blanks[j] || []).some(x => ekNorm(x) === ekNorm(inp.value)));
+    if (ok) { st.done = s + 1; if (st.done >= st.steps.length) ekLog(id, true); }
+    else { ins.forEach((inp, j) => inp.classList.toggle('no', !(step.blanks[j] || []).some(x => ekNorm(x) === ekNorm(inp.value)))); ekLog(id, false); return true; }
+  } else if (a === 'stepnext') { st.done = +t.dataset.s + 1; }
+  else if (a === 'rec') { ekRecord(id, n); return true; }
+  else if (a === 'play') { if (st.url) new Audio(st.url).play().catch(() => {}); return true; }
+  else if (a === 'self') { st.self = t.dataset.v === '1'; ekLog(id, st.self); }
+  else return false;
+  ekEngRefresh(id, n);
+  return true;
+}
+async function ekRecord(id, n) {
+  const st = EK_ACT[id].eng.items[n];
+  if (st.rec) { try { st.rec.stop(); } catch (e) {} return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder) { if (typeof toast === 'function') toast('Bu tarayıcı ses kaydını desteklemiyor.'); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const r = new MediaRecorder(stream), parca = [];
+    r.ondataavailable = e => { if (e.data && e.data.size) parca.push(e.data); };
+    r.onstop = () => { stream.getTracks().forEach(tr => tr.stop()); st.url = URL.createObjectURL(new Blob(parca, { type: r.mimeType || 'audio/webm' })); st.rec = null; st.self = null; ekEngRefresh(id, n); };
+    st.rec = r; r.start(); ekEngRefresh(id, n);
+    setTimeout(() => { if (st.rec === r) { try { r.stop(); } catch (e) {} } }, 10000);
+  } catch (e) { if (typeof toast === 'function') toast('Mikrofona erişilemedi. Tarayıcı izinlerini kontrol et.'); }
+}
+/* Kanıt gösterme: metindeki cümleler tıklanabilir */
+function ekKanitHTML(id, metin) {
+  const cumleler = metin.replace(/\n+/g, ' ').split(/(?<=[.!?])\s+/).filter(Boolean);
+  EK_ACT[id].kanit = { cumleler, sel: null };
+  return `<div class="ek-act-metin ek-kanit-metin">${cumleler.map((c, k) => `<span class="ek-kanit-c" data-ek="kanit" data-a="${id}" data-k="${k}">${ekEsc(c)}</span>`).join(' ')}</div>
+    <div class="ek-act-not">Cevabını verdikten sonra metinde kanıt olan cümleye tıkla.</div>`;
+}
+function ekKanitCheck(id) {
+  const reg = EK_ACT[id]; if (!reg || !reg.kanit) return;
+  const it = reg.items.find(x => x.alan['kanıt']); if (!it) return;
+  const kn = reg.kanit; const el = document.querySelectorAll(`.ek-kanit-c[data-a="${id}"]`);
+  const ok = kn.sel != null && ekNorm(kn.cumleler[kn.sel]).includes(ekNorm(it.alan['kanıt']));
+  el.forEach((e, k) => { e.classList.remove('ok', 'no'); if (k === kn.sel) e.classList.add(ok ? 'ok' : 'no'); });
+  const sk = document.getElementById('ek-skor-' + id); if (sk) sk.textContent = ok ? 'Kanıt doğru' : (kn.sel == null ? 'Önce bir cümle seç' : 'Kanıt bu cümlede değil');
+  if (kn.sel != null) ekLog(id, ok);
+}
+/* Sürükle-bırak */
+document.addEventListener('dragstart', function (e) {
+  const c = e.target.closest && e.target.closest('.ek-eng .ek-chip-btn'); if (!c) return;
+  EK_DRAG = { a: c.dataset.a, i: +c.dataset.i, k: +c.dataset.k, ek: c.dataset.ek };
+  try { e.dataTransfer.setData('text/plain', 'ek'); e.dataTransfer.effectAllowed = 'move'; } catch (x) {}
+  c.classList.add('dragging');
+});
+document.addEventListener('dragend', function (e) { const c = e.target.closest && e.target.closest('.ek-chip-btn'); if (c) c.classList.remove('dragging'); document.querySelectorAll('.dz-over').forEach(x => x.classList.remove('dz-over')); });
+document.addEventListener('dragover', function (e) {
+  if (!EK_DRAG) return; const dz = e.target.closest && e.target.closest('[data-dz]'); if (!dz) return;
+  const eng = dz.closest('.ek-eng'); if (!eng || eng.dataset.a !== EK_DRAG.a || +eng.dataset.i !== EK_DRAG.i) return;
+  e.preventDefault(); document.querySelectorAll('.dz-over').forEach(x => x !== dz && x.classList.remove('dz-over')); dz.classList.add('dz-over');
+});
+document.addEventListener('drop', function (e) {
+  if (!EK_DRAG) return; const dz = e.target.closest && e.target.closest('[data-dz]'); if (!dz) return;
+  const engEl = dz.closest('.ek-eng'); if (!engEl || engEl.dataset.a !== EK_DRAG.a || +engEl.dataset.i !== EK_DRAG.i) return;
+  e.preventDefault();
+  const { a: id, i: n, k } = EK_DRAG; EK_DRAG = null;
+  const reg = EK_ACT[id]; const st = reg.eng.items[n], z = dz.dataset.dz;
+  if (reg.eng.kind === 'order') {
+    st.ans = st.ans.filter(x => x !== k); st.pool = st.pool.filter(x => x !== k);
+    if (z === 'ans') { const hedef = e.target.closest('.ek-chip-btn'); const hk = hedef ? +hedef.dataset.k : null; const pos = hk != null && hk !== k ? st.ans.indexOf(hk) : -1;
+      if (pos > -1) st.ans.splice(pos, 0, k); else st.ans.push(k); }
+    else st.pool.push(k);
+  } else if (reg.eng.kind === 'match') {
+    const i = st.slots.indexOf(k); if (i > -1) st.slots[i] = null;
+    if (z === 'slot') st.slots[+dz.dataset.s] = k;
+    st.sel = null;
+  } else if (reg.eng.kind === 'group') {
+    st.place[k] = z === 'g' ? +dz.dataset.g : null; st.sel = null;
+  }
+  ekEngRefresh(id, n);
+});
+/* Cevap kaydı (zayıf konu analizi için) */
+function ekLog(id, dogru) {
+  const reg = EK_ACT[id];
+  if (!reg || reg.scope !== 'reader' || !EK.unit) return;
+  reg.cozuldu = reg.cozuldu || dogru;
+  const el = document.querySelector(`.ek-act[data-act="${id}"]`); if (el && dogru) el.classList.add('ek-cozuldu');
+  if (typeof currentUser === 'undefined' || !currentUser || typeof sb === 'undefined') return;
+  sb.from('ek_answers').insert({ user_id: currentUser.id, unit_id: EK.unit.id, act_key: reg.key, tip: reg.act.tip, konular: reg.act.konu || [], dogru: !!dogru }).then(() => {}, () => {});
+}
+
+/* ============================================================
    OKUYUCU
    ============================================================ */
-const EK = { list: [], unit: null, parsed: null, sections: [], pages: [], anchors: {}, secPage: [], cur: 0, single: false, zoom: 100, acik: {}, tab: 'kelime', loaded: false, saveT: null };
+const EK = { list: [], unit: null, parsed: null, sections: [], pages: [], anchors: {}, secPage: [], cur: 0, single: false, zoom: 100, acik: {}, tab: 'kelime', loaded: false, saveT: null,
+  tool: 'sec', color: 'y', ann: [], annHist: [], annFut: [], bid: {}, notes: [], cstats: {}, deck: null };
 
 function ekShellHTML() {
   return `<div class="ek-wrap" id="ek-wrap">
@@ -608,6 +979,23 @@ function ekShellHTML() {
       <div class="ek-main">
         <div class="ek-center">
           <div class="ek-toolbar">
+            <div class="ek-tools">
+              <button class="ek-tool active" data-ek="tool" data-v="sec" title="Seç"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 2-2 6z"/></svg><span>Seç</span></button>
+              <button class="ek-tool" data-ek="tool" data-v="hl" title="Fosforla"><svg viewBox="0 0 24 24"><path d="M4 20h8"/><path d="M14.5 4.5l5 5L10 19H5v-5z"/></svg><span>Fosforla</span></button>
+              <button class="ek-tool" data-ek="tool" data-v="ul" title="Altı Çiz"><svg viewBox="0 0 24 24"><path d="M7 4v7a5 5 0 0 0 10 0V4"/><line x1="5" y1="20" x2="19" y2="20"/></svg><span>Altı Çiz</span></button>
+              <button class="ek-tool" data-ek="tool" data-v="note" title="Not Ekle"><svg viewBox="0 0 24 24"><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5"/></svg><span>Not Ekle</span></button>
+              <button class="ek-tool" data-ek="tool" data-v="erase" title="Silgi"><svg viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M16.5 3.5l4 4L10 18l-5-5z"/></svg><span>Silgi</span></button>
+              <span class="ek-tb-sep"></span>
+              <span class="ek-colors">
+                <button class="ek-color active" data-ek="color" data-v="y" style="--c:#fcd34d" title="Sarı"></button>
+                <button class="ek-color" data-ek="color" data-v="p" style="--c:#f9a8d4" title="Pembe"></button>
+                <button class="ek-color" data-ek="color" data-v="g" style="--c:#86efac" title="Yeşil"></button>
+                <button class="ek-color" data-ek="color" data-v="b" style="--c:#93c5fd" title="Mavi"></button>
+              </span>
+              <span class="ek-tb-sep"></span>
+              <button class="ek-ico-btn" data-ek="undo" title="Geri al (Ctrl+Z)" disabled><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M4 9h10a6 6 0 0 1 0 12h-2"/></svg></button>
+              <button class="ek-ico-btn" data-ek="redo" title="İleri al (Ctrl+Y)" disabled><svg viewBox="0 0 24 24"><polyline points="15 14 20 9 15 4"/><path d="M20 9H10a6 6 0 0 0 0 12h2"/></svg></button>
+            </div>
             <div class="ek-tb-nav">
               <button class="ek-ico-btn" data-ek="prev" title="Önceki sayfa"><svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg></button>
               <span class="ek-tb-page" id="ek-tb-page">Sayfa – / –</span>
@@ -642,9 +1030,7 @@ function ekShellHTML() {
         </aside>
       </div>
     </div>
-    <div class="ek-view" id="ek-v-notlar" style="display:none">
-      <div class="ek-soon"><h3>Notlarım</h3><p>Ders ve konulara bağlı kendi notlarını tutacağın bu alan bir sonraki aşamada açılacak.</p></div>
-    </div>
+    <div class="ek-view" id="ek-v-notlar" style="display:none"></div>
     <div class="ek-view" id="ek-v-kartlar" style="display:none"><div id="ek-cards"></div></div>
     <div class="ek-measure" id="ek-measure" aria-hidden="true"></div>
   </div>`;
@@ -723,6 +1109,9 @@ async function ekOpenUnit(id, secIdx) {
   try { localStorage.setItem('ek_last', String(id)); } catch (e) {}
   EK.parsed = ekParse(row.kaynak);
   EK.sections = ekBuildSections(EK.parsed, 'reader');
+  ekBidMap(); EK.deck = null;
+  await Promise.all([ekAnnLoad(id), ekNotesLoad(id), ekCardStatsLoad(id)]);
+  ekAnnRender();
   ekPaginate();
   let start = 0;
   if (secIdx != null) start = EK.secPage[secIdx] || 0;
@@ -749,22 +1138,28 @@ function ekBuildSections(parsed, scope) {
     s.blocks.forEach(b => { if (b.t === 'act') { sayac++; const c = ekActAnswers(b); if (c.length) anahtar.push({ t: 'anahtar', baslik: (s.tur === 'ders' ? 'Ders ' + s.no : s.ad) + ' · Etkinlik ' + sayac + ' — ' + EK_TIPLER[b.tip], satirlar: c }); } });
   });
   if (anahtar.length) secs.push({ tur: 'anahtar', ad: 'Cevap anahtarı', blocks: anahtar });
-  return secs.map((s, si) => {
-    const els = [{ el: ekBlockEl({ t: 'sectitle' }, s, si), pb: false }];
-    s.blocks.forEach(b => {
+  const out = secs.map((s, si) => {
+    const tEl = ekBlockEl({ t: 'sectitle' }, s, si); tEl.dataset.bid = si + '-t';
+    const els = [{ el: tEl, pb: false }];
+    let actNo = 0;
+    s.blocks.forEach((b, bi) => {
       if (b.t === 'pagebreak') { els.push({ pb: true }); return; }
-      const el = ekBlockEl(b, s, si); if (el) els.push({ el, pb: false });
+      if (b.t === 'act') _ekCurKey = 's' + si + 'a' + (actNo++);
+      const el = ekBlockEl(b, s, si);
+      if (el) { el.dataset.bid = si + '-' + bi; els.push({ el, pb: false }); }
     });
     return { sec: s, els };
   });
+  return out;
 }
 function ekPageSize() {
   const wrap = document.getElementById('ek-wrap'), book = document.getElementById('ek-book');
   if (!wrap || !book) return null;
   const fs = wrap.classList.contains('ek-fs');
   const bw = book.clientWidth || 900;
-  EK.single = bw < 740;
+  EK.single = bw < 700;
   const w = EK.single ? Math.min(bw - 8, 640) : Math.floor((bw - 8) / 2);
+  wrap.classList.toggle('ek-narrow', w < 470);
   const h = Math.max(520, Math.min(fs ? 2000 : 980, window.innerHeight - (fs ? 150 : 250)));
   wrap.style.setProperty('--ek-pg-h', h + 'px');
   wrap.style.setProperty('--ek-fs', (EK.zoom / 100) + '');
@@ -903,15 +1298,24 @@ function ekSearch(q) {
 function ekRenderSideNotes() {
   const box = document.getElementById('ek-side-notlar'); if (!box) return;
   const kutular = document.querySelectorAll('#ek-book .ek-box');
-  let h = `<div class="ek-side-sec">Bu sayfadaki notlar (${kutular.length})</div>`;
-  if (!kutular.length) h += '<div class="ek-side-empty">Bu sayfalarda not kutusu yok.</div>';
+  const stickies = [...document.querySelectorAll('#ek-book .ek-sticky')];
+  let h = `<div class="ek-side-sec">Bu sayfadaki notlar (${kutular.length + stickies.length})</div>`;
+  if (!kutular.length && !stickies.length) h += '<div class="ek-side-empty">Bu sayfalarda not yok.</div>';
   kutular.forEach((k, i) => {
     const tur = k.dataset.kutu;
     const bas = (k.querySelector('.ek-box-h') || {}).textContent || '';
     const oz = ((k.querySelector('.ek-box-b') || {}).textContent || '').trim().slice(0, 90);
     h += `<button class="ek-sn ek-sn-${ekEsc(tur)}" data-ek="snote" data-k="${i}"><b>${ekEsc(bas)}</b><span>${ekEsc(oz)}${oz.length >= 90 ? '…' : ''}</span></button>`;
   });
-  h += '<div class="ek-side-sec" style="margin-top:14px">Kendi notlarım</div><div class="ek-side-empty">Kendi not alma araçların bir sonraki aşamada eklenecek.</div>';
+  stickies.forEach(st => {
+    const a = (EK.ann || []).find(x => x.id === st.dataset.sid); if (!a) return;
+    h += `<button class="ek-sn ek-sn-st c-${a.color || 'y'}" data-ek="stgo" data-sid="${a.id}"><b>Yapışkan not</b><span>${ekEsc((a.text || 'Boş not').slice(0, 90))}</span></button>`;
+  });
+  const si = ekCurSection();
+  const benim = (EK.notes || []).filter(n => +n.sec_idx === si);
+  h += `<div class="ek-side-sec" style="margin-top:14px">Bu derse ait notlarım (${benim.length})</div>`;
+  benim.forEach(n => { h += `<button class="ek-sn ek-sn-my" data-ek="nopen" data-id="${n.id}"><b>${ekEsc(n.baslik || 'Başlıksız not')}</b><span>${ekEsc((n.metin || '').slice(0, 90))}</span></button>`; });
+  h += `<button class="ek-btn ghost" style="width:100%;margin-top:6px" data-ek="nnew">+ Yeni Not</button>`;
   box.innerHTML = h;
 }
 function ekSideTab(v) {
@@ -925,23 +1329,377 @@ function ekTopTab(v) {
   document.querySelectorAll('.ek-ttab').forEach(b => b.classList.toggle('active', b.dataset.v === v));
   ['kitap', 'notlar', 'kartlar'].forEach(x => { const el = document.getElementById('ek-v-' + x); if (el) el.style.display = x === v ? '' : 'none'; });
   if (v === 'kitap') setTimeout(() => { ekPaginate(); ekRender(); }, 20);
+  if (v === 'notlar') ekRenderNotesTab();
+  if (v === 'kartlar') ekRenderCards();
 }
-/* Kartlar (Faz 1: liste; kaydırmalı deste Faz 4) */
+/* ============================================================
+   FAZ 3 · İŞARETLEME (fosfor, altını çiz, yapışkan not, silgi, geri/ileri al)
+   İşaretlemeler içerik bloğuna (data-bid) + blok içi metin konumuna bağlanır;
+   zoom/ekran boyutu değişse de yerinde kalır.
+   ============================================================ */
+const EK_RENK = { y: '#fde68a', p: '#fbcfe8', g: '#bbf7d0', b: '#bfdbfe' };
+function ekBidMap() {
+  EK.bid = {};
+  EK.sections.forEach(s => s.els.forEach(x => { if (x.el && x.el.dataset.bid) EK.bid[x.el.dataset.bid] = x.el; }));
+}
+function ekTextNodes(root) {
+  const out = [];
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode(n) {
+    return n.parentElement && n.parentElement.closest('.ek-sticky') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; } });
+  let n; while ((n = w.nextNode())) out.push(n);
+  return out;
+}
+function ekOffset(block, node, off) {
+  const r = document.createRange(); r.setStart(block, 0); r.setEnd(node, off);
+  let t = 0;
+  for (const n of ekTextNodes(block)) {
+    if (n === node) return t + off;
+    const c = r.comparePoint(n, n.nodeValue.length);
+    if (c === 0) t += n.nodeValue.length; else if (c > 0) break;
+  }
+  return t;
+}
+function ekWrapRange(block, s, e, ann) {
+  let t = 0;
+  for (const n of ekTextNodes(block)) {
+    const len = n.nodeValue.length, a = Math.max(s, t), b = Math.min(e, t + len);
+    if (a < b && n.nodeValue.slice(a - t, b - t).trim()) {
+      let hedef = n;
+      if (b - t < len) hedef.splitText(b - t);
+      if (a - t > 0) hedef = hedef.splitText(a - t);
+      const sp = document.createElement('span');
+      sp.className = 'ek-ann ek-ann-' + ann.type; sp.dataset.aid = ann.id;
+      sp.style.setProperty('--ek-ac', EK_RENK[ann.color] || EK_RENK.y);
+      hedef.parentNode.insertBefore(sp, hedef); sp.appendChild(hedef);
+    }
+    t += len;
+  }
+}
+function ekAnnRender() {
+  if (!EK.bid) return;
+  Object.values(EK.bid).forEach(bl => {
+    bl.querySelectorAll('.ek-sticky').forEach(x => x.remove());
+    bl.querySelectorAll('.ek-ann').forEach(sp => sp.replaceWith(...sp.childNodes));
+    bl.normalize();
+  });
+  (EK.ann || []).forEach(a => {
+    const bl = EK.bid[a.bid]; if (!bl) return;
+    if (a.type === 'st') { bl.appendChild(ekStickyEl(a)); return; }
+    const metin = ekTextNodes(bl).map(n => n.nodeValue).join('');
+    let s = a.s, e = a.e;
+    if (metin.slice(s, e) !== a.txt) { const i = metin.indexOf(a.txt); if (i < 0) return; s = i; e = i + a.txt.length; }
+    ekWrapRange(bl, s, e, a);
+  });
+  ekRenderSideNotes();
+}
+function ekStickyEl(a) {
+  const el = ekEl(`<div class="ek-sticky c-${a.color || 'y'}${a.min ? ' min' : ''}" data-sid="${a.id}" style="left:${(a.x * 100).toFixed(2)}%;top:${Math.round(a.y)}px">
+    <div class="ek-st-h" data-sthandle="1"><span class="ek-st-grip">⋮⋮</span>
+      <button class="ek-st-b" data-ek="stmin" data-sid="${a.id}" title="${a.min ? 'Aç' : 'Küçült'}">${a.min ? '+' : '–'}</button>
+      <button class="ek-st-b" data-ek="stdel" data-sid="${a.id}" title="Sil">×</button></div>
+    <textarea class="ek-st-t" data-sid="${a.id}" placeholder="Notunu yaz…" spellcheck="false"></textarea></div>`);
+  el.querySelector('textarea').value = a.text || '';
+  return el;
+}
+function ekAnnPush() { EK.annHist.push(JSON.stringify(EK.ann)); if (EK.annHist.length > 60) EK.annHist.shift(); EK.annFut = []; ekUndoState(); }
+function ekUndo() { if (!EK.annHist.length) return; EK.annFut.push(JSON.stringify(EK.ann)); EK.ann = JSON.parse(EK.annHist.pop()); ekAnnRender(); ekAnnSave(); ekUndoState(); }
+function ekRedo() { if (!EK.annFut.length) return; EK.annHist.push(JSON.stringify(EK.ann)); EK.ann = JSON.parse(EK.annFut.pop()); ekAnnRender(); ekAnnSave(); ekUndoState(); }
+function ekUndoState() {
+  const u = document.querySelector('[data-ek="undo"]'), r = document.querySelector('[data-ek="redo"]');
+  if (u) u.disabled = !EK.annHist.length; if (r) r.disabled = !EK.annFut.length;
+}
+function ekAnnId() { return 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+async function ekAnnLoad(unitId) {
+  EK.ann = []; EK.annHist = []; EK.annFut = [];
+  try { const l = localStorage.getItem('ek_ann_' + unitId); if (l) EK.ann = JSON.parse(l) || []; } catch (e) {}
+  if (typeof currentUser !== 'undefined' && currentUser) {
+    try { const { data } = await sb.from('ek_annotations').select('data').eq('user_id', currentUser.id).eq('unit_id', unitId).maybeSingle();
+      if (data && Array.isArray(data.data)) EK.ann = data.data; } catch (e) {}
+  }
+  ekUndoState();
+}
+function ekAnnSave() {
+  if (!EK.unit) return; const id = EK.unit.id, veri = EK.ann.slice();
+  try { localStorage.setItem('ek_ann_' + id, JSON.stringify(veri)); } catch (e) {}
+  clearTimeout(EK.annT);
+  EK.annT = setTimeout(() => {
+    if (typeof currentUser === 'undefined' || !currentUser) return;
+    sb.from('ek_annotations').upsert({ user_id: currentUser.id, unit_id: id, data: veri, updated_at: new Date().toISOString() }, { onConflict: 'user_id,unit_id' }).then(() => {}, () => {});
+  }, 900);
+}
+function ekSetTool(v) {
+  EK.tool = v;
+  document.querySelectorAll('.ek-tool').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+  const bk = document.getElementById('ek-book'); if (bk) bk.className = bk.className.replace(/\bek-tool-\w+/g, '').trim() + ' ek-tool-' + v;
+  const ipucu = { hl: 'Fosforlamak istediğin metni fareyle seç.', ul: 'Altını çizmek istediğin metni fareyle seç.', note: 'Notu bırakmak istediğin yere tıkla.', erase: 'Silmek istediğin işarete veya nota tıkla.' }[v];
+  if (ipucu && typeof toast === 'function') toast(ipucu);
+}
+function ekSetColor(v) { EK.color = v; document.querySelectorAll('.ek-color').forEach(b => b.classList.toggle('active', b.dataset.v === v)); }
+/* Fosfor / altını çiz: seçim bırakılınca */
+document.addEventListener('mouseup', function (e) {
+  if (!['hl', 'ul'].includes(EK.tool)) return;
+  const book = document.getElementById('ek-book'); if (!book || !book.contains(e.target)) return;
+  setTimeout(() => {
+    const sel = window.getSelection(); if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    const r = sel.getRangeAt(0);
+    const sEl = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement;
+    const bl = sEl && sEl.closest('#ek-book [data-bid]'); if (!bl) return;
+    if (bl.classList.contains('ek-act') || bl.closest('.ek-act')) { if (typeof toast === 'function') toast('Etkinliklerin içinde işaretleme yapılamaz.'); sel.removeAllRanges(); return; }
+    const s = ekOffset(bl, r.startContainer, r.startOffset);
+    const eIn = bl.contains(r.endContainer);
+    const e2 = eIn ? ekOffset(bl, r.endContainer, r.endOffset) : ekTextNodes(bl).reduce((t, n) => t + n.nodeValue.length, 0);
+    const txt = ekTextNodes(bl).map(n => n.nodeValue).join('').slice(s, e2);
+    sel.removeAllRanges();
+    if (!txt.trim() || e2 <= s) return;
+    ekAnnPush();
+    EK.ann.push({ id: ekAnnId(), type: EK.tool, bid: bl.dataset.bid, s, e: e2, txt, color: EK.color });
+    ekAnnRender(); ekAnnSave();
+  }, 0);
+});
+/* Yapışkan not bırakma ve silgi */
+function ekBookClick(e) {
+  const book = document.getElementById('ek-book'); if (!book || !book.contains(e.target)) return false;
+  if (EK.tool === 'erase') {
+    const sp = e.target.closest('.ek-ann'), st = e.target.closest('.ek-sticky');
+    const id = sp ? sp.dataset.aid : (st ? st.dataset.sid : null);
+    if (id) { ekAnnPush(); EK.ann = EK.ann.filter(a => a.id !== id); ekAnnRender(); ekAnnSave(); }
+    return true;
+  }
+  if (EK.tool === 'note') {
+    if (e.target.closest('.ek-sticky')) return true;
+    const page = e.target.closest('.ek-page'); if (!page) return true;
+    let bl = e.target.closest('[data-bid]');
+    if (!bl) { const bs = [...page.querySelectorAll('.ek-pg-body > [data-bid]')]; bl = bs.find(b => b.getBoundingClientRect().bottom > e.clientY) || bs[bs.length - 1]; }
+    if (!bl) return true;
+    const rc = bl.getBoundingClientRect();
+    ekAnnPush();
+    const a = { id: ekAnnId(), type: 'st', bid: bl.dataset.bid, x: Math.max(0, Math.min(0.72, (e.clientX - rc.left) / rc.width)), y: e.clientY - rc.top, text: '', color: EK.color, min: false };
+    EK.ann.push(a); ekAnnRender(); ekAnnSave(); ekSetTool('sec');
+    setTimeout(() => { const t = document.querySelector(`.ek-st-t[data-sid="${a.id}"]`); if (t) t.focus(); }, 30);
+    return true;
+  }
+  return false;
+}
+/* Yapışkan notu sürükleme */
+let _ekStDrag = null;
+document.addEventListener('pointerdown', function (e) {
+  const h = e.target.closest && e.target.closest('.ek-st-h'); if (!h || e.target.closest('button')) return;
+  const st = h.closest('.ek-sticky'); const r = st.getBoundingClientRect();
+  _ekStDrag = { el: st, id: st.dataset.sid, sx: e.clientX, sy: e.clientY, ox: r.left, oy: r.top };
+  st.classList.add('dragging'); e.preventDefault();
+});
+document.addEventListener('pointermove', function (e) {
+  if (!_ekStDrag) return;
+  _ekStDrag.el.style.transform = `translate(${e.clientX - _ekStDrag.sx}px, ${e.clientY - _ekStDrag.sy}px)`;
+});
+document.addEventListener('pointerup', function (e) {
+  if (!_ekStDrag) return;
+  const d = _ekStDrag; _ekStDrag = null;
+  const nx = d.ox + (e.clientX - d.sx), ny = d.oy + (e.clientY - d.sy);
+  d.el.style.pointerEvents = 'none';
+  const alt = document.elementFromPoint(nx + 12, ny + 12);
+  d.el.style.pointerEvents = ''; d.el.classList.remove('dragging');
+  let bl = alt && alt.closest('#ek-book [data-bid]');
+  let ty = ny;
+  if (!bl) {   // bloklar arası boşluk veya sayfa dışı: bırakılan (yoksa başladığı) sayfanın içine sabitle
+    const pgEl = (alt && alt.closest('#ek-book .ek-page')) || d.el.closest('.ek-page'); const body = pgEl && pgEl.querySelector('.ek-pg-body');
+    if (body) {
+      const br = body.getBoundingClientRect(); ty = Math.max(br.top, Math.min(ny, br.bottom - 60));
+      const bs = [...body.children].filter(x => x.dataset && x.dataset.bid);
+      bl = bs.find(x => x.getBoundingClientRect().bottom > ty) || bs[bs.length - 1];
+    }
+  }
+  const a = EK.ann.find(x => x.id === d.id);
+  if (!a || !bl) { d.el.style.transform = ''; return; }
+  const rc = bl.getBoundingClientRect();
+  ekAnnPush();
+  a.bid = bl.dataset.bid; a.x = Math.max(0, Math.min(0.85, (nx - rc.left) / rc.width)); a.y = ty - rc.top;
+  ekAnnRender(); ekAnnSave();
+});
+
+/* ============================================================
+   FAZ 3 · KULLANICININ KONU NOTLARI
+   ============================================================ */
+async function ekNotesLoad(unitId) {
+  EK.notes = [];
+  if (typeof currentUser === 'undefined' || !currentUser) return;
+  try { const { data } = await sb.from('ek_notes').select('*').eq('user_id', currentUser.id).eq('unit_id', unitId).order('updated_at', { ascending: false }); EK.notes = data || []; } catch (e) {}
+}
+function ekSecAd(si) { const t = (EK.unit && EK.unit.toc || [])[si]; if (!t) return 'Genel'; return t.tur === 'ders' ? 'Ders ' + t.no + ' · ' + t.ad : t.ad; }
+function ekRenderNotesTab(acId) {
+  const box = document.getElementById('ek-v-notlar'); if (!box) return;
+  if (typeof currentUser === 'undefined' || !currentUser) { box.innerHTML = '<div class="ek-soon"><h3>Notlarım</h3><p>Kendi notlarını tutmak için giriş yapmalısın.</p></div>'; return; }
+  const gruplar = {};
+  (EK.notes || []).forEach(n => { (gruplar[n.sec_idx] = gruplar[n.sec_idx] || []).push(n); });
+  let liste = '';
+  Object.keys(gruplar).sort((a, b) => a - b).forEach(si => {
+    liste += `<div class="ek-nl-sec">${ekEsc(ekSecAd(+si))}</div>`;
+    gruplar[si].forEach(n => { liste += `<button class="ek-nl-it${String(n.id) === String(acId) ? ' active' : ''}" data-ek="nopen" data-id="${n.id}"><b>${ekEsc(n.baslik || 'Başlıksız not')}</b><span>${ekEsc((n.metin || '').slice(0, 80))}</span></button>`; });
+  });
+  if (!liste) liste = '<div class="ek-side-empty">Bu ünitede henüz notun yok.</div>';
+  const n = acId === 'yeni' ? { id: 'yeni', sec_idx: Math.max(0, ekCurSection()), baslik: '', metin: '' } : (EK.notes || []).find(x => String(x.id) === String(acId));
+  const toc = (EK.unit && EK.unit.toc) || [];
+  const ed = n ? `<div class="ek-ne">
+      <select id="ek-ne-sec" class="ek-ne-in">${toc.map((t, i) => t.tur === 'anahtar' ? '' : `<option value="${i}"${i === +n.sec_idx ? ' selected' : ''}>${ekEsc(ekSecAd(i))}</option>`).join('')}</select>
+      <input id="ek-ne-bas" class="ek-ne-in" placeholder="Not başlığı" value="${ekEsc(n.baslik || '')}" autocomplete="off" data-lpignore="true" data-form-type="other">
+      <textarea id="ek-ne-met" class="ek-ne-ta" placeholder="Bu konu hakkındaki notlarını buraya yaz…">${ekEsc(n.metin || '')}</textarea>
+      <div class="ek-ne-f"><button class="ek-btn" data-ek="nsave" data-id="${n.id}">Kaydet</button>
+        ${n.id !== 'yeni' ? `<button class="ek-btn ghost" data-ek="ndel" data-id="${n.id}">Sil</button>` : ''}
+        <button class="ek-btn ghost" data-ek="ngo" data-s="${n.sec_idx}">Kitapta bu derse git</button></div></div>`
+    : '<div class="ek-ne ek-ne-bos"><p>Soldan bir not seç veya yeni not oluştur.</p></div>';
+  box.innerHTML = `<div class="ek-notes"><div class="ek-nl"><div class="ek-nl-h"><h3>Notlarım</h3><button class="ek-btn sm" data-ek="nnew">+ Yeni Not</button></div>${liste}</div>${ed}</div>`;
+}
+async function ekNoteSave(id) {
+  if (!currentUser || !EK.unit) return;
+  const row = { user_id: currentUser.id, unit_id: EK.unit.id, sec_idx: +document.getElementById('ek-ne-sec').value || 0,
+    baslik: document.getElementById('ek-ne-bas').value.trim() || null, metin: document.getElementById('ek-ne-met').value, updated_at: new Date().toISOString() };
+  try {
+    let r;
+    if (id === 'yeni') r = await sb.from('ek_notes').insert(row).select('id').single();
+    else r = await sb.from('ek_notes').update(row).eq('id', id).select('id').single();
+    if (r.error) throw r.error;
+    await ekNotesLoad(EK.unit.id); ekRenderNotesTab(r.data.id); ekRenderSideNotes();
+    if (typeof toast === 'function') toast('Not kaydedildi.');
+  } catch (e) { if (typeof uiAlert === 'function') uiAlert('Not kaydedilemedi: ' + ((e && e.message) || e)); }
+}
+async function ekNoteDelete(id) {
+  if (typeof uiConfirm === 'function' && !(await uiConfirm('Bu not silinsin mi?', 'Notu Sil', { danger: true }))) return;
+  try { await sb.from('ek_notes').delete().eq('id', id); await ekNotesLoad(EK.unit.id); ekRenderNotesTab(); ekRenderSideNotes(); } catch (e) {}
+}
+
+/* ============================================================
+   FAZ 4 · ÇALIŞMA KARTLARI (kaydırmalı deste)
+   sola = Tekrar (destenin sonuna) · sağa = Tamamladım (turdan çıkar)
+   ============================================================ */
+async function ekCardStatsLoad(unitId) {
+  EK.cstats = {};
+  try { const l = JSON.parse(localStorage.getItem('ek_cs') || '{}'); Object.keys(l).forEach(k => { if (k.startsWith(unitId + ':')) EK.cstats[k] = l[k]; }); } catch (e) {}
+  if (typeof currentUser === 'undefined' || !currentUser) return;
+  try { const { data } = await sb.from('ek_card_stats').select('*').eq('user_id', currentUser.id).like('card_key', unitId + ':%'); (data || []).forEach(r => { EK.cstats[r.card_key] = r; }); } catch (e) {}
+}
+function ekCardStat(key, yon) {
+  const s = Object.assign({ tekrar: 0, tamam: 0, ardisik: 0 }, EK.cstats[key] || {});
+  const now = Date.now();
+  if (yon === 'L') { s.tekrar++; s.ardisik = 0; s.sonraki = new Date(now + 10 * 60000).toISOString(); }
+  else { s.tamam++; s.ardisik++; s.sonraki = new Date(now + Math.min(60, Math.pow(2, s.ardisik - 1)) * 86400000).toISOString(); }
+  s.son = new Date(now).toISOString(); EK.cstats[key] = s;
+  try { const l = JSON.parse(localStorage.getItem('ek_cs') || '{}'); l[key] = { tekrar: s.tekrar, tamam: s.tamam, ardisik: s.ardisik, son: s.son, sonraki: s.sonraki }; localStorage.setItem('ek_cs', JSON.stringify(l)); } catch (e) {}
+  if (typeof currentUser !== 'undefined' && currentUser) {
+    sb.from('ek_card_stats').upsert({ user_id: currentUser.id, card_key: key, tekrar: s.tekrar, tamam: s.tamam, ardisik: s.ardisik, son: s.son, sonraki: s.sonraki }, { onConflict: 'user_id,card_key' }).then(() => {}, () => {});
+  }
+}
+function ekDeckCards(kapsam) {
+  const out = []; if (!EK.parsed || !EK.unit) return out;
+  EK.parsed.sections.forEach((s, si) => {
+    if (kapsam !== 'unit' && si !== +kapsam) return;
+    let ci = 0;
+    s.blocks.forEach(b => { if (b.t === 'kartlar') b.cards.forEach(c => out.push({ key: EK.unit.id + ':' + si + ':' + (ci++), on: c.on, arka: c.arka, si })); });
+  });
+  return out;
+}
+function ekDeckStart(yalnizZor) {
+  const kapsam = (document.getElementById('ek-dk-kapsam') || {}).value || 'unit';
+  const mod = (document.getElementById('ek-dk-mod') || {}).value || 'konu';
+  let cards = ekDeckCards(kapsam);
+  if (yalnizZor && EK.deck) cards = EK.deck.cards.filter((c, i) => EK.deck.zor.has(i));
+  let sira = [...cards.keys()];
+  if (mod === 'karisik') sira = ekKaristir(sira);
+  else if (mod === 'akilli') {
+    const now = Date.now();
+    const puan = i => { const s = EK.cstats[cards[i].key]; if (!s) return [1, 0, 0];
+      const t = s.sonraki ? new Date(s.sonraki).getTime() : 0; return [t <= now ? 0 : 2, t, -(s.tekrar || 0)]; };
+    sira.sort((a, b) => { const x = puan(a), y = puan(b); return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]; });
+  }
+  EK.deck = { cards, queue: sira, done: [], hist: [], zor: new Set(), flipped: false, kapsam, mod, unitId: EK.unit ? EK.unit.id : null };
+  ekRenderCards();
+}
 function ekRenderCards() {
   const box = document.getElementById('ek-cards'); if (!box || !EK.parsed) return;
-  let h = '<div class="ek-cards-h"><h3>Çalışma kartları</h3><p>Kaydırmalı çalışma destesi bir sonraki aşamada eklenecek. Şimdilik kartlara tıklayarak ön ve arka yüzlerini görebilirsin.</p></div>';
-  let say = 0;
-  EK.parsed.sections.forEach(s => {
-    const cards = []; s.blocks.forEach(b => { if (b.t === 'kartlar') cards.push(...b.cards); });
-    if (!cards.length) return;
-    say += cards.length;
-    h += `<div class="ek-cards-sec">${s.tur === 'ders' ? 'Ders ' + s.no + ' · ' : ''}${ekEsc(s.ad)} <span>${cards.length} kart</span></div><div class="ek-cards-grid">`;
-    cards.forEach(c => { h += `<button class="ek-fc" data-ek="flip"><div class="ek-fc-on">${ekInline(c.on)}</div><div class="ek-fc-arka">${ekInline(c.arka)}</div></button>`; });
-    h += '</div>';
-  });
-  if (!say) h += '<div class="ek-side-empty">Bu ünitede henüz kart yok.</div>';
+  const tumu = ekDeckCards('unit');
+  if (!tumu.length) { box.innerHTML = '<div class="ek-soon"><h3>Çalışma kartları</h3><p>Bu ünitede henüz kart yok.</p></div>'; return; }
+  if (!EK.deck || EK.deck.unitId !== EK.unit.id) { EK.deck = null; ekDeckStart(); return; }
+  const d = EK.deck, n = d.cards.length, bitti = d.done.length, kalan = d.queue.length;
+  const toc = EK.unit.toc || [];
+  const dersler = toc.map((t, i) => ({ t, i })).filter(x => ekDeckCards(x.i).length);
+  let h = `<div class="ek-dk">
+    <div class="ek-dk-top">
+      <div class="ek-dk-ctl">
+        <select id="ek-dk-kapsam" class="ek-ne-in" data-ek-dk="1"><option value="unit"${d.kapsam === 'unit' ? ' selected' : ''}>Tüm ünite (${tumu.length} kart)</option>
+          ${dersler.map(x => `<option value="${x.i}"${String(d.kapsam) === String(x.i) ? ' selected' : ''}>${ekEsc(ekSecAd(x.i))}</option>`).join('')}</select>
+        <select id="ek-dk-mod" class="ek-ne-in" data-ek-dk="1">
+          <option value="konu"${d.mod === 'konu' ? ' selected' : ''}>Konu sırası</option>
+          <option value="akilli"${d.mod === 'akilli' ? ' selected' : ''}>Akıllı tekrar</option>
+          <option value="karisik"${d.mod === 'karisik' ? ' selected' : ''}>Karışık</option></select>
+        <button class="ek-btn ghost sm" data-ek="dstart">Yeniden başlat</button>
+      </div>
+      <div class="ek-dk-prog"><div class="ek-dk-bar"><i style="width:${n ? (bitti / n * 100) : 0}%"></i></div>
+        <span>${bitti}/${n} tamamlandı • ${kalan} kart kaldı</span></div>
+    </div>`;
+  if (!kalan) {
+    h += `<div class="ek-dk-end"><h3>Tebrikler! Bu turdaki bütün kartları tamamladın.</h3>
+      <p>${d.zor.size ? d.zor.size + ' kartta zorlandın (en az bir kez Tekrar dedin).' : 'Hiçbir kartta takılmadın.'}</p>
+      <div class="ek-ne-f" style="justify-content:center"><button class="ek-btn" data-ek="dstart">Yeniden başlat</button>
+      ${d.zor.size ? '<button class="ek-btn ghost" data-ek="dzor">Sadece zorlandıklarım</button>' : ''}</div></div>`;
+  } else {
+    const c = d.cards[d.queue[0]];
+    h += `<div class="ek-dk-area">
+      ${kalan > 2 ? '<div class="ek-dc ek-dc-b2"></div>' : ''}${kalan > 1 ? '<div class="ek-dc ek-dc-b1"></div>' : ''}
+      <div class="ek-dc ek-dc-top${d.flipped ? ' flipped' : ''}" id="ek-dc-top">
+        <span class="ek-dc-lbl l">Tekrar</span><span class="ek-dc-lbl r">Tamamladım</span>
+        <div class="ek-dc-ders">${ekEsc(ekSecAd(c.si))}</div>
+        <div class="ek-dc-face">${ekInline(d.flipped ? c.arka : c.on)}</div>
+        <div class="ek-dc-hint">${d.flipped ? 'Arka yüz' : 'Çevirmek için tıkla'}</div>
+      </div></div>
+      <div class="ek-dk-btns">
+        <button class="ek-btn ghost" data-ek="dleft"${kalan <= 1 ? ' disabled title="Son kartı tamamlayarak bitir"' : ''}>← Tekrar</button>
+        <button class="ek-btn ghost" data-ek="dflip">Çevir</button>
+        <button class="ek-btn" data-ek="dright">Tamamladım →</button>
+      </div>
+      <div class="ek-dk-sub"><button class="ek-lnk" data-ek="dundo"${d.hist.length ? '' : ' disabled'}>Son hareketi geri al</button> · Klavye: ← Tekrar · → Tamamladım · Boşluk Çevir</div>`;
+  }
+  h += `<details class="ek-dk-all"><summary>Tüm kartlar ve çalışma geçmişi (${tumu.length})</summary><div class="ek-cards-grid">${tumu.map(c => {
+    const s = EK.cstats[c.key];
+    return `<button class="ek-fc" data-ek="flip"><div class="ek-fc-on">${ekInline(c.on)}</div><div class="ek-fc-arka">${ekInline(c.arka)}</div>
+      <div class="ek-fc-st">${s ? `${s.tamam || 0} kez tamam · ${s.tekrar || 0} kez tekrar` : 'Henüz çalışılmadı'}</div></button>`; }).join('')}</div></details></div>`;
   box.innerHTML = h;
 }
+function ekDeckMove(yon) {
+  const d = EK.deck; if (!d || !d.queue.length) return;
+  if (yon === 'L' && d.queue.length <= 1) { if (typeof toast === 'function') toast('Son kart: tamamlayarak turu bitir.'); return; }
+  const top = document.getElementById('ek-dc-top');
+  const uygula = () => {
+    const idx = d.queue.shift();
+    if (yon === 'L') { d.queue.push(idx); d.zor.add(idx); } else d.done.push(idx);
+    d.hist.push({ yon, idx }); d.flipped = false;
+    ekCardStat(d.cards[idx].key, yon); ekRenderCards();
+  };
+  if (top) { top.classList.add(yon === 'L' ? 'fly-l' : 'fly-r'); setTimeout(uygula, 230); } else uygula();
+}
+function ekDeckUndo() {
+  const d = EK.deck; if (!d || !d.hist.length) return;
+  const son = d.hist.pop();
+  if (son.yon === 'L') d.queue.pop(); else d.done.pop();
+  d.queue.unshift(son.idx); d.flipped = false; ekRenderCards();
+}
+/* Kartı parmakla / fareyle kaydırma */
+let _ekSw = null;
+document.addEventListener('pointerdown', function (e) {
+  const c = e.target.closest && e.target.closest('#ek-dc-top'); if (!c) return;
+  _ekSw = { el: c, x: e.clientX, dx: 0 }; c.setPointerCapture && c.setPointerCapture(e.pointerId);
+});
+document.addEventListener('pointermove', function (e) {
+  if (!_ekSw) return; _ekSw.dx = e.clientX - _ekSw.x;
+  _ekSw.el.style.transform = `translateX(${_ekSw.dx}px) rotate(${_ekSw.dx / 22}deg)`;
+  _ekSw.el.classList.toggle('lean-l', _ekSw.dx < -40); _ekSw.el.classList.toggle('lean-r', _ekSw.dx > 40);
+});
+document.addEventListener('pointerup', function (e) {
+  if (!_ekSw) return; const s = _ekSw; _ekSw = null;
+  if (Math.abs(s.dx) < 6) { s.el.style.transform = ''; EK.deck.flipped = !EK.deck.flipped; ekRenderCards(); return; }
+  if (s.dx > 100) ekDeckMove('R');
+  else if (s.dx < -100 && EK.deck.queue.length > 1) ekDeckMove('L');
+  else { if (s.dx < -100) { if (typeof toast === 'function') toast('Son kart: tamamlayarak turu bitir.'); }
+    s.el.style.transform = ''; s.el.classList.remove('lean-l', 'lean-r'); }
+});
 
 /* ---------- Olay yönetimi (tek dinleyici) ---------- */
 document.addEventListener('click', function (e) {
@@ -955,6 +1713,31 @@ document.addEventListener('click', function (e) {
     if (a === 'reveal') { ekRevealAct(t.dataset.a); return; }
     if (a === 'ornek') { const d = t.nextElementSibling; if (d) d.style.display = d.style.display === 'none' ? '' : 'none'; return; }
     if (a === 'kural') { ekGoKural(t.dataset.no); return; }
+    if (a === 'tool') { ekSetTool(t.dataset.v); return; }
+    if (a === 'color') { ekSetColor(t.dataset.v); return; }
+    if (a === 'undo') { ekUndo(); return; }
+    if (a === 'redo') { ekRedo(); return; }
+    if (a === 'stdel') { ekAnnPush(); EK.ann = EK.ann.filter(x => x.id !== t.dataset.sid); ekAnnRender(); ekAnnSave(); return; }
+    if (a === 'stmin') { const x = EK.ann.find(y => y.id === t.dataset.sid); if (x) { x.min = !x.min; ekAnnRender(); ekAnnSave(); } return; }
+    if (a === 'stgo') { const st = document.querySelector(`#ek-book .ek-sticky[data-sid="${t.dataset.sid}"]`); if (st) { st.classList.add('ek-flash'); setTimeout(() => st.classList.remove('ek-flash'), 1500); } return; }
+    if (a === 'nnew') { ekTopTab('notlar'); ekRenderNotesTab('yeni'); return; }
+    if (a === 'nopen') { ekTopTab('notlar'); ekRenderNotesTab(t.dataset.id); return; }
+    if (a === 'nsave') { ekNoteSave(t.dataset.id); return; }
+    if (a === 'ndel') { ekNoteDelete(t.dataset.id); return; }
+    if (a === 'ngo') { ekTopTab('kitap'); setTimeout(() => ekGoPage(EK.secPage[+t.dataset.s] || 0), 60); return; }
+    if (a === 'dleft') { ekDeckMove('L'); return; }
+    if (a === 'dright') { ekDeckMove('R'); return; }
+    if (a === 'dflip') { if (EK.deck) { EK.deck.flipped = !EK.deck.flipped; ekRenderCards(); } return; }
+    if (a === 'dundo') { ekDeckUndo(); return; }
+    if (a === 'dstart') { ekDeckStart(); return; }
+    if (a === 'dzor') { ekDeckStart(true); return; }
+    if (['ord', 'mpick', 'mslot', 'gpick', 'gbox', 'tok', 'stepopt', 'stepchk', 'stepnext', 'rec', 'play', 'self'].includes(a)) { ekEngClick(t); return; }
+    if (a === 'echeck') { ekEngCheck(t.dataset.a); return; }
+    if (a === 'eshow') { ekEngShow(t.dataset.a); return; }
+    if (a === 'ereset') { ekEngReset(t.dataset.a); return; }
+    if (a === 'kanit') { const r = EK_ACT[t.dataset.a]; if (r && r.kanit) { r.kanit.sel = +t.dataset.k;
+      document.querySelectorAll(`.ek-kanit-c[data-a="${t.dataset.a}"]`).forEach((e2, k) => { e2.classList.remove('ok', 'no'); e2.classList.toggle('sel', k === r.kanit.sel); }); } return; }
+    if (a === 'kanitchk') { ekKanitCheck(t.dataset.a); return; }
     if (a === 'prev') { ekStep(-1); return; }
     if (a === 'next') { ekStep(1); return; }
     if (a === 'fs') { const w = document.getElementById('ek-wrap'); if (w) { w.classList.toggle('ek-fs'); setTimeout(() => { ekPaginate(); ekRender(); }, 40); } return; }
@@ -978,7 +1761,9 @@ document.addEventListener('click', function (e) {
     }
     return;
   }
+  if (ekBookClick(e)) return;
   // Kitap içindeki kelimeler
+  if (e.target.closest('.ek-eng, .ek-kanit-metin, .ek-sticky') || EK.tool !== 'sec') return;
   const w = e.target.closest('#ek-book .ek-w, #ek-book .ek-g[data-w], #ek-adm-preview .ek-w, #ek-cards .ek-w');
   if (w && !e.target.closest('input,textarea,button')) {
     if (e.target.closest('#ek-adm-preview')) return;
@@ -986,15 +1771,33 @@ document.addEventListener('click', function (e) {
   }
 });
 document.addEventListener('input', function (e) {
+  if (e.target && e.target.classList && e.target.classList.contains('ek-fix')) {
+    const r = EK_ACT[e.target.dataset.a]; if (r && r.eng) r.eng.items[+e.target.dataset.i].fixv[+e.target.dataset.k] = e.target.value;
+  }
+  if (e.target && e.target.classList && e.target.classList.contains('ek-st-t')) {
+    const x = (EK.ann || []).find(y => y.id === e.target.dataset.sid); if (x) { x.text = e.target.value; ekAnnSave(); }
+  }
   if (e.target && e.target.id === 'ek-search') ekSearch(e.target.value);
   if (e.target && e.target.dataset && e.target.dataset.ekSlider) ekGoPage(+e.target.value);
 });
 document.addEventListener('change', function (e) {
   if (e.target && e.target.dataset && e.target.dataset.ekZoom) { EK.zoom = +e.target.value || 100; ekPaginate(); ekRender(); }
+  if (e.target && e.target.dataset && e.target.dataset.ekDk) { ekDeckStart(); }
 });
 document.addEventListener('keydown', function (e) {
   const pg = document.getElementById('page-grammar');
   if (!pg || !pg.classList.contains('active') || !EK.pages.length) return;
+  const kv = document.getElementById('ek-v-kartlar');
+  if (kv && kv.style.display !== 'none' && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName || '')) {
+    if (e.key === 'ArrowLeft') { ekDeckMove('L'); e.preventDefault(); }
+    else if (e.key === 'ArrowRight') { ekDeckMove('R'); e.preventDefault(); }
+    else if (e.key === ' ') { if (EK.deck) { EK.deck.flipped = !EK.deck.flipped; ekRenderCards(); } e.preventDefault(); }
+    return;
+  }
+  if ((e.ctrlKey || e.metaKey) && !/INPUT|TEXTAREA/.test(e.target.tagName || '')) {
+    if (e.key.toLowerCase() === 'z') { ekUndo(); e.preventDefault(); return; }
+    if (e.key.toLowerCase() === 'y') { ekRedo(); e.preventDefault(); return; }
+  }
   if (/INPUT|TEXTAREA|SELECT/.test((e.target.tagName || ''))) {
     if (e.key === 'Enter' && e.target.classList.contains('ek-blank')) { ekCheckAct(e.target.dataset.a); }
     return;
