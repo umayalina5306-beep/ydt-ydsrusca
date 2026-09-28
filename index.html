@@ -49,7 +49,8 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=132">
+<link rel="stylesheet" href="css/style.css?v=133">
+<link rel="stylesheet" href="css/ekitap.css?v=133">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -72,7 +73,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=132" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=133" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -163,12 +164,13 @@
     <div class="profile-layout" id="learn-layout">
       <div class="profile-sidebar">
         <div class="psb-menu">
-          <div class="psb-section-title">📚 EĞİTİM MERKEZİ</div>
-          <button class="psb-item active" id="lsb-words"   onclick="learnNav('words',this)"><span class="psb-ic">🔤</span> <span>Kelimeler</span></button>
-          <button class="psb-item" id="lsb-grammar" onclick="learnNav('grammar',this)"><span class="psb-ic">📖</span> <span>Gramer</span></button>
-          <button class="psb-item" id="lsb-works"   onclick="learnNav('works',this)"><span class="psb-ic">📝</span> <span>Çalışmalar</span></button>
-          <button class="psb-item" id="lsb-video"   onclick="learnNav('video',this)"><span class="psb-ic">🎬</span> <span>Video Dersler</span></button>
+          <div class="psb-section-title">EĞİTİM MERKEZİ</div>
+          <button class="psb-item active" id="lsb-words"   onclick="learnNav('words',this)"><span class="psb-ic"><svg class="psb-svg" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><polyline points="15 3 15 7 19 7"/><line x1="9" y1="12" x2="16" y2="12"/><line x1="9" y1="16" x2="14" y2="16"/></svg></span> <span>Kelimeler</span></button>
+          <button class="psb-item" id="lsb-grammar" onclick="learnNav('grammar',this)"><span class="psb-ic"><svg class="psb-svg" viewBox="0 0 24 24"><path d="M12 6.5C10.5 5 8 4.5 4 5v13c4-.5 6.5 0 8 1.5"/><path d="M12 6.5C13.5 5 16 4.5 20 5v13c-4-.5-6.5 0-8 1.5"/><line x1="12" y1="6.5" x2="12" y2="19.5"/></svg></span> <span>Gramer</span></button>
+          <button class="psb-item" id="lsb-works"   onclick="learnNav('works',this)"><span class="psb-ic"><svg class="psb-svg" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><polyline points="8.5 10 10 11.5 13 8.5"/><line x1="8.5" y1="15.5" x2="15.5" y2="15.5"/></svg></span> <span>Çalışmalar</span></button>
+          <button class="psb-item" id="lsb-video"   onclick="learnNav('video',this)"><span class="psb-ic"><svg class="psb-svg" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><polygon points="10 9 15 12 10 15"/></svg></span> <span>Video Dersler</span></button>
         </div>
+        <div id="ek-tree" class="ek-tree" style="display:none;"></div>
       </div>
       <div id="learn-content"></div>
     </div>
@@ -833,13 +835,7 @@
 <!-- ===== VIDEO ===== -->
 <!-- GRAMER sayfası (boş — e-kitap altyapısı için ayrıldı) -->
 <div id="page-grammar" class="page">
-  <section class="words-section" style="max-width:1180px; margin:0 auto; padding:28px 20px 48px;">
-    <div class="words-header"><div>
-      <h2>Gramer <span>Merkezi</span></h2>
-      <p>Ünite kitapçıkları ve interaktif gramer içerikleri yakında burada olacak.</p>
-    </div></div>
-    <div class="profile-empty" style="margin-top:30px;">📖 Bu bölüm yapım aşamasında.</div>
-  </section>
+  <div id="ek-host"></div>
 </div>
 
 <div id="page-grammarworks" class="page">
@@ -1372,6 +1368,8 @@
           <button class="psb-item" id="asb-videos" onclick="adminNav('videos')"><span class="psb-ic">🎬</span> Videolar</button>
           <button class="psb-item" id="asb-recs" onclick="adminNav('recs')"><span class="psb-ic">⭐</span> Öneriler</button>
           <button class="psb-item" id="asb-grammar" onclick="adminNav('grammar')"><span class="psb-ic">📖</span> Gramer Notları</button>
+          <button class="psb-item" id="asb-ekitap" onclick="adminNav('ekitap')"><span class="psb-ic">📘</span> E-Kitap</button>
+          <button class="psb-item" id="asb-topics" onclick="adminNav('topics')"><span class="psb-ic">🗂️</span> Konu Yönetimi</button>
           <button class="psb-item" id="asb-kurumlar" onclick="adminNav('kurumlar')"><span class="psb-ic">🏫</span> Kurumlar</button>
           <button class="psb-item" id="asb-visits" onclick="adminNav('visits')"><span class="psb-ic">📈</span> Ziyaret & SEO</button>
           <button class="psb-item" id="asb-settings" onclick="adminNav('settings')"><span class="psb-ic">⚙️</span> Site Ayarları</button>
@@ -1777,6 +1775,62 @@
           </div>
         </div>
 
+        <div id="av-ekitap" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">E-Kitap</h2>
+          <p class="profile-sub">Üniteleri içerik formatında yapıştır, kontrol et, önizle ve yayınla. Tüm içerik buradan düzenlenir.</p>
+          <div id="ek-adm-list"></div>
+          <div id="ek-adm-editor" style="display:none;">
+            <div class="ek-adm-top">
+              <button class="set-btn ghost" onclick="ekAdmList()">← Ünite listesi</button>
+              <h3 class="an-h3" id="ek-adm-title" style="margin:0;">Yeni ünite</h3>
+            </div>
+            <div class="ek-adm-grid">
+              <div class="ek-adm-col">
+                <div class="ek-adm-tools">
+                  <button class="mail-act" onclick="ekAdmInsert('\n---sayfa---\n')">Sayfa sonu ekle</button>
+                  <label class="mail-act" style="cursor:pointer;">Görsel yükle<input type="file" accept="image/*" style="display:none;" onchange="ekAdmImage(event)"></label>
+                  <button class="mail-act" onclick="ekAdmCopyFormat()">Konu listesini kopyala</button>
+                </div>
+                <textarea id="ek-src" class="ek-src" spellcheck="false" placeholder="@modül 1 | Rusçanın Temelleri&#10;@ünite 1 | İsimler: Cinsiyet ve Çokluk&#10;@seviye A1&#10;&#10;# Ders 1 | ..."></textarea>
+                <div class="mail-actions" style="margin-top:10px;">
+                  <button class="set-btn" onclick="ekAdmCheck()">Kontrol et ve önizle</button>
+                  <button class="set-btn ghost" onclick="ekAdmSave()">Taslak kaydet</button>
+                  <button class="set-btn" onclick="ekAdmSave(true)">Kaydet ve yayınla</button>
+                </div>
+                <div id="ek-adm-report" class="ek-rep"></div>
+              </div>
+              <div class="ek-adm-col">
+                <div class="ek-adm-prev-h">Önizleme</div>
+                <div id="ek-adm-preview" class="ek-adm-preview"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="av-topics" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">Konu Yönetimi</h2>
+          <p class="profile-sub">Konular sorulara, e-kitap derslerine, etkinliklere ve ileride videolara bağlanır. Tek tek veya toplu ekleyebilirsin.</p>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">Konu ekle / düzenle</h3>
+            <div class="ek-tp-form">
+              <input id="tp-kod" class="pq-input" placeholder="kod (ör. isim-cinsiyet)" autocomplete="off" data-lpignore="true" data-form-type="other">
+              <input id="tp-ad" class="pq-input" placeholder="Ad (ör. İsimlerde cinsiyet)" autocomplete="off" data-lpignore="true" data-form-type="other">
+              <select id="tp-ust" class="pq-input"></select>
+              <select id="tp-sev" class="pq-input"><option value="">Seviye</option><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
+              <button class="set-btn" onclick="ekTopicSave()">Kaydet</button>
+            </div>
+            <p class="pq-hint">Var olan bir kodu yazıp kaydedersen o konu güncellenir.</p>
+          </div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">Toplu ekle</h3>
+            <p class="pq-hint">Her satır bir konu: <code>kod | ad | üst kod | seviye</code> (üst kodu olmayan için <code>-</code>)</p>
+            <textarea id="tp-bulk" class="an-textarea" rows="6" placeholder="isimler | İsimler | - | A1&#10;isim-cinsiyet | İsimlerde cinsiyet | isimler | A1"></textarea>
+            <button class="set-btn" style="margin-top:8px;" onclick="ekTopicBulk()">Toplu ekle</button>
+          </div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">Konular</h3>
+            <div id="ek-topics-list"></div>
+          </div>
+        </div>
         <div id="av-grammar" class="admin-view" style="display:none;">
           <h2 class="profile-h2">Gramer Notları</h2>
           <p class="profile-sub">Konu anlatımı kartları. Alıştırmalar sayfasında öğrencilere görünür.</p>
@@ -2154,12 +2208,13 @@
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=132"></script>
-<script defer src="js/auth.js?v=132"></script>
-<script defer src="js/admin.js?v=132"></script>
-<script defer src="js/profile.js?v=132"></script>
-<script defer src="js/extras.js?v=132"></script>
-<script defer src="js/app.js?v=132"></script>
+<script defer src="js/supabase-config.js?v=133"></script>
+<script defer src="js/auth.js?v=133"></script>
+<script defer src="js/admin.js?v=133"></script>
+<script defer src="js/profile.js?v=133"></script>
+<script defer src="js/extras.js?v=133"></script>
+<script defer src="js/app.js?v=133"></script>
+<script defer src="js/ekitap.js?v=133"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
