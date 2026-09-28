@@ -399,14 +399,7 @@ function ekActEl(act) {
   if (a['kontrol-listesi']) h += `<ul class="ek-act-kl">${a['kontrol-listesi'].split('|').map(x => `<li>${ekInline(x.trim())}</li>`).join('')}</ul>`;
 
   if (faz2) {
-    // Önizleme: cevabı ele vermeden içerik
-    const src = act.items.length ? act.items.map((it, n) => ({ no: (n + 1) + '. ', t: it.prompt.join(' ') })) : (act.lead || []).map(t => ({ no: '', t }));
-    const onz = src.filter(s => String(s.t).trim()).map(s => {
-      let t = String(s.t);
-      if (/\s\|\s/.test(t) && !t.trim().startsWith('|')) t = t.split('|').map(x => x.trim()).sort(() => Math.random() - .5).join('  ·  ');
-      return `<div class="ek-act-onz">${ekEsc(s.no)}${ekInline(t)}</div>`;
-    }).join('');
-    h += `<div class="ek-act-body">${onz}</div></div>`;
+    h += `<div class="ek-act-body">${ekFaz2Preview(act)}</div></div>`;
     return ekEl(h);
   }
 
@@ -424,6 +417,50 @@ function ekActEl(act) {
       <span class="ek-act-skor" id="ek-skor-${id}"></span>
     </div></div>`;
   return ekEl(h);
+}
+
+/* 2. aşama türlerinin önizlemesi — cevabı ele vermeden, karışık sırayla */
+function ekKaristir(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function ekCipler(liste) { return `<div class="ek-chips">${liste.map(x => `<span class="ek-chip">${ekInline(x)}</span>`).join('')}</div>`; }
+function ekSesBtn(t) { return `<button class="ek-say" data-ek="speak" data-t="${ekEsc(t)}" title="Dinle">${EK_IC.ses}</button>`; }
+function ekFaz2Preview(act) {
+  let h = '';
+  if (act.items.length) {
+    act.items.forEach((it, n) => {
+      const pr = it.prompt.join(' ').trim();
+      let ic = '';
+      if (it.alan['ses'] != null) ic += ekSesBtn(it.alan['ses']);
+      else if (act.tip === 'telaffuz' && pr) ic += ekSesBtn(pr.replace(/\{[^:}]*:|[{}\[\]]/g, ''));
+      let govde = '';
+      if (it.adimlar.length) {
+        govde = `<div>${ekInline(it.adimlar[0])}</div><div class="ek-act-not">${it.adimlar.length} adımlı çözüm</div>`;
+      } else if (it.alan['parçalar']) {
+        govde = ekCipler(ekKaristir(it.alan['parçalar'].split('=>')[0].split(',').map(x => x.trim()).filter(Boolean)));
+      } else if (/\s\|\s/.test(pr) && !pr.startsWith('|')) {
+        govde = ekCipler(ekKaristir(pr.split('|').map(x => x.trim()).filter(Boolean)));
+      } else govde = ekInline(pr);
+      h += `<div class="ek-it"><div class="ek-it-q"><span class="ek-it-no">${n + 1}.</span>${ic}<div class="ek-it-t">${govde}</div></div></div>`;
+    });
+    return h;
+  }
+  const lines = (act.lead || []).map(l => l.trim()).filter(Boolean);
+  const ciftler = lines.filter(l => / = /.test(l) && !/^\[/.test(l));
+  const gruplar = lines.filter(l => /^\[[^\]]+\]/.test(l));
+  const diyalog = lines.filter(l => /^-\s*[^:]{1,12}:/.test(l));
+  if (ciftler.length && ciftler.length === lines.length) {
+    const sol = ciftler.map(l => l.split(' = ')[0].trim()), sag = ekKaristir(ciftler.map(l => l.split(' = ').slice(1).join(' = ').trim()));
+    return `<div class="ek-match"><div>${ekCipler(sol)}</div><div class="ek-match-ok">↔</div><div>${ekCipler(sag)}</div></div>`;
+  }
+  if (gruplar.length && gruplar.length === lines.length) {
+    const adlar = [], ogeler = [];
+    gruplar.forEach(l => { const m = l.match(/^\[([^\]]+)\]\s*(.*)$/); adlar.push(m[1]); ogeler.push(...m[2].split(',').map(x => x.trim()).filter(Boolean)); });
+    return `<div class="ek-act-not">Gruplar</div><div class="ek-chips">${adlar.map(a => `<span class="ek-chip ek-chip-grp">${ekInline(a)}</span>`).join('')}</div>
+      <div class="ek-act-not">Yerleştirilecek öğeler</div>${ekCipler(ekKaristir(ogeler))}`;
+  }
+  if (act.tip === 'diyalog-sirala' && diyalog.length) {
+    return ekKaristir(diyalog).map(l => `<div class="ek-act-onz">${ekInline(l.replace(/^-\s*/, ''))}</div>`).join('');
+  }
+  return lines.map(l => `<div class="ek-act-onz">${ekInline(l)}</div>`).join('');
 }
 function ekItemKind(it) {
   if (it.opts.length) return 'choice';
