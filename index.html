@@ -49,8 +49,8 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=136">
-<link rel="stylesheet" href="css/ekitap.css?v=136">
+<link rel="stylesheet" href="css/style.css?v=137">
+<link rel="stylesheet" href="css/ekitap.css?v=137">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -73,7 +73,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=136" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=137" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -1835,6 +1835,38 @@
             <textarea id="tp-bulk" class="an-textarea" rows="6" placeholder="isimler | İsimler | - | A1&#10;isim-cinsiyet | İsimlerde cinsiyet | isimler | A1"></textarea>
             <button class="set-btn" style="margin-top:8px;" onclick="ekTopicBulk()">Toplu ekle</button>
           </div>
+          <div class="admin-notif-card" id="oz-card">
+            <h3 class="an-h3">Özet notları</h3>
+            <p class="pq-hint">Konu özetlerini burada hazırla. Videolardaki "Konu" kartlarını eklerken bu notlardan seçebilirsin.</p>
+            <input type="hidden" id="oz-id">
+            <div class="oz-form">
+              <input id="oz-baslik" class="pq-input" placeholder="Başlık (ör. Çoğul ekleri: -ы / -и)" autocomplete="off" data-lpignore="true" data-form-type="other">
+              <select id="oz-konu" class="pq-input"><option value="">Konu (isteğe bağlı)</option></select>
+            </div>
+            <div class="oz-tb">
+              <button type="button" class="oz-b" onclick="ozCmd('bold')" title="Kalın"><b>K</b></button>
+              <button type="button" class="oz-b" onclick="ozCmd('italic')" title="Eğik"><i>E</i></button>
+              <button type="button" class="oz-b" onclick="ozCmd('underline')" title="Altı çizili"><u>A</u></button>
+              <button type="button" class="oz-b" onclick="ozCmd('insertUnorderedList')" title="Madde işaretli liste">• Liste</button>
+              <button type="button" class="oz-b" onclick="ozCmd('insertOrderedList')" title="Numaralı liste">1. Liste</button>
+              <span class="oz-sep"></span>
+              <button type="button" class="oz-b oz-c" style="color:#2563eb" onclick="ozCmd('foreColor','#2563eb')" title="Mavi (eril)">A</button>
+              <button type="button" class="oz-b oz-c" style="color:#db2777" onclick="ozCmd('foreColor','#db2777')" title="Pembe (dişil)">A</button>
+              <button type="button" class="oz-b oz-c" style="color:#16a34a" onclick="ozCmd('foreColor','#16a34a')" title="Yeşil (nötr)">A</button>
+              <button type="button" class="oz-b oz-c" style="color:#b91c1c" onclick="ozCmd('foreColor','#b91c1c')" title="Kırmızı">A</button>
+              <button type="button" class="oz-b" onclick="ozCmd('hiliteColor','#fde68a')" title="Fosfor"><span style="background:#fde68a;padding:0 3px">F</span></button>
+              <button type="button" class="oz-b" onclick="ozCmd('removeFormat')" title="Biçimi temizle">Temizle</button>
+            </div>
+            <div id="oz-govde" class="oz-govde" contenteditable="true" data-ph="Özet metni… (kalın, renk, liste kullanabilirsin)"></div>
+            <div class="mail-actions" style="margin-top:8px;">
+              <button class="set-btn" id="oz-kaydet" onclick="ozSave()">Not ekle</button>
+              <button class="set-btn ghost" onclick="ozClear()">Temizle</button>
+            </div>
+            <div class="oz-liste-h">
+              <input id="oz-ara" class="pq-input" type="search" placeholder="Notlarda ara…" oninput="ozRender()" autocomplete="off" data-lpignore="true" data-form-type="other">
+            </div>
+            <div id="oz-list"></div>
+          </div>
           <div class="admin-notif-card">
             <h3 class="an-h3">Konular</h3>
             <div id="ek-topics-list"></div>
@@ -2160,13 +2192,13 @@
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=136"></script>
-<script defer src="js/auth.js?v=136"></script>
-<script defer src="js/admin.js?v=136"></script>
-<script defer src="js/profile.js?v=136"></script>
-<script defer src="js/extras.js?v=136"></script>
-<script defer src="js/app.js?v=136"></script>
-<script defer src="js/ekitap.js?v=136"></script>
+<script defer src="js/supabase-config.js?v=137"></script>
+<script defer src="js/auth.js?v=137"></script>
+<script defer src="js/admin.js?v=137"></script>
+<script defer src="js/profile.js?v=137"></script>
+<script defer src="js/extras.js?v=137"></script>
+<script defer src="js/app.js?v=137"></script>
+<script defer src="js/ekitap.js?v=137"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
