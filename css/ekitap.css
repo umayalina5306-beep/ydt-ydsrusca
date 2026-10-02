@@ -54,7 +54,7 @@
 
 /* ---------- Kap ---------- */
 .ek-wrap { --ek-fs: 1; --ek-pg-h: 720px; padding: 18px 20px 30px; }
-.ek-wrap svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ek-wrap svg, .gw-run svg, .ek-adm-preview svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .ek-wrap.ek-fs { position: fixed; inset: 0; z-index: 9990; background: var(--off-white, #f5f0e8); overflow: auto; padding: 14px 18px; }
 .ek-toptabs { display: flex; gap: 8px; margin-bottom: 14px; }
 .ek-ttab { display: flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 10px; border: 1px solid #e3d9c5;
@@ -482,3 +482,53 @@
 .ek-dk-all { margin-top: 22px; border-top: 1px solid #f0e9da; padding-top: 12px; }
 .ek-dk-all summary { cursor: pointer; font-weight: 700; color: var(--ek-navy); margin-bottom: 10px; }
 .ek-fc-st { font-size: .74rem; color: #8b93a1; margin-top: 6px; }
+
+/* ============================================================
+   GRAMER ÇALIŞMALARI · ÇALIŞMA SETLERİ
+   ============================================================ */
+.gw-card-h { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.gw-filtre { display: flex; gap: 8px; flex-wrap: wrap; }
+.gw-filtre .pq-input { min-width: 170px; margin: 0; }
+.gw-seviye { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.gw-seviye:empty { display: none; }
+.gw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.gw-set { text-align: left; display: flex; flex-direction: column; gap: 6px; background: #fff; border: 1px solid #ece4d3; border-left: 4px solid var(--ek-navy);
+  border-radius: 12px; padding: 14px 16px; cursor: pointer; font: inherit; color: var(--ek-ink); transition: transform .15s, box-shadow .15s; }
+.gw-set:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(13,27,42,.1); }
+.gw-set.bitti { border-left-color: #16a34a; }
+.gw-set-top { display: flex; gap: 6px; align-items: center; font-size: .74rem; }
+.gw-lvl { background: var(--ek-gold); color: var(--ek-navy); font-weight: 700; padding: 2px 7px; border-radius: 5px; }
+.gw-taslak { background: #fef3c7; color: #92400e; padding: 2px 7px; border-radius: 5px; }
+.gw-n { margin-left: auto; color: #6b7280; }
+.gw-set-t { font-family: 'PT Serif', serif; font-weight: 700; color: var(--ek-navy); font-size: 1.05rem; line-height: 1.3; }
+.gw-set-a { font-size: .84rem; color: #4b5563; line-height: 1.45; }
+.gw-set-k { display: flex; flex-wrap: wrap; gap: 4px; }
+.gw-set-k span { font-size: .7rem; background: #f3ede0; color: #6b5a33; padding: 2px 7px; border-radius: 5px; }
+.gw-bar { height: 6px; background: #eef0f3; border-radius: 4px; overflow: hidden; }
+.gw-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--ek-gold), #16a34a); border-radius: 4px; transition: width .3s; }
+.gw-set-f { display: flex; justify-content: space-between; font-size: .8rem; color: #6b7280; }
+.gw-set-f b { color: var(--ek-navy); }
+/* Set çözme ekranı */
+#page-grammarworks.gw-running .words-section > :not(#gw-run):not(.works-back-row) { display: none !important; }
+#page-grammarworks.gw-running .works-back-row { display: none; }
+.gw-run-h { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; background: #fff; border: 1px solid #ece4d3;
+  border-radius: 14px; padding: 14px 18px; margin-bottom: 14px; }
+.gw-run-t span { font-size: .74rem; color: #8b6a24; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.gw-run-t h2 { margin: 2px 0; font-family: 'PT Serif', serif; color: var(--ek-navy); font-size: 1.4rem; }
+.gw-run-t p { margin: 0; color: #4b5563; font-size: .9rem; }
+.gw-run-p { display: flex; flex-direction: column; gap: 6px; min-width: 200px; font-size: .82rem; color: #475569; }
+.gw-run-p .gw-bar { width: 100%; }
+.gw-run-b { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 16px; align-items: start; }
+.gw-sheet { background: var(--ek-paper); border: 1px solid #e7dcc6; border-radius: 14px; padding: 24px 30px; font-size: 15px; line-height: 1.6; color: var(--ek-ink);
+  box-shadow: 0 8px 22px rgba(13,27,42,.08); }
+.gw-side { background: #fff; border: 1px solid #ece4d3; border-radius: 14px; overflow: hidden; position: sticky; top: 90px; }
+.gw-side-h { background: var(--ek-navy); color: #fff; font-weight: 600; padding: 11px 14px; }
+#gw-word { padding: 14px; }
+.gw-key { margin-top: 18px; border-top: 2px solid var(--ek-gold); padding-top: 10px; }
+.gw-key summary { cursor: pointer; font-weight: 700; color: var(--ek-navy); }
+.gw-key-b { margin-top: 10px; }
+@media (max-width: 1000px) { .gw-run-b { grid-template-columns: 1fr; } .gw-side { position: static; } .gw-run-h { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .gw-sheet { padding: 16px 14px; } }
+/* Video Konu kartı → e-kitap */
+.sv-ek-btn { margin-top: 10px; }
+.ek-adm-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
