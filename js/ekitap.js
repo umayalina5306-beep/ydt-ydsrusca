@@ -2086,7 +2086,19 @@ async function ekAdmEdit(id) {
 }
 function ekAdmCheck() {
   const src = document.getElementById('ek-src').value;
+  // Metnin türünü kendisi tanı: "@set" → çalışma seti, "@modül/@ünite" → e-kitap ünitesi (sekmeden bağımsız)
+  const setMi = /^\s*@set\s/mi.test(src), uniteMi = /^\s*@(mod[üu]l|[üu]nite)\s/mi.test(src);
+  let turNotu = '';
+  if (setMi !== uniteMi) {
+    const yeni = setMi ? 'set' : 'unit';
+    if (yeni !== EKA.mode) {
+      if (EKA.editId) turNotu = `<div class="ek-rep-row bad"><b>Tür</b> Bu metin ${setMi ? 'bir çalışma seti' : 'bir e-kitap ünitesi'} gibi görünüyor ama açık kayıt ${EKA.mode === 'set' ? 'bir çalışma seti' : 'bir ünite'}. Yeni kayıt olarak eklemek için listeye dönüp "Yeni" ile aç.</div>`;
+      else { EKA.mode = yeni; turNotu = `<div class="ek-rep-row good"><b>Tür</b> Metin ${setMi ? '<b>çalışma seti</b> olarak tanındı; Gramer Çalışmaları setlerine' : '<b>e-kitap ünitesi</b> olarak tanındı; E-kitap ünitelerine'} kaydedilecek.</div>`;
+        document.getElementById('ek-adm-title').textContent = setMi ? 'Yeni çalışma seti' : 'Yeni ünite'; }
+    }
+  } else if (setMi && uniteMi) turNotu = '<div class="ek-rep-row bad"><b>Tür</b> Metinde hem "@set" hem "@modül/@ünite" satırı var; birini sil.</div>';
   const p = ekParse(src, { set: EKA.mode === 'set' }); EKA.lastParse = p;
+  if (turNotu.includes('bad')) p.errors.push({ ln: 1, msg: 'Metin türü ile açık kayıt uyuşmuyor.' });
   const bilinen = new Set(EKA.topics.map(t => t.kod));
   const bilinmeyen = [...p.konular].filter(k => !bilinen.has(k));
   const rep = document.getElementById('ek-adm-report');
@@ -2094,7 +2106,8 @@ function ekAdmCheck() {
     <span>${EKA.mode === 'set' ? 'Çalışma seti' : p.sections.filter(s => s.tur === 'ders').length + ' ders'}</span><span>${p.actSay} etkinlik</span>
     <span class="${p.errors.length ? 'bad' : 'good'}">${p.errors.length} hata</span><span>${p.warnings.length + bilinmeyen.length} uyarı</span>
     ${p.kontrolSay ? `<span class="warn">${p.kontrolSay} etkinlik kontrol edilecek</span>` : ''}</div>`;
-  p.errors.forEach(x => { h += `<div class="ek-rep-row bad"><b>Satır ${x.ln}</b> ${ekEsc(x.msg)}</div>`; });
+  h += turNotu;
+  p.errors.forEach(x => { if (x.msg !== 'Metin türü ile açık kayıt uyuşmuyor.') h += `<div class="ek-rep-row bad"><b>Satır ${x.ln}</b> ${ekEsc(x.msg)}</div>`; });
   p.warnings.forEach(x => { h += `<div class="ek-rep-row warn"><b>Satır ${x.ln}</b> ${ekEsc(x.msg)}</div>`; });
   if (bilinmeyen.length) h += `<div class="ek-rep-row warn"><b>Konu</b> Konu listesinde olmayan kodlar: ${bilinmeyen.map(ekEsc).join(', ')} — Konu Yönetimi'nden ekleyebilirsin.</div>`;
   rep.innerHTML = h;
@@ -2190,12 +2203,98 @@ function ekAdmCopyFormat() {
 }
 
 /* ============================================================
+   YÖNETİM: ÖZET NOTLARI (Konu Yönetimi içinde)
+   Video "Konu" kartları bu notlardan doldurulur.
+   ============================================================ */
+const OZ = { rows: [] };
+function ozTemizle(html) {
+  const d = document.createElement('div'); d.innerHTML = html || '';
+  const izin = new Set(['B','STRONG','I','EM','U','BR','P','DIV','SPAN','UL','OL','LI','FONT','MARK','SUB','SUP']);
+  (function gez(el) {
+    [...el.children].forEach(ch => {
+      if (/^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|TEMPLATE|NOSCRIPT)$/.test(ch.tagName)) { ch.remove(); return gez(el); }
+      if (!izin.has(ch.tagName)) { ch.replaceWith(...ch.childNodes); return gez(el); }
+      [...ch.attributes].forEach(a => {
+        const ad = a.name.toLowerCase();
+        if (ad === 'style') { const s = (a.value.match(/(?:^|;)\s*(color|background-color)\s*:\s*[#\w(),.\s%]+/gi) || []).join(';'); s ? ch.setAttribute('style', s.replace(/^;/, '')) : ch.removeAttribute('style'); }
+        else if (ad !== 'color') ch.removeAttribute(a.name);
+      });
+      gez(ch);
+    });
+  })(d);
+  return d.innerHTML.trim();
+}
+async function ozInit() {
+  try { const { data } = await sb.from('ozet_notlar').select('*').order('konu', { nullsFirst: true }).order('sort').order('id'); OZ.rows = data || []; }
+  catch (e) { OZ.rows = []; }
+  const sel = document.getElementById('oz-konu');
+  if (sel) { const v = sel.value; sel.innerHTML = '<option value="">Konu (isteğe bağlı)</option>' + EKA.topics.map(t => `<option value="${ekEsc(t.kod)}">${ekEsc(t.ad)} (${ekEsc(t.kod)})</option>`).join(''); sel.value = v; }
+  ozRender();
+}
+function ozRender() {
+  const box = document.getElementById('oz-list'); if (!box) return;
+  const ara = ((document.getElementById('oz-ara') || {}).value || '').trim().toLocaleLowerCase('tr');
+  const ad = {}; EKA.topics.forEach(t => ad[t.kod] = t.ad);
+  const liste = OZ.rows.filter(r => !ara || (r.baslik + ' ' + (r.govde || '').replace(/<[^>]+>/g, ' ')).toLocaleLowerCase('tr').includes(ara));
+  if (!OZ.rows.length) { box.innerHTML = '<div class="profile-empty">Henüz özet notu yok.</div>'; return; }
+  if (!liste.length) { box.innerHTML = '<div class="profile-empty">Aramaya uyan not yok.</div>'; return; }
+  const grup = {}; liste.forEach(r => { (grup[r.konu || ''] = grup[r.konu || ''] || []).push(r); });
+  box.innerHTML = Object.keys(grup).sort().map(k => `<div class="oz-grup">${k ? ekEsc(ad[k] || k) : 'Konusuz'} <span>${grup[k].length}</span></div>` +
+    grup[k].map(r => `<div class="oz-row${r.aktif === false ? ' pasif' : ''}">
+      <button class="oz-row-h" onclick="this.parentElement.classList.toggle('open')"><b>${ekEsc(r.baslik)}</b>${r.aktif === false ? ' <em>gizli</em>' : ''}<span>▾</span></button>
+      <div class="oz-row-b">${r.govde || ''}</div>
+      <div class="oz-row-f">
+        <button class="mail-act" onclick="ozEdit(${r.id})">Düzenle</button>
+        <button class="mail-act" onclick="ozToggle(${r.id}, ${r.aktif === false})">${r.aktif === false ? 'Göster' : 'Gizle'}</button>
+        <button class="mail-act red" onclick="ozDelete(${r.id})">Sil</button>
+      </div></div>`).join('')).join('');
+}
+function ozCmd(cmd, val) {
+  const g = document.getElementById('oz-govde'); if (!g) return;
+  g.focus();
+  try { document.execCommand('styleWithCSS', false, cmd === 'hiliteColor' || cmd === 'foreColor'); } catch (e) {}
+  try { document.execCommand(cmd, false, val || null); } catch (e) {}
+}
+function ozClear() {
+  ['oz-id', 'oz-baslik'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const g = document.getElementById('oz-govde'); if (g) g.innerHTML = '';
+  const b = document.getElementById('oz-kaydet'); if (b) b.textContent = 'Not ekle';
+}
+function ozEdit(id) {
+  const r = OZ.rows.find(x => x.id === id); if (!r) return;
+  document.getElementById('oz-id').value = r.id;
+  document.getElementById('oz-baslik').value = r.baslik || '';
+  document.getElementById('oz-konu').value = r.konu || '';
+  document.getElementById('oz-govde').innerHTML = r.govde || '';
+  document.getElementById('oz-kaydet').textContent = 'Güncelle';
+  document.getElementById('oz-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+async function ozSave() {
+  const id = document.getElementById('oz-id').value;
+  const baslik = document.getElementById('oz-baslik').value.trim();
+  const govde = ozTemizle(document.getElementById('oz-govde').innerHTML);
+  if (!baslik) { uiAlert('Başlık yaz.'); return; }
+  if (!govde.replace(/<[^>]+>/g, '').trim()) { uiAlert('Not metni boş olamaz.'); return; }
+  const row = { baslik, govde, konu: document.getElementById('oz-konu').value || null, updated_at: new Date().toISOString() };
+  try {
+    const { error } = id ? await sb.from('ozet_notlar').update(row).eq('id', id) : await sb.from('ozet_notlar').insert(row);
+    if (error) throw error;
+    toast(id ? 'Özet notu güncellendi.' : 'Özet notu eklendi.'); ozClear(); await ozInit();
+  } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e) + ' (ozet_notlari.sql çalıştırıldı mı?)'); }
+}
+async function ozToggle(id, aktif) { try { await sb.from('ozet_notlar').update({ aktif }).eq('id', id); await ozInit(); } catch (e) {} }
+async function ozDelete(id) {
+  if (!(await uiConfirm('Bu özet notu silinsin mi? Bu nottan doldurulmuş video kartları etkilenmez.', 'Notu Sil', { danger: true }))) return;
+  try { await sb.from('ozet_notlar').delete().eq('id', id); await ozInit(); } catch (e) {}
+}
+
+/* ============================================================
    YÖNETİM: KONU YÖNETİMİ
    ============================================================ */
 async function ekTopicsFetch() {
   try { const { data } = await sb.from('topics').select('*').order('sort').order('kod'); EKA.topics = data || []; } catch (e) { EKA.topics = []; }
 }
-async function ekTopicsInit() { await ekTopicsFetch(); ekTopicsRender(); }
+async function ekTopicsInit() { await ekTopicsFetch(); ekTopicsRender(); ozInit(); }
 function ekTopicsRender() {
   const box = document.getElementById('ek-topics-list'); if (!box) return;
   const sel = document.getElementById('tp-ust');
@@ -2270,6 +2369,6 @@ async function ekTopicBulk() {
 }
 
 if (typeof window !== 'undefined') {
-  Object.assign(window, { ekOpenRef, gwInit, gwOpen, gwBack, gwFiltre, gwSeviye, gwKural, gwAdmMove, ekAdmTab, ekOpen, ekAdmInit, ekAdmNew, ekAdmEdit, ekAdmCheck, ekAdmSave, ekAdmToggle, ekAdmDelete, ekAdmInsert,
+  Object.assign(window, { ozInit, ozRender, ozCmd, ozClear, ozEdit, ozSave, ozToggle, ozDelete, ekOpenRef, gwInit, gwOpen, gwBack, gwFiltre, gwSeviye, gwKural, gwAdmMove, ekAdmTab, ekOpen, ekAdmInit, ekAdmNew, ekAdmEdit, ekAdmCheck, ekAdmSave, ekAdmToggle, ekAdmDelete, ekAdmInsert,
     ekAdmImage, ekAdmCopyFormat, ekAdmList, ekTopicsInit, ekTopicSave, ekTopicDelete, ekTopicBulk, ekTopicEdit, ekParse });
 }
