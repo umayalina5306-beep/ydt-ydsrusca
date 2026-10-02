@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v135';
+var YDT_SURUM = 'v136';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -2076,6 +2076,9 @@ function _wShowCard(card, opts) {
 
   // Soru metni (checkpoint/quiz başlığı body'de değil, title'da; body varsa göster)
   if (card.body && card.card_type !== 'poll') inner += `<div class="sv-card-body">${card.body}</div>`;
+  if (card.card_type === 'topic' && card.ek_ref) {
+    inner += `<button class="set-btn sv-ek-btn" onclick="_wOpenEkRef('${_escAttr(card.ek_ref)}')">📖 E-kitapta aç</button>`;
+  }
   if (card.card_type === 'checkpoint' && card.title) {
     inner += `<div class="sv-card-body" style="font-weight:600;">${_escHtml(card.title)}</div>`;
   }
@@ -2590,6 +2593,12 @@ function _wPlayNext(idx) {
   setTimeout(() => openWatch(v), 600);
 }
 
+/* Video Konu kartından e-kitabın ilgili dersine git */
+function _wOpenEkRef(ref) {
+  const p = String(ref || '').split(':'); if (!p[0]) return;
+  try { _wSaveProgress(false); } catch (e) {}
+  if (typeof ekOpenRef === 'function') ekOpenRef(p[0], p[1]);
+}
 function closeWatch() {
   _wSaveProgress(false);
   _wCleanup();
@@ -2739,6 +2748,7 @@ function learnNav(sub, btn) {
   // Sayfa özel tetikleyiciler
   if (sub === 'quiz' && typeof showSetup === 'function') showSetup();
   if (sub === 'grammarworks' && typeof tfYeni === 'function') setTimeout(tfYeni, 200);
+  if (sub === 'grammarworks' && typeof gwInit === 'function') { if (typeof gwBack === 'function' && typeof GW !== 'undefined' && GW.set) gwBack(); gwInit(); }
   // E-kitap: Gramer sekmesinde okuyucu + sol modül ağacı
   const ekTree = document.getElementById('ek-tree');
   if (ekTree) ekTree.style.display = sub === 'grammar' ? '' : 'none';
@@ -6475,19 +6485,19 @@ async function adminVidStats(videoId, title) {
 }
 
 async function adminVidCards(videoId, title) {
-  let cards = [], gramNotes = [], vidRow = null, chapters = [];
+  let cards = [], ekUnits = [], vidRow = null, chapters = [];
   try {
     const [c1, c2, c3, c4] = await Promise.all([
       sb.from('video_cards').select('*').eq('video_id', videoId).order('t_sec'),
-      sb.from('content_grammar').select('id, title').eq('active', true).order('title').limit(500).then(r => r, () => ({ data: [] })),
+      sb.from('ek_units').select('id, modul_no, unite_no, unite_ad, toc').order('modul_no').order('unite_no').then(r => r, () => ({ data: [] })),
       sb.from('content_videos').select('duration_sec').eq('id', videoId).single().then(r => r, () => ({ data: null })),
       sb.from('video_chapters').select('id, t_sec, title').eq('video_id', videoId).order('t_sec').then(r => r, () => ({ data: [] }))
     ]);
-    cards = c1.data || []; gramNotes = c2.data || []; vidRow = c3.data; chapters = c4.data || [];
+    cards = c1.data || []; ekUnits = c2.data || []; vidRow = c3.data; chapters = c4.data || [];
   } catch (e) {}
   _vcVideoDur = (vidRow && vidRow.duration_sec) || 0;
   _vcChapters = chapters;
-  _vcEditId = null;
+  _vcEditId = null; _vcEditRef = null;
 
   const TIP_AD = { info:'💡 Bilgi', quiz:'❓ Soru', poll:'📊 Anket', word:'🔤 Kelime', topic:'📖 Konu', checkpoint:'🚧 Kontrol Noktası' };
   const sureBilgi = _vcVideoDur
@@ -6535,13 +6545,15 @@ async function adminVidCards(videoId, title) {
         <div id="vc-word-picked" class="pq-hint"></div>
       </div>
 
-      <!-- 📖 Konu kartı: gramer notundan seç -->
+      <!-- 📖 Konu kartı: e-kitaptaki bir derse bağla -->
       <div id="vc-topic-alan" style="display:none;margin-bottom:8px;">
-        <select id="vc-gramnote" class="pq-input" style="width:100%;" onchange="adminCardPickNote(this.value)">
-          <option value="">📖 Mevcut gramer notundan seç…</option>
-          ${gramNotes.map(n => `<option value="${n.id}">${_escHtml(n.title)}</option>`).join('')}
+        <select id="vc-ekref" class="pq-input" style="width:100%;">
+          <option value="">📖 E-kitaptaki bir derse bağla (isteğe bağlı)…</option>
+          ${ekUnits.map(u => `<optgroup label="Modül ${u.modul_no} · Ünite ${u.unite_no} — ${_escAttr(u.unite_ad || '')}">
+            ${(u.toc || []).map((t, si) => t.tur === 'anahtar' ? '' : `<option value="${u.id}:${si}">${t.tur === 'ders' ? 'Ders ' + t.no + ' · ' : ''}${_escHtml(t.ad || '')}</option>`).join('')}
+          </optgroup>`).join('')}
         </select>
-        <p class="pq-hint">Seçersen notun içeriği aşağı gelir. Yeni yazarsan bu içerik <b>gramer notu olarak da kaydedilir</b>.</p>
+        <p class="pq-hint">Seçersen öğrenci bu kartta <b>"E-kitapta aç"</b> butonunu görür ve kitabın o dersine gider.</p>
       </div>
 
       <!-- Zengin metin editörü -->
@@ -6599,8 +6611,11 @@ async function adminVidCards(videoId, title) {
 }
 
 /* ✏️ Kart düzenleme — mevcut kartı forma yükler */
+let _vcEditRef = null;
 function adminVidCardEdit(cd, videoId, title) {
   _vcEditId = cd.id;
+  _vcEditRef = cd.ek_ref || null;
+  setTimeout(() => { const s = document.getElementById('vc-ekref'); if (s) s.value = cd.ek_ref || ''; }, 0);
   document.getElementById('vc-form-baslik').textContent = '✏️ Kartı Düzenle';
   document.getElementById('vc-save-btn').textContent = 'Güncelle';
   document.getElementById('vc-min').value = Math.floor(cd.t_sec / 60);
@@ -6720,15 +6735,6 @@ function adminCardDelOpt(btn) {
   btn.closest('.vc-opt-row').remove();
 }
 
-function adminCardPickNote(noteId) {
-  if (!noteId) return;
-  sb.from('content_grammar').select('title, body').eq('id', noteId).single().then(r => {
-    if (r && r.data) {
-      const t = document.getElementById('vc-title'); if (t && !t.value) t.value = r.data.title || '';
-      const b = document.getElementById('vc-body'); if (b) b.innerHTML = r.data.body || '';
-    }
-  }, () => {});
-}
 
 async function adminVidCardAdd(videoId, title) {
   const dk  = parseInt((document.getElementById('vc-min') || {}).value, 10) || 0;
@@ -6790,6 +6796,11 @@ async function adminVidCardAdd(videoId, title) {
     uiAlert('Başlık veya metin gir.'); return;
   }
 
+  // Konu kartı → e-kitap bağlantısı (boşsa yalnız önceden bağlıysa temizle; sütun yoksa kaydı bozmasın)
+  if (tip === 'topic') {
+    const ekref = (document.getElementById('vc-ekref') || {}).value || '';
+    if (ekref) row.ek_ref = ekref; else if (_vcEditRef) row.ek_ref = null;
+  }
   try {
     let error;
     if (_vcEditId) {
@@ -6798,13 +6809,9 @@ async function adminVidCardAdd(videoId, title) {
       ({ error } = await sb.from('video_cards').insert(row));
     }
     if (error) throw error;
-    const secilenNot = (document.getElementById('vc-gramnote') || {}).value;
-    if (tip === 'topic' && bas && govde && !secilenNot && !_vcEditId) {
-      try { await sb.from('content_grammar').insert({ title: bas, body: govde, category: 'genel', active: true }); } catch (e) {}
-    }
     document.getElementById('vcard-modal').remove();
     toast(_vcEditId ? '✏️ Kart güncellendi.' : '🃏 Kart eklendi.');
-    _vcEditId = null;
+    _vcEditId = null; _vcEditRef = null;
     adminVidCards(videoId, title);
   } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
 }
@@ -8616,41 +8623,6 @@ function scCheck() {
   }
 }
 
-/* ============================================================
-   📖 GRAMER NOTLARI (site tarafı)
-   ============================================================ */
-let _grammarRows = [], _grammarCat = 'all';
-const GRAMMAR_CATS = { genel: 'Genel', padej: 'Padej', fiil: 'Fiiller', 'cümle': 'Cümle Yapısı' };
-async function loadGrammar() {
-  const box = document.getElementById('grammar-list'); if (!box) return;
-  try {
-    const { data } = await sb.from('content_grammar').select('*').eq('active', true).order('sort').order('created_at');
-    _grammarRows = data || [];
-  } catch (e) { _grammarRows = []; }
-  renderGrammarFilters();
-  renderGrammar();
-}
-function renderGrammarFilters() {
-  const box = document.getElementById('grammar-filters'); if (!box) return;
-  const cats = ['all', ...Object.keys(GRAMMAR_CATS)];
-  box.innerHTML = cats.map(c => `<button class="rec-chip ${c === _grammarCat ? 'active' : ''}" onclick="grammarSetCat('${c}')">${c === 'all' ? 'Tümü' : GRAMMAR_CATS[c]}</button>`).join('');
-}
-function grammarSetCat(c) { _grammarCat = c; renderGrammarFilters(); renderGrammar(); }
-function renderGrammar() {
-  const box = document.getElementById('grammar-list'); if (!box) return;
-  let list = _grammarRows;
-  if (_grammarCat !== 'all') list = list.filter(r => (r.category || 'genel') === _grammarCat);
-  if (!list.length) { box.innerHTML = '<div class="profile-empty">📖 Bu kategoride henüz not yok. Yakında eklenecek!</div>'; return; }
-  box.innerHTML = list.map(r => `
-    <div class="grammar-card">
-      <div class="grammar-head">
-        <div class="grammar-title">${_escHtml(r.title)}</div>
-        <div class="grammar-badges"><span class="kv-lvl">${_escHtml(r.level || '')}</span> <span class="cw-cat">${GRAMMAR_CATS[r.category] || r.category || ''}</span></div>
-      </div>
-      <div class="grammar-body">${_sanitizeRich(r.body || '')}</div>
-    </div>`).join('');
-}
-
 /* Sayfa açılış kancaları */
 (function () {
   const _origShowPage = window.showPage;
@@ -8661,70 +8633,11 @@ function renderGrammar() {
         if (id === 'padejlab') renderPadejTable();
         if (id === 'aspectmatch') startAspectGame();
         if (id === 'sentence') startSentenceGame();
-        if (id === 'grammar') loadGrammar();
       } catch (e) {}
     };
   }
 })();
 
-/* ---- Panel: Gramer notları CRUD ---- */
-let _grRows = [];
-function grRte(cmd, val) { const a = document.getElementById('gr-body'); if (a) a.focus(); try { document.execCommand(cmd, false, val || null); } catch (e) {} }
-async function adminGrammarInit() { await adminGrReload(); }
-async function adminGrReload() {
-  try { const { data } = await sb.from('content_grammar').select('*').order('sort').order('created_at'); _grRows = data || []; }
-  catch (e) { _grRows = []; }
-  renderGrList();
-}
-function renderGrList() {
-  const box = document.getElementById('gr-list'); if (!box) return;
-  if (!_grRows.length) { box.innerHTML = '<div class="profile-empty">Henüz not yok. gramer_notlari.sql çalıştırıldı mı?</div>'; return; }
-  box.innerHTML = _grRows.map(r => `
-    <div class="cw-row ${r.active === false ? 'off' : ''}">
-      <div class="cw-main" style="flex:1;"><b>${_escHtml(r.title)}</b> <span class="kv-lvl">${r.level || ''}</span> <span class="cw-cat">${GRAMMAR_CATS[r.category] || r.category || ''}</span>
-        <div class="err-meta">${_escHtml((r.body || '').replace(/<[^>]*>/g, ' ').slice(0, 80))}</div></div>
-      <div class="cw-acts">
-        <button class="mail-act" onclick="adminGrEdit('${r.id}')">✏️</button>
-        ${r.active === false
-          ? `<button class="mail-act" onclick="adminGrToggle('${r.id}', true)">↩️</button><button class="mail-act red" onclick="adminGrPurge('${r.id}')">❌</button>`
-          : `<button class="mail-act red" onclick="adminGrToggle('${r.id}', false)">🗑️</button>`}
-      </div>
-    </div>`).join('');
-}
-function adminGrClear() {
-  ['gr-id', 'gr-title'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  const b = document.getElementById('gr-body'); if (b) b.innerHTML = '';
-  const btn = document.getElementById('gr-save-btn'); if (btn) btn.textContent = 'Not Ekle';
-}
-function adminGrEdit(id) {
-  const r = _grRows.find(x => x.id === id); if (!r) return;
-  document.getElementById('gr-id').value = r.id;
-  document.getElementById('gr-title').value = r.title || '';
-  document.getElementById('gr-level').value = r.level || 'A1';
-  document.getElementById('gr-cat').value = r.category || 'genel';
-  document.getElementById('gr-body').innerHTML = _sanitizeRich(r.body || '');
-  document.getElementById('gr-save-btn').textContent = 'Değişiklikleri Kaydet';
-  document.getElementById('gr-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-async function adminGrSave() {
-  const title = _cwVal('gr-title'); if (!title) { uiAlert('Başlık zorunlu.'); return; }
-  const bodyEl = document.getElementById('gr-body');
-  const body = (bodyEl && bodyEl.textContent.trim()) ? _sanitizeRich(bodyEl.innerHTML) : null;
-  const row = { title, level: _cwVal('gr-level'), category: _cwVal('gr-cat'), body, active: true };
-  const id = _cwVal('gr-id');
-  try {
-    let error;
-    if (id) ({ error } = await sb.from('content_grammar').update(row).eq('id', id));
-    else ({ error } = await sb.from('content_grammar').insert(row));
-    if (error) throw error;
-    toast('Not kaydedildi.'); adminGrClear(); adminGrReload();
-  } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e) + ' — gramer_notlari.sql çalıştı mı?'); }
-}
-async function adminGrToggle(id, aktif) { try { await sb.from('content_grammar').update({ active: aktif }).eq('id', id); adminGrReload(); } catch (e) {} }
-async function adminGrPurge(id) {
-  if (!(await uiConfirm('Bu not kalıcı olarak silinsin mi?', 'Kalıcı Sil', { danger: true }))) return;
-  try { await sb.from('content_grammar').delete().eq('id', id); adminGrReload(); } catch (e) {}
-}
 
 /* ============================================================
    📐 PADEJ ÇEKİM MOTORU — tekil, 6 hâl (kurallı; istisna
@@ -8857,80 +8770,6 @@ function plQuizCheck() {
   setTimeout(() => { _plQuiz.i++; plQuizRender(); }, 1400);
 }
 
-/* ---- 📖 Gramer Notları (site) ---- */
-let _gNotes = [];
-async function loadGrammarNotes() {
-  try {
-    const { data } = await sb.from('content_grammar').select('*').eq('active', true).order('sort').limit(500);
-    _gNotes = data || [];
-  } catch (e) { _gNotes = []; }
-  const box = document.getElementById('gn-site-list'); if (!box) return;
-  if (!_gNotes.length) { box.innerHTML = '<div class="profile-empty">Henüz gramer notu eklenmedi — yakında! 📖</div>'; return; }
-  box.innerHTML = _gNotes.map((n, i) => `
-    <div class="gn-card">
-      <button class="gn-title" onclick="this.parentElement.classList.toggle('open')">📖 ${_escHtml(n.title)} <span class="gn-arrow">▾</span></button>
-      <div class="gn-body">${_sanitizeRich(n.body || '')}</div>
-    </div>`).join('');
-}
-
-/* ---- Panel: Gramer Notları CRUD ---- */
-let _gnRows = [];
-async function adminGnInit() {
-  try { const { data } = await sb.from('content_grammar').select('*').order('sort'); _gnRows = data || []; }
-  catch (e) { _gnRows = []; }
-  const box = document.getElementById('gn-list'); if (!box) return;
-  box.innerHTML = _gnRows.length ? _gnRows.map(n => `
-    <div class="cw-row ${n.active === false ? 'off' : ''}">
-      <div class="cw-main"><b>${_escHtml(n.title)}</b>${n.active === false ? ' <span class="mail-member no">Gizli</span>' : ''}
-        <div class="err-meta">${_escHtml((n.body || '').replace(/<[^>]*>/g, ' ').slice(0, 90))}</div></div>
-      <div class="cw-acts">
-        <button class="mail-act" onclick="adminGnEdit('${n.id}')">✏️</button>
-        ${n.active === false
-          ? `<button class="mail-act" onclick="adminGnFlag('${n.id}', true)">↩️</button>
-             <button class="mail-act red" onclick="adminGnPurge('${n.id}')">❌</button>`
-          : `<button class="mail-act red" onclick="adminGnFlag('${n.id}', false)">🗑️</button>`}
-      </div>
-    </div>`).join('') : '<div class="profile-empty">Henüz not yok — ilkini yukarıdan ekle! (gramer_merkezi.sql çalıştırıldı mı?)</div>';
-}
-function rteFor(id, cmd, val) {
-  const area = document.getElementById(id); if (area) area.focus();
-  try { document.execCommand(cmd, false, val || null); } catch (e) {}
-}
-function adminGnClear() {
-  document.getElementById('gn-id').value = '';
-  document.getElementById('gn-title').value = '';
-  document.getElementById('gn-body').innerHTML = '';
-  document.getElementById('gn-save-btn').textContent = 'Not Ekle';
-}
-function adminGnEdit(id) {
-  const n = _gnRows.find(x => x.id === id); if (!n) return;
-  document.getElementById('gn-id').value = n.id;
-  document.getElementById('gn-title').value = n.title || '';
-  document.getElementById('gn-body').innerHTML = _sanitizeRich(n.body || '');
-  document.getElementById('gn-save-btn').textContent = 'Değişiklikleri Kaydet';
-  document.getElementById('gn-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-async function adminGnSave() {
-  const title = (document.getElementById('gn-title') || {}).value.trim();
-  const bodyEl = document.getElementById('gn-body');
-  const body = bodyEl && (bodyEl.textContent || '').trim() ? bodyEl.innerHTML : null;
-  if (!title) { uiAlert('Başlık zorunlu.'); return; }
-  const id = (document.getElementById('gn-id') || {}).value;
-  try {
-    let error;
-    if (id) ({ error } = await sb.from('content_grammar').update({ title, body }).eq('id', id));
-    else ({ error } = await sb.from('content_grammar').insert({ title, body, category: 'genel', active: true }));
-    if (error) throw error;
-    toast('Not kaydedildi.');
-    adminGnClear(); adminGnInit(); loadGrammarNotes();
-  } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e) + ' — gramer_merkezi.sql çalıştırıldı mı?'); }
-}
-async function adminGnFlag(id, aktif) { try { await sb.from('content_grammar').update({ active: aktif }).eq('id', id); adminGnInit(); loadGrammarNotes(); } catch (e) {} }
-async function adminGnPurge(id) {
-  if (!(await uiConfirm('Bu not temelli silinsin mi?', 'Temelli Sil', { danger: true }))) return;
-  try { await sb.from('content_grammar').delete().eq('id', id); adminGnInit(); loadGrammarNotes(); } catch (e) {}
-}
-setTimeout(function () { try { if (typeof sb !== 'undefined' && sb) loadGrammarNotes(); } catch (e) {} }, 1400);
 
 
 /* ============================================================
