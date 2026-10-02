@@ -107,15 +107,20 @@ function ekInline(str, ctx) {
 /* ============================================================
    AYRIŞTIRICI
    ============================================================ */
-function ekParse(src) {
+function ekParse(src, opt) {
+  opt = opt || {};
   const lines = String(src || '').replace(/\r/g, '').split('\n');
   const res = { meta: {}, sections: [], errors: [], warnings: [], konular: new Set(), kontrolSay: 0, actSay: 0, bolumNo: new Set(), kuralRef: [] };
   const err = (ln, msg) => res.errors.push({ ln, msg });
   const warn = (ln, msg) => res.warnings.push({ ln, msg });
   let sec = null, i = 0;
   const ensureSec = (ln) => {
-    if (!sec) { warn(ln, 'İçerik bir "# Ders N | Ad" başlığından önce başlıyor; "Giriş" bölümü olarak eklendi.');
-      sec = { tur: 'giris', no: null, ad: 'Giriş', altbaslik: '', konular: [], blocks: [] }; res.sections.push(sec); }
+    if (!sec) {
+      if (!opt.set) warn(ln, 'İçerik bir "# Ders N | Ad" başlığından önce başlıyor; "Giriş" bölümü olarak eklendi.');
+      sec = opt.set ? { tur: 'set', no: null, ad: res.meta.baslik || 'Çalışma seti', altbaslik: '', konular: [], blocks: [] }
+                    : { tur: 'giris', no: null, ad: 'Giriş', altbaslik: '', konular: [], blocks: [] };
+      res.sections.push(sec);
+    }
   };
   while (i < lines.length) {
     const raw = lines[i], line = raw.trim(), ln = i + 1;
@@ -124,6 +129,9 @@ function ekParse(src) {
     let mm;
     if ((mm = line.match(/^@mod[üu]l\s+(\d+)\s*\|\s*(.+)$/i))) { res.meta.modul_no = +mm[1]; res.meta.modul_ad = mm[2].trim(); i++; continue; }
     if ((mm = line.match(/^@[üu]nite\s+(\d+)\s*\|\s*(.+)$/i))) { res.meta.unite_no = +mm[1]; res.meta.unite_ad = mm[2].trim(); i++; continue; }
+    if ((mm = line.match(/^@set\s+(.+)$/i))) { res.meta.baslik = mm[1].trim(); i++; continue; }
+    if ((mm = line.match(/^@a[çc][ıi]klama\s+(.+)$/i))) { res.meta.aciklama = mm[1].trim(); i++; continue; }
+    if ((mm = line.match(/^@kitap\s+(\d+)\s*\.\s*(\d+)/i))) { res.meta.kitap = { m: +mm[1], u: +mm[2] }; i++; continue; }
     if ((mm = line.match(/^@seviye\s+(\S+)/i))) { res.meta.seviye = mm[1].toUpperCase(); i++; continue; }
     if ((mm = line.match(/^@alt\s*ba[şs]l[ıi]k\s+(.+)$/i))) { ensureSec(ln); sec.altbaslik = mm[1].trim(); i++; continue; }
     if ((mm = line.match(/^@konu\s+(.+)$/i))) {
@@ -199,6 +207,13 @@ function ekParse(src) {
     ekParseSimple(chunk).forEach(b => sec.blocks.push(b));
   }
   // Doğrulamalar
+  if (opt.set) {
+    if (!res.meta.baslik) err(1, '"@set Başlık" satırı eksik.');
+    if (!res.meta.seviye) warn(1, '"@seviye" satırı eksik.');
+    if (!res.actSay) err(1, 'Sette hiç etkinlik yok.');
+    if (res.kuralRef.length && !res.meta.kitap) warn(res.kuralRef[0].ln, '"kural:" kullanılmış ama "@kitap M.Ü" satırı yok; "Kuralı gör" butonu kitabı açamaz.');
+    return res;
+  }
   if (res.meta.modul_no == null) err(1, '"@modül N | Ad" satırı eksik.');
   if (res.meta.unite_no == null) err(1, '"@ünite N | Ad" satırı eksik.');
   if (!res.meta.seviye) warn(1, '"@seviye" satırı eksik.');
@@ -312,7 +327,7 @@ function ekParseItem(it, res, govdeMi) {
    ============================================================ */
 let _ekActSeq = 0;              // hiç sıfırlanmaz → kimlikler sayfa genelinde benzersiz
 const EK_ACT = {};              // etkinlik çalışma verisi: id → { blanks:[], items:[], act }
-const EK_SCOPE = { reader: [], admin: [] };
+const EK_SCOPE = { reader: [], admin: [], gw: [] };
 let _ekScope = 'reader';
 let _ekCurKey = '';
 
@@ -320,7 +335,8 @@ function ekBlankInput(ctx, alts) {
   const reg = EK_ACT[ctx.act];
   const bi = reg.blanks.length;
   reg.blanks.push({ alts, item: ctx.item == null ? -1 : ctx.item });
-  const w = Math.max(3, Math.min(18, Math.max(...alts.map(a => a.length)) + 2));
+  // Kiril harfleri (ы, ж, ш…) '0' karakterinden geniştir → 1.35 kat pay
+  const w = Math.max(4, Math.min(26, Math.ceil(Math.max(...alts.map(a => a.length)) * 1.35) + 2));
   return `<input class="ek-blank" data-a="${ctx.act}" data-b="${bi}" style="width:${w}ch" autocomplete="off" spellcheck="false" type="text">`;
 }
 
@@ -335,7 +351,7 @@ function ekBlockEl(b, sec, secIdx, unit) {
             ${sec.altbaslik ? `<div class="ek-lesson-sub">${ekInline(sec.altbaslik)}</div>` : ''}
             <div class="ek-lesson-ad">${ekInline(sec.ad)}</div></div></div>`);
       }
-      const k = { ozet: 'ÜNİTE ÖZETİ', okuma: 'OKUMA', test: 'ÜNİTE TESTİ', anahtar: 'CEVAP ANAHTARI', giris: 'GİRİŞ' }[sec.tur] || '';
+      const k = { ozet: 'ÜNİTE ÖZETİ', okuma: 'OKUMA', test: 'ÜNİTE TESTİ', anahtar: 'CEVAP ANAHTARI', giris: 'GİRİŞ', set: 'ÇALIŞMA SETİ' }[sec.tur] || '';
       return ekEl(`<div class="ek-lesson-head ek-lesson-head-alt" data-sec="${secIdx}"><div><div class="ek-lesson-k">${k}</div><div class="ek-lesson-ad">${ekInline(sec.ad)}</div></div></div>`);
     }
     case 'h2': return ekEl(`<h2 class="ek-h2"${b.no ? ` data-bolum="${ekEsc(b.no)}"` : ''}>${b.no ? `<span class="ek-h2-no">${ekEsc(b.no)}</span>` : ''}<span class="ek-h2-t">${ekInline(b.text)}</span></h2>`);
@@ -955,6 +971,7 @@ document.addEventListener('drop', function (e) {
 /* Cevap kaydı (zayıf konu analizi için) */
 function ekLog(id, dogru) {
   const reg = EK_ACT[id];
+  if (reg && reg.scope === 'gw') { gwLog(reg, id, dogru); return; }
   if (!reg || reg.scope !== 'reader' || !EK.unit) return;
   reg.cozuldu = reg.cozuldu || dogru;
   const el = document.querySelector(`.ek-act[data-act="${id}"]`); if (el && dogru) el.classList.add('ek-cozuldu');
@@ -1038,6 +1055,14 @@ function ekShellHTML() {
 
 /* Gramer sayfası açıldığında */
 async function ekOpen() {
+  if (EK._acilis) { EK._tekrar = true; return; }
+  EK._acilis = true;
+  try { await _ekOpen(); } finally {
+    EK._acilis = false;
+    if (EK._tekrar) { EK._tekrar = false; if (EK.pending) ekOpen(); }
+  }
+}
+async function _ekOpen() {
   const host = document.getElementById('ek-host'); if (!host) return;
   if (!document.getElementById('ek-wrap')) host.innerHTML = ekShellHTML();
   const tree = document.getElementById('ek-tree'); if (tree) tree.style.display = '';
@@ -1046,6 +1071,16 @@ async function ekOpen() {
   if (!EK.list.length) {
     document.getElementById('ek-book').innerHTML = '<div class="ek-empty">Henüz yayınlanmış ünite yok.</div>';
     return;
+  }
+  if (EK.pending) {
+    const pd = EK.pending; EK.pending = null;
+    if (EK.list.some(x => x.id === pd.unitId)) {
+      if (!EK.unit || EK.unit.id !== pd.unitId) await ekOpenUnit(pd.unitId, pd.sec != null ? pd.sec : undefined);
+      else if (pd.sec != null) setTimeout(() => { ekPaginate(); ekGoPage(EK.secPage[pd.sec] || 0); }, 30);
+      else setTimeout(() => { ekPaginate(); ekRender(); }, 30);
+      if (pd.no) setTimeout(() => ekGoKural(pd.no), 350);
+      return;
+    }
   }
   if (!EK.unit) {
     let hedef = null; try { hedef = +localStorage.getItem('ek_last') || null; } catch (e) {}
@@ -1258,9 +1293,9 @@ function ekFindWord(k) {
   }
   return w || null;
 }
-function ekShowWord(k) {
-  ekSideTab('kelime');
-  const box = document.getElementById('ek-word'); if (!box) return;
+function ekShowWord(k, hedef) {
+  if (!hedef) ekSideTab('kelime');
+  const box = document.getElementById(hedef || 'ek-word'); if (!box) return;
   const w = ekFindWord(k);
   if (!w) { box.innerHTML = `<div class="ek-wc"><div class="ek-wc-ru">${ekEsc(k)}</div><div class="ek-side-empty">Bu kelime henüz sözlükte kayıtlı değil.</div></div>`; return; }
   const CINS = { 'м': ['m', 'eril'], 'ж': ['f', 'dişil'], 'с': ['n', 'nötr'], 'мн': ['p', 'çoğul'], 'м/ж': ['mf', 'ortak'] };
@@ -1712,7 +1747,7 @@ document.addEventListener('click', function (e) {
     if (a === 'check') { ekCheckAct(t.dataset.a); return; }
     if (a === 'reveal') { ekRevealAct(t.dataset.a); return; }
     if (a === 'ornek') { const d = t.nextElementSibling; if (d) d.style.display = d.style.display === 'none' ? '' : 'none'; return; }
-    if (a === 'kural') { ekGoKural(t.dataset.no); return; }
+    if (a === 'kural') { if (t.closest('#gw-run')) gwKural(t.dataset.no); else ekGoKural(t.dataset.no); return; }
     if (a === 'tool') { ekSetTool(t.dataset.v); return; }
     if (a === 'color') { ekSetColor(t.dataset.v); return; }
     if (a === 'undo') { ekUndo(); return; }
@@ -1744,7 +1779,7 @@ document.addEventListener('click', function (e) {
     if (a === 'stab') { ekSideTab(t.dataset.v); return; }
     if (a === 'ttab') { ekTopTab(t.dataset.v); return; }
     if (a === 'sword') { ekShowWord(t.dataset.w); return; }
-    if (a === 'saveword') { if (typeof _wAddWordToSaved === 'function') _wAddWordToSaved(t.dataset.w); setTimeout(() => ekShowWord(t.dataset.w), 400); return; }
+    if (a === 'saveword') { if (typeof _wAddWordToSaved === 'function') _wAddWordToSaved(t.dataset.w); const hd = t.closest('#gw-word') ? 'gw-word' : undefined; setTimeout(() => ekShowWord(t.dataset.w, hd), 400); return; }
     if (a === 'flip') { t.classList.toggle('flipped'); return; }
     if (a === 'snote') { const k = document.querySelectorAll('#ek-book .ek-box')[+t.dataset.k]; if (k) { k.classList.add('ek-flash'); k.scrollIntoView({ block: 'nearest' }); setTimeout(() => k.classList.remove('ek-flash'), 1600); } return; }
     if (a === 'tmod') { const m = t.dataset.m; EK.acik['m' + m] = EK.acik['m' + m] === false; ekRenderTree(); return; }
@@ -1762,6 +1797,9 @@ document.addEventListener('click', function (e) {
     return;
   }
   if (ekBookClick(e)) return;
+  // Çalışma setlerindeki kelimeler (kendi paneline)
+  const gwW = e.target.closest('#gw-run .ek-w, #gw-run .ek-g[data-w]');
+  if (gwW && !e.target.closest('input,textarea,button,.ek-eng,.ek-kanit-metin')) { ekShowWord(gwW.dataset.w, 'gw-word'); return; }
   // Kitap içindeki kelimeler
   if (e.target.closest('.ek-eng, .ek-kanit-metin, .ek-sticky') || EK.tool !== 'sec') return;
   const w = e.target.closest('#ek-book .ek-w, #ek-book .ek-g[data-w], #ek-adm-preview .ek-w, #ek-cards .ek-w');
@@ -1816,18 +1854,156 @@ window.addEventListener('resize', function () {
 });
 
 /* ============================================================
+   GRAMER ÇALIŞMALARI · ÇALIŞMA SETLERİ
+   E-kitabın etkinlik motorlarıyla, kitaptan bağımsız alıştırmalar
+   ============================================================ */
+const GW = { list: [], loaded: false, set: null, parsed: null, cozulen: {}, seviye: '', topics: null };
+
+/* Dışarıdan e-kitabı belirli bir derste/bölümde aç (video kartı, çalışma seti) */
+function ekOpenRef(unitId, sec, no) {
+  EK.pending = { unitId: +unitId, sec: (sec === '' || sec == null) ? null : +sec, no: no || '' };
+  if (typeof showPage === 'function') showPage('learn');
+  if (typeof learnNav === 'function') learnNav('grammar');
+}
+async function gwKural(no) {
+  const k = GW.parsed && GW.parsed.meta.kitap;
+  if (!k) { if (typeof toast === 'function') toast('Bu set bir e-kitap ünitesine bağlı değil.'); return; }
+  if (!EK.loaded) await ekLoadList();
+  const u = EK.list.find(x => x.modul_no === k.m && x.unite_no === k.u);
+  if (!u) { if (typeof toast === 'function') toast('Bağlı e-kitap ünitesi henüz yayında değil.'); return; }
+  ekOpenRef(u.id, null, no);
+}
+
+async function gwInit() {
+  if (!GW.loaded) {
+    try {
+      const { data } = await sb.from('gw_sets').select('id, baslik, aciklama, seviye, konular, kitap_ref, act_say, yayinda, sort')
+        .order('sort').order('id');
+      GW.list = data || [];
+    } catch (e) { GW.list = []; }
+    if (!GW.topics) { try { const { data } = await sb.from('topics').select('kod, ad'); GW.topics = {}; (data || []).forEach(t => GW.topics[t.kod] = t.ad); } catch (e) { GW.topics = {}; } }
+    await gwCozulenYukle();
+    GW.loaded = true;
+  }
+  // Konu filtresi seçenekleri
+  const ks = document.getElementById('gw-konu');
+  if (ks && ks.options.length <= 1) {
+    const kodlar = [...new Set(GW.list.flatMap(s => s.konular || []))];
+    ks.innerHTML = '<option value="">Tüm konular</option>' + kodlar.map(k => `<option value="${ekEsc(k)}">${ekEsc(GW.topics[k] || k)}</option>`).join('');
+  }
+  gwFiltre();
+}
+async function gwCozulenYukle() {
+  GW.cozulen = {};
+  if (typeof currentUser === 'undefined' || !currentUser) return;
+  try {
+    const { data } = await sb.from('ek_answers').select('set_id, act_key').eq('user_id', currentUser.id).eq('dogru', true).not('set_id', 'is', null).limit(5000);
+    (data || []).forEach(r => { (GW.cozulen[r.set_id] = GW.cozulen[r.set_id] || new Set()).add(r.act_key); });
+  } catch (e) {}
+}
+function gwSeviye(v) { GW.seviye = v; gwFiltre(); }
+function gwFiltre() {
+  const box = document.getElementById('gw-list'); if (!box) return;
+  const sevBox = document.getElementById('gw-seviye');
+  const sevs = [...new Set(GW.list.map(s => s.seviye).filter(Boolean))].sort();
+  if (sevBox) sevBox.innerHTML = sevs.length > 1 ? ['', ...sevs].map(v => `<button class="rec-chip ${GW.seviye === v ? 'active' : ''}" onclick="gwSeviye('${v}')">${v || 'Tümü'}</button>`).join('') : '';
+  const ara = ((document.getElementById('gw-ara') || {}).value || '').trim().toLocaleLowerCase('tr');
+  const konu = (document.getElementById('gw-konu') || {}).value || '';
+  const liste = GW.list.filter(s => (!GW.seviye || s.seviye === GW.seviye) && (!konu || (s.konular || []).includes(konu)) &&
+    (!ara || (s.baslik + ' ' + (s.aciklama || '')).toLocaleLowerCase('tr').includes(ara)));
+  if (!GW.list.length) { box.innerHTML = '<div class="profile-empty">Henüz alıştırma seti eklenmedi.</div>'; return; }
+  if (!liste.length) { box.innerHTML = '<div class="profile-empty">Bu filtreye uyan set yok.</div>'; return; }
+  box.innerHTML = '<div class="gw-grid">' + liste.map(s => {
+    const n = s.act_say || 0, c = GW.cozulen[s.id] ? GW.cozulen[s.id].size : 0, yz = n ? Math.min(100, Math.round(c / n * 100)) : 0;
+    const dugme = !c ? 'Başla' : (c >= n ? 'Tekrar çöz' : 'Devam et');
+    return `<button class="gw-set${c >= n && n ? ' bitti' : ''}" onclick="gwOpen(${s.id})">
+      <div class="gw-set-top">${s.seviye ? `<span class="gw-lvl">${ekEsc(s.seviye)}</span>` : ''}${s.yayinda ? '' : '<span class="gw-taslak">taslak</span>'}<span class="gw-n">${n} etkinlik</span></div>
+      <div class="gw-set-t">${ekEsc(s.baslik)}</div>
+      ${s.aciklama ? `<div class="gw-set-a">${ekEsc(s.aciklama)}</div>` : ''}
+      <div class="gw-set-k">${(s.konular || []).slice(0, 4).map(k => `<span>${ekEsc(GW.topics[k] || k)}</span>`).join('')}</div>
+      <div class="gw-bar"><i style="width:${yz}%"></i></div>
+      <div class="gw-set-f"><span>${c}/${n} tamamlandı</span><b>${dugme} →</b></div>
+    </button>`;
+  }).join('') + '</div>';
+}
+async function gwOpen(id) {
+  const run = document.getElementById('gw-run'); if (!run) return;
+  let row = null;
+  try { const { data } = await sb.from('gw_sets').select('*').eq('id', id).single(); row = data; } catch (e) {}
+  if (!row) { if (typeof uiAlert === 'function') uiAlert('Set açılamadı.'); return; }
+  GW.set = row; GW.parsed = ekParse(row.kaynak, { set: true });
+  const secs = ekBuildSections(GW.parsed, 'gw');
+  const k = GW.parsed.meta.kitap;
+  run.innerHTML = `<div class="gw-run-h">
+      <button class="works-back" onclick="gwBack()">← Alıştırma setleri</button>
+      <div class="gw-run-t"><span>${row.seviye ? ekEsc(row.seviye) + ' · ' : ''}Alıştırma seti</span><h2>${ekEsc(row.baslik)}</h2>
+        ${row.aciklama ? `<p>${ekEsc(row.aciklama)}</p>` : ''}</div>
+      <div class="gw-run-p"><div class="gw-bar"><i id="gw-run-bar"></i></div><span id="gw-run-say"></span>
+        ${k ? `<button class="ek-btn ghost sm" onclick="gwKural('')">📖 İlgili e-kitap ünitesi</button>` : ''}</div>
+    </div>
+    <div class="gw-run-b"><div class="gw-sheet" id="gw-sheet"></div>
+      <aside class="gw-side"><div class="gw-side-h">Kelime</div><div id="gw-word"><div class="ek-side-empty">Etkinliklerdeki bir Rusça kelimeye tıkla; bilgileri burada görünecek.</div></div></aside></div>`;
+  const sheet = document.getElementById('gw-sheet');
+  secs.forEach(s => {
+    const els = s.sec.tur === 'set' ? s.els.slice(1) : s.els;
+    if (s.sec.tur === 'anahtar') {
+      const d = ekEl('<details class="gw-key"><summary>Cevap anahtarı</summary><div class="gw-key-b"></div></details>');
+      els.slice(1).forEach(x => { if (x.el) d.querySelector('.gw-key-b').appendChild(x.el); });
+      sheet.appendChild(d); return;
+    }
+    els.forEach(x => { if (!x.pb && x.el) sheet.appendChild(x.el); });
+  });
+  const coz = GW.cozulen[row.id] || new Set();
+  sheet.querySelectorAll('.ek-act').forEach(el => { const r = EK_ACT[el.dataset.act]; if (r && coz.has(r.key)) el.classList.add('ek-cozuldu'); });
+  gwIlerleme();
+  document.getElementById('page-grammarworks').classList.add('gw-running');
+  run.style.display = '';
+  run.scrollIntoView({ block: 'start' }); window.scrollBy(0, -90);
+}
+function gwIlerleme() {
+  if (!GW.set) return;
+  const n = GW.parsed ? GW.parsed.actSay : 0, c = GW.cozulen[GW.set.id] ? GW.cozulen[GW.set.id].size : 0;
+  const bar = document.getElementById('gw-run-bar'), say = document.getElementById('gw-run-say');
+  if (bar) bar.style.width = (n ? Math.min(100, Math.round(c / n * 100)) : 0) + '%';
+  if (say) say.textContent = `${Math.min(c, n)}/${n} etkinlik tamamlandı`;
+}
+function gwLog(reg, id, dogru) {
+  if (!GW.set) return;
+  reg.cozuldu = reg.cozuldu || dogru;
+  const el = document.querySelector(`.ek-act[data-act="${id}"]`); if (el && dogru) el.classList.add('ek-cozuldu');
+  if (dogru) { (GW.cozulen[GW.set.id] = GW.cozulen[GW.set.id] || new Set()).add(reg.key); gwIlerleme(); }
+  if (typeof currentUser === 'undefined' || !currentUser || typeof sb === 'undefined') return;
+  sb.from('ek_answers').insert({ user_id: currentUser.id, set_id: GW.set.id, unit_id: null, act_key: reg.key, tip: reg.act.tip, konular: reg.act.konu || [], dogru: !!dogru }).then(() => {}, () => {});
+}
+function gwBack() {
+  const run = document.getElementById('gw-run'); if (run) { run.style.display = 'none'; run.innerHTML = ''; }
+  const pg = document.getElementById('page-grammarworks'); if (pg) pg.classList.remove('gw-running');
+  GW.set = null; gwFiltre();
+}
+
+/* ============================================================
    YÖNETİM: E-KİTAP EDİTÖRÜ
    ============================================================ */
-const EKA = { editId: null, topics: [], lastParse: null };
+const EKA = { editId: null, topics: [], lastParse: null, mode: 'unit' };
+const EKA_TBL = () => EKA.mode === 'set' ? 'gw_sets' : 'ek_units';
 
 async function ekAdmInit() {
   await ekTopicsFetch();
   ekAdmList();
 }
+function ekAdmTab(m) { EKA.mode = m; ekAdmList(); }
+function ekAdmTabsRender() {
+  const t = document.getElementById('ek-adm-tabs'); if (!t) return;
+  t.style.display = '';
+  t.innerHTML = `<button class="mail-tab ${EKA.mode === 'unit' ? 'active' : ''}" onclick="ekAdmTab('unit')">E-Kitap üniteleri</button>
+    <button class="mail-tab ${EKA.mode === 'set' ? 'active' : ''}" onclick="ekAdmTab('set')">Gramer Çalışmaları setleri</button>`;
+}
 async function ekAdmList() {
   const box = document.getElementById('ek-adm-list'); if (!box) return;
   document.getElementById('ek-adm-editor').style.display = 'none';
   box.style.display = '';
+  ekAdmTabsRender();
+  if (EKA.mode === 'set') return gwAdmList(box);
   box.innerHTML = '<div class="admin-loading">Yükleniyor...</div>';
   let rows = [];
   try { const { data } = await sb.from('ek_units').select('id, modul_no, modul_ad, unite_no, unite_ad, seviye, yayinda, kontrol_say, updated_at, toc').order('modul_no').order('unite_no'); rows = data || []; } catch (e) {}
@@ -1849,28 +2025,73 @@ async function ekAdmList() {
   });
   box.innerHTML = h;
 }
+async function gwAdmList(box) {
+  box.innerHTML = '<div class="admin-loading">Yükleniyor...</div>';
+  let rows = [];
+  try { const { data } = await sb.from('gw_sets').select('id, baslik, seviye, konular, act_say, kontrol_say, yayinda, updated_at, sort').order('sort').order('id'); rows = data || []; } catch (e) {}
+  let h = `<div class="mail-actions" style="margin-bottom:14px;"><button class="set-btn" onclick="ekAdmNew()">+ Yeni çalışma seti</button></div>`;
+  if (!rows.length) h += '<div class="profile-empty">Henüz çalışma seti yok. Setler Eğitim → Çalışmalar → Gramer Çalışmaları sayfasında görünür.</div>';
+  rows.forEach((r, i) => {
+    h += `<div class="cw-row">
+      <div class="cw-main"><b>${ekEsc(r.baslik)}</b> <span class="cw-cat">${ekEsc(r.seviye || '')}</span>
+        <span class="cw-cat" style="background:${r.yayinda ? '#dcfce7' : '#fef3c7'}">${r.yayinda ? 'Yayında' : 'Taslak'}</span>
+        ${r.kontrol_say ? `<span class="cw-cat" style="background:#fee2e2">${r.kontrol_say} etkinlik kontrol edilecek</span>` : ''}
+        <div class="err-meta">${r.act_say || 0} etkinlik · ${(r.konular || []).map(ekEsc).join(', ')} · son güncelleme ${new Date(r.updated_at).toLocaleString('tr-TR')}</div></div>
+      <div class="cw-acts">
+        <button class="mail-act" title="Yukarı" onclick="gwAdmMove(${r.id}, -1)" ${i === 0 ? 'disabled' : ''}>🔼</button>
+        <button class="mail-act" title="Aşağı" onclick="gwAdmMove(${r.id}, 1)" ${i === rows.length - 1 ? 'disabled' : ''}>🔽</button>
+        <button class="mail-act" onclick="ekAdmEdit(${r.id})">Düzenle</button>
+        <button class="mail-act" onclick="ekAdmToggle(${r.id}, ${!r.yayinda})">${r.yayinda ? 'Yayından kaldır' : 'Yayınla'}</button>
+        <button class="mail-act red" onclick="ekAdmDelete(${r.id})">Sil</button>
+      </div></div>`;
+  });
+  box.innerHTML = h;
+  EKA.setRows = rows;
+}
+async function gwAdmMove(id, yon) {
+  const rows = (EKA.setRows || []).slice(); const i = rows.findIndex(r => r.id === id), j = i + yon;
+  if (i < 0 || j < 0 || j >= rows.length) return;
+  [rows[i], rows[j]] = [rows[j], rows[i]];
+  try { for (let k = 0; k < rows.length; k++) if (rows[k].sort !== k) await sb.from('gw_sets').update({ sort: k }).eq('id', rows[k].id); } catch (e) {}
+  GW.loaded = false; ekAdmList();
+}
+const GW_SABLON = `@set Başlık (ör. Çoğul ekleri — 1. alıştırma)
+@seviye A1
+@konu isim-cogul
+@kitap 1.2
+@açıklama Kısa açıklama (liste kartında görünür)
+
+:::etkinlik bosluk
+yönerge: Parantezdeki ismi çoğul yapın.
+konu: isim-cogul
+kural: 1.1
+---
+1. На полке стоят {{книги}} (книга).
+:::
+`;
 function ekAdmOpenEditor(src, id) {
   EKA.editId = id || null;
+  const t = document.getElementById('ek-adm-tabs'); if (t) t.style.display = 'none';
   document.getElementById('ek-adm-list').style.display = 'none';
   document.getElementById('ek-adm-editor').style.display = '';
   document.getElementById('ek-src').value = src || '';
-  document.getElementById('ek-adm-title').textContent = id ? 'Üniteyi düzenle' : 'Yeni ünite';
+  document.getElementById('ek-adm-title').textContent = EKA.mode === 'set' ? (id ? 'Çalışma setini düzenle' : 'Yeni çalışma seti') : (id ? 'Üniteyi düzenle' : 'Yeni ünite');
   document.getElementById('ek-adm-report').innerHTML = '';
   document.getElementById('ek-adm-preview').innerHTML = '<div class="profile-empty">Önizleme için "Kontrol et ve önizle"ye bas.</div>';
 }
-function ekAdmNew() { ekAdmOpenEditor('', null); }
+function ekAdmNew() { ekAdmOpenEditor(EKA.mode === 'set' ? GW_SABLON : '', null); }
 async function ekAdmEdit(id) {
-  try { const { data } = await sb.from('ek_units').select('kaynak').eq('id', id).single(); ekAdmOpenEditor(data ? data.kaynak : '', id); }
-  catch (e) { uiAlert('Ünite açılamadı.'); }
+  try { const { data } = await sb.from(EKA_TBL()).select('kaynak').eq('id', id).single(); ekAdmOpenEditor(data ? data.kaynak : '', id); }
+  catch (e) { uiAlert('Açılamadı.'); }
 }
 function ekAdmCheck() {
   const src = document.getElementById('ek-src').value;
-  const p = ekParse(src); EKA.lastParse = p;
+  const p = ekParse(src, { set: EKA.mode === 'set' }); EKA.lastParse = p;
   const bilinen = new Set(EKA.topics.map(t => t.kod));
   const bilinmeyen = [...p.konular].filter(k => !bilinen.has(k));
   const rep = document.getElementById('ek-adm-report');
   let h = `<div class="ek-rep-sum">
-    <span>${p.sections.filter(s => s.tur === 'ders').length} ders</span><span>${p.actSay} etkinlik</span>
+    <span>${EKA.mode === 'set' ? 'Çalışma seti' : p.sections.filter(s => s.tur === 'ders').length + ' ders'}</span><span>${p.actSay} etkinlik</span>
     <span class="${p.errors.length ? 'bad' : 'good'}">${p.errors.length} hata</span><span>${p.warnings.length + bilinmeyen.length} uyarı</span>
     ${p.kontrolSay ? `<span class="warn">${p.kontrolSay} etkinlik kontrol edilecek</span>` : ''}</div>`;
   p.errors.forEach(x => { h += `<div class="ek-rep-row bad"><b>Satır ${x.ln}</b> ${ekEsc(x.msg)}</div>`; });
@@ -1880,7 +2101,8 @@ function ekAdmCheck() {
   // Önizleme (akışlı, sayfasız)
   const prev = document.getElementById('ek-adm-preview');
   prev.innerHTML = '';
-  ekBuildSections({ sections: p.sections }, 'admin').forEach(s => s.els.forEach(x => {
+  if (EKA.mode === 'set' && p.meta.baslik) prev.appendChild(ekEl(`<div class="ek-lesson-head ek-lesson-head-alt"><div><div class="ek-lesson-k">ÇALIŞMA SETİ</div><div class="ek-lesson-ad">${ekEsc(p.meta.baslik)}</div></div></div>`));
+  ekBuildSections({ sections: p.sections }, 'admin').forEach(s => (s.sec.tur === 'set' ? s.els.slice(1) : s.els).forEach(x => {
     if (x.pb) prev.appendChild(ekEl('<div class="ek-pb-mark">— elle sayfa sonu —</div>'));
     else prev.appendChild(x.el);
   }));
@@ -1894,6 +2116,7 @@ async function ekAdmSave(yayinla) {
   const p = ekAdmCheck();
   if (p.errors.length) { uiAlert('Önce ' + p.errors.length + ' hatayı düzeltmelisin (raporda satır numaralarıyla listelendi).'); return; }
   const src = document.getElementById('ek-src').value;
+  if (EKA.mode === 'set') return gwAdmSave(p, src, yayinla);
   const toc = p.sections.map(s => ({ tur: s.tur, no: s.no, ad: s.ad }));
   if (p.actSay) toc.push({ tur: 'anahtar', no: null, ad: 'Cevap anahtarı' });
   const row = {
@@ -1912,12 +2135,35 @@ async function ekAdmSave(yayinla) {
     EK.loaded = false; if (EK.unit && EK.unit.id === EKA.editId) { EK.unit = null; EK.pages = []; }
   } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
 }
+async function gwAdmSave(p, src, yayinla) {
+  const k = p.meta.kitap;
+  const row = { baslik: p.meta.baslik, aciklama: p.meta.aciklama || null, seviye: p.meta.seviye || null, konular: [...p.konular],
+    kitap_ref: k ? k.m + '.' + k.u : null, kaynak: src, act_say: p.actSay, kontrol_say: p.kontrolSay, updated_at: new Date().toISOString() };
+  if (yayinla !== undefined) row.yayinda = !!yayinla;
+  try {
+    let res;
+    if (EKA.editId) res = await sb.from('gw_sets').update(row).eq('id', EKA.editId).select('id').single();
+    else {
+      row.sort = (EKA.setRows || []).length;
+      res = await sb.from('gw_sets').insert(row).select('id').single();
+    }
+    if (res.error) throw res.error;
+    EKA.editId = res.data.id; GW.loaded = false;
+    toast(yayinla ? 'Çalışma seti kaydedildi ve yayınlandı.' : 'Çalışma seti taslak olarak kaydedildi.');
+  } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e) + ' (gramer_calismalari.sql çalıştırıldı mı?)'); }
+}
 async function ekAdmToggle(id, yayinda) {
-  try { await sb.from('ek_units').update({ yayinda }).eq('id', id); EK.loaded = false; ekAdmList(); } catch (e) {}
+  try { await sb.from(EKA_TBL()).update({ yayinda }).eq('id', id); EK.loaded = false; GW.loaded = false; ekAdmList(); } catch (e) {}
 }
 async function ekAdmDelete(id) {
-  if (!(await uiConfirm('Bu ünite ve tüm içeriği silinsin mi? Bu işlem geri alınamaz.', 'Üniteyi Sil', { danger: true }))) return;
-  try { await sb.from('ek_units').delete().eq('id', id); EK.loaded = false; if (EK.unit && EK.unit.id === id) EK.unit = null; ekAdmList(); } catch (e) {}
+  const set = EKA.mode === 'set';
+  if (!(await uiConfirm(set ? 'Bu çalışma seti ve öğrencilerin bu setteki cevap kayıtları silinsin mi? Bu işlem geri alınamaz.'
+                            : 'Bu ünite ve tüm içeriği silinsin mi? Bu işlem geri alınamaz.', set ? 'Seti Sil' : 'Üniteyi Sil', { danger: true }))) return;
+  try {
+    await sb.from(EKA_TBL()).delete().eq('id', id);
+    if (set) GW.loaded = false; else { EK.loaded = false; if (EK.unit && EK.unit.id === id) EK.unit = null; }
+    ekAdmList();
+  } catch (e) {}
 }
 function ekAdmInsert(txt) {
   const ta = document.getElementById('ek-src'); if (!ta) return;
@@ -2024,6 +2270,6 @@ async function ekTopicBulk() {
 }
 
 if (typeof window !== 'undefined') {
-  Object.assign(window, { ekOpen, ekAdmInit, ekAdmNew, ekAdmEdit, ekAdmCheck, ekAdmSave, ekAdmToggle, ekAdmDelete, ekAdmInsert,
+  Object.assign(window, { ekOpenRef, gwInit, gwOpen, gwBack, gwFiltre, gwSeviye, gwKural, gwAdmMove, ekAdmTab, ekOpen, ekAdmInit, ekAdmNew, ekAdmEdit, ekAdmCheck, ekAdmSave, ekAdmToggle, ekAdmDelete, ekAdmInsert,
     ekAdmImage, ekAdmCopyFormat, ekAdmList, ekTopicsInit, ekTopicSave, ekTopicDelete, ekTopicBulk, ekTopicEdit, ekParse });
 }
