@@ -529,6 +529,34 @@
 .gw-key-b { margin-top: 10px; }
 @media (max-width: 1000px) { .gw-run-b { grid-template-columns: 1fr; } .gw-side { position: static; } .gw-run-h { grid-template-columns: 1fr; } }
 @media (max-width: 700px) { .gw-sheet { padding: 16px 14px; } }
-/* Video Konu kartı → e-kitap */
-.sv-ek-btn { margin-top: 10px; }
+
+
 .ek-adm-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.ek-rep-row.good { background: #ecfdf3; color: #166534; }
+
+/* ---------- Yönetim: Özet notları ---------- */
+.oz-form { display: grid; grid-template-columns: 1.6fr 1fr; gap: 8px; margin-bottom: 8px; }
+.oz-form .pq-input { margin: 0; }
+.oz-tb { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; background: #f8f5ee; border: 1px solid #e3d9c5; border-bottom: 0; border-radius: 9px 9px 0 0; padding: 6px; }
+.oz-b { border: 1px solid #e3d9c5; background: #fff; border-radius: 6px; padding: 4px 9px; cursor: pointer; font-size: .85rem; min-width: 30px; }
+.oz-b:hover { border-color: var(--ek-gold); }
+.oz-c { font-weight: 800; }
+.oz-sep { width: 1px; height: 20px; background: #e3d9c5; margin: 0 4px; }
+.oz-govde { min-height: 150px; max-height: 420px; overflow-y: auto; border: 1px solid #e3d9c5; border-radius: 0 0 9px 9px; padding: 10px 12px; background: #fff; line-height: 1.6; outline: none; }
+.oz-govde:focus { border-color: var(--ek-gold); }
+.oz-govde:empty::before { content: attr(data-ph); color: #9ca3af; }
+.oz-liste-h { margin: 18px 0 8px; }
+.oz-liste-h .pq-input { margin: 0; max-width: 320px; }
+.oz-grup { font-weight: 700; color: var(--ek-navy); margin: 14px 0 6px; font-size: .9rem; }
+.oz-grup span { font-weight: 500; color: #6b7280; font-size: .8rem; margin-left: 4px; }
+.oz-row { border: 1px solid #ece4d3; border-radius: 10px; margin-bottom: 6px; background: #fff; }
+.oz-row.pasif { opacity: .6; }
+.oz-row-h { width: 100%; display: flex; gap: 8px; align-items: center; background: transparent; border: 0; padding: 9px 12px; cursor: pointer; text-align: left; font: inherit; }
+.oz-row-h b { flex: 1; color: var(--ek-navy); }
+.oz-row-h em { font-style: normal; font-size: .72rem; background: #fef3c7; color: #92400e; padding: 1px 6px; border-radius: 5px; }
+.oz-row-h span { color: #9ca3af; transition: transform .2s; }
+.oz-row.open .oz-row-h span { transform: rotate(180deg); }
+.oz-row-b, .oz-row-f { display: none; }
+.oz-row.open .oz-row-b { display: block; padding: 0 14px 8px; line-height: 1.6; font-size: .92rem; }
+.oz-row.open .oz-row-f { display: flex; gap: 6px; padding: 0 12px 10px; }
+@media (max-width: 800px) { .oz-form { grid-template-columns: 1fr; } }
