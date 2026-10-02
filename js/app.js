@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v136';
+var YDT_SURUM = 'v137';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -2076,9 +2076,6 @@ function _wShowCard(card, opts) {
 
   // Soru metni (checkpoint/quiz başlığı body'de değil, title'da; body varsa göster)
   if (card.body && card.card_type !== 'poll') inner += `<div class="sv-card-body">${card.body}</div>`;
-  if (card.card_type === 'topic' && card.ek_ref) {
-    inner += `<button class="set-btn sv-ek-btn" onclick="_wOpenEkRef('${_escAttr(card.ek_ref)}')">📖 E-kitapta aç</button>`;
-  }
   if (card.card_type === 'checkpoint' && card.title) {
     inner += `<div class="sv-card-body" style="font-weight:600;">${_escHtml(card.title)}</div>`;
   }
@@ -2593,12 +2590,6 @@ function _wPlayNext(idx) {
   setTimeout(() => openWatch(v), 600);
 }
 
-/* Video Konu kartından e-kitabın ilgili dersine git */
-function _wOpenEkRef(ref) {
-  const p = String(ref || '').split(':'); if (!p[0]) return;
-  try { _wSaveProgress(false); } catch (e) {}
-  if (typeof ekOpenRef === 'function') ekOpenRef(p[0], p[1]);
-}
 function closeWatch() {
   _wSaveProgress(false);
   _wCleanup();
@@ -6485,19 +6476,19 @@ async function adminVidStats(videoId, title) {
 }
 
 async function adminVidCards(videoId, title) {
-  let cards = [], ekUnits = [], vidRow = null, chapters = [];
+  let cards = [], ozNotlar = [], vidRow = null, chapters = [];
   try {
     const [c1, c2, c3, c4] = await Promise.all([
       sb.from('video_cards').select('*').eq('video_id', videoId).order('t_sec'),
-      sb.from('ek_units').select('id, modul_no, unite_no, unite_ad, toc').order('modul_no').order('unite_no').then(r => r, () => ({ data: [] })),
+      sb.from('ozet_notlar').select('id, baslik, konu').eq('aktif', true).order('konu', { nullsFirst: true }).order('sort').order('id').then(r => r, () => ({ data: [] })),
       sb.from('content_videos').select('duration_sec').eq('id', videoId).single().then(r => r, () => ({ data: null })),
       sb.from('video_chapters').select('id, t_sec, title').eq('video_id', videoId).order('t_sec').then(r => r, () => ({ data: [] }))
     ]);
-    cards = c1.data || []; ekUnits = c2.data || []; vidRow = c3.data; chapters = c4.data || [];
+    cards = c1.data || []; ozNotlar = c2.data || []; vidRow = c3.data; chapters = c4.data || [];
   } catch (e) {}
   _vcVideoDur = (vidRow && vidRow.duration_sec) || 0;
   _vcChapters = chapters;
-  _vcEditId = null; _vcEditRef = null;
+  _vcEditId = null;
 
   const TIP_AD = { info:'💡 Bilgi', quiz:'❓ Soru', poll:'📊 Anket', word:'🔤 Kelime', topic:'📖 Konu', checkpoint:'🚧 Kontrol Noktası' };
   const sureBilgi = _vcVideoDur
@@ -6545,15 +6536,13 @@ async function adminVidCards(videoId, title) {
         <div id="vc-word-picked" class="pq-hint"></div>
       </div>
 
-      <!-- 📖 Konu kartı: e-kitaptaki bir derse bağla -->
+      <!-- 📖 Konu kartı: özet notundan doldur -->
       <div id="vc-topic-alan" style="display:none;margin-bottom:8px;">
-        <select id="vc-ekref" class="pq-input" style="width:100%;">
-          <option value="">📖 E-kitaptaki bir derse bağla (isteğe bağlı)…</option>
-          ${ekUnits.map(u => `<optgroup label="Modül ${u.modul_no} · Ünite ${u.unite_no} — ${_escAttr(u.unite_ad || '')}">
-            ${(u.toc || []).map((t, si) => t.tur === 'anahtar' ? '' : `<option value="${u.id}:${si}">${t.tur === 'ders' ? 'Ders ' + t.no + ' · ' : ''}${_escHtml(t.ad || '')}</option>`).join('')}
-          </optgroup>`).join('')}
+        <select id="vc-oznot" class="pq-input" style="width:100%;" onchange="adminCardPickOzet(this.value)">
+          <option value="">📖 Özet notundan seç…</option>
+          ${ozNotlar.map(n => `<option value="${n.id}">${n.konu ? _escHtml(n.konu) + ' · ' : ''}${_escHtml(n.baslik)}</option>`).join('')}
         </select>
-        <p class="pq-hint">Seçersen öğrenci bu kartta <b>"E-kitapta aç"</b> butonunu görür ve kitabın o dersine gider.</p>
+        <p class="pq-hint">Seçtiğin notun başlığı ve metni aşağıdaki alanlara gelir; istersen düzenleyebilirsin. Notları Yönetim → Konu Yönetimi → Özet notları'ndan eklersin.</p>
       </div>
 
       <!-- Zengin metin editörü -->
@@ -6611,11 +6600,18 @@ async function adminVidCards(videoId, title) {
 }
 
 /* ✏️ Kart düzenleme — mevcut kartı forma yükler */
-let _vcEditRef = null;
+/* Konu kartı: özet notundan başlık + metin doldur */
+function adminCardPickOzet(id) {
+  if (!id) return;
+  sb.from('ozet_notlar').select('baslik, govde').eq('id', id).single().then(r => {
+    if (r && r.data) {
+      const t = document.getElementById('vc-title'); if (t) t.value = r.data.baslik || '';
+      const b = document.getElementById('vc-body'); if (b) b.innerHTML = r.data.govde || '';
+    }
+  }, () => {});
+}
 function adminVidCardEdit(cd, videoId, title) {
   _vcEditId = cd.id;
-  _vcEditRef = cd.ek_ref || null;
-  setTimeout(() => { const s = document.getElementById('vc-ekref'); if (s) s.value = cd.ek_ref || ''; }, 0);
   document.getElementById('vc-form-baslik').textContent = '✏️ Kartı Düzenle';
   document.getElementById('vc-save-btn').textContent = 'Güncelle';
   document.getElementById('vc-min').value = Math.floor(cd.t_sec / 60);
@@ -6796,11 +6792,6 @@ async function adminVidCardAdd(videoId, title) {
     uiAlert('Başlık veya metin gir.'); return;
   }
 
-  // Konu kartı → e-kitap bağlantısı (boşsa yalnız önceden bağlıysa temizle; sütun yoksa kaydı bozmasın)
-  if (tip === 'topic') {
-    const ekref = (document.getElementById('vc-ekref') || {}).value || '';
-    if (ekref) row.ek_ref = ekref; else if (_vcEditRef) row.ek_ref = null;
-  }
   try {
     let error;
     if (_vcEditId) {
@@ -6811,7 +6802,7 @@ async function adminVidCardAdd(videoId, title) {
     if (error) throw error;
     document.getElementById('vcard-modal').remove();
     toast(_vcEditId ? '✏️ Kart güncellendi.' : '🃏 Kart eklendi.');
-    _vcEditId = null; _vcEditRef = null;
+    _vcEditId = null;
     adminVidCards(videoId, title);
   } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
 }
