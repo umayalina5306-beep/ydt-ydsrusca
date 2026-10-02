@@ -49,8 +49,8 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=135">
-<link rel="stylesheet" href="css/ekitap.css?v=135">
+<link rel="stylesheet" href="css/style.css?v=136">
+<link rel="stylesheet" href="css/ekitap.css?v=136">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -73,7 +73,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=135" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=136" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -843,8 +843,22 @@
     <div class="works-back-row"><button class="works-back" onclick="learnNav('works')">← Çalışmalar</button></div>
     <div class="words-header"><div>
       <h2>Gramer <span>Çalışmaları</span></h2>
-      <p>Padej çekimleri, konu notları ve gramer alıştırmaları — YDS'nin kalbi burada.</p>
+      <p>Konu konu alıştırma setleri, padej çekimleri ve gramer oyunları — YDS'nin kalbi burada.</p>
     </div></div>
+
+    <!-- Çalışma setleri (e-kitap etkinlik motorlarıyla) -->
+    <div class="admin-notif-card gw-card">
+      <div class="gw-card-h">
+        <h3 class="an-h3" style="margin:0;">Alıştırma Setleri</h3>
+        <div class="gw-filtre">
+          <input id="gw-ara" class="pq-input" type="search" placeholder="Set ara…" autocomplete="off" data-lpignore="true" data-form-type="other" oninput="gwFiltre()">
+          <select id="gw-konu" class="pq-input" onchange="gwFiltre()"><option value="">Tüm konular</option></select>
+        </div>
+      </div>
+      <div id="gw-seviye" class="gw-seviye"></div>
+      <div id="gw-list"><div class="profile-empty">Yükleniyor...</div></div>
+    </div>
+    <div id="gw-run" class="gw-run" style="display:none;"></div>
 
     <div class="admin-notif-card">
       <h3 class="an-h3">📐 Padej Çekim Laboratuvarı</h3>
@@ -861,11 +875,6 @@
       <div id="pl-quiz"></div>
     </div>
 
-    <div class="admin-notif-card">
-      <h3 class="an-h3">📖 Gramer Notları</h3>
-      <p class="pq-hint">Konu konu kısa notlar — başlığa tıklayınca açılır.</p>
-      <div id="gn-site-list"><div class="profile-empty">Yükleniyor...</div></div>
-    </div>
 
     <div class="admin-notif-card">
       <h3 class="an-h3">🎮 НСВ/СВ Eşleştirme Oyunu</h3>
@@ -1367,7 +1376,6 @@
           <button class="psb-item" id="asb-pquest" onclick="adminNav('pquest')"><span class="psb-ic">📖</span> Paragraf Soruları</button>
           <button class="psb-item" id="asb-videos" onclick="adminNav('videos')"><span class="psb-ic">🎬</span> Videolar</button>
           <button class="psb-item" id="asb-recs" onclick="adminNav('recs')"><span class="psb-ic">⭐</span> Öneriler</button>
-          <button class="psb-item" id="asb-grammar" onclick="adminNav('grammar')"><span class="psb-ic">📖</span> Gramer Notları</button>
           <button class="psb-item" id="asb-ekitap" onclick="adminNav('ekitap')"><span class="psb-ic">📘</span> E-Kitap</button>
           <button class="psb-item" id="asb-topics" onclick="adminNav('topics')"><span class="psb-ic">🗂️</span> Konu Yönetimi</button>
           <button class="psb-item" id="asb-kurumlar" onclick="adminNav('kurumlar')"><span class="psb-ic">🏫</span> Kurumlar</button>
@@ -1777,7 +1785,8 @@
 
         <div id="av-ekitap" class="admin-view" style="display:none;">
           <h2 class="profile-h2">E-Kitap</h2>
-          <p class="profile-sub">Üniteleri içerik formatında yapıştır, kontrol et, önizle ve yayınla. Tüm içerik buradan düzenlenir.</p>
+          <p class="profile-sub">E-kitap ünitelerini ve Gramer Çalışmaları setlerini içerik formatında yapıştır, kontrol et, önizle ve yayınla.</p>
+          <div id="ek-adm-tabs" class="ek-adm-tabs"></div>
           <div id="ek-adm-list"></div>
           <div id="ek-adm-editor" style="display:none;">
             <div class="ek-adm-top">
@@ -1831,64 +1840,7 @@
             <div id="ek-topics-list"></div>
           </div>
         </div>
-        <div id="av-grammar" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Gramer Notları</h2>
-          <p class="profile-sub">Konu anlatımı kartları. Alıştırmalar sayfasında öğrencilere görünür.</p>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">✏️ Not Ekle / Düzenle</h3>
-            <input type="hidden" id="gr-id">
-            <div class="pq-row2">
-              <input id="gr-title" class="pq-input" placeholder="Başlık *" autocomplete="off" data-lpignore="true" data-form-type="other">
-              <select id="gr-level" class="pq-input pq-level"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
-              <select id="gr-cat" class="pq-input"><option value="genel">Genel</option><option value="padej">Padej</option><option value="fiil">Fiiller</option><option value="cümle">Cümle Yapısı</option></select>
-            </div>
-            <div class="rte-bar">
-              <button type="button" class="rte-btn" onclick="grRte('bold')"><b>K</b></button>
-              <button type="button" class="rte-btn" onclick="grRte('italic')"><i>İ</i></button>
-              <button type="button" class="rte-btn" onclick="grRte('underline')"><u>A</u></button>
-              <span class="rte-sep"></span>
-              <button type="button" class="rte-btn" onclick="grRte('insertUnorderedList')">• —</button>
-              <button type="button" class="rte-btn" onclick="grRte('insertOrderedList')">1. —</button>
-              <label class="rte-color">🅰️<input type="color" onchange="grRte('foreColor', this.value)"></label>
-            </div>
-            <div id="gr-body" class="rte-area" contenteditable="true" data-ph="Konu anlatımı... (kalın, liste, renk kullanabilirsin)"></div>
-            <button class="set-btn" id="gr-save-btn" onclick="adminGrSave()">Not Ekle</button>
-            <button class="set-btn ghost" onclick="adminGrClear()" style="margin-left:8px;">Temizle</button>
-          </div>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">📋 Not Listesi</h3>
-            <div id="gr-list"><div class="profile-empty">Yükleniyor...</div></div>
-          </div>
-        </div>
 
-        <div id="av-grammar" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Gramer Notları</h2>
-          <p class="profile-sub">Sitedeki Gramer Merkezi'nde görünen konu kartları. Değişiklikler anında yayına girer.</p>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">✏️ Not Ekle / Düzenle</h3>
-            <input type="hidden" id="gn-id">
-            <input id="gn-title" class="pq-input" placeholder="Konu başlığı (örn: Р.п. ne zaman kullanılır?)" style="margin-bottom:8px;">
-            <div class="rte-bar">
-              <button type="button" class="rte-btn" onclick="rteFor('gn-body','bold')"><b>K</b></button>
-              <button type="button" class="rte-btn" onclick="rteFor('gn-body','italic')"><i>İ</i></button>
-              <button type="button" class="rte-btn" onclick="rteFor('gn-body','underline')"><u>A</u></button>
-              <span class="rte-sep"></span>
-              <label class="rte-color">🅰️<input type="color" onchange="rteFor('gn-body','foreColor', this.value)"></label>
-              <label class="rte-color">🖍️<input type="color" onchange="rteFor('gn-body','hiliteColor', this.value)"></label>
-              <span class="rte-sep"></span>
-              <button type="button" class="rte-btn" onclick="rteFor('gn-body','insertUnorderedList')">• —</button>
-              <button type="button" class="rte-btn" onclick="rteFor('gn-body','insertOrderedList')">1. —</button>
-              <button type="button" class="rte-btn" onclick="rteFor('gn-body','removeFormat')">🧹</button>
-            </div>
-            <div id="gn-body" class="rte-area" contenteditable="true" data-ph="Konu anlatımı... (tablolar için madde listesi kullan)"></div>
-            <div><button class="set-btn" id="gn-save-btn" onclick="adminGnSave()">Not Ekle</button>
-            <button class="set-btn ghost" style="margin-left:8px;" onclick="adminGnClear()">Temizle</button></div>
-          </div>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">📋 Not Listesi</h3>
-            <div id="gn-list"><div class="profile-empty">Yükleniyor...</div></div>
-          </div>
-        </div>
 
         <div id="av-kurumlar" class="admin-view" style="display:none;">
           <h2 class="profile-h2">Kurumlar</h2>
@@ -2208,13 +2160,13 @@
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=135"></script>
-<script defer src="js/auth.js?v=135"></script>
-<script defer src="js/admin.js?v=135"></script>
-<script defer src="js/profile.js?v=135"></script>
-<script defer src="js/extras.js?v=135"></script>
-<script defer src="js/app.js?v=135"></script>
-<script defer src="js/ekitap.js?v=135"></script>
+<script defer src="js/supabase-config.js?v=136"></script>
+<script defer src="js/auth.js?v=136"></script>
+<script defer src="js/admin.js?v=136"></script>
+<script defer src="js/profile.js?v=136"></script>
+<script defer src="js/extras.js?v=136"></script>
+<script defer src="js/app.js?v=136"></script>
+<script defer src="js/ekitap.js?v=136"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
