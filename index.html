@@ -49,8 +49,8 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=137">
-<link rel="stylesheet" href="css/ekitap.css?v=137">
+<link rel="stylesheet" href="css/style.css?v=138">
+<link rel="stylesheet" href="css/ekitap.css?v=138">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -73,7 +73,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=137" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=138" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -1809,7 +1809,7 @@
                 <div id="ek-adm-report" class="ek-rep"></div>
               </div>
               <div class="ek-adm-col">
-                <div class="ek-adm-prev-h">Önizleme</div>
+                <div class="ek-adm-prev-h">Önizleme <span class="ek-pd-tabs"><button class="mail-tab active" data-v="akis" onclick="ekAdmGorunum('akis')">Akış</button><button class="mail-tab" data-v="sayfa" onclick="ekAdmGorunum('sayfa')">Sayfa düzeni</button></span></div>
                 <div id="ek-adm-preview" class="ek-adm-preview"></div>
               </div>
             </div>
@@ -2192,13 +2192,13 @@
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=137"></script>
-<script defer src="js/auth.js?v=137"></script>
-<script defer src="js/admin.js?v=137"></script>
-<script defer src="js/profile.js?v=137"></script>
-<script defer src="js/extras.js?v=137"></script>
-<script defer src="js/app.js?v=137"></script>
-<script defer src="js/ekitap.js?v=137"></script>
+<script defer src="js/supabase-config.js?v=138"></script>
+<script defer src="js/auth.js?v=138"></script>
+<script defer src="js/admin.js?v=138"></script>
+<script defer src="js/profile.js?v=138"></script>
+<script defer src="js/extras.js?v=138"></script>
+<script defer src="js/app.js?v=138"></script>
+<script defer src="js/ekitap.js?v=138"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
