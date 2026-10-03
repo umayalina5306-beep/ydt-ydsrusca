@@ -113,7 +113,8 @@ function ekParse(src, opt) {
   const res = { meta: {}, sections: [], errors: [], warnings: [], konular: new Set(), kontrolSay: 0, actSay: 0, bolumNo: new Set(), kuralRef: [] };
   const err = (ln, msg) => res.errors.push({ ln, msg });
   const warn = (ln, msg) => res.warnings.push({ ln, msg });
-  let sec = null, i = 0;
+  let sec = null, i = 0, curLn = 1;
+  const P = b => { if (b && b.ln == null) b.ln = curLn; sec.blocks.push(b); };
   const ensureSec = (ln) => {
     if (!sec) {
       if (!opt.set) warn(ln, 'İçerik bir "# Ders N | Ad" başlığından önce başlıyor; "Giriş" bölümü olarak eklendi.');
@@ -123,7 +124,7 @@ function ekParse(src, opt) {
     }
   };
   while (i < lines.length) {
-    const raw = lines[i], line = raw.trim(), ln = i + 1;
+    const raw = lines[i], line = raw.trim(), ln = i + 1; curLn = ln;
     if (!line) { i++; continue; }
     // Ünite üst bilgileri
     let mm;
@@ -147,14 +148,14 @@ function ekParse(src, opt) {
     if (/^#\s/.test(line)) { err(ln, 'Tanınmayan bölüm başlığı. Biçim: "# Ders 1 | Ad" veya "# Özet | Ad", "# Okuma | Ad", "# Test | Ad".'); i++; continue; }
     ensureSec(ln);
     // Sayfa sonu
-    if (/^---\s*sayfa\s*---$/i.test(line)) { sec.blocks.push({ t: 'pagebreak' }); i++; continue; }
+    if (/^---\s*sayfa\s*---$/i.test(line)) { P({ t: 'pagebreak' }); i++; continue; }
     // Başlıklar
     if ((mm = line.match(/^##\s+(\d+(?:\.\d+)*)\s+(.+)$/))) {
       if (res.bolumNo.has(mm[1])) warn(ln, 'Bölüm numarası ' + mm[1] + ' tekrar kullanılmış.');
-      res.bolumNo.add(mm[1]); sec.blocks.push({ t: 'h2', no: mm[1], text: mm[2].trim() }); i++; continue;
+      res.bolumNo.add(mm[1]); P({ t: 'h2', no: mm[1], text: mm[2].trim() }); i++; continue;
     }
-    if ((mm = line.match(/^##\s+(.+)$/))) { sec.blocks.push({ t: 'h2', no: '', text: mm[1].trim() }); i++; continue; }
-    if ((mm = line.match(/^###\s+(.+)$/))) { sec.blocks.push({ t: 'h3', text: mm[1].trim() }); i++; continue; }
+    if ((mm = line.match(/^##\s+(.+)$/))) { P({ t: 'h2', no: '', text: mm[1].trim() }); i++; continue; }
+    if ((mm = line.match(/^###\s+(.+)$/))) { P({ t: 'h3', text: mm[1].trim() }); i++; continue; }
     // ::: blokları
     if ((mm = line.match(/^:::\s*([^\s]+)\s*(.*)$/))) {
       const tip = mm[1].toLowerCase().replace(/altin$/, 'altın').replace(/^ornek$/, 'örnek');
@@ -165,7 +166,7 @@ function ekParse(src, opt) {
       if (!EK_BLOKLAR.has(tip)) { err(ln, 'Tanınmayan blok türü: ":::' + mm[1] + '".'); i = j + 1; continue; }
       if (tip === 'etkinlik') {
         const act = ekParseAct(rest, body, ln, res);
-        if (act) { sec.blocks.push(act); res.actSay++; if (act.kontrol) res.kontrolSay++; (act.konu || []).forEach(k => res.konular.add(k)); }
+        if (act) { P(act); res.actSay++; if (act.kontrol) res.kontrolSay++; (act.konu || []).forEach(k => res.konular.add(k)); }
       } else if (tip === 'kartlar') {
         const cards = []; let cur = null;
         body.forEach(l => {
@@ -178,33 +179,33 @@ function ekParse(src, opt) {
           else if (cur) { if (cur.arka) cur.arka += ' ' + s; else cur.on += ' ' + s; }
         });
         if (cur) cards.push(cur);
-        sec.blocks.push({ t: 'kartlar', cards });
+        P({ t: 'kartlar', cards });
       } else if (tip === 'kutular') {
         const kutular = body.map(l => l.trim()).filter(Boolean).map(l => {
           const q = l.match(/^\[(мн|м|ж|с)\]\s*(.*)$/); if (!q) return null;
           const p = q[2].split('|').map(x => x.trim());
           return { c: EK_CINS[q[1]], baslik: p[0] || '', aciklama: p[1] || '', ornek: p.slice(2) };
         }).filter(Boolean);
-        sec.blocks.push({ t: 'kutular', kutular });
+        P({ t: 'kutular', kutular });
       } else if (tip === 'kelimeler') {
         const kel = body.map(l => l.trim()).filter(Boolean).map(l => { const p = l.split('|').map(x => x.trim()); return { ic: p[0] || '', ru: p[1] || '', tr: p[2] || '' }; });
-        sec.blocks.push({ t: 'kelimeler', kel });
+        P({ t: 'kelimeler', kel });
       } else if (tip === 'örnek') {
         const ornek = body.map(l => l.trim()).filter(Boolean).map(l => { const k = l.indexOf(' = '); return k > -1 ? { ru: l.slice(0, k).trim(), tr: l.slice(k + 3).trim() } : { ru: l, tr: '' }; });
-        sec.blocks.push({ t: 'ornek', ornek });
+        P({ t: 'ornek', ornek });
       } else {
-        sec.blocks.push({ t: 'kutu', tur: tip, baslik: rest || EK_KUTULAR[tip], body: ekParseSimple(body) });
+        P({ t: 'kutu', tur: tip, baslik: rest || EK_KUTULAR[tip], body: ekParseSimple(body) });
       }
       i = j + 1; continue;
     }
     // Düz içerik (paragraf, liste, tablo, görsel) — bir sonraki özel satıra kadar
-    const chunk = [];
+    const chunk = [], chunkLn = i + 1;
     while (i < lines.length) {
       const s = lines[i].trim();
       if (/^(#|@|:::|---\s*sayfa)/i.test(s)) break;
       chunk.push(lines[i]); i++;
     }
-    ekParseSimple(chunk).forEach(b => sec.blocks.push(b));
+    ekParseSimple(chunk, chunkLn).forEach(b => P(b));
   }
   // Doğrulamalar
   if (opt.set) {
@@ -226,9 +227,10 @@ function ekParse(src, opt) {
 }
 
 /* Paragraf / liste / tablo / görsel */
-function ekParseSimple(lines) {
-  const out = []; let para = [], list = null;
-  const flushP = () => { if (para.length) { out.push({ t: 'p', text: para.join(' ') }); para = []; } };
+function ekParseSimple(lines, baseLn) {
+  const out = []; let para = [], list = null, pBas = 0;
+  const L = k => baseLn ? baseLn + k : undefined;
+  const flushP = () => { if (para.length) { out.push({ t: 'p', text: para.join(' '), ln: L(pBas) }); para = []; } };
   const flushL = () => { if (list) { out.push(list); list = null; } };
   for (let k = 0; k < lines.length; k++) {
     const s = lines[k].trim();
@@ -236,18 +238,18 @@ function ekParseSimple(lines) {
     let m;
     if (s.startsWith('|')) {
       flushP(); flushL();
-      const rows = [];
+      const rows = [], tBas = k;
       while (k < lines.length && lines[k].trim().startsWith('|')) {
         const r = lines[k].trim();
         if (!/^\|[\s:|-]+\|?$/.test(r)) rows.push(r.replace(/^\||\|$/g, '').split('|').map(c => c.trim()));
         k++;
       }
-      k--; out.push({ t: 'table', rows }); continue;
+      k--; out.push({ t: 'table', rows, ln: L(tBas) }); continue;
     }
-    if ((m = s.match(/^!\[([^\]]*)\]\(([^)]+)\)$/))) { flushP(); flushL(); out.push({ t: 'img', alt: m[1], src: m[2] }); continue; }
-    if ((m = s.match(/^[-•]\s+(.*)$/))) { flushP(); if (!list || list.t !== 'ul') { flushL(); list = { t: 'ul', items: [] }; } list.items.push(m[1]); continue; }
-    if ((m = s.match(/^\d+\.\s+(.*)$/))) { flushP(); if (!list || list.t !== 'ol') { flushL(); list = { t: 'ol', items: [] }; } list.items.push(m[1]); continue; }
-    flushL(); para.push(s);
+    if ((m = s.match(/^!\[([^\]]*)\]\(([^)]+)\)$/))) { flushP(); flushL(); out.push({ t: 'img', alt: m[1], src: m[2], ln: L(k) }); continue; }
+    if ((m = s.match(/^[-•]\s+(.*)$/))) { flushP(); if (!list || list.t !== 'ul') { flushL(); list = { t: 'ul', items: [], ln: L(k) }; } list.items.push(m[1]); continue; }
+    if ((m = s.match(/^\d+\.\s+(.*)$/))) { flushP(); if (!list || list.t !== 'ol') { flushL(); list = { t: 'ol', items: [], ln: L(k) }; } list.items.push(m[1]); continue; }
+    flushL(); if (!para.length) pBas = k; para.push(s);
   }
   flushP(); flushL();
   return out;
@@ -1000,10 +1002,12 @@ function ekShellHTML() {
               <button class="ek-tool active" data-ek="tool" data-v="sec" title="Seç"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 2-2 6z"/></svg><span>Seç</span></button>
               <button class="ek-tool" data-ek="tool" data-v="hl" title="Fosforla"><svg viewBox="0 0 24 24"><path d="M4 20h8"/><path d="M14.5 4.5l5 5L10 19H5v-5z"/></svg><span>Fosforla</span></button>
               <button class="ek-tool" data-ek="tool" data-v="ul" title="Altı Çiz"><svg viewBox="0 0 24 24"><path d="M7 4v7a5 5 0 0 0 10 0V4"/><line x1="5" y1="20" x2="19" y2="20"/></svg><span>Altı Çiz</span></button>
+              <button class="ek-tool" data-ek="tool" data-v="pen" title="Kalem"><svg viewBox="0 0 24 24"><path d="M4 20l1.5-5L16 4.5a2.1 2.1 0 0 1 3 3L8.5 18z"/><path d="M14 6.5l3 3"/><path d="M4 20l4.5-1.5"/></svg><span>Kalem</span></button>
               <button class="ek-tool" data-ek="tool" data-v="note" title="Not Ekle"><svg viewBox="0 0 24 24"><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5"/></svg><span>Not Ekle</span></button>
               <button class="ek-tool" data-ek="tool" data-v="erase" title="Silgi"><svg viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M16.5 3.5l4 4L10 18l-5-5z"/></svg><span>Silgi</span></button>
               <span class="ek-tb-sep"></span>
               <span class="ek-colors">
+                <button class="ek-color" data-ek="color" data-v="k" style="--c:#1e293b" title="Koyu (kalem)"></button>
                 <button class="ek-color active" data-ek="color" data-v="y" style="--c:#fcd34d" title="Sarı"></button>
                 <button class="ek-color" data-ek="color" data-v="p" style="--c:#f9a8d4" title="Pembe"></button>
                 <button class="ek-color" data-ek="color" data-v="g" style="--c:#86efac" title="Yeşil"></button>
@@ -1174,14 +1178,14 @@ function ekBuildSections(parsed, scope) {
   });
   if (anahtar.length) secs.push({ tur: 'anahtar', ad: 'Cevap anahtarı', blocks: anahtar });
   const out = secs.map((s, si) => {
-    const tEl = ekBlockEl({ t: 'sectitle' }, s, si); tEl.dataset.bid = si + '-t';
+    const tEl = ekBlockEl({ t: 'sectitle' }, s, si); tEl.dataset.bid = si + '-t'; if (s.ln) tEl.dataset.ln = s.ln;
     const els = [{ el: tEl, pb: false }];
     let actNo = 0;
     s.blocks.forEach((b, bi) => {
-      if (b.t === 'pagebreak') { els.push({ pb: true }); return; }
+      if (b.t === 'pagebreak') { els.push({ pb: true, ln: b.ln }); return; }
       if (b.t === 'act') _ekCurKey = 's' + si + 'a' + (actNo++);
       const el = ekBlockEl(b, s, si);
-      if (el) { el.dataset.bid = si + '-' + bi; els.push({ el, pb: false }); }
+      if (el) { el.dataset.bid = si + '-' + bi; if (b.ln) el.dataset.ln = b.ln; els.push({ el, pb: false }); }
     });
     return { sec: s, els };
   });
@@ -1372,7 +1376,7 @@ function ekTopTab(v) {
    İşaretlemeler içerik bloğuna (data-bid) + blok içi metin konumuna bağlanır;
    zoom/ekran boyutu değişse de yerinde kalır.
    ============================================================ */
-const EK_RENK = { y: '#fde68a', p: '#fbcfe8', g: '#bbf7d0', b: '#bfdbfe' };
+const EK_RENK = { y: '#fde68a', p: '#fbcfe8', g: '#bbf7d0', b: '#bfdbfe', k: '#cbd5e1' };
 function ekBidMap() {
   EK.bid = {};
   EK.sections.forEach(s => s.els.forEach(x => { if (x.el && x.el.dataset.bid) EK.bid[x.el.dataset.bid] = x.el; }));
@@ -1413,13 +1417,14 @@ function ekWrapRange(block, s, e, ann) {
 function ekAnnRender() {
   if (!EK.bid) return;
   Object.values(EK.bid).forEach(bl => {
-    bl.querySelectorAll('.ek-sticky').forEach(x => x.remove());
+    bl.querySelectorAll('.ek-sticky, .ek-pen').forEach(x => x.remove());
     bl.querySelectorAll('.ek-ann').forEach(sp => sp.replaceWith(...sp.childNodes));
     bl.normalize();
   });
   (EK.ann || []).forEach(a => {
     const bl = EK.bid[a.bid]; if (!bl) return;
     if (a.type === 'st') { bl.appendChild(ekStickyEl(a)); return; }
+    if (a.type === 'pen') { bl.appendChild(ekPenSvg(a)); return; }
     const metin = ekTextNodes(bl).map(n => n.nodeValue).join('');
     let s = a.s, e = a.e;
     if (metin.slice(s, e) !== a.txt) { const i = metin.indexOf(a.txt); if (i < 0) return; s = i; e = i + a.txt.length; }
@@ -1466,7 +1471,8 @@ function ekSetTool(v) {
   EK.tool = v;
   document.querySelectorAll('.ek-tool').forEach(b => b.classList.toggle('active', b.dataset.v === v));
   const bk = document.getElementById('ek-book'); if (bk) bk.className = bk.className.replace(/\bek-tool-\w+/g, '').trim() + ' ek-tool-' + v;
-  const ipucu = { hl: 'Fosforlamak istediğin metni fareyle seç.', ul: 'Altını çizmek istediğin metni fareyle seç.', note: 'Notu bırakmak istediğin yere tıkla.', erase: 'Silmek istediğin işarete veya nota tıkla.' }[v];
+  if (v === 'pen' && EK.color === 'y') ekSetColor('k');
+  const ipucu = { pen: 'Sayfanın üzerine çiz. Bitince Seç aracına dön.', hl: 'Fosforlamak istediğin metni fareyle seç.', ul: 'Altını çizmek istediğin metni fareyle seç.', note: 'Notu bırakmak istediğin yere tıkla.', erase: 'Silmek istediğin işarete veya nota tıkla.' }[v];
   if (ipucu && typeof toast === 'function') toast(ipucu);
 }
 function ekSetColor(v) { EK.color = v; document.querySelectorAll('.ek-color').forEach(b => b.classList.toggle('active', b.dataset.v === v)); }
@@ -1495,8 +1501,8 @@ document.addEventListener('mouseup', function (e) {
 function ekBookClick(e) {
   const book = document.getElementById('ek-book'); if (!book || !book.contains(e.target)) return false;
   if (EK.tool === 'erase') {
-    const sp = e.target.closest('.ek-ann'), st = e.target.closest('.ek-sticky');
-    const id = sp ? sp.dataset.aid : (st ? st.dataset.sid : null);
+    const sp = e.target.closest('.ek-ann'), st = e.target.closest('.ek-sticky'), pn = e.target.closest('.ek-pen-p');
+    const id = sp ? sp.dataset.aid : (st ? st.dataset.sid : (pn ? pn.dataset.aid : null));
     if (id) { ekAnnPush(); EK.ann = EK.ann.filter(a => a.id !== id); ekAnnRender(); ekAnnSave(); }
     return true;
   }
@@ -1738,6 +1744,8 @@ document.addEventListener('pointerup', function (e) {
 
 /* ---------- Olay yönetimi (tek dinleyici) ---------- */
 document.addEventListener('click', function (e) {
+  const pdB = e.target.closest('#ek-pd-grid .ek-pg-body > [data-ln]');
+  if (pdB && !e.target.closest('.ek-pd-x')) ekPdSec(pdB);
   const t = e.target.closest('[data-ek]');
   if (t) {
     const a = t.dataset.ek;
@@ -1852,6 +1860,138 @@ window.addEventListener('resize', function () {
     if (pg && pg.classList.contains('active') && EK.pages.length) { ekPaginate(); ekGoPage(EK.cur); }
   }, 250);
 });
+
+/* ---------- Yönetim: Sayfa düzeni görünümü (elle sayfa sonu düzenleme) ---------- */
+const EK_ONAYAR = [
+  { k: 'genis', ad: 'Geniş ekran (~1920 px)', w: 660, h: 830 },
+  { k: 'masa', ad: 'Masaüstü (~1600 px)', w: 500, h: 750 },
+  { k: 'dizustu', ad: 'Dizüstü (~1366 px)', w: 383, h: 520, dar: true }
+];
+function ekAdmGorunum(v) {
+  EKA.gorunum = v;
+  document.querySelectorAll('.ek-pd-tabs .mail-tab').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+  ekAdmCheck();
+}
+function ekAdmSayfalar(p) {
+  const prev = document.getElementById('ek-adm-preview'); if (!prev) return;
+  const oa = EK_ONAYAR.find(x => x.k === EKA.onayar) || EK_ONAYAR[1];
+  const secs = ekBuildSections({ sections: p.sections }, 'admin');
+  prev.classList.add('ek-pd-mod');
+  prev.innerHTML = `<div class="ek-pd-bar">
+      <select class="pq-input" onchange="EKA.onayar=this.value; ekAdmCheck()">${EK_ONAYAR.map(o => `<option value="${o.k}"${o.k === oa.k ? ' selected' : ''}>${o.ad}</option>`).join('')}</select>
+      <span class="ek-pd-not">Otomatik sayfa sonları ekran boyutuna göre değişir; <b>elle eklenen</b> sayfa sonları her ekranda geçerlidir.</span></div>
+    <div class="ek-pd-sec" id="ek-pd-sec">Düzenlemek için bir bloğa tıkla.</div>
+    <div class="ek-wrap ek-pd-wrap${oa.dar ? ' ek-narrow' : ''}" style="--ek-pg-h:${oa.h}px;--ek-fs:1">
+      <div class="ek-pd-grid" id="ek-pd-grid"></div><div class="ek-measure" id="ek-pd-meas"></div></div>`;
+  const meas = document.getElementById('ek-pd-meas'), grid = document.getElementById('ek-pd-grid');
+  meas.style.width = oa.w + 'px';
+  const bas = `Modül ${p.meta.modul_no || ''} · Ünite ${p.meta.unite_no || ''} — ${p.meta.unite_ad || p.meta.baslik || ''}`;
+  const sayfalar = []; let pg = null, body = null;
+  const yeni = (neden, ln, ad) => {
+    pg = ekEl(`<div class="ek-page"><div class="ek-pg-head"><span>${ekEsc(bas)}</span><span class="ek-pg-no"></span></div><div class="ek-pg-body"></div></div>`);
+    body = pg.querySelector('.ek-pg-body'); meas.appendChild(pg); sayfalar.push({ pg, neden, ln, ad });
+  };
+  secs.forEach(s => {
+    yeni('bolum', null, s.sec.tur === 'ders' ? 'Ders ' + s.sec.no : s.sec.ad);
+    s.els.forEach(x => {
+      if (x.pb) { if (body.children.length) yeni('elle', x.ln); return; }
+      body.appendChild(x.el);
+      if (body.scrollHeight > body.clientHeight + 2 && body.children.length > 1) { body.removeChild(x.el); yeni('oto'); body.appendChild(x.el); }
+      if (body.children.length === 1 && body.scrollHeight > body.clientHeight + 2) x.el.classList.add('ek-tall');
+    });
+  });
+  const z = Math.min(1, Math.max(0.3, (grid.clientWidth - 16) / (2 * oa.w + 16)));
+  sayfalar.forEach((s, k) => {
+    s.pg.querySelector('.ek-pg-no').textContent = k + 1;
+    s.pg.style.width = oa.w + 'px';
+    const etiket = s.neden === 'bolum' ? `Yeni bölüm: ${ekEsc(s.ad)}` : s.neden === 'elle'
+      ? `Elle sayfa sonu <button class="ek-pd-x" onclick="ekPdKaldir(${s.ln})" title="Bu sayfa sonunu kaldır">Kaldır</button>` : 'Otomatik';
+    const kap = ekEl(`<div class="ek-pd-pg"><div class="ek-pd-lbl ek-pd-${s.neden}"><b>Sayfa ${k + 1}</b> · ${etiket}</div><div class="ek-pd-z" style="zoom:${z}"></div></div>`);
+    kap.querySelector('.ek-pd-z').appendChild(s.pg);
+    grid.appendChild(kap);
+  });
+  meas.remove();
+  if (EKA.secLn) { const el = grid.querySelector(`.ek-pg-body > [data-ln="${EKA.secLn}"]`); if (el) ekPdSec(el, true); }
+}
+function ekPdSec(el, sessiz) {
+  document.querySelectorAll('#ek-pd-grid .ek-pd-sel').forEach(x => x.classList.remove('ek-pd-sel'));
+  el.classList.add('ek-pd-sel'); EKA.secLn = +el.dataset.ln;
+  const ilk = el.parentElement.firstElementChild === el, baslik = /-t$/.test(el.dataset.bid || '');
+  const bar = document.getElementById('ek-pd-sec'); if (!bar) return;
+  bar.innerHTML = `<b>Seçili blok</b> · kaynak satırı ${el.dataset.ln}
+    ${ilk || baslik ? '<span class="ek-pd-not">(zaten sayfanın başında)</span>' : `<button class="mail-act" onclick="ekPdBol(${el.dataset.ln})">Bu bloktan yeni sayfa başlat</button>`}
+    <button class="mail-act" onclick="ekPdGoster(${el.dataset.ln})">Kaynakta göster</button>`;
+  if (!sessiz) bar.scrollIntoView({ block: 'nearest' });
+}
+function ekPdKaynak(fn) {
+  const ta = document.getElementById('ek-src'); if (!ta) return;
+  const L = ta.value.split('\n'); fn(L); ta.value = L.join('\n'); ekAdmCheck();
+}
+function ekPdBol(ln) {
+  if (!ln) return;
+  EKA.secLn = ln + 1;   // blok bir satır aşağı kayar; seçim onu izlesin
+  ekPdKaynak(L => L.splice(ln - 1, 0, '---sayfa---'));
+  if (typeof toast === 'function') toast('Sayfa sonu eklendi. Kalıcı olması için kaydetmeyi unutma.');
+}
+function ekPdKaldir(ln) {
+  if (EKA.secLn && EKA.secLn > ln) EKA.secLn -= 1;
+  ekPdKaynak(L => { if (/^---\s*sayfa\s*---$/i.test((L[ln - 1] || '').trim())) L.splice(ln - 1, 1); });
+  if (typeof toast === 'function') toast('Sayfa sonu kaldırıldı. Kalıcı olması için kaydetmeyi unutma.');
+}
+function ekPdGoster(ln) {
+  const ta = document.getElementById('ek-src'); if (!ta) return;
+  const L = ta.value.split('\n'); let bas = 0; for (let i = 0; i < ln - 1 && i < L.length; i++) bas += L[i].length + 1;
+  ta.focus(); ta.setSelectionRange(bas, bas + (L[ln - 1] || '').length);
+  const satirY = parseFloat(getComputedStyle(ta).lineHeight) || 20; ta.scrollTop = Math.max(0, (ln - 4) * satirY);
+}
+
+/* ---------- Kalem (serbest çizim) ---------- */
+const EK_KALEM_RENK = { k: '#1e293b', y: '#d97706', p: '#db2777', g: '#16a34a', b: '#2563eb' };
+function ekPenD(pts) { return pts.map((q, i) => (i ? 'L' : 'M') + (q[0] * 1000).toFixed(1) + ' ' + (q[1] * 1000).toFixed(1)).join(' '); }
+function ekPenSvg(a) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('class', 'ek-pen'); svg.setAttribute('viewBox', '0 0 1000 1000'); svg.setAttribute('preserveAspectRatio', 'none');
+  const path = document.createElementNS(ns, 'path');
+  path.setAttribute('class', 'ek-pen-p'); path.setAttribute('vector-effect', 'non-scaling-stroke'); path.setAttribute('d', ekPenD(a.pts || []));
+  path.dataset.aid = a.id;
+  path.style.cssText = `fill:none;stroke:${EK_KALEM_RENK[a.color] || EK_KALEM_RENK.k};stroke-width:${a.w || 2.5}px;stroke-linecap:round;stroke-linejoin:round`;
+  svg.appendChild(path); return svg;
+}
+let _ekPen = null;
+function ekPenNokta(e) {
+  const d = _ekPen; if (!d) return;
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  (evs.length ? evs : [e]).forEach(ev => {
+    if (d.son && Math.hypot(ev.clientX - d.son[0], ev.clientY - d.son[1]) < 1.5) return;
+    if (d.a.pts.length > 3000) return;
+    d.son = [ev.clientX, ev.clientY];
+    d.a.pts.push([+((ev.clientX - d.rc.left) / d.rc.width).toFixed(4), +((ev.clientY - d.rc.top) / d.rc.height).toFixed(4)]);
+  });
+  d.path.setAttribute('d', ekPenD(d.a.pts));
+}
+document.addEventListener('pointerdown', function (e) {
+  if (EK.tool !== 'pen' || e.button > 0) return;
+  const book = document.getElementById('ek-book'); if (!book || !book.contains(e.target)) return;
+  const page = e.target.closest('.ek-page'); if (!page || page.classList.contains('ek-page-blank') || e.target.closest('.ek-sticky')) return;
+  let bl = e.target.closest('.ek-pg-body > [data-bid]');
+  if (!bl) { const bs = [...page.querySelectorAll('.ek-pg-body > [data-bid]')]; bl = bs.find(b => b.getBoundingClientRect().bottom > e.clientY) || bs[bs.length - 1]; }
+  if (!bl) return;
+  e.preventDefault();
+  const a = { id: ekAnnId(), type: 'pen', bid: bl.dataset.bid, pts: [], color: EK.color, w: 2.5 };
+  const svg = ekPenSvg(a); bl.appendChild(svg);
+  _ekPen = { a, rc: bl.getBoundingClientRect(), path: svg.firstChild, svg, son: null };
+  ekPenNokta(e);
+}, true);
+document.addEventListener('pointermove', function (e) { if (_ekPen) { e.preventDefault(); ekPenNokta(e); } });
+function ekPenBitir() {
+  const d = _ekPen; if (!d) return; _ekPen = null;
+  if (d.a.pts.length < 2) { d.svg.remove(); return; }
+  d.svg.remove();
+  ekAnnPush(); EK.ann.push(d.a); ekAnnRender(); ekAnnSave();
+}
+document.addEventListener('pointerup', ekPenBitir);
+document.addEventListener('pointercancel', ekPenBitir);
 
 /* ============================================================
    GRAMER ÇALIŞMALARI · ÇALIŞMA SETLERİ
@@ -1984,7 +2124,7 @@ function gwBack() {
 /* ============================================================
    YÖNETİM: E-KİTAP EDİTÖRÜ
    ============================================================ */
-const EKA = { editId: null, topics: [], lastParse: null, mode: 'unit' };
+const EKA = { editId: null, topics: [], lastParse: null, mode: 'unit', gorunum: 'akis', onayar: 'masa', secLn: null };
 const EKA_TBL = () => EKA.mode === 'set' ? 'gw_sets' : 'ek_units';
 
 async function ekAdmInit() {
@@ -2123,6 +2263,8 @@ function ekAdmCheck() {
     const reg = EK_ACT[el.dataset.act];
     if (reg && reg.act && reg.act.kontrol) el.classList.add('ek-kontrol');
   });
+  prev.classList.remove('ek-pd-mod');
+  if (EKA.gorunum === 'sayfa') ekAdmSayfalar(p);
   return p;
 }
 async function ekAdmSave(yayinla) {
@@ -2369,6 +2511,6 @@ async function ekTopicBulk() {
 }
 
 if (typeof window !== 'undefined') {
-  Object.assign(window, { ozInit, ozRender, ozCmd, ozClear, ozEdit, ozSave, ozToggle, ozDelete, ekOpenRef, gwInit, gwOpen, gwBack, gwFiltre, gwSeviye, gwKural, gwAdmMove, ekAdmTab, ekOpen, ekAdmInit, ekAdmNew, ekAdmEdit, ekAdmCheck, ekAdmSave, ekAdmToggle, ekAdmDelete, ekAdmInsert,
+  Object.assign(window, { ekAdmGorunum, ekAdmSayfalar, ekPdBol, ekPdKaldir, ekPdGoster, ozInit, ozRender, ozCmd, ozClear, ozEdit, ozSave, ozToggle, ozDelete, ekOpenRef, gwInit, gwOpen, gwBack, gwFiltre, gwSeviye, gwKural, gwAdmMove, ekAdmTab, ekOpen, ekAdmInit, ekAdmNew, ekAdmEdit, ekAdmCheck, ekAdmSave, ekAdmToggle, ekAdmDelete, ekAdmInsert,
     ekAdmImage, ekAdmCopyFormat, ekAdmList, ekTopicsInit, ekTopicSave, ekTopicDelete, ekTopicBulk, ekTopicEdit, ekParse });
 }
