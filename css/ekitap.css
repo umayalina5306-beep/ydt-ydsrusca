@@ -560,3 +560,30 @@
 .oz-row.open .oz-row-b { display: block; padding: 0 14px 8px; line-height: 1.6; font-size: .92rem; }
 .oz-row.open .oz-row-f { display: flex; gap: 6px; padding: 0 12px 10px; }
 @media (max-width: 800px) { .oz-form { grid-template-columns: 1fr; } }
+
+/* ---------- Kalem ---------- */
+.ek-sticky.c-k { background: #e2e8f0; }
+.ek-pen { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 4; }
+.ek-book.ek-tool-pen .ek-page { cursor: crosshair; touch-action: none; -webkit-user-select: none; user-select: none; }
+.ek-book.ek-tool-erase .ek-pen-p { pointer-events: stroke; cursor: not-allowed; }
+.ek-book.ek-tool-erase .ek-pen-p:hover { stroke: #dc2626 !important; }
+
+/* ---------- Yönetim: Sayfa düzeni ---------- */
+.ek-pd-tabs { display: inline-flex; gap: 4px; margin-left: 10px; vertical-align: middle; }
+.ek-pd-tabs .mail-tab { padding: 4px 12px; font-size: .8rem; }
+.ek-adm-preview.ek-pd-mod { padding: 12px; background: #f3efe6; }
+.ek-pd-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.ek-pd-bar .pq-input { margin: 0; width: auto; }
+.ek-pd-not { font-size: .78rem; color: #6b7280; }
+.ek-pd-sec { position: sticky; top: -12px; z-index: 6; background: #fff; border: 1px solid #e3d9c5; border-radius: 9px; padding: 8px 10px; margin-bottom: 10px;
+  font-size: .84rem; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ek-pd-wrap { padding: 0 !important; }
+.ek-pd-grid { display: flex; flex-wrap: wrap; gap: 14px 16px; }
+.ek-pd-pg { display: flex; flex-direction: column; gap: 4px; }
+.ek-pd-lbl { font-size: .74rem; color: #475569; display: flex; gap: 6px; align-items: center; }
+.ek-pd-lbl.ek-pd-elle { color: #b45309; } .ek-pd-lbl.ek-pd-bolum { color: var(--ek-navy); }
+.ek-pd-x { border: 1px solid #f3c3c3; background: #fff; color: #b91c1c; border-radius: 6px; padding: 1px 8px; font-size: .72rem; cursor: pointer; }
+.ek-pd-z .ek-page { border-radius: 6px; box-shadow: 0 3px 12px rgba(13,27,42,.14); }
+.ek-pd-z .ek-pg-body > [data-ln] { cursor: pointer; border-radius: 4px; transition: outline-color .1s; outline: 2px solid transparent; outline-offset: 2px; }
+.ek-pd-z .ek-pg-body > [data-ln]:hover { outline-color: rgba(201,168,76,.55); }
+.ek-pd-z .ek-pg-body > .ek-pd-sel { outline-color: #2563eb !important; }
