@@ -993,11 +993,19 @@ function ekShellHTML() {
       <button class="ek-ttab active" data-ek="ttab" data-v="kitap"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><line x1="12" y1="5" x2="12" y2="19"/></svg>E-Kitap</button>
       <button class="ek-ttab" data-ek="ttab" data-v="notlar"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="14" y2="14"/></svg>Notlar</button>
       <button class="ek-ttab" data-ek="ttab" data-v="kartlar"><svg viewBox="0 0 24 24"><rect x="6" y="3" width="13" height="16" rx="2"/><path d="M4 7v12a2 2 0 0 0 2 2h9"/></svg>Kartlar</button>
+      <div class="ek-tt-r">
+        <span class="ek-pg-pill" id="ek-tb-page">Sayfa – / –</span>
+              <select class="ek-zoom" id="ek-zoom" data-ek-zoom="1">
+                <option value="90">%90</option><option value="100" selected>%100</option><option value="110">%110</option><option value="125">%125</option>
+              </select>
+              <button class="ek-ico-btn" data-ek="fs" title="Tam ekran"><svg viewBox="0 0 24 24"><polyline points="4 9 4 4 9 4"/><polyline points="20 9 20 4 15 4"/><polyline points="4 15 4 20 9 20"/><polyline points="20 15 20 20 15 20"/></svg></button>
+        <button class="ek-ico-btn ek-tb-tog" data-ek="tbtog" title="Araç çubuğunu aç / kapat"><svg viewBox="0 0 24 24"><path d="M4 20l1.5-5L16 4.5a2.1 2.1 0 0 1 3 3L8.5 18z"/><path d="M14 6.5l3 3"/></svg><span>Araçlar</span></button>
+      </div>
     </div>
     <div class="ek-view" id="ek-v-kitap">
       <div class="ek-main">
         <div class="ek-center">
-          <div class="ek-toolbar">
+          <div class="ek-toolbar" id="ek-toolbar">
             <div class="ek-tools">
               <button class="ek-tool active" data-ek="tool" data-v="sec" title="Seç"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 2-2 6z"/></svg><span>Seç</span></button>
               <button class="ek-tool" data-ek="tool" data-v="hl" title="Fosforla"><svg viewBox="0 0 24 24"><path d="M4 20h8"/><path d="M14.5 4.5l5 5L10 19H5v-5z"/></svg><span>Fosforla</span></button>
@@ -1016,17 +1024,6 @@ function ekShellHTML() {
               <span class="ek-tb-sep"></span>
               <button class="ek-ico-btn" data-ek="undo" title="Geri al (Ctrl+Z)" disabled><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M4 9h10a6 6 0 0 1 0 12h-2"/></svg></button>
               <button class="ek-ico-btn" data-ek="redo" title="İleri al (Ctrl+Y)" disabled><svg viewBox="0 0 24 24"><polyline points="15 14 20 9 15 4"/><path d="M20 9H10a6 6 0 0 0 0 12h2"/></svg></button>
-            </div>
-            <div class="ek-tb-nav">
-              <button class="ek-ico-btn" data-ek="prev" title="Önceki sayfa"><svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg></button>
-              <span class="ek-tb-page" id="ek-tb-page">Sayfa – / –</span>
-              <button class="ek-ico-btn" data-ek="next" title="Sonraki sayfa"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></button>
-            </div>
-            <div class="ek-tb-r">
-              <select class="ek-zoom" id="ek-zoom" data-ek-zoom="1">
-                <option value="90">%90</option><option value="100" selected>%100</option><option value="110">%110</option><option value="125">%125</option>
-              </select>
-              <button class="ek-ico-btn" data-ek="fs" title="Tam ekran"><svg viewBox="0 0 24 24"><polyline points="4 9 4 4 9 4"/><polyline points="20 9 20 4 15 4"/><polyline points="4 15 4 20 9 20"/><polyline points="20 15 20 20 15 20"/></svg></button>
             </div>
           </div>
           <div class="ek-book" id="ek-book"><div class="ek-empty">Yükleniyor…</div></div>
@@ -1068,7 +1065,11 @@ async function ekOpen() {
 }
 async function _ekOpen() {
   const host = document.getElementById('ek-host'); if (!host) return;
-  if (!document.getElementById('ek-wrap')) host.innerHTML = ekShellHTML();
+  if (!document.getElementById('ek-wrap')) {
+    host.innerHTML = ekShellHTML();
+    let tb = false; try { tb = localStorage.getItem('ek_tb') === '1'; } catch (x) {}
+    if (tb) { document.getElementById('ek-wrap').classList.add('ek-tb-acik'); const b = document.querySelector('[data-ek="tbtog"]'); if (b) b.classList.add('active'); }
+  }
   const tree = document.getElementById('ek-tree'); if (tree) tree.style.display = '';
   if (!EK.loaded) await ekLoadList();
   ekRenderTree();
@@ -1199,7 +1200,7 @@ function ekPageSize() {
   EK.single = bw < 700;
   const w = EK.single ? Math.min(bw - 8, 640) : Math.floor((bw - 8) / 2);
   wrap.classList.toggle('ek-narrow', w < 470);
-  const h = Math.max(520, Math.min(fs ? 2000 : 980, window.innerHeight - (fs ? 150 : 250)));
+  const h = Math.max(520, Math.min(fs ? 2000 : 1150, window.innerHeight - (fs ? 120 : 225)));
   wrap.style.setProperty('--ek-pg-h', h + 'px');
   wrap.style.setProperty('--ek-fs', (EK.zoom / 100) + '');
   return { w, h };
@@ -1209,6 +1210,8 @@ function ekPaginate() {
   if (!meas || !sz || !EK.sections.length) return;
   meas.style.width = sz.w + 'px';
   meas.innerHTML = '';
+  // Not ve çizimler sayfa taşma ölçümünü etkilemesin: ölçüm sırasında çıkar, sonra yeniden çiz
+  EK.sections.forEach(s => s.els.forEach(x => { if (x.el) x.el.querySelectorAll('.ek-sticky, .ek-pen').forEach(n => n.remove()); }));
   EK.pages = []; EK.anchors = {}; EK.secPage = [];
   const u = EK.unit || {};
   const bas = `Modül ${u.modul_no || ''} · Ünite ${u.unite_no || ''} — ${u.unite_ad || ''}`;
@@ -1232,6 +1235,7 @@ function ekPaginate() {
   });
   EK.pages.forEach((p, k) => { p.querySelector('.ek-pg-no').textContent = k + 1; });
   meas.innerHTML = '';
+  if (EK.ann && EK.ann.length) ekAnnRender();
 }
 function ekRender() {
   const book = document.getElementById('ek-book'); if (!book || !EK.pages.length) return;
@@ -1433,10 +1437,11 @@ function ekAnnRender() {
   ekRenderSideNotes();
 }
 function ekStickyEl(a) {
-  const el = ekEl(`<div class="ek-sticky c-${a.color || 'y'}${a.min ? ' min' : ''}" data-sid="${a.id}" style="left:${(a.x * 100).toFixed(2)}%;top:${Math.round(a.y)}px">
+  const egim = ((parseInt(String(a.id).slice(-3), 36) || 0) % 9 - 4) * 0.6;   // her not kendine özgü hafif eğik
+  const el = ekEl(`<div class="ek-sticky c-${a.color || 'y'}${a.min ? ' min' : ''}" data-sid="${a.id}" style="left:${(a.x * 100).toFixed(2)}%;top:${Math.round(a.y)}px;--egim:${egim.toFixed(1)}deg">
     <div class="ek-st-h" data-sthandle="1"><span class="ek-st-grip">⋮⋮</span>
       <button class="ek-st-b" data-ek="stmin" data-sid="${a.id}" title="${a.min ? 'Aç' : 'Küçült'}">${a.min ? '+' : '–'}</button>
-      <button class="ek-st-b" data-ek="stdel" data-sid="${a.id}" title="Sil">×</button></div>
+      <button class="ek-st-b" data-ek="stdel" data-sid="${a.id}" title="Sil"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></div>
     <textarea class="ek-st-t" data-sid="${a.id}" placeholder="Notunu yaz…" spellcheck="false"></textarea></div>`);
   el.querySelector('textarea').value = a.text || '';
   return el;
@@ -1497,6 +1502,23 @@ document.addEventListener('mouseup', function (e) {
     ekAnnRender(); ekAnnSave();
   }, 0);
 });
+/* Yapışkan not konumu: sayfanın içinde kalacak şekilde (sırta / sayfa dışına taşmaz) */
+function ekStYer(page, cx, cy, gen, yuk) {
+  gen = gen || 186; yuk = yuk || 112;
+  const pr = page.getBoundingClientRect();
+  const L = Math.max(pr.left + 6, Math.min(cx, pr.right - gen - 6));
+  const T = Math.max(pr.top + 6, Math.min(cy, pr.bottom - yuk - 6));
+  const bs = [...page.querySelectorAll('.ek-pg-body > [data-bid]')]; if (!bs.length) return null;
+  const bl = bs.find(b => b.getBoundingClientRect().bottom > T) || bs[bs.length - 1];
+  const rc = bl.getBoundingClientRect();
+  return { bl, x: (L - rc.left) / rc.width, y: T - rc.top };
+}
+function ekStSayfa(cx) {   // bırakılan noktanın sayfası; sırt/boşluk ise en yakın sayfa
+  const ps = [...document.querySelectorAll('#ek-book .ek-page:not(.ek-page-blank)')];
+  return ps.find(p => { const r = p.getBoundingClientRect(); return cx >= r.left && cx <= r.right; })
+    || ps.sort((a, b) => { const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+      return Math.min(Math.abs(cx - ra.left), Math.abs(cx - ra.right)) - Math.min(Math.abs(cx - rb.left), Math.abs(cx - rb.right)); })[0];
+}
 /* Yapışkan not bırakma ve silgi */
 function ekBookClick(e) {
   const book = document.getElementById('ek-book'); if (!book || !book.contains(e.target)) return false;
@@ -1509,12 +1531,9 @@ function ekBookClick(e) {
   if (EK.tool === 'note') {
     if (e.target.closest('.ek-sticky')) return true;
     const page = e.target.closest('.ek-page'); if (!page) return true;
-    let bl = e.target.closest('[data-bid]');
-    if (!bl) { const bs = [...page.querySelectorAll('.ek-pg-body > [data-bid]')]; bl = bs.find(b => b.getBoundingClientRect().bottom > e.clientY) || bs[bs.length - 1]; }
-    if (!bl) return true;
-    const rc = bl.getBoundingClientRect();
+    const yer = ekStYer(page, e.clientX, e.clientY); if (!yer) return true;
     ekAnnPush();
-    const a = { id: ekAnnId(), type: 'st', bid: bl.dataset.bid, x: Math.max(0, Math.min(0.72, (e.clientX - rc.left) / rc.width)), y: e.clientY - rc.top, text: '', color: EK.color, min: false };
+    const a = { id: ekAnnId(), type: 'st', bid: yer.bl.dataset.bid, x: yer.x, y: yer.y, text: '', color: EK.color, min: false };
     EK.ann.push(a); ekAnnRender(); ekAnnSave(); ekSetTool('sec');
     setTimeout(() => { const t = document.querySelector(`.ek-st-t[data-sid="${a.id}"]`); if (t) t.focus(); }, 30);
     return true;
@@ -1537,24 +1556,13 @@ document.addEventListener('pointerup', function (e) {
   if (!_ekStDrag) return;
   const d = _ekStDrag; _ekStDrag = null;
   const nx = d.ox + (e.clientX - d.sx), ny = d.oy + (e.clientY - d.sy);
-  d.el.style.pointerEvents = 'none';
-  const alt = document.elementFromPoint(nx + 12, ny + 12);
-  d.el.style.pointerEvents = ''; d.el.classList.remove('dragging');
-  let bl = alt && alt.closest('#ek-book [data-bid]');
-  let ty = ny;
-  if (!bl) {   // bloklar arası boşluk veya sayfa dışı: bırakılan (yoksa başladığı) sayfanın içine sabitle
-    const pgEl = (alt && alt.closest('#ek-book .ek-page')) || d.el.closest('.ek-page'); const body = pgEl && pgEl.querySelector('.ek-pg-body');
-    if (body) {
-      const br = body.getBoundingClientRect(); ty = Math.max(br.top, Math.min(ny, br.bottom - 60));
-      const bs = [...body.children].filter(x => x.dataset && x.dataset.bid);
-      bl = bs.find(x => x.getBoundingClientRect().bottom > ty) || bs[bs.length - 1];
-    }
-  }
+  const sr = d.el.getBoundingClientRect(); d.el.classList.remove('dragging');
+  const page = ekStSayfa(nx + sr.width / 2);
+  const yer = page && ekStYer(page, nx, ny, sr.width, sr.height);
   const a = EK.ann.find(x => x.id === d.id);
-  if (!a || !bl) { d.el.style.transform = ''; return; }
-  const rc = bl.getBoundingClientRect();
+  if (!a || !yer) { d.el.style.transform = ''; return; }
   ekAnnPush();
-  a.bid = bl.dataset.bid; a.x = Math.max(0, Math.min(0.85, (nx - rc.left) / rc.width)); a.y = ty - rc.top;
+  a.bid = yer.bl.dataset.bid; a.x = yer.x; a.y = yer.y;
   ekAnnRender(); ekAnnSave();
 });
 
@@ -1783,6 +1791,13 @@ document.addEventListener('click', function (e) {
     if (a === 'kanitchk') { ekKanitCheck(t.dataset.a); return; }
     if (a === 'prev') { ekStep(-1); return; }
     if (a === 'next') { ekStep(1); return; }
+    if (a === 'tbtog') {
+      const w = document.getElementById('ek-wrap'); if (!w) return;
+      const acik = w.classList.toggle('ek-tb-acik'); t.classList.toggle('active', acik);
+      try { localStorage.setItem('ek_tb', acik ? '1' : '0'); } catch (x) {}
+      if (!acik && EK.tool !== 'sec') ekSetTool('sec');
+      return;
+    }
     if (a === 'fs') { const w = document.getElementById('ek-wrap'); if (w) { w.classList.toggle('ek-fs'); setTimeout(() => { ekPaginate(); ekRender(); }, 40); } return; }
     if (a === 'stab') { ekSideTab(t.dataset.v); return; }
     if (a === 'ttab') { ekTopTab(t.dataset.v); return; }
