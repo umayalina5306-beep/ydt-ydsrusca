@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v139';
+var YDT_SURUM = 'v140';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -6542,7 +6542,7 @@ async function adminVidCards(videoId, title) {
           <option value="">📖 Özet notundan seç…</option>
           ${ozNotlar.map(n => `<option value="${n.id}">${n.konu ? _escHtml(n.konu) + ' · ' : ''}${_escHtml(n.baslik)}</option>`).join('')}
         </select>
-        <p class="pq-hint">Seçtiğin notun başlığı ve metni aşağıdaki alanlara gelir; istersen düzenleyebilirsin. Notları Yönetim → Konu Yönetimi → Özet notları'ndan eklersin.</p>
+        <p class="pq-hint">Seçtiğin notun başlığı ve metni aşağıdaki alanlara gelir; istersen düzenleyebilirsin. Notları Yönetim → İçerik Merkezi → Özet notları sekmesinden eklersin.</p>
       </div>
 
       <!-- Zengin metin editörü -->
