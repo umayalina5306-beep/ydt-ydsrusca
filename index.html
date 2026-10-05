@@ -49,8 +49,8 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=139">
-<link rel="stylesheet" href="css/ekitap.css?v=139">
+<link rel="stylesheet" href="css/style.css?v=140">
+<link rel="stylesheet" href="css/ekitap.css?v=140">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -73,7 +73,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=139" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=140" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -1376,8 +1376,7 @@
           <button class="psb-item" id="asb-pquest" onclick="adminNav('pquest')"><span class="psb-ic">📖</span> Paragraf Soruları</button>
           <button class="psb-item" id="asb-videos" onclick="adminNav('videos')"><span class="psb-ic">🎬</span> Videolar</button>
           <button class="psb-item" id="asb-recs" onclick="adminNav('recs')"><span class="psb-ic">⭐</span> Öneriler</button>
-          <button class="psb-item" id="asb-ekitap" onclick="adminNav('ekitap')"><span class="psb-ic">📘</span> E-Kitap</button>
-          <button class="psb-item" id="asb-topics" onclick="adminNav('topics')"><span class="psb-ic">🗂️</span> Konu Yönetimi</button>
+          <button class="psb-item" id="asb-icerik" onclick="adminNav('icerik')"><span class="psb-ic">📚</span> İçerik Merkezi</button>
           <button class="psb-item" id="asb-kurumlar" onclick="adminNav('kurumlar')"><span class="psb-ic">🏫</span> Kurumlar</button>
           <button class="psb-item" id="asb-visits" onclick="adminNav('visits')"><span class="psb-ic">📈</span> Ziyaret & SEO</button>
           <button class="psb-item" id="asb-settings" onclick="adminNav('settings')"><span class="psb-ic">⚙️</span> Site Ayarları</button>
@@ -1783,41 +1782,16 @@
           </div>
         </div>
 
-        <div id="av-ekitap" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">E-Kitap</h2>
-          <p class="profile-sub">E-kitap ünitelerini ve Gramer Çalışmaları setlerini içerik formatında yapıştır, kontrol et, önizle ve yayınla.</p>
-          <div id="ek-adm-tabs" class="ek-adm-tabs"></div>
-          <div id="ek-adm-list"></div>
-          <div id="ek-adm-editor" style="display:none;">
-            <div class="ek-adm-top">
-              <button class="set-btn ghost" onclick="ekAdmList()">← Ünite listesi</button>
-              <h3 class="an-h3" id="ek-adm-title" style="margin:0;">Yeni ünite</h3>
-            </div>
-            <div class="ek-adm-grid">
-              <div class="ek-adm-col">
-                <div class="ek-adm-tools">
-                  <button class="mail-act" onclick="ekAdmInsert('\n---sayfa---\n')">Sayfa sonu ekle</button>
-                  <label class="mail-act" style="cursor:pointer;">Görsel yükle<input type="file" accept="image/*" style="display:none;" onchange="ekAdmImage(event)"></label>
-                  <button class="mail-act" onclick="ekAdmCopyFormat()">Konu listesini kopyala</button>
-                </div>
-                <textarea id="ek-src" class="ek-src" spellcheck="false" placeholder="@modül 1 | Rusçanın Temelleri&#10;@ünite 1 | İsimler: Cinsiyet ve Çokluk&#10;@seviye A1&#10;&#10;# Ders 1 | ..."></textarea>
-                <div class="mail-actions" style="margin-top:10px;">
-                  <button class="set-btn" onclick="ekAdmCheck()">Kontrol et ve önizle</button>
-                  <button class="set-btn ghost" onclick="ekAdmSave()">Taslak kaydet</button>
-                  <button class="set-btn" onclick="ekAdmSave(true)">Kaydet ve yayınla</button>
-                </div>
-                <div id="ek-adm-report" class="ek-rep"></div>
-              </div>
-              <div class="ek-adm-col">
-                <div class="ek-adm-prev-h">Önizleme <span class="ek-pd-tabs"><button class="mail-tab active" data-v="akis" onclick="ekAdmGorunum('akis')">Akış</button><button class="mail-tab" data-v="sayfa" onclick="ekAdmGorunum('sayfa')">Sayfa düzeni</button></span></div>
-                <div id="ek-adm-preview" class="ek-adm-preview"></div>
-              </div>
-            </div>
+        <div id="av-icerik" class="admin-view" style="display:none;">
+          <h2 class="profile-h2">İçerik Merkezi</h2>
+          <p class="profile-sub">Konular, özet notları, e-kitap üniteleri ve Gramer Çalışmaları setleri tek yerden yönetilir. Tüm içerikler konulara bağlanır.</p>
+          <div id="ic-tabs" class="ic-tabs">
+            <button class="mail-tab active" data-v="konular" onclick="icTab('konular')">Konular</button>
+            <button class="mail-tab" data-v="ozet" onclick="icTab('ozet')">Özet notları</button>
+            <button class="mail-tab" data-v="unite" onclick="icTab('unite')">E-kitap üniteleri</button>
+            <button class="mail-tab" data-v="set" onclick="icTab('set')">Çalışma setleri</button>
           </div>
-        </div>
-        <div id="av-topics" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Konu Yönetimi</h2>
-          <p class="profile-sub">Konular sorulara, e-kitap derslerine, etkinliklere ve ileride videolara bağlanır. Tek tek veya toplu ekleyebilirsin.</p>
+          <div id="ic-konular">
           <div class="admin-notif-card">
             <h3 class="an-h3">Konu ekle / düzenle</h3>
             <div class="ek-tp-form">
@@ -1826,8 +1800,9 @@
               <select id="tp-ust" class="pq-input"></select>
               <select id="tp-sev" class="pq-input"><option value="">Seviye</option><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
               <button class="set-btn" onclick="ekTopicSave()">Kaydet</button>
+              <button class="set-btn ghost" onclick="ekTopicYeni()">Temizle</button>
             </div>
-            <p class="pq-hint">Var olan bir kodu yazıp kaydedersen o konu güncellenir.</p>
+            <p class="pq-hint">Düzenle'ye basınca konunun adı, üst konusu ve seviyesi değiştirilebilir; kod içeriklerde yazılı olduğu için kilitlenir.</p>
           </div>
           <div class="admin-notif-card">
             <h3 class="an-h3">Toplu ekle</h3>
@@ -1835,7 +1810,13 @@
             <textarea id="tp-bulk" class="an-textarea" rows="6" placeholder="isimler | İsimler | - | A1&#10;isim-cinsiyet | İsimlerde cinsiyet | isimler | A1"></textarea>
             <button class="set-btn" style="margin-top:8px;" onclick="ekTopicBulk()">Toplu ekle</button>
           </div>
-          <div class="admin-notif-card" id="oz-card">
+          
+          <div class="admin-notif-card">
+            <h3 class="an-h3">Konular</h3>
+            <div id="ek-topics-list"></div>
+          </div>
+        </div>
+          <div id="ic-ozet" style="display:none;"><div class="admin-notif-card" id="oz-card">
             <h3 class="an-h3">Özet notları</h3>
             <p class="pq-hint">Konu özetlerini burada hazırla. Videolardaki "Konu" kartlarını eklerken bu notlardan seçebilirsin.</p>
             <input type="hidden" id="oz-id">
@@ -1866,12 +1847,39 @@
               <input id="oz-ara" class="pq-input" type="search" placeholder="Notlarda ara…" oninput="ozRender()" autocomplete="off" data-lpignore="true" data-form-type="other">
             </div>
             <div id="oz-list"></div>
-          </div>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">Konular</h3>
-            <div id="ek-topics-list"></div>
+          </div></div>
+          <div id="ic-ekitap" style="display:none;">
+          
+          <div id="ek-adm-list"></div>
+          <div id="ek-adm-editor" style="display:none;">
+            <div class="ek-adm-top">
+              <button class="set-btn ghost" onclick="ekAdmList()">← Ünite listesi</button>
+              <h3 class="an-h3" id="ek-adm-title" style="margin:0;">Yeni ünite</h3>
+            </div>
+            <div class="ek-adm-grid">
+              <div class="ek-adm-col">
+                <div class="ek-adm-tools">
+                  <button class="mail-act" onclick="ekAdmInsert('\n---sayfa---\n')">Sayfa sonu ekle</button>
+                  <label class="mail-act" style="cursor:pointer;">Görsel yükle<input type="file" accept="image/*" style="display:none;" onchange="ekAdmImage(event)"></label>
+                  <button class="mail-act" onclick="ekAdmCopyFormat()">Konu listesini kopyala</button>
+                </div>
+                <textarea id="ek-src" class="ek-src" spellcheck="false" placeholder="@modül 1 | Rusçanın Temelleri&#10;@ünite 1 | İsimler: Cinsiyet ve Çokluk&#10;@seviye A1&#10;&#10;# Ders 1 | ..."></textarea>
+                <div class="mail-actions" style="margin-top:10px;">
+                  <button class="set-btn" onclick="ekAdmCheck()">Kontrol et ve önizle</button>
+                  <button class="set-btn ghost" onclick="ekAdmSave()">Taslak kaydet</button>
+                  <button class="set-btn" onclick="ekAdmSave(true)">Kaydet ve yayınla</button>
+                </div>
+                <div id="ek-adm-report" class="ek-rep"></div>
+              </div>
+              <div class="ek-adm-col">
+                <div class="ek-adm-prev-h">Önizleme <span class="ek-pd-tabs"><button class="mail-tab active" data-v="akis" onclick="ekAdmGorunum('akis')">Akış</button><button class="mail-tab" data-v="sayfa" onclick="ekAdmGorunum('sayfa')">Sayfa düzeni</button></span></div>
+                <div id="ek-adm-preview" class="ek-adm-preview"></div>
+              </div>
+            </div>
           </div>
         </div>
+        </div>
+        
 
 
         <div id="av-kurumlar" class="admin-view" style="display:none;">
@@ -2192,13 +2200,13 @@
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=139"></script>
-<script defer src="js/auth.js?v=139"></script>
-<script defer src="js/admin.js?v=139"></script>
-<script defer src="js/profile.js?v=139"></script>
-<script defer src="js/extras.js?v=139"></script>
-<script defer src="js/app.js?v=139"></script>
-<script defer src="js/ekitap.js?v=139"></script>
+<script defer src="js/supabase-config.js?v=140"></script>
+<script defer src="js/auth.js?v=140"></script>
+<script defer src="js/admin.js?v=140"></script>
+<script defer src="js/profile.js?v=140"></script>
+<script defer src="js/extras.js?v=140"></script>
+<script defer src="js/app.js?v=140"></script>
+<script defer src="js/ekitap.js?v=140"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
