@@ -994,11 +994,6 @@ function ekShellHTML() {
       <button class="ek-ttab" data-ek="ttab" data-v="notlar"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="14" y2="14"/></svg>Notlar</button>
       <button class="ek-ttab" data-ek="ttab" data-v="kartlar"><svg viewBox="0 0 24 24"><rect x="6" y="3" width="13" height="16" rx="2"/><path d="M4 7v12a2 2 0 0 0 2 2h9"/></svg>Kartlar</button>
       <div class="ek-tt-r">
-        <span class="ek-pg-pill" id="ek-tb-page">Sayfa – / –</span>
-              <select class="ek-zoom" id="ek-zoom" data-ek-zoom="1">
-                <option value="90">%90</option><option value="100" selected>%100</option><option value="110">%110</option><option value="125">%125</option>
-              </select>
-              <button class="ek-ico-btn" data-ek="fs" title="Tam ekran"><svg viewBox="0 0 24 24"><polyline points="4 9 4 4 9 4"/><polyline points="20 9 20 4 15 4"/><polyline points="4 15 4 20 9 20"/><polyline points="20 15 20 20 15 20"/></svg></button>
         <button class="ek-ico-btn ek-tb-tog" data-ek="tbtog" title="Araç çubuğunu aç / kapat"><svg viewBox="0 0 24 24"><path d="M4 20l1.5-5L16 4.5a2.1 2.1 0 0 1 3 3L8.5 18z"/><path d="M14 6.5l3 3"/></svg><span>Araçlar</span></button>
       </div>
     </div>
@@ -1043,7 +1038,7 @@ function ekShellHTML() {
           <div class="ek-side-b" id="ek-side-kelime">
             <input class="ek-search" id="ek-search" type="search" placeholder="Sözlükte ara (Rusça / Türkçe)" autocomplete="off" data-lpignore="true" data-form-type="other">
             <div id="ek-search-res"></div>
-            <div id="ek-word"><div class="ek-side-empty">Kitaptaki bir Rusça kelimeye tıkla; bilgileri burada görünecek.</div></div>
+            <div id="ek-word"></div>
           </div>
         </aside>
       </div>
@@ -1149,6 +1144,7 @@ async function ekOpenUnit(id, secIdx) {
   try { localStorage.setItem('ek_last', String(id)); } catch (e) {}
   EK.parsed = ekParse(row.kaynak);
   EK.sections = ekBuildSections(EK.parsed, 'reader');
+  ekKelimeTopla(); ekKelimeListe();
   ekBidMap(); EK.deck = null;
   await Promise.all([ekAnnLoad(id), ekNotesLoad(id), ekCardStatsLoad(id)]);
   ekAnnRender();
@@ -1250,7 +1246,18 @@ function ekRender() {
   const n = EK.pages.length;
   const a = EK.cur + 1, b = EK.single ? a : Math.min(n, EK.cur + 2);
   const etiket = a === b ? `${a} / ${n}` : `${a}–${b} / ${n}`;
-  const tp = document.getElementById('ek-tb-page'); if (tp) tp.textContent = 'Sayfa ' + etiket;
+  EK.pages.forEach(pp => { const o = pp.querySelector(':scope > .ek-ribbon'); if (o) o.remove(); });
+  if (sol) {
+    const wr = document.getElementById('ek-wrap'), fs = !!(wr && wr.classList.contains('ek-fs'));
+    sol.appendChild(ekEl(`<div class="ek-ribbon${EK.rbAcik ? ' acik' : ''}">
+      <button class="ek-rb-serit" data-ek="ribbon" title="Sayfa ve görünüm"><span>${a}</span></button>
+      <div class="ek-rb-menu">
+        <div class="ek-rb-sayfa" id="ek-tb-page">Sayfa ${etiket}</div>
+        <div class="ek-rb-git"><input type="number" id="ek-rb-input" min="1" max="${n}" placeholder="Sayfa no"><button class="ek-btn sm" data-ek="gopg">Git</button></div>
+        <label class="ek-rb-sat"><span>Yakınlaştır</span><select class="ek-zoom" id="ek-zoom" data-ek-zoom="1">${[90, 100, 110, 125].map(z => `<option value="${z}"${EK.zoom === z ? ' selected' : ''}>%${z}</option>`).join('')}</select></label>
+        <button class="ek-btn ghost sm" data-ek="fs">${fs ? 'Tam ekrandan çık' : 'Tam ekran'}</button>
+      </div></div>`));
+  }
   const bn = document.getElementById('ek-bottom-n'); if (bn) bn.textContent = etiket;
   const sl = document.getElementById('ek-slider'); if (sl) { sl.max = n - 1; sl.value = EK.cur; }
   ekRenderSideNotes();
@@ -1301,11 +1308,7 @@ function ekFindWord(k) {
   }
   return w || null;
 }
-function ekShowWord(k, hedef) {
-  if (!hedef) ekSideTab('kelime');
-  const box = document.getElementById(hedef || 'ek-word'); if (!box) return;
-  const w = ekFindWord(k);
-  if (!w) { box.innerHTML = `<div class="ek-wc"><div class="ek-wc-ru">${ekEsc(k)}</div><div class="ek-side-empty">Bu kelime henüz sözlükte kayıtlı değil.</div></div>`; return; }
+function ekWordCardHTML(w) {
   const CINS = { 'м': ['m', 'eril'], 'ж': ['f', 'dişil'], 'с': ['n', 'nötr'], 'мн': ['p', 'çoğul'], 'м/ж': ['mf', 'ortak'] };
   const c = CINS[w.cinsiyet];
   const roz = [];
@@ -1315,7 +1318,7 @@ function ekShowWord(k, hedef) {
   if (w.tip) roz.push(`<span class="ek-wc-b">${ekEsc(w.tip)}</span>`);
   if (w.padej) roz.push(`<span class="ek-wc-b">${ekEsc(w.padej)}</span>`);
   const kayitli = typeof isWordSaved === 'function' && isWordSaved(w.ru);
-  box.innerHTML = `<div class="ek-wc">
+  return `<div class="ek-wc">
     <div class="ek-wc-top"><div class="ek-wc-ru${c ? ' ek-g-' + c[0] : ''}">${ekEsc(w.ru)}</div>
       <button class="ek-say" data-ek="speak" data-t="${ekEsc(w.ru)}" title="Dinle">${EK_IC.ses}</button></div>
     ${(w.p || w.pron) ? `<div class="ek-wc-ipa">${ekEsc(w.p || w.pron)}</div>` : ''}
@@ -1327,6 +1330,50 @@ function ekShowWord(k, hedef) {
     ${(w.not || w.note) ? `<div class="ek-wc-lbl">Not</div><div class="ek-wc-not">${ekEsc(w.not || w.note)}</div>` : ''}
     <button class="ek-btn ${kayitli ? 'ghost' : ''}" data-ek="saveword" data-w="${ekEsc(w.ru)}">${kayitli ? 'Kelime kasanda' : '+ Kelime kasama ekle'}</button>
   </div>`;
+}
+function ekShowWord(k, hedef) {
+  if (hedef) {
+    const box = document.getElementById(hedef); if (!box) return;
+    const w = ekFindWord(k);
+    box.innerHTML = w ? ekWordCardHTML(w) : `<div class="ek-wc"><div class="ek-wc-ru">${ekEsc(k)}</div><div class="ek-side-empty">Bu kelime henüz sözlükte kayıtlı değil.</div></div>`;
+    return;
+  }
+  ekSideTab('kelime');
+  const key = ekKelAnahtar(k);
+  EK.kelSira = (EK.kelSira || []).filter(x => x !== key); EK.kelSira.unshift(key);
+  EK.kelAcik = key;
+  if (!(EK.kelimeler || []).some(x => x.key === key)) (EK.kelimeler = EK.kelimeler || []).push({ key, k, w: ekFindWord(k) });
+  ekKelimeListe(true);
+}
+function ekKelAnahtar(k) { const w = ekFindWord(k); return w ? 'w:' + w.ru : 't:' + String(k).toLowerCase().replace(/ё/g, 'е'); }
+function ekKelimeTopla() {
+  const gor = new Map(), onbellek = {};
+  (EK.sections || []).forEach(s => s.els.forEach(x => {
+    if (!x.el) return;
+    x.el.querySelectorAll('[data-w]').forEach(n => {
+      const k = n.dataset.w; if (!k) return;
+      const lk = k.toLowerCase();
+      const w = lk in onbellek ? onbellek[lk] : (onbellek[lk] = ekFindWord(k));
+      if (!w && lk.replace(/[^а-яё]/g, '').length <= 2) return;   // kuralda geçen tek harfler / ekler kelime değil
+      const key = w ? 'w:' + w.ru : 't:' + lk.replace(/ё/g, 'е');
+      if (!gor.has(key)) gor.set(key, { key, k, w });
+    });
+  }));
+  EK.kelimeler = [...gor.values()]; EK.kelSira = []; EK.kelAcik = null;
+}
+function ekKelimeListe(kaydir) {
+  const box = document.getElementById('ek-word'); if (!box) return;
+  const tum = EK.kelimeler || [];
+  if (!tum.length) { box.innerHTML = '<div class="ek-side-empty">Bu ünitede kelime bulunamadı.</div>'; return; }
+  const sira = (EK.kelSira || []).map(key => tum.find(x => x.key === key)).filter(Boolean);
+  const kalan = tum.filter(x => !(EK.kelSira || []).includes(x.key));
+  box.innerHTML = `<div class="ek-kl-bas">Bu ünitedeki kelimeler <span>${tum.length}</span></div>` + sira.concat(kalan).map(x => {
+    const acik = EK.kelAcik === x.key;
+    return `<div class="ek-kl-row${acik ? ' acik' : ''}${x.w ? '' : ' yok'}">
+      <button class="ek-kl-h" data-ek="klrow" data-key="${ekEsc(x.key)}"><b>${ekEsc(x.w ? x.w.ru : x.k)}</b><span>${ekEsc(x.w ? (x.w.tr || '') : 'sözlükte yok')}</span></button>
+      ${acik ? `<div class="ek-kl-b">${x.w ? ekWordCardHTML(x.w) : '<div class="ek-side-empty">Bu kelime henüz sözlükte kayıtlı değil.</div>'}</div>` : ''}</div>`;
+  }).join('');
+  if (kaydir) { const sb2 = document.getElementById('ek-side-kelime'); if (sb2) sb2.scrollTop = 0; }
 }
 function ekSearch(q) {
   const box = document.getElementById('ek-search-res'); if (!box) return;
@@ -1529,7 +1576,7 @@ function ekBookClick(e) {
     return true;
   }
   if (EK.tool === 'note') {
-    if (e.target.closest('.ek-sticky')) return true;
+    if (e.target.closest('.ek-sticky, .ek-ribbon')) return true;
     const page = e.target.closest('.ek-page'); if (!page) return true;
     const yer = ekStYer(page, e.clientX, e.clientY); if (!yer) return true;
     ekAnnPush();
@@ -1752,6 +1799,7 @@ document.addEventListener('pointerup', function (e) {
 
 /* ---------- Olay yönetimi (tek dinleyici) ---------- */
 document.addEventListener('click', function (e) {
+  if (EK.rbAcik && !e.target.closest('.ek-ribbon')) { EK.rbAcik = false; document.querySelectorAll('.ek-ribbon.acik').forEach(r => r.classList.remove('acik')); }
   const pdB = e.target.closest('#ek-pd-grid .ek-pg-body > [data-ln]');
   if (pdB && !e.target.closest('.ek-pd-x')) ekPdSec(pdB);
   const t = e.target.closest('[data-ek]');
@@ -1791,6 +1839,8 @@ document.addEventListener('click', function (e) {
     if (a === 'kanitchk') { ekKanitCheck(t.dataset.a); return; }
     if (a === 'prev') { ekStep(-1); return; }
     if (a === 'next') { ekStep(1); return; }
+    if (a === 'ribbon') { EK.rbAcik = !EK.rbAcik; const r = t.closest('.ek-ribbon'); if (r) r.classList.toggle('acik', EK.rbAcik); if (EK.rbAcik) setTimeout(() => { const i = document.getElementById('ek-rb-input'); if (i) i.focus(); }, 30); return; }
+    if (a === 'gopg') { const i = document.getElementById('ek-rb-input'); const v = parseInt(i && i.value, 10); if (v) { EK.rbAcik = false; ekGoPage(v - 1); } return; }
     if (a === 'tbtog') {
       const w = document.getElementById('ek-wrap'); if (!w) return;
       const acik = w.classList.toggle('ek-tb-acik'); t.classList.toggle('active', acik);
@@ -1802,6 +1852,7 @@ document.addEventListener('click', function (e) {
     if (a === 'stab') { ekSideTab(t.dataset.v); return; }
     if (a === 'ttab') { ekTopTab(t.dataset.v); return; }
     if (a === 'sword') { ekShowWord(t.dataset.w); return; }
+    if (a === 'klrow') { EK.kelAcik = EK.kelAcik === t.dataset.key ? null : t.dataset.key; ekKelimeListe(); return; }
     if (a === 'saveword') { if (typeof _wAddWordToSaved === 'function') _wAddWordToSaved(t.dataset.w); const hd = t.closest('#gw-word') ? 'gw-word' : undefined; setTimeout(() => ekShowWord(t.dataset.w, hd), 400); return; }
     if (a === 'flip') { t.classList.toggle('flipped'); return; }
     if (a === 'snote') { const k = document.querySelectorAll('#ek-book .ek-box')[+t.dataset.k]; if (k) { k.classList.add('ek-flash'); k.scrollIntoView({ block: 'nearest' }); setTimeout(() => k.classList.remove('ek-flash'), 1600); } return; }
@@ -1861,6 +1912,7 @@ document.addEventListener('keydown', function (e) {
   }
   if (/INPUT|TEXTAREA|SELECT/.test((e.target.tagName || ''))) {
     if (e.key === 'Enter' && e.target.classList.contains('ek-blank')) { ekCheckAct(e.target.dataset.a); }
+    if (e.key === 'Enter' && e.target.id === 'ek-rb-input') { const v = parseInt(e.target.value, 10); if (v) { EK.rbAcik = false; ekGoPage(v - 1); } }
     return;
   }
   if (e.key === 'ArrowRight') { ekStep(1); e.preventDefault(); }
@@ -1978,24 +2030,25 @@ function ekPenNokta(e) {
   const d = _ekPen; if (!d) return;
   const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
   (evs.length ? evs : [e]).forEach(ev => {
-    if (d.son && Math.hypot(ev.clientX - d.son[0], ev.clientY - d.son[1]) < 1.5) return;
+    const cx = Math.max(d.br.left + 2, Math.min(d.br.right - 2, ev.clientX)), cy = Math.max(d.br.top + 2, Math.min(d.br.bottom - 2, ev.clientY));
+    if (d.son && Math.hypot(cx - d.son[0], cy - d.son[1]) < 1.5) return;
     if (d.a.pts.length > 3000) return;
-    d.son = [ev.clientX, ev.clientY];
-    d.a.pts.push([+((ev.clientX - d.rc.left) / d.rc.width).toFixed(4), +((ev.clientY - d.rc.top) / d.rc.height).toFixed(4)]);
+    d.son = [cx, cy];
+    d.a.pts.push([+((cx - d.rc.left) / d.rc.width).toFixed(4), +((cy - d.rc.top) / d.rc.height).toFixed(4)]);
   });
   d.path.setAttribute('d', ekPenD(d.a.pts));
 }
 document.addEventListener('pointerdown', function (e) {
   if (EK.tool !== 'pen' || e.button > 0) return;
   const book = document.getElementById('ek-book'); if (!book || !book.contains(e.target)) return;
-  const page = e.target.closest('.ek-page'); if (!page || page.classList.contains('ek-page-blank') || e.target.closest('.ek-sticky')) return;
+  const page = e.target.closest('.ek-page'); if (!page || page.classList.contains('ek-page-blank') || e.target.closest('.ek-sticky, .ek-ribbon')) return;
   let bl = e.target.closest('.ek-pg-body > [data-bid]');
   if (!bl) { const bs = [...page.querySelectorAll('.ek-pg-body > [data-bid]')]; bl = bs.find(b => b.getBoundingClientRect().bottom > e.clientY) || bs[bs.length - 1]; }
   if (!bl) return;
   e.preventDefault();
   const a = { id: ekAnnId(), type: 'pen', bid: bl.dataset.bid, pts: [], color: EK.color, w: 2.5 };
   const svg = ekPenSvg(a); bl.appendChild(svg);
-  _ekPen = { a, rc: bl.getBoundingClientRect(), path: svg.firstChild, svg, son: null };
+  _ekPen = { a, rc: bl.getBoundingClientRect(), br: book.getBoundingClientRect(), path: svg.firstChild, svg, son: null };
   ekPenNokta(e);
 }, true);
 document.addEventListener('pointermove', function (e) { if (_ekPen) { e.preventDefault(); ekPenNokta(e); } });
@@ -2264,7 +2317,7 @@ function ekAdmCheck() {
   h += turNotu;
   p.errors.forEach(x => { if (x.msg !== 'Metin türü ile açık kayıt uyuşmuyor.') h += `<div class="ek-rep-row bad"><b>Satır ${x.ln}</b> ${ekEsc(x.msg)}</div>`; });
   p.warnings.forEach(x => { h += `<div class="ek-rep-row warn"><b>Satır ${x.ln}</b> ${ekEsc(x.msg)}</div>`; });
-  if (bilinmeyen.length) h += `<div class="ek-rep-row warn"><b>Konu</b> Konu listesinde olmayan kodlar: ${bilinmeyen.map(ekEsc).join(', ')} — Konu Yönetimi'nden ekleyebilirsin.</div>`;
+  if (bilinmeyen.length) h += `<div class="ek-rep-row warn"><b>Konu</b> Konu listesinde olmayan kodlar: ${bilinmeyen.map(ekEsc).join(', ')} — İçerik Merkezi → Konular sekmesinden ekleyebilirsin.</div>`;
   rep.innerHTML = h;
   // Önizleme (akışlı, sayfasız)
   const prev = document.getElementById('ek-adm-preview');
@@ -2451,7 +2504,34 @@ async function ozDelete(id) {
 async function ekTopicsFetch() {
   try { const { data } = await sb.from('topics').select('*').order('sort').order('kod'); EKA.topics = data || []; } catch (e) { EKA.topics = []; }
 }
-async function ekTopicsInit() { await ekTopicsFetch(); ekTopicsRender(); ozInit(); }
+async function ekTopicsInit() { await Promise.all([ekTopicsFetch(), ekKullanimYukle()]); ekTopicsRender(); ozInit(); }
+async function ekKullanimYukle() {
+  const k = {}; const ekle = (kod, tur, ad) => { if (!kod) return; const o = k[kod] = k[kod] || { u: [], s: [], n: [] }; o[tur].push(ad); };
+  const al = q => q.then(r => (r && r.data) || [], () => []);
+  try {
+    const [u, s, n] = await Promise.all([al(sb.from('ek_units').select('modul_no, unite_no, unite_ad, konular')),
+      al(sb.from('gw_sets').select('baslik, konular')), al(sb.from('ozet_notlar').select('baslik, konu'))]);
+    u.forEach(r => (r.konular || []).forEach(x => ekle(x, 'u', `Modül ${r.modul_no} · Ünite ${r.unite_no} ${r.unite_ad || ''}`)));
+    s.forEach(r => (r.konular || []).forEach(x => ekle(x, 's', r.baslik)));
+    n.forEach(r => ekle(r.konu, 'n', r.baslik));
+  } catch (e) {}
+  EKA.kullanim = k;
+}
+const IC = { tab: 'konular' };
+function icInit() { icTab(IC.tab); }
+async function icTab(t) {
+  IC.tab = t;
+  document.querySelectorAll('#ic-tabs .mail-tab').forEach(b => b.classList.toggle('active', b.dataset.v === t));
+  const hedef = { konular: 'ic-konular', ozet: 'ic-ozet', unite: 'ic-ekitap', set: 'ic-ekitap' }[t];
+  ['ic-konular', 'ic-ozet', 'ic-ekitap'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = id === hedef ? '' : 'none'; });
+  if (t === 'konular') await ekTopicsInit();
+  else if (t === 'ozet') { await ekTopicsFetch(); ozInit(); }
+  else { await ekTopicsFetch(); EKA.mode = t === 'set' ? 'set' : 'unit'; ekAdmList(); }
+}
+function ekTopicYeni() {
+  ['tp-kod', 'tp-ad'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const k = document.getElementById('tp-kod'); if (k) { k.readOnly = false; k.focus(); }
+}
 function ekTopicsRender() {
   const box = document.getElementById('ek-topics-list'); if (!box) return;
   const sel = document.getElementById('tp-ust');
@@ -2460,7 +2540,7 @@ function ekTopicsRender() {
   const cocuk = {}; EKA.topics.forEach(t => { const u = t.ust_kod || ''; (cocuk[u] = cocuk[u] || []).push(t); });
   const kodlar = new Set(EKA.topics.map(t => t.kod));
   const satir = (t, d) => `<div class="cw-row" style="padding-left:${12 + d * 22}px">
-      <div class="cw-main"><b>${ekEsc(t.ad)}</b> <span class="cw-cat">${ekEsc(t.kod)}</span>${t.seviye ? `<span class="cw-cat">${ekEsc(t.seviye)}</span>` : ''}</div>
+      <div class="cw-main"><b>${ekEsc(t.ad)}</b> <span class="cw-cat">${ekEsc(t.kod)}</span>${t.seviye ? `<span class="cw-cat">${ekEsc(t.seviye)}</span>` : ''}${ekKullanimHTML(t.kod)}</div>
       <div class="cw-acts"><button class="mail-act" onclick="ekTopicEdit('${ekEsc(t.kod)}')">Düzenle</button>
         <button class="mail-act red" onclick="ekTopicDelete('${ekEsc(t.kod)}')">Sil</button></div></div>`;
   const agac = (u, d) => (cocuk[u] || []).map(t => satir(t, d) + agac(t.kod, d + 1)).join('');
@@ -2469,9 +2549,16 @@ function ekTopicsRender() {
   EKA.topics.filter(t => t.ust_kod && !kodlar.has(t.ust_kod)).forEach(t => { h += satir(t, 0); });
   box.innerHTML = `<div class="err-meta" style="margin-bottom:8px">${EKA.topics.length} konu</div>` + h;
 }
+function ekKullanimHTML(kod) {
+  const ku = (EKA.kullanim || {})[kod];
+  const ch = ku ? [['u', 'ünite'], ['s', 'set'], ['n', 'özet notu']].filter(([x]) => ku[x].length)
+    .map(([x, ad]) => `<span class="ic-say" title="${ekEsc(ku[x].join('\n'))}">${ku[x].length} ${ad}</span>`).join('') : '';
+  return ch || '<span class="ic-say bos">henüz kullanılmıyor</span>';
+}
 function ekTopicEdit(kod) {
   const t = EKA.topics.find(x => x.kod === kod); if (!t) return;
   document.getElementById('tp-kod').value = t.kod;
+  document.getElementById('tp-kod').readOnly = true;
   document.getElementById('tp-ad').value = t.ad || '';
   document.getElementById('tp-ust').value = t.ust_kod || '';
   document.getElementById('tp-sev').value = t.seviye || '';
@@ -2490,7 +2577,7 @@ async function ekTopicSave() {
   try {
     const { error } = await sb.from('topics').upsert(row, { onConflict: 'kod' });
     if (error) throw error;
-    ['tp-kod', 'tp-ad'].forEach(id => document.getElementById(id).value = '');
+    ['tp-kod', 'tp-ad'].forEach(id => document.getElementById(id).value = ''); document.getElementById('tp-kod').readOnly = false;
     toast('Konu kaydedildi.'); await ekTopicsInit();
   } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
 }
@@ -2526,6 +2613,6 @@ async function ekTopicBulk() {
 }
 
 if (typeof window !== 'undefined') {
-  Object.assign(window, { ekAdmGorunum, ekAdmSayfalar, ekPdBol, ekPdKaldir, ekPdGoster, ozInit, ozRender, ozCmd, ozClear, ozEdit, ozSave, ozToggle, ozDelete, ekOpenRef, gwInit, gwOpen, gwBack, gwFiltre, gwSeviye, gwKural, gwAdmMove, ekAdmTab, ekOpen, ekAdmInit, ekAdmNew, ekAdmEdit, ekAdmCheck, ekAdmSave, ekAdmToggle, ekAdmDelete, ekAdmInsert,
+  Object.assign(window, { icInit, icTab, ekTopicYeni, ekAdmGorunum, ekAdmSayfalar, ekPdBol, ekPdKaldir, ekPdGoster, ozInit, ozRender, ozCmd, ozClear, ozEdit, ozSave, ozToggle, ozDelete, ekOpenRef, gwInit, gwOpen, gwBack, gwFiltre, gwSeviye, gwKural, gwAdmMove, ekAdmTab, ekOpen, ekAdmInit, ekAdmNew, ekAdmEdit, ekAdmCheck, ekAdmSave, ekAdmToggle, ekAdmDelete, ekAdmInsert,
     ekAdmImage, ekAdmCopyFormat, ekAdmList, ekTopicsInit, ekTopicSave, ekTopicDelete, ekTopicBulk, ekTopicEdit, ekParse });
 }
