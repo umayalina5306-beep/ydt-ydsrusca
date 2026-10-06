@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v145';
+var YDT_SURUM = 'v146';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1189,6 +1189,7 @@ function userHasPremium() {
   } catch (e) { return false; }
 }
 function renderVideos(){
+  if (typeof vdRender === 'function') { try { if (typeof VD !== 'undefined' && VD.yuklendi) vdRender(); else if (typeof vdOpen === 'function') vdOpen(); return; } catch (e) {} }
   const grid = document.getElementById('video-grid'); if (!grid) return;
   const hasPrem = userHasPremium();
   // Premium/yönetici için üstteki kilit bannerını gizle
@@ -2664,7 +2665,7 @@ setTimeout(() => {
 async function refreshVideosFromDb() {
   try {
     const { data } = await sb.from('content_videos').select('*').eq('active', true).order('num').limit(1000);
-    if (data) { videos = data.map(r => ({ id: r.id, num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb, sub_default: r.sub_default, crumb: r.crumb })); renderVideos(); }
+    if (data) { videos = data.map(r => ({ id: r.id, num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb, sub_default: r.sub_default, crumb: r.crumb, mf: r.mf_ref || null, dur: r.duration_sec || null })); renderVideos(); }
   } catch (e) {}
 }
 async function refreshPqFromDb() {
@@ -2744,6 +2745,9 @@ function learnNav(sub, btn) {
   const ekTree = document.getElementById('ek-tree');
   if (ekTree) ekTree.style.display = sub === 'grammar' ? '' : 'none';
   if (sub === 'grammar' && typeof ekOpen === 'function') setTimeout(ekOpen, 30);
+  const vdTree = document.getElementById('vd-tree');
+  if (vdTree) vdTree.style.display = sub === 'video' ? '' : 'none';
+  if (sub === 'video' && typeof vdOpen === 'function') { vdOpen(true); setTimeout(vdOpen, 900); }
   if (typeof trackPageView === 'function') trackPageView(sub);
 }
 /* Çalışmalar kartlarından yönlendirme */
@@ -2817,7 +2821,7 @@ async function loadData() {
     if (dbSyn.length) synonymGroups = dbSyn.map(r => ({ grup: r.grup, kelimeler: Array.isArray(r.kelimeler) ? r.kelimeler : JSON.parse(r.kelimeler || '[]') }));
     if (dbAnt.length) antonymPairs = dbAnt.map(r => ({ ru1: r.ru1, tr1: r.tr1, p1: r.p1, ru2: r.ru2, tr2: r.tr2, p2: r.p2 }));
     if (dbFam.length) wordFamilies = dbFam.map(r => ({ kok: r.kok, anlam: r.anlam, kelimeler: Array.isArray(r.kelimeler) ? r.kelimeler : JSON.parse(r.kelimeler || '[]') }));
-    if (dbVid.length) videos = dbVid.map(r => ({ id: r.id, num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb, sub_default: r.sub_default, crumb: r.crumb }));
+    if (dbVid.length) videos = dbVid.map(r => ({ id: r.id, num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb, sub_default: r.sub_default, crumb: r.crumb, mf: r.mf_ref || null, dur: r.duration_sec || null }));
   } catch (e) { _logDev('DB içerikleri işlenemedi:', e); }
   // Paragraf soruları (dosya yoksa site yine çalışsın diye ayrı try/catch)
   try {
@@ -5975,7 +5979,7 @@ function _maintOverlay() {
    YÖNETİCİ — VİDEO YÖNETİMİ
    ============================================================ */
 let _cvRows = [];
-async function adminVideosInit() { await adminCvReload(); }
+async function adminVideosInit() { await adminCvReload(); if (typeof vdAdmMufredat === 'function') vdAdmMufredat(); }
 async function adminCvReload() {
   try { const { data } = await sb.from('content_videos').select('*').order('num').limit(1000); _cvRows = data || []; }
   catch (e) { _cvRows = []; }
@@ -6008,6 +6012,7 @@ function renderCvList() {
       <div class="cw-main" style="flex:1;"><b>#${r.num || '-'} ${_escHtml(r.title)}</b> <span class="kv-lvl">${r.level || ''}</span>
         ${r.premium ? '<span class="mail-member yes">👑 Premium</span>' : '<span class="mail-member">🆓 Ücretsiz</span>'}
         <span class="cw-cat">${r.source === 'stream' ? 'CF Stream' : 'YouTube'}</span>
+        ${r.mf_ref ? `<span class="cw-cat" style="background:#e8f0fb;color:#1e4f8f">Müfredat ${_escHtml(r.mf_ref)}</span>` : '<span class="cw-cat" style="background:#f3f4f6;color:#9ca3af">müfredata bağlı değil</span>'}
         ${!r.video_id ? '<span class="mail-member no">ID eksik</span>' : ''}
         ${r.active === false ? '<span class="mail-member no">Gizli</span>' : ''}
         <div class="err-meta">${_escHtml(r.descr || '')}</div></div>
@@ -6032,6 +6037,7 @@ function renderCvList() {
 }
 function adminVidFormClear() {
   ['cv-id','cv-num','cv-title','cv-desc','cv-vid','cv-thumb'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const mfS = document.getElementById('cv-mf'); if (mfS) mfS.value = '';
   const pr = document.getElementById('cv-premium'); if (pr) pr.checked = false;
   const btn = document.getElementById('cv-save-btn'); if (btn) btn.textContent = 'Video Ekle';
 }
@@ -6047,6 +6053,7 @@ function adminVidEdit(id) {
   document.getElementById('cv-vid').value = r.video_id || '';
   document.getElementById('cv-thumb').value = r.thumb || '';
   document.getElementById('cv-premium').checked = !!r.premium;
+  if (typeof vdAdmMufredat === 'function') vdAdmMufredat(r.mf_ref || '');
   const btn = document.getElementById('cv-save-btn'); if (btn) btn.textContent = 'Değişiklikleri Kaydet';
   document.getElementById('cv-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
@@ -6096,10 +6103,15 @@ async function adminVidSave() {
   const row = { num, level: _cwVal('cv-lvl'), title,
     descr: _cwVal('cv-desc') || null, source: _cwVal('cv-source'), video_id: _cwVal('cv-vid') || null,
     thumb: _cwVal('cv-thumb') || null, premium: document.getElementById('cv-premium').checked, active: true };
+  const mfEl = document.getElementById('cv-mf'); if (mfEl) row.mf_ref = mfEl.value || null;
   try {
     let error;
-    if (id) ({ error } = await sb.from('content_videos').update(row).eq('id', id));
-    else ({ error } = await sb.from('content_videos').insert(row));
+    const yaz = r => id ? sb.from('content_videos').update(r).eq('id', id) : sb.from('content_videos').insert(r);
+    ({ error } = await yaz(row));
+    if (error && /mf_ref/.test(error.message || '')) {   // video_mufredat.sql henüz çalıştırılmamış
+      delete row.mf_ref; ({ error } = await yaz(row));
+      if (!error) uiAlert('Video kaydedildi ama müfredat bağlantısı için önce video_mufredat.sql çalıştırılmalı.');
+    }
     if (error) throw error;
     await _adminVidRenumber();  // sıraları 1,2,3… olarak sıkılaştır (boşlukları kapat)
     toast('Video kaydedildi.'); adminVidFormClear(); await adminCvReload(); refreshVideosFromDb();
