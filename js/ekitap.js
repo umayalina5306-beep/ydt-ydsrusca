@@ -1223,8 +1223,12 @@ function ekRender() {
   const n = EK.pages.length;
   const a = EK.cur + 1, b = EK.single ? a : Math.min(n, EK.cur + 2);
   const etiket = a === b ? `${a} / ${n}` : `${a}–${b} / ${n}`;
-  EK.pages.forEach(pp => { const o = pp.querySelector(':scope > .ek-ribbons'); if (o) o.remove(); });
+  EK.pages.forEach(pp => pp.querySelectorAll(':scope > .ek-ribbons, :scope > .ek-kose').forEach(o => o.remove()));
   if (sol) sol.appendChild(ekEl(ekRibbonHTML()));
+  // Sayfa köşeleri: alt dış köşeye tıklayınca sayfa çevrilir (yalnızca Seç aracında görünür)
+  if (sol && EK.cur > 0) sol.appendChild(ekEl('<button class="ek-kose sol" data-ek="prev" title="Önceki sayfa" aria-label="Önceki sayfa"></button>'));
+  const sonSayfa = EK.single ? sol : EK.pages[EK.cur + 1];
+  if (sonSayfa && EK.cur + (EK.single ? 1 : 2) < n) sonSayfa.appendChild(ekEl('<button class="ek-kose sag" data-ek="next" title="Sonraki sayfa" aria-label="Sonraki sayfa"></button>'));
   const bn = document.getElementById('ek-bottom-n'); if (bn) bn.textContent = etiket;
   const sl = document.getElementById('ek-slider'); if (sl) { sl.max = n - 1; sl.value = EK.cur; }
   ekRenderSideNotes();
@@ -1579,7 +1583,7 @@ function ekBookClick(e) {
     return true;
   }
   if (EK.tool === 'note') {
-    if (e.target.closest('.ek-sticky, .ek-ribbons')) return true;
+    if (e.target.closest('.ek-sticky, .ek-ribbons, .ek-kose')) return true;
     const page = e.target.closest('.ek-page'); if (!page) return true;
     const yer = ekStYer(page, e.clientX, e.clientY); if (!yer) return true;
     ekAnnPush();
