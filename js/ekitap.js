@@ -1452,12 +1452,15 @@ function ekAnnRender() {
 }
 function ekStickyEl(a) {
   const egim = ((parseInt(String(a.id).slice(-3), 36) || 0) % 9 - 4) * 0.6;   // her not kendine özgü hafif eğik
-  const el = ekEl(`<div class="ek-sticky c-${a.color || 'y'}${a.min ? ' min' : ''}" data-sid="${a.id}" style="left:${(a.x * 100).toFixed(2)}%;top:${Math.round(a.y)}px;--egim:${egim.toFixed(1)}deg">
+  const gen = a.w ? Math.max(EK_ST_MIN, Math.min(EK_ST_MAX, a.w)) : 0;
+  const el = ekEl(`<div class="ek-sticky c-${a.color || 'y'}${a.min ? ' min' : ''}" data-sid="${a.id}" style="left:${(a.x * 100).toFixed(2)}%;top:${Math.round(a.y)}px;--egim:${egim.toFixed(1)}deg${gen && !a.min ? ';width:' + gen + 'px' : ''}">
+    ${a.min ? `<button class="ek-st-mini" data-ek="stmin" data-sid="${a.id}" title="Notu aç${a.text ? ': ' + ekEsc(String(a.text).slice(0, 60)) : ''}"><svg viewBox="0 0 24 24"><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5"/><line x1="8.5" y1="9" x2="15.5" y2="9"/><line x1="8.5" y1="12.5" x2="13" y2="12.5"/></svg></button>` : `
     <div class="ek-st-h" data-sthandle="1"><span class="ek-st-grip">⋮⋮</span>
-      <button class="ek-st-b" data-ek="stmin" data-sid="${a.id}" title="${a.min ? 'Aç' : 'Küçült'}">${a.min ? '+' : '–'}</button>
+      <button class="ek-st-b" data-ek="stmin" data-sid="${a.id}" title="Küçült"><svg viewBox="0 0 24 24"><line x1="6" y1="12" x2="18" y2="12"/></svg></button>
       <button class="ek-st-b" data-ek="stdel" data-sid="${a.id}" title="Sil"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></div>
-    <textarea class="ek-st-t" data-sid="${a.id}" placeholder="Notunu yaz…" spellcheck="false"></textarea></div>`);
-  el.querySelector('textarea').value = a.text || '';
+    <textarea class="ek-st-t" data-sid="${a.id}" placeholder="Notunu yaz…" spellcheck="false"></textarea>
+    <span class="ek-st-rs" data-strs="1" title="Genişlet / daralt"></span>`}</div>`);
+  const ta = el.querySelector('textarea'); if (ta) ta.value = a.text || '';
   return el;
 }
 function ekAnnPush() { EK.annHist.push(JSON.stringify(EK.ann)); if (EK.annHist.length > 60) EK.annHist.shift(); EK.annFut = []; ekUndoState(); }
@@ -1587,6 +1590,27 @@ function ekBookClick(e) {
   }
   return false;
 }
+/* Yapışkan notu sağa doğru genişletme (sınırlı) */
+const EK_ST_MIN = 150, EK_ST_MAX = 340;
+let _ekStRs = null;
+document.addEventListener('pointerdown', function (e) {
+  const h = e.target.closest && e.target.closest('.ek-st-rs'); if (!h) return;
+  const st = h.closest('.ek-sticky'), pg = st.closest('.ek-page');
+  const r = st.getBoundingClientRect(), pr = pg ? pg.getBoundingClientRect() : null;
+  _ekStRs = { el: st, id: st.dataset.sid, sx: e.clientX, w0: st.offsetWidth, maks: Math.min(EK_ST_MAX, pr ? pr.right - r.left - 8 : EK_ST_MAX) };
+  st.classList.add('resizing'); e.preventDefault(); e.stopPropagation();
+}, true);
+document.addEventListener('pointermove', function (e) {
+  if (!_ekStRs) return;
+  const w = Math.round(Math.max(EK_ST_MIN, Math.min(_ekStRs.maks, _ekStRs.w0 + e.clientX - _ekStRs.sx)));
+  _ekStRs.el.style.width = w + 'px'; _ekStRs.w = w;
+});
+document.addEventListener('pointerup', function () {
+  if (!_ekStRs) return;
+  const d = _ekStRs; _ekStRs = null; d.el.classList.remove('resizing');
+  const a = EK.ann.find(x => x.id === d.id); if (!a || !d.w || d.w === a.w) return;
+  ekAnnPush(); a.w = d.w; ekAnnSave();
+});
 /* Yapışkan notu sürükleme */
 let _ekStDrag = null;
 document.addEventListener('pointerdown', function (e) {
@@ -1630,7 +1654,7 @@ function ekRenderNotesTab(acId) {
   let liste = '';
   Object.keys(gruplar).sort((a, b) => a - b).forEach(si => {
     liste += `<div class="ek-nl-sec">${ekEsc(ekSecAd(+si))}</div>`;
-    gruplar[si].forEach(n => { liste += `<button class="ek-nl-it${String(n.id) === String(acId) ? ' active' : ''}" data-ek="nopen" data-id="${n.id}"><b>${ekEsc(n.baslik || 'Başlıksız not')}${n.kart_aktif ? ' <em class="ek-nl-kart">kart</em>' : ''}</b><span>${ekEsc((n.metin || '').slice(0, 80))}</span></button>`; });
+    gruplar[si].forEach(n => { liste += `<div class="ek-nl-w"><button class="ek-nl-it${String(n.id) === String(acId) ? ' active' : ''}" data-ek="nopen" data-id="${n.id}"><b>${ekEsc(n.baslik || 'Başlıksız not')}${n.kart_aktif ? ' <em class="ek-nl-kart">kart</em>' : ''}</b><span>${ekEsc((n.metin || '').slice(0, 80))}</span></button><button class="ek-nl-del" data-ek="ndel" data-id="${n.id}" title="Notu sil" aria-label="Notu sil"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></div>`; });
   });
   if (!liste) liste = '<div class="ek-side-empty">Bu ünitede henüz notun yok.</div>';
   const n = acId === 'yeni' ? { id: 'yeni', sec_idx: Math.max(0, ekCurSection()), baslik: '', metin: '' } : (EK.notes || []).find(x => String(x.id) === String(acId));
@@ -1641,11 +1665,11 @@ function ekRenderNotesTab(acId) {
       <textarea id="ek-ne-met" class="ek-ne-ta" placeholder="Bu konu hakkındaki notlarını buraya yaz…">${ekEsc(n.metin || '')}</textarea>
       <label class="ek-ne-kart"><input type="checkbox" id="ek-ne-kart"${n.kart_aktif ? ' checked' : ''} onchange="document.getElementById('ek-ne-kartalan').style.display=this.checked?'':'none'"> Bu notu çalışma kartı olarak da kullan</label>
       <div id="ek-ne-kartalan" class="ek-ne-kartalan"${n.kart_aktif ? '' : ' style="display:none"'}>
-        <textarea id="ek-ne-on" class="ek-ne-in" rows="2" placeholder="Kartın ön yüzü (soru, kelime…)">${ekEsc(n.kart_on || '')}</textarea>
-        <textarea id="ek-ne-arka" class="ek-ne-in" rows="2" placeholder="Kartın arka yüzü (cevap, açıklama…)">${ekEsc(n.kart_arka || '')}</textarea>
+        <textarea id="ek-ne-on" class="ek-ne-in" rows="5" placeholder="Kartın ön yüzü (soru, kelime…)">${ekEsc(n.kart_on || '')}</textarea>
+        <textarea id="ek-ne-arka" class="ek-ne-in" rows="5" placeholder="Kartın arka yüzü (cevap, açıklama…)">${ekEsc(n.kart_arka || '')}</textarea>
       </div>
       <div class="ek-ne-f"><button class="ek-btn" data-ek="nsave" data-id="${n.id}">Kaydet</button>
-        ${n.id !== 'yeni' ? `<button class="ek-btn ghost" data-ek="ndel" data-id="${n.id}">Sil</button>` : ''}
+        ${n.id !== 'yeni' ? `<button class="ek-btn ghost" data-ek="ndel" data-id="${n.id}">Sil</button>` : `<button class="ek-btn ghost" data-ek="nvazgec">Vazgeç</button>`}
         <button class="ek-btn ghost" data-ek="ngo" data-s="${n.sec_idx}">Kitapta bu derse git</button></div></div>`
     : '<div class="ek-ne ek-ne-bos"><p>Soldan bir not seç veya yeni not oluştur.</p></div>';
   box.innerHTML = `<div class="ek-notes"><div class="ek-nl"><div class="ek-nl-h"><h3>Notlarım</h3><button class="ek-btn sm" data-ek="nnew">+ Yeni Not</button></div>${liste}</div>${ed}</div>`;
@@ -1752,7 +1776,7 @@ function ekRenderCards() {
   if (!kalan) {
     h += `<div class="ek-dk-end"><h3>Tebrikler! Bu turdaki bütün kartları tamamladın.</h3>
       <p>${d.zor.size ? d.zor.size + ' kartta zorlandın (en az bir kez Tekrar dedin).' : 'Hiçbir kartta takılmadın.'}</p>
-      <div class="ek-ne-f" style="justify-content:center"><button class="ek-btn" data-ek="dstart">Yeniden başlat</button>
+      <div class="ek-ne-f ek-dk-end-b"><button class="ek-btn" data-ek="dstart">Yeniden başlat</button>
       ${d.zor.size ? '<button class="ek-btn ghost" data-ek="dzor">Sadece zorlandıklarım</button>' : ''}</div></div>`;
   } else {
     const c = d.cards[d.queue[0]];
@@ -1842,6 +1866,7 @@ document.addEventListener('click', function (e) {
     if (a === 'nopen') { ekTopTab('notlar'); ekRenderNotesTab(t.dataset.id); return; }
     if (a === 'nsave') { ekNoteSave(t.dataset.id); return; }
     if (a === 'ndel') { ekNoteDelete(t.dataset.id); return; }
+    if (a === 'nvazgec') { ekRenderNotesTab(); return; }
     if (a === 'ngo') { ekTopTab('kitap'); setTimeout(() => ekGoPage(EK.secPage[+t.dataset.s] || 0), 60); return; }
     if (a === 'dleft') { ekDeckMove('L'); return; }
     if (a === 'dright') { ekDeckMove('R'); return; }
