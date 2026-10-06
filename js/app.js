@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v141';
+var YDT_SURUM = 'v142';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -4006,7 +4006,7 @@ function uiModal(o) {
     const root = _ensureModalRoot();
     const wrap = document.createElement('div');
     wrap.className = 'ui-modal-overlay';
-    const promptHtml = o.prompt ? `<input id="ui-modal-input" type="${o.inputType||'text'}" class="ui-modal-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${(o.placeholder||'').replace(/"/g,'&quot;')}">` : '';
+    const promptHtml = o.prompt ? `<input id="ui-modal-input" type="${o.inputType||'text'}" class="ui-modal-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${(o.placeholder||'').replace(/"/g,'&quot;')}" value="${_escAttr(o.value||'')}">` : '';
     const cancelBtn = o.cancel ? `<button class="ui-modal-btn ghost" data-act="cancel">${_escHtml(o.cancelText||'Vazgeç')}</button>` : '';
     const danger = o.danger ? ' danger' : '';
     wrap.innerHTML = `<div class="ui-modal">
@@ -4018,7 +4018,7 @@ function uiModal(o) {
     root.appendChild(wrap);
     requestAnimationFrame(() => wrap.classList.add('show'));
     const inp = wrap.querySelector('#ui-modal-input');
-    if (inp) setTimeout(() => inp.focus(), 60);
+    if (inp) setTimeout(() => { inp.focus(); try { inp.select(); } catch (e) {} }, 60);
     function done(val) { wrap.classList.remove('show'); setTimeout(() => wrap.remove(), 160); resolve(val); }
     wrap.addEventListener('click', e => {
       const act = e.target.getAttribute && e.target.getAttribute('data-act');
@@ -4031,7 +4031,7 @@ function uiModal(o) {
 }
 function uiAlert(message, title) { return uiModal({ title: title || 'Bilgi', message: message, confirmText: 'Tamam', cancel: false }); }
 function uiConfirm(message, title, opts) { opts = opts || {}; return uiModal({ title: title || 'Onay', message: message, confirmText: opts.confirmText || 'Evet', cancelText: opts.cancelText || 'Vazgeç', cancel: true, danger: opts.danger }); }
-function uiPrompt(message, opts) { opts = opts || {}; return uiModal({ title: opts.title || 'Giriş', message: message, prompt: true, inputType: opts.type || 'text', placeholder: opts.placeholder || '', confirmText: 'Tamam', cancelText: 'Vazgeç', cancel: true }); }
+function uiPrompt(message, opts) { opts = opts || {}; return uiModal({ title: opts.title || 'Giriş', message: message, prompt: true, inputType: opts.type || 'text', placeholder: opts.placeholder || '', value: opts.value || '', confirmText: 'Tamam', cancelText: 'Vazgeç', cancel: true }); }
 if (typeof window !== 'undefined') { window.uiAlert = uiAlert; window.uiConfirm = uiConfirm; window.uiPrompt = uiPrompt; }
 
 /* ============================================================
