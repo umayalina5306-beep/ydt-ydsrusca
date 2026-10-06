@@ -49,8 +49,8 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=143">
-<link rel="stylesheet" href="css/ekitap.css?v=143">
+<link rel="stylesheet" href="css/style.css?v=144">
+<link rel="stylesheet" href="css/ekitap.css?v=144">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -73,7 +73,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=143" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=144" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -391,21 +391,21 @@
     <h1 class="works-title">Çalışmalar</h1>
     <p class="works-sub">Konuları pekiştirmek, bilgilerini ölçmek ve daha fazla pratik yapmak için aşağıdaki bölümlerden birini seçebilirsin.</p>
     <div class="works-cards">
-      <div class="works-card" onclick="worksGo('quiz')">
+      <div class="works-card" tabindex="0" onclick="worksGo('quiz')" onkeydown="if(event.key==='Enter')worksGo('quiz')">
         <div class="works-card-ic">
           <svg viewBox="0 0 24 24" width="52" height="52" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="17" rx="2"></rect><line x1="7" y1="9" x2="13" y2="9"></line><line x1="7" y1="13" x2="13" y2="13"></line><line x1="7" y1="17" x2="10" y2="17"></line><circle cx="18" cy="17" r="4" fill="currentColor" stroke="none" opacity="0.25"></circle><polyline points="16.5 17 17.7 18.2 20 15.8" stroke-width="2"></polyline></svg>
         </div>
         <h2 class="works-card-title">Testler</h2>
         <p class="works-card-desc">Bilgini ölç, eksiklerini gör, ilerlemeni takip et.</p>
-        <div class="works-card-cta"><span class="works-arrow">→</span> Testlere Git</div>
+        <div class="works-card-cta"><span class="works-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg></span> Testlere Git</div>
       </div>
-      <div class="works-card" onclick="worksGo('grammarworks')">
+      <div class="works-card" tabindex="0" onclick="worksGo('grammarworks')" onkeydown="if(event.key==='Enter')worksGo('grammarworks')">
         <div class="works-card-ic">
           <svg viewBox="0 0 24 24" width="52" height="52" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10.5 5 8 4.5 4 5v13c4-.5 6.5 0 8 1.5"></path><path d="M12 6.5C13.5 5 16 4.5 20 5v13c-4-.5-6.5 0-8 1.5"></path><line x1="12" y1="6.5" x2="12" y2="19.5"></line></svg>
         </div>
         <h2 class="works-card-title">Gramer Çalışmaları</h2>
         <p class="works-card-desc">Konuları pekiştirmek için ek alıştırmalar yap.</p>
-        <div class="works-card-cta"><span class="works-arrow">→</span> Gramer Çalışmalarına Git</div>
+        <div class="works-card-cta"><span class="works-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg></span> Gramer Çalışmalarına Git</div>
       </div>
     </div>
   </div>
@@ -2230,13 +2230,13 @@
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=143"></script>
-<script defer src="js/auth.js?v=143"></script>
-<script defer src="js/admin.js?v=143"></script>
-<script defer src="js/profile.js?v=143"></script>
-<script defer src="js/extras.js?v=143"></script>
-<script defer src="js/app.js?v=143"></script>
-<script defer src="js/ekitap.js?v=143"></script>
+<script defer src="js/supabase-config.js?v=144"></script>
+<script defer src="js/auth.js?v=144"></script>
+<script defer src="js/admin.js?v=144"></script>
+<script defer src="js/profile.js?v=144"></script>
+<script defer src="js/extras.js?v=144"></script>
+<script defer src="js/app.js?v=144"></script>
+<script defer src="js/ekitap.js?v=144"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
