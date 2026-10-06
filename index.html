@@ -49,8 +49,8 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=140">
-<link rel="stylesheet" href="css/ekitap.css?v=140">
+<link rel="stylesheet" href="css/style.css?v=141">
+<link rel="stylesheet" href="css/ekitap.css?v=141">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -73,7 +73,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=140" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=141" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -160,7 +160,7 @@
 
 <!-- ===== WORDS ===== -->
 <div id="page-learn" class="page">
-  <section style="max-width:1280px;margin:0 auto;padding:24px 20px 48px;">
+  <section class="learn-section" style="max-width:none;margin:0;padding:10px 0 24px;">
     <div class="profile-layout" id="learn-layout">
       <div class="profile-sidebar">
         <div class="psb-menu">
@@ -1790,6 +1790,7 @@
             <button class="mail-tab" data-v="ozet" onclick="icTab('ozet')">Özet notları</button>
             <button class="mail-tab" data-v="unite" onclick="icTab('unite')">E-kitap üniteleri</button>
             <button class="mail-tab" data-v="set" onclick="icTab('set')">Çalışma setleri</button>
+            <button class="mail-tab" data-v="kartlar" onclick="icTab('kartlar')">Kartlar</button>
           </div>
           <div id="ic-konular">
           <div class="admin-notif-card">
@@ -1848,6 +1849,13 @@
             </div>
             <div id="oz-list"></div>
           </div></div>
+          <div id="ic-kartlar" style="display:none;">
+            <div class="admin-notif-card">
+              <div class="ic-kart-bar"><select id="ic-kart-unite" class="pq-input" onchange="icKartYukle()"></select><span id="ic-kart-ozet" class="ic-kart-ozet"></span></div>
+              <p class="pq-hint">E-kitap ünitelerindeki hazırlanmış çalışma kartları. Silinen kart ünite metninden de kaldırılır; öğrencilerin diğer kartlardaki tekrar geçmişi etkilenmez.</p>
+              <div id="ic-kart-list"></div>
+            </div>
+          </div>
           <div id="ic-ekitap" style="display:none;">
           
           <div id="ek-adm-list"></div>
@@ -2200,13 +2208,13 @@
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=140"></script>
-<script defer src="js/auth.js?v=140"></script>
-<script defer src="js/admin.js?v=140"></script>
-<script defer src="js/profile.js?v=140"></script>
-<script defer src="js/extras.js?v=140"></script>
-<script defer src="js/app.js?v=140"></script>
-<script defer src="js/ekitap.js?v=140"></script>
+<script defer src="js/supabase-config.js?v=141"></script>
+<script defer src="js/auth.js?v=141"></script>
+<script defer src="js/admin.js?v=141"></script>
+<script defer src="js/profile.js?v=141"></script>
+<script defer src="js/extras.js?v=141"></script>
+<script defer src="js/app.js?v=141"></script>
+<script defer src="js/ekitap.js?v=141"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
