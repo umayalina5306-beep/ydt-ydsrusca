@@ -49,8 +49,8 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=141">
-<link rel="stylesheet" href="css/ekitap.css?v=141">
+<link rel="stylesheet" href="css/style.css?v=142">
+<link rel="stylesheet" href="css/ekitap.css?v=142">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -73,7 +73,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=141" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=142" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -1786,13 +1786,35 @@
           <h2 class="profile-h2">İçerik Merkezi</h2>
           <p class="profile-sub">Konular, özet notları, e-kitap üniteleri ve Gramer Çalışmaları setleri tek yerden yönetilir. Tüm içerikler konulara bağlanır.</p>
           <div id="ic-tabs" class="ic-tabs">
-            <button class="mail-tab active" data-v="konular" onclick="icTab('konular')">Konular</button>
+            <button class="mail-tab active" data-v="konular" onclick="icTab('konular')">Müfredat ve konular</button>
             <button class="mail-tab" data-v="ozet" onclick="icTab('ozet')">Özet notları</button>
             <button class="mail-tab" data-v="unite" onclick="icTab('unite')">E-kitap üniteleri</button>
             <button class="mail-tab" data-v="set" onclick="icTab('set')">Çalışma setleri</button>
             <button class="mail-tab" data-v="kartlar" onclick="icTab('kartlar')">Kartlar</button>
           </div>
           <div id="ic-konular">
+          <div class="admin-notif-card">
+            <div class="mf-bas"><h3 class="an-h3">Müfredat ağacı</h3>
+              <div class="mf-bas-acts"><button class="set-btn" onclick="mfYeniModul()">+ Yeni modül</button>
+                <button class="set-btn ghost" onclick="mfTumu(true)">Tümünü aç</button><button class="set-btn ghost" onclick="mfTumu(false)">Üniteleri kapat</button></div></div>
+            <p class="pq-hint">Modül → Ünite → Ders → Konu. Adların yanındaki düğmelerle yeniden adlandır, ders ekle, konu ata. Konuları bir dersten diğerine sürükleyerek taşıyabilirsin. Her değişiklik ünite metnine (@modül, @ünite, # Ders, @konu satırları) yazılır; kitap ve ağaç hep aynı kalır. Yeni üniteler taslak olarak açılır.</p>
+            <div id="mf-tree" class="mf-tree"><div class="admin-loading">Yükleniyor...</div></div>
+          </div>
+          <div class="admin-notif-card">
+            <h3 class="an-h3">Hiçbir derse bağlı olmayan konular <span id="mf-atanmamis-say" class="mf-meta"></span></h3>
+            <p class="pq-hint">Bir konuyu ağaçtaki bir dersin üzerine sürükle ya da aşağıdan seçip ata. Alt konusu bir derse bağlı olan üst konular burada görünmez.</p>
+            <div id="mf-atanmamis"></div>
+          </div>
+          <div class="admin-notif-card">
+            <details class="mf-toplu"><summary><h3 class="an-h3" style="display:inline">Toplu müfredat</h3> <span class="mf-meta">tüm ağacı metinle kur / düzenle</span></summary>
+            <p class="pq-hint">Biçim: <code>@modül 1 | Ad</code>, <code>@ünite 1 | Ad | A1</code>, <code># Ders 1 | Ad</code>, ardından her satıra bir konu: <code>kod | Konu adı</code> (yalnızca ad da yazabilirsin, kodu kendisi üretir). Önce "Mevcut ağacı getir" ile bugünkü hâli al, düzenle, "Önizle" ile değişiklikleri gör, sonra uygula. Olmayan üniteler taslak olarak, olmayan konular konu listesine eklenir.</p>
+            <div class="mail-actions" style="margin-bottom:8px"><button class="set-btn ghost" onclick="mfDisaAktar()">Mevcut ağacı getir</button></div>
+            <textarea id="mf-toplu" class="an-textarea" rows="12" oninput="mfPlanTemizle()" placeholder="@modül 1 | Temel Dilbilgisi&#10;@ünite 1 | İsimler | A1&#10;# Ders 1 | İsimlerde cinsiyet&#10;isim-cinsiyet | İsimlerde cinsiyet&#10;# Ders 2 | Çoğul&#10;isim-cogul | İsimlerde çoğul"></textarea>
+            <label class="mf-cb"><input type="checkbox" id="mf-toplu-degistir" onchange="mfPlanTemizle()"> Listede yazmayan konuları o derslerden çıkar (işaretli değilse yalnızca eklenir)</label>
+            <div class="mail-actions"><button class="set-btn" onclick="mfTopluOnizle()">Önizle</button></div>
+            <div id="mf-toplu-rapor" class="mf-rapor"></div>
+            </details>
+          </div>
           <div class="admin-notif-card">
             <h3 class="an-h3">Konu ekle / düzenle</h3>
             <div class="ek-tp-form">
@@ -1813,7 +1835,7 @@
           </div>
           
           <div class="admin-notif-card">
-            <h3 class="an-h3">Konular</h3>
+            <h3 class="an-h3">Konu listesi</h3>
             <div id="ek-topics-list"></div>
           </div>
         </div>
@@ -2208,13 +2230,13 @@
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=141"></script>
-<script defer src="js/auth.js?v=141"></script>
-<script defer src="js/admin.js?v=141"></script>
-<script defer src="js/profile.js?v=141"></script>
-<script defer src="js/extras.js?v=141"></script>
-<script defer src="js/app.js?v=141"></script>
-<script defer src="js/ekitap.js?v=141"></script>
+<script defer src="js/supabase-config.js?v=142"></script>
+<script defer src="js/auth.js?v=142"></script>
+<script defer src="js/admin.js?v=142"></script>
+<script defer src="js/profile.js?v=142"></script>
+<script defer src="js/extras.js?v=142"></script>
+<script defer src="js/app.js?v=142"></script>
+<script defer src="js/ekitap.js?v=142"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
