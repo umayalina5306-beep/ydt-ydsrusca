@@ -998,33 +998,12 @@ function ekShellHTML() {
     <div class="ek-view" id="ek-v-kitap">
       <div class="ek-main">
         <div class="ek-center">
-          <div class="ek-toolbar" id="ek-toolbar">
-            <div class="ek-tools">
-              <button class="ek-tool active" data-ek="tool" data-v="sec" title="Seç"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 2-2 6z"/></svg><span>Seç</span></button>
-              <button class="ek-tool" data-ek="tool" data-v="hl" title="Fosforla"><svg viewBox="0 0 24 24"><path d="M4 20h8"/><path d="M14.5 4.5l5 5L10 19H5v-5z"/></svg><span>Fosforla</span></button>
-              <button class="ek-tool" data-ek="tool" data-v="ul" title="Altı Çiz"><svg viewBox="0 0 24 24"><path d="M7 4v7a5 5 0 0 0 10 0V4"/><line x1="5" y1="20" x2="19" y2="20"/></svg><span>Altı Çiz</span></button>
-              <button class="ek-tool" data-ek="tool" data-v="pen" title="Kalem"><svg viewBox="0 0 24 24"><path d="M4 20l1.5-5L16 4.5a2.1 2.1 0 0 1 3 3L8.5 18z"/><path d="M14 6.5l3 3"/><path d="M4 20l4.5-1.5"/></svg><span>Kalem</span></button>
-              <button class="ek-tool" data-ek="tool" data-v="note" title="Not Ekle"><svg viewBox="0 0 24 24"><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5"/></svg><span>Not Ekle</span></button>
-              <button class="ek-tool" data-ek="tool" data-v="erase" title="Silgi"><svg viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M16.5 3.5l4 4L10 18l-5-5z"/></svg><span>Silgi</span></button>
-              <span class="ek-tb-sep"></span>
-              <span class="ek-colors">
-                <button class="ek-color" data-ek="color" data-v="k" style="--c:#1e293b" title="Koyu (kalem)"></button>
-                <button class="ek-color active" data-ek="color" data-v="y" style="--c:#fcd34d" title="Sarı"></button>
-                <button class="ek-color" data-ek="color" data-v="p" style="--c:#f9a8d4" title="Pembe"></button>
-                <button class="ek-color" data-ek="color" data-v="g" style="--c:#86efac" title="Yeşil"></button>
-                <button class="ek-color" data-ek="color" data-v="b" style="--c:#93c5fd" title="Mavi"></button>
-              </span>
-              <span class="ek-tb-sep"></span>
-              <button class="ek-ico-btn" data-ek="undo" title="Geri al (Ctrl+Z)" disabled><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M4 9h10a6 6 0 0 1 0 12h-2"/></svg></button>
-              <button class="ek-ico-btn" data-ek="redo" title="İleri al (Ctrl+Y)" disabled><svg viewBox="0 0 24 24"><polyline points="15 14 20 9 15 4"/><path d="M20 9H10a6 6 0 0 0 0 12h2"/></svg></button>
-            </div>
-          </div>
           <div class="ek-book" id="ek-book"><div class="ek-empty">Yükleniyor…</div></div>
           <div class="ek-bottom">
             <button class="ek-nav-btn" data-ek="prev"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="11 6 5 12 11 18"/></svg>Önceki Sayfa</button>
             <input type="range" class="ek-slider" id="ek-slider" min="0" max="0" value="0" data-ek-slider="1">
             <span class="ek-bottom-n" id="ek-bottom-n">–</span>
-            <span class="ek-bt-git"><input type="number" id="ek-rb-input" min="1" placeholder="Sayfa" autocomplete="off"><button class="ek-btn sm" data-ek="gopg">Git</button></span>
+            <span class="ek-bt-git" title="Sayfaya git"><input type="number" id="ek-rb-input" min="1" placeholder="Sayfa" aria-label="Sayfa numarası" autocomplete="off"><button class="ek-git-b" data-ek="gopg" aria-label="Git"><svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="18" y2="12"/><polyline points="13 7 18 12 13 17"/></svg></button></span>
             <select class="ek-zoom" id="ek-zoom" data-ek-zoom="1" title="Yakınlaştır"><option value="90">%90</option><option value="100" selected>%100</option><option value="110">%110</option><option value="125">%125</option></select>
             <button class="ek-nav-btn" data-ek="next">Sonraki Sayfa<svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg></button>
           </div>
@@ -1062,8 +1041,6 @@ async function _ekOpen() {
   const host = document.getElementById('ek-host'); if (!host) return;
   if (!document.getElementById('ek-wrap')) {
     host.innerHTML = ekShellHTML();
-    let tb = false; try { tb = localStorage.getItem('ek_tb') === '1'; } catch (x) {}
-    if (tb) { document.getElementById('ek-wrap').classList.add('ek-tb-acik'); const b = document.querySelector('[data-ek="tbtog"]'); if (b) b.classList.add('active'); }
   }
   const tree = document.getElementById('ek-tree'); if (tree) tree.style.display = '';
   if (!EK.loaded) await ekLoadList();
@@ -1247,13 +1224,7 @@ function ekRender() {
   const a = EK.cur + 1, b = EK.single ? a : Math.min(n, EK.cur + 2);
   const etiket = a === b ? `${a} / ${n}` : `${a}–${b} / ${n}`;
   EK.pages.forEach(pp => { const o = pp.querySelector(':scope > .ek-ribbons'); if (o) o.remove(); });
-  if (sol) {
-    const wr = document.getElementById('ek-wrap'), fs = !!(wr && wr.classList.contains('ek-fs')), tb = !!(wr && wr.classList.contains('ek-tb-acik'));
-    sol.appendChild(ekEl(`<div class="ek-ribbons">
-      <button class="ek-rb${tb ? ' active' : ''}" data-ek="tbtog" title="${tb ? 'Araçları gizle' : 'Araçlar'}"><svg viewBox="0 0 24 24"><path d="M4 20l1.5-5L16 4.5a2.1 2.1 0 0 1 3 3L8.5 18z"/><path d="M14 6.5l3 3"/></svg></button>
-      <button class="ek-rb${fs ? ' active' : ''}" data-ek="fs" title="${fs ? 'Tam ekrandan çık' : 'Tam ekran'}"><svg viewBox="0 0 24 24"><polyline points="4 9 4 4 9 4"/><polyline points="20 9 20 4 15 4"/><polyline points="4 15 4 20 9 20"/><polyline points="20 15 20 20 15 20"/></svg></button>
-    </div>`));
-  }
+  if (sol) sol.appendChild(ekEl(ekRibbonHTML()));
   const bn = document.getElementById('ek-bottom-n'); if (bn) bn.textContent = etiket;
   const sl = document.getElementById('ek-slider'); if (sl) { sl.max = n - 1; sl.value = EK.cur; }
   ekRenderSideNotes();
@@ -1515,15 +1486,48 @@ function ekAnnSave() {
     sb.from('ek_annotations').upsert({ user_id: currentUser.id, unit_id: id, data: veri, updated_at: new Date().toISOString() }, { onConflict: 'user_id,unit_id' }).then(() => {}, () => {});
   }, 900);
 }
+/* Ayraçlar: Araçlar (aşağı açılan liste) + Tam ekran */
+const EK_ARAC = [
+  ['sec', 'Seç', '<path d="M5 3l14 8-6 2-2 6z"/>', false],
+  ['hl', 'Fosforla', '<path d="M4 20h8"/><path d="M14.5 4.5l5 5L10 19H5v-5z"/>', true],
+  ['ul', 'Altı Çiz', '<path d="M7 4v7a5 5 0 0 0 10 0V4"/><line x1="5" y1="20" x2="19" y2="20"/>', true],
+  ['pen', 'Kalem', '<path d="M4 20l1.5-5L16 4.5a2.1 2.1 0 0 1 3 3L8.5 18z"/><path d="M14 6.5l3 3"/>', true],
+  ['note', 'Not Ekle', '<path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5"/>', true],
+  ['erase', 'Silgi', '<path d="M7 20h10"/><path d="M16.5 3.5l4 4L10 18l-5-5z"/>', false]
+];
+const EK_RENKLER = [['k', '#1e293b', 'Koyu'], ['y', '#fcd34d', 'Sarı'], ['p', '#f9a8d4', 'Pembe'], ['g', '#86efac', 'Yeşil'], ['b', '#93c5fd', 'Mavi']];
+function ekRibbonHTML() {
+  const wr = document.getElementById('ek-wrap'), fs = !!(wr && wr.classList.contains('ek-fs'));
+  const ak = EK_ARAC.find(x => x[0] === EK.tool) || EK_ARAC[0], renk = (EK_RENKLER.find(r => r[0] === EK.color) || EK_RENKLER[1])[1];
+  const menu = EK.tbMenu ? `<div class="ek-tm" role="menu">${EK_ARAC.map(([v, ad, ic, rk]) => `
+      <div class="ek-tm-r"><button class="ek-tm-i${EK.tool === v ? ' active' : ''}" data-ek="tmi" data-v="${v}" role="menuitem" title="${rk ? 'Tıkla: renk seç · Çift tıkla: mevcut renkle başla' : ad}"><svg viewBox="0 0 24 24">${ic}</svg><span>${ad}</span>${rk && EK.tool === v ? `<i class="ek-tm-dot" style="--c:${renk}"></i>` : ''}</button>
+      ${rk && EK.renkSatir === v ? `<div class="ek-tm-renk">${EK_RENKLER.map(([k, c, t]) => `<button class="ek-color${EK.color === k ? ' active' : ''}" data-ek="tcol" data-v="${k}" style="--c:${c}" title="${t}"></button>`).join('')}</div>` : ''}</div>`).join('')}
+      <div class="ek-tm-sep"></div>
+      <div class="ek-tm-ur"><button class="ek-tm-i" data-ek="undo" title="Geri al (Ctrl+Z)"${EK.annHist.length ? '' : ' disabled'}><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M4 9h10a6 6 0 0 1 0 12h-2"/></svg><span>Geri al</span></button>
+      <button class="ek-tm-i" data-ek="redo" title="İleri al (Ctrl+Y)"${EK.annFut.length ? '' : ' disabled'}><svg viewBox="0 0 24 24"><polyline points="15 14 20 9 15 4"/><path d="M20 9H10a6 6 0 0 0 0 12h2"/></svg><span>İleri al</span></button></div>
+    </div>` : '';
+  return `<div class="ek-ribbons">
+    <button class="ek-rb${EK.tbMenu || EK.tool !== 'sec' ? ' active' : ''}" data-ek="tbtog" title="Araçlar" aria-expanded="${EK.tbMenu ? 'true' : 'false'}"><svg viewBox="0 0 24 24">${ak[2]}</svg>${ak[3] && EK.tool !== 'sec' ? `<i class="ek-rb-dot" style="--c:${renk}"></i>` : ''}</button>
+    <button class="ek-rb${fs ? ' active' : ''}" data-ek="fs" title="${fs ? 'Tam ekrandan çık' : 'Tam ekran'}"><svg viewBox="0 0 24 24">${fs ? '<polyline points="9 4 9 9 4 9"/><polyline points="15 4 15 9 20 9"/><polyline points="9 20 9 15 4 15"/><polyline points="15 20 15 15 20 15"/>' : '<polyline points="4 9 4 4 9 4"/><polyline points="20 9 20 4 15 4"/><polyline points="4 15 4 20 9 20"/><polyline points="20 15 20 20 15 20"/>'}</svg></button>
+    ${menu}</div>`;
+}
+function ekRibbonsYenile() {
+  const o = document.querySelector('#ek-book .ek-ribbons'); if (!o) return;
+  o.replaceWith(ekEl(ekRibbonHTML()));
+}
+function ekMenuKapat() { if (!EK.tbMenu && !EK.renkSatir) return; EK.tbMenu = false; EK.renkSatir = null; ekRibbonsYenile(); }
+document.addEventListener('mousedown', function (e) { if (EK.tbMenu && !(e.target.closest && e.target.closest('.ek-ribbons'))) ekMenuKapat(); });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && EK.tbMenu) ekMenuKapat(); });
 function ekSetTool(v) {
-  EK.tool = v;
+  const once = EK.tool; EK.tool = v;
   document.querySelectorAll('.ek-tool').forEach(b => b.classList.toggle('active', b.dataset.v === v));
   const bk = document.getElementById('ek-book'); if (bk) bk.className = bk.className.replace(/\bek-tool-\w+/g, '').trim() + ' ek-tool-' + v;
   if (v === 'pen' && EK.color === 'y') ekSetColor('k');
   const ipucu = { pen: 'Sayfanın üzerine çiz. Bitince Seç aracına dön.', hl: 'Fosforlamak istediğin metni fareyle seç.', ul: 'Altını çizmek istediğin metni fareyle seç.', note: 'Notu bırakmak istediğin yere tıkla.', erase: 'Silmek istediğin işarete veya nota tıkla.' }[v];
-  if (ipucu && typeof toast === 'function') toast(ipucu);
+  if (ipucu && once !== v && typeof toast === 'function') toast(ipucu);
+  ekRibbonsYenile();
 }
-function ekSetColor(v) { EK.color = v; document.querySelectorAll('.ek-color').forEach(b => b.classList.toggle('active', b.dataset.v === v)); }
+function ekSetColor(v) { EK.color = v; ekRibbonsYenile(); }
 /* Fosfor / altını çiz: seçim bırakılınca */
 document.addEventListener('mouseup', function (e) {
   if (!['hl', 'ul'].includes(EK.tool)) return;
@@ -1856,13 +1860,14 @@ document.addEventListener('click', function (e) {
     if (a === 'next') { ekStep(1); return; }
     if (a === 'ribbon') { EK.rbAcik = !EK.rbAcik; const r = t.closest('.ek-ribbon'); if (r) r.classList.toggle('acik', EK.rbAcik); if (EK.rbAcik) setTimeout(() => { const i = document.getElementById('ek-rb-input'); if (i) i.focus(); }, 30); return; }
     if (a === 'gopg') { const i = document.getElementById('ek-rb-input'); const v = parseInt(i && i.value, 10); if (v) { EK.rbAcik = false; ekGoPage(v - 1); } return; }
-    if (a === 'tbtog') {
-      const w = document.getElementById('ek-wrap'); if (!w) return;
-      const acik = w.classList.toggle('ek-tb-acik'); t.classList.toggle('active', acik);
-      try { localStorage.setItem('ek_tb', acik ? '1' : '0'); } catch (x) {}
-      if (!acik && EK.tool !== 'sec') ekSetTool('sec');
-      return;
+    if (a === 'tbtog') { EK.tbMenu = !EK.tbMenu; EK.renkSatir = null; ekRibbonsYenile(); return; }
+    if (a === 'tmi') {
+      const v = t.dataset.v, rk = (EK_ARAC.find(x => x[0] === v) || [])[3], simdi = Date.now();
+      const cift = EK._tmSon && EK._tmSon.v === v && simdi - EK._tmSon.t < 400; EK._tmSon = { v, t: simdi };
+      if (!rk || cift) { ekSetTool(v); EK.tbMenu = false; EK.renkSatir = null; ekRibbonsYenile(); return; }
+      EK.renkSatir = EK.renkSatir === v ? null : v; ekSetTool(v); return;
     }
+    if (a === 'tcol') { EK.color = t.dataset.v; EK.tbMenu = false; EK.renkSatir = null; ekRibbonsYenile(); return; }
     if (a === 'fs') { const w = document.getElementById('ek-wrap'); if (w) { w.classList.toggle('ek-fs'); setTimeout(() => { ekPaginate(); ekRender(); }, 40); } return; }
     if (a === 'stab') { ekSideTab(t.dataset.v); return; }
     if (a === 'ttab') { ekTopTab(t.dataset.v); return; }
