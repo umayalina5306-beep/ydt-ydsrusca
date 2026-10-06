@@ -972,3 +972,59 @@ input[readonly]#tp-kod { background: #f3f4f6; color: #6b7280; }
 }
 @media (max-width: 860px) { .vd-tree { width: 100%; max-height: 320px; } }
 @media (min-width: 861px) { #learn-layout:has(#page-video.active) { grid-template-columns: 262px minmax(0, 1fr); } }
+
+/* ============ v147 · Video Dersler: panel, iç kaydırma, açılır sıralama, kategoriler ============ */
+@media (min-width: 861px) {
+  #learn-layout:has(#page-video.active) { gap: 20px; }
+  #learn-layout:has(#page-video.active) #page-video.active {
+    display: flex; flex-direction: column; height: calc(100vh - 104px); min-height: 0 !important;
+    border-radius: 18px; border: 1px solid #ece4d3; box-shadow: 0 1px 3px rgba(13,27,42,.04); overflow: hidden; margin-bottom: 14px; }
+  #learn-layout:has(#page-video.active) .vd-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 22px 8px 0 26px; }
+  #learn-layout:has(#page-video.active) .vd-head, #learn-layout:has(#page-video.active) .vd-lock,
+  #learn-layout:has(#page-video.active) .vd-bar, #learn-layout:has(#page-video.active) .vd-filtre { margin-right: 18px; }
+  #learn-layout:has(#page-video.active) .vd-grid { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; align-content: start;
+    padding: 6px 12px 22px 2px; scrollbar-gutter: stable; }
+  #learn-layout:has(#page-video.active) .profile-sidebar { margin-bottom: 14px; }
+}
+@media (max-width: 860px) { #page-video.active { border-radius: 16px; } }
+.vd-grid::-webkit-scrollbar { width: 8px; }
+.vd-grid::-webkit-scrollbar-thumb { background: #ddd0b4; border-radius: 8px; }
+.vd-grid::-webkit-scrollbar-track { background: transparent; }
+
+/* Sol ağaç: daha rahat aralıklar */
+.vd-tree { padding: 14px 12px 14px 10px; }
+.vd-tree-bas { padding: 2px 10px 10px; }
+.vd-tn { padding: 8px 10px; gap: 10px; }
+.vd-tn-r { gap: 4px; margin: 1px 0; }
+.vd-kids { margin-left: 14px; padding-left: 8px; margin-top: 2px; margin-bottom: 4px; }
+.vd-dersler { margin-left: 26px; }
+.vd-l3 { padding: 7px 10px; }
+.vd-tn em { margin-left: 6px; min-width: 22px; text-align: center; }
+.vd-dis { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #ece4d3; }
+
+/* Kategori etiketi */
+.vd-chip.kat { background: #efe9fb; color: #5b3fa8; }
+
+/* Açılır sıralama listesi */
+.vd-dd { position: relative; }
+.vd-dd-b { height: 100%; display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e6dcc8; border-radius: 12px; padding: 0 12px 0 14px;
+  font: inherit; font-size: .88rem; color: #6b7280; cursor: pointer; transition: border-color .15s, box-shadow .15s; white-space: nowrap; min-width: 210px; }
+.vd-dd-b b { color: var(--dark, #0d1b2a); font-weight: 600; flex: 1; text-align: left; }
+.vd-dd-b:hover, .vd-dd.acik .vd-dd-b { border-color: var(--gold, #c9a84c); }
+.vd-dd.acik .vd-dd-b { box-shadow: 0 0 0 3px rgba(201,168,76,.16); }
+.vd-dd-ok { width: 16px; height: 16px; color: #6b7280; transition: transform .2s; }
+.vd-dd.acik .vd-dd-ok { transform: rotate(180deg); }
+.vd-dd-m { position: absolute; top: calc(100% + 8px); right: 0; z-index: 40; width: 250px; background: #fff; border: 1px solid #ece4d3; border-radius: 16px; padding: 6px;
+  box-shadow: 0 18px 40px -12px rgba(13,27,42,.28); opacity: 0; transform: translateY(-6px) scale(.98); transform-origin: top right; pointer-events: none; transition: opacity .15s, transform .15s; }
+.vd-dd.acik .vd-dd-m { opacity: 1; transform: none; pointer-events: auto; }
+.vd-dd-o { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 0; background: transparent; border-radius: 11px; padding: 9px 12px;
+  cursor: pointer; text-align: left; font: inherit; color: var(--dark, #0d1b2a); }
+.vd-dd-o span { display: flex; flex-direction: column; gap: 1px; }
+.vd-dd-o b { font-size: .88rem; font-weight: 600; }
+.vd-dd-o small { font-size: .74rem; color: #8a8270; }
+.vd-dd-o:hover { background: #f7f2e8; }
+.vd-dd-o.sec { background: #fbf1d8; }
+.vd-dd-o svg { width: 16px; height: 16px; color: #8b6a24; flex-shrink: 0; }
+@media (max-width: 640px) { .vd-dd-b { min-height: 44px; width: 100%; } .vd-dd-m { left: 0; right: 0; width: auto; } }
+.vd-grid { grid-auto-rows: max-content; }
+.vd-thumb { flex-shrink: 0; }
