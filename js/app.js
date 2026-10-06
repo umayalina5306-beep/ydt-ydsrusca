@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v146';
+var YDT_SURUM = 'v147';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -6012,7 +6012,7 @@ function renderCvList() {
       <div class="cw-main" style="flex:1;"><b>#${r.num || '-'} ${_escHtml(r.title)}</b> <span class="kv-lvl">${r.level || ''}</span>
         ${r.premium ? '<span class="mail-member yes">👑 Premium</span>' : '<span class="mail-member">🆓 Ücretsiz</span>'}
         <span class="cw-cat">${r.source === 'stream' ? 'CF Stream' : 'YouTube'}</span>
-        ${r.mf_ref ? `<span class="cw-cat" style="background:#e8f0fb;color:#1e4f8f">Müfredat ${_escHtml(r.mf_ref)}</span>` : '<span class="cw-cat" style="background:#f3f4f6;color:#9ca3af">müfredata bağlı değil</span>'}
+        ${r.mf_ref ? `<span class="cw-cat" style="background:#e8f0fb;color:#1e4f8f">${_escHtml(typeof vdKat === 'function' && vdKat(r.mf_ref) ? vdKat(r.mf_ref)[1] : 'Müfredat ' + r.mf_ref)}</span>` : '<span class="cw-cat" style="background:#f3f4f6;color:#9ca3af">müfredata bağlı değil</span>'}
         ${!r.video_id ? '<span class="mail-member no">ID eksik</span>' : ''}
         ${r.active === false ? '<span class="mail-member no">Gizli</span>' : ''}
         <div class="err-meta">${_escHtml(r.descr || '')}</div></div>
