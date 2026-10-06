@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v143';
+var YDT_SURUM = 'v144';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -9762,3 +9762,21 @@ if (typeof window !== 'undefined') {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _initCookieBanner);
   else _initCookieBanner();
 }
+
+/* v144: alt bilginin her sayfada en altta durması için üst/alt yüksekliklerini ölç */
+(function () {
+  function olc() {
+    try {
+      var nav = document.querySelector('body > nav'), ft = document.querySelector('body > footer'), r = document.documentElement;
+      if (nav) { var u = nav.offsetHeight, e = nav.previousElementSibling;
+        while (e) { var cs = getComputedStyle(e); if (cs.display !== 'none' && cs.position !== 'fixed' && cs.position !== 'absolute') u += e.offsetHeight; e = e.previousElementSibling; }
+        r.style.setProperty('--ust-h', u + 'px'); }
+      if (ft) r.style.setProperty('--alt-h', Math.round(ft.offsetHeight) + 'px');
+    } catch (e) {}
+  }
+  window.addEventListener('load', olc); window.addEventListener('resize', olc);
+  document.addEventListener('DOMContentLoaded', olc); setTimeout(olc, 1500);
+  if (window.MutationObserver) document.addEventListener('DOMContentLoaded', function () {
+    var b = document.body; if (b) new MutationObserver(function () { clearTimeout(olc._t); olc._t = setTimeout(olc, 120); }).observe(b, { childList: true });
+  });
+})();
