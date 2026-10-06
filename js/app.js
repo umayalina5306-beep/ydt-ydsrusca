@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v140';
+var YDT_SURUM = 'v141';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -3726,9 +3726,9 @@ function renderProgressChart() {
    ============================================================ */
 function getDailyLog() { try { return JSON.parse(localStorage.getItem('ydt_daily_activity') || '{}'); } catch (e) { return {}; } }
 function setDailyLog(o) { try { localStorage.setItem('ydt_daily_activity', JSON.stringify(o)); } catch (e) {} }
-function _emptyDay() { return { focusMin:0, pomodoros:0, questions:0, videos:0, wordsLearned:0 }; }
+function _emptyDay() { return { focusMin:0, pomodoros:0, questions:0, videos:0, wordsLearned:0, cards:0, ekActs:0 }; }
 function dayActivity(key) { const l = getDailyLog(); return Object.assign(_emptyDay(), l[key] || {}); }
-function _dayHasActivity(a) { return !!(a && (a.focusMin || a.pomodoros || a.questions || a.videos || a.wordsLearned)); }
+function _dayHasActivity(a) { return !!(a && (a.cards || a.ekActs || a.focusMin || a.pomodoros || a.questions || a.videos || a.wordsLearned)); }
 function logActivity(field, amount) {
   try { cdHaftalikEkle(amount || 1); } catch (e) {}
   if (!amount) return;
@@ -3749,7 +3749,7 @@ function logActivity(field, amount) {
 function _syncDaySummary(dateKey, dayObj) {
   try {
     if (!sb || !currentUser) return;
-    sb.from('daily_summary').upsert({
+    const _ds = {
       user_id:      currentUser.id,
       day:          dateKey,
       questions:    dayObj.questions    || 0,
@@ -3760,8 +3760,17 @@ function _syncDaySummary(dateKey, dayObj) {
       pomodoros:    dayObj.pomodoros    || 0,
       tests_done:   dayObj.testsDone    || 0,
       daily_reviews:dayObj.dailyReviews || 0,
+      cards:        dayObj.cards        || 0,
+      ek_acts:      dayObj.ekActs       || 0,
       updated_at:   new Date().toISOString()
-    }, { onConflict: 'user_id,day' }).then(function(){}, function(){});
+    };
+    sb.from('daily_summary').upsert(_ds, { onConflict: 'user_id,day' }).then(function (r) {
+      // kartlar_gunluk.sql henüz çalıştırılmadıysa yeni sütunlar olmadan yine de yaz
+      if (r && r.error && /cards|ek_acts/.test(r.error.message || '')) {
+        delete _ds.cards; delete _ds.ek_acts;
+        sb.from('daily_summary').upsert(_ds, { onConflict: 'user_id,day' }).then(function(){}, function(){});
+      }
+    }, function(){});
   } catch (e) {}
 }
 if (typeof window !== 'undefined') window.logActivity = logActivity; // extras.js (pomodoro) için
