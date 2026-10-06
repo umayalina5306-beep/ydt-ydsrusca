@@ -823,7 +823,7 @@ input[readonly]#tp-kod { background: #f3f4f6; color: #6b7280; }
 /* ============ v144 ============ */
 /* Sayfalarla kapak arasında çok hafif gölge */
 .ek-book .ek-page.ek-left, .ek-book .ek-page.ek-right, .ek-book.ek-single .ek-page {
-  box-shadow: 0 0 0 1px rgba(90,65,25,.07), 0 1px 5px rgba(70,48,15,.10); }
+  box-shadow: 0 0 0 1px rgba(90,65,25,.14), 0 1px 6px 1px rgba(60,40,10,.26); }
 
 /* Yapışkan not: yuvarlak köşeler, sağa genişletme, küçültülmüş hâl */
 .ek-sticky { border-radius: 10px 10px 4px 10px; }
@@ -850,15 +850,10 @@ input[readonly]#tp-kod { background: #f3f4f6; color: #6b7280; }
 .ek-ne-ta { min-height: 200px; }
 .ek-ne-kartalan textarea { min-height: 120px; }
 
-/* Üst sekmeler ve kart butonları: üst bar laciverti + altın vurgu */
-.ek-ttab { background: #fff; color: var(--dark, #0d1b2a); border-color: rgba(13,27,42,.22); }
-.ek-ttab:hover { border-color: var(--dark, #0d1b2a); }
-.ek-ttab.active { background: var(--dark, #0d1b2a); color: #fff; border-color: var(--dark, #0d1b2a); box-shadow: inset 0 -3px 0 var(--ek-gold); }
-.ek-ttab.active svg { color: var(--ek-gold); }
+/* Kart / not butonları: üst bar laciverti (#0d1b2a), boş butonlarda lacivert kenarlık */
 #ek-v-kartlar .ek-btn, #ek-v-notlar .ek-btn { background: var(--dark, #0d1b2a); color: #fff; border: 1px solid var(--dark, #0d1b2a); }
 #ek-v-kartlar .ek-btn.ghost, #ek-v-notlar .ek-btn.ghost { background: #fff; color: var(--dark, #0d1b2a); border: 1.5px solid rgba(13,27,42,.45); }
 #ek-v-kartlar .ek-btn.ghost:hover:not(:disabled), #ek-v-notlar .ek-btn.ghost:hover { border-color: var(--dark, #0d1b2a); background: #f6f3ec; filter: none; }
-#ek-v-kartlar .ek-btn:not(.ghost):hover:not(:disabled), #ek-v-notlar .ek-btn:not(.ghost):hover { box-shadow: inset 0 -2px 0 var(--ek-gold); filter: none; }
 
 /* Kartlar bitince: yazı ve buton ortalı, aralarında nefes payı */
 .ek-dk-end { padding: 70px 10px 60px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
@@ -866,3 +861,18 @@ input[readonly]#tp-kod { background: #f3f4f6; color: #6b7280; }
 .ek-dk-end p { margin: 4px 0 0; color: #6b7280; }
 .ek-dk-end-b { justify-content: center; margin-top: 26px; }
 .ek-dk-end-b .ek-btn { padding: 11px 22px; font-size: .92rem; }
+
+/* ============ v145: Sayfa köşesinden çevirme ============ */
+.ek-kose { position: absolute; bottom: 0; width: 46px; height: 46px; border: 0; padding: 0; cursor: pointer; z-index: 6; background: transparent; }
+.ek-kose.sag { right: 0; border-radius: 0 0 14px 0; }
+.ek-kose.sol { left: 0; border-radius: 0 0 0 14px; }
+.ek-kose::before { content: ''; position: absolute; bottom: 0; width: 0; height: 0; transition: width .18s ease, height .18s ease; pointer-events: none;
+  box-shadow: -2px -2px 5px rgba(60,40,10,.18); }
+.ek-kose.sag::before { right: 0; border-radius: 10px 0 12px 0;
+  background: linear-gradient(315deg, #c7b083 0%, #c7b083 48%, #efe4cc 52%, #fbf5e8 100%); }
+.ek-kose.sol::before { left: 0; border-radius: 0 10px 0 12px; box-shadow: 2px -2px 5px rgba(60,40,10,.18);
+  background: linear-gradient(45deg, #c7b083 0%, #c7b083 48%, #efe4cc 52%, #fbf5e8 100%); }
+.ek-kose:hover::before, .ek-kose:focus-visible::before { width: 34px; height: 34px; }
+.ek-book.ek-tool-hl .ek-kose, .ek-book.ek-tool-ul .ek-kose, .ek-book.ek-tool-pen .ek-kose,
+.ek-book.ek-tool-note .ek-kose, .ek-book.ek-tool-erase .ek-kose { display: none; }
+@media (hover: none) { .ek-kose::before { width: 16px; height: 16px; } }
