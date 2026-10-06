@@ -2520,7 +2520,7 @@ async function ozDelete(id) {
 async function ekTopicsFetch() {
   try { const { data } = await sb.from('topics').select('*').order('sort').order('kod'); EKA.topics = data || []; } catch (e) { EKA.topics = []; }
 }
-async function ekTopicsInit() { await Promise.all([ekTopicsFetch(), ekKullanimYukle()]); ekTopicsRender(); ozInit(); }
+async function ekTopicsInit() { await Promise.all([ekTopicsFetch(), ekKullanimYukle(), mfYukle()]); ekTopicsRender(); mfBagla(); mfRender(); }
 async function ekKullanimYukle() {
   const k = {}; const ekle = (kod, tur, ad) => { if (!kod) return; const o = k[kod] = k[kod] || { u: [], s: [], n: [] }; o[tur].push(ad); };
   const al = q => q.then(r => (r && r.data) || [], () => []);
@@ -2629,9 +2629,9 @@ function ekTopicEdit(kod) {
   document.getElementById('tp-kod').focus();
 }
 function ekKodTemizle(s) {
-  return String(s || '').trim().toLowerCase()
+  return String(s || '').trim().replace(/İ/g, 'i').replace(/I/g, 'ı').toLowerCase()
     .replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u')
-    .replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 }
 async function ekTopicSave() {
   const kod = ekKodTemizle(document.getElementById('tp-kod').value);
@@ -2676,7 +2676,459 @@ async function ekTopicBulk() {
   } catch (e) { uiAlert('Eklenemedi: ' + ((e && e.message) || e)); }
 }
 
+/* ============================================================
+   İÇERİK MERKEZİ → MÜFREDAT AĞACI
+   Modül → Ünite → Ders → Konu. Ayrı tablo yok: bilgiler ünite
+   metnindeki @modül / @ünite / @seviye / # Ders / @konu satırlarından
+   okunur ve her düzenleme yine o satırlara yazılır (kitap = ağaç).
+   ============================================================ */
+const MF = { rows: [], kapali: new Set(), ekle: null, plan: null };
+const MF_TUR = { ders: 'Ders', ozet: 'Özet', okuma: 'Okuma', test: 'Test' };
+async function mfYukle() {
+  try {
+    const { data } = await sb.from('ek_units').select('id, modul_no, modul_ad, unite_no, unite_ad, seviye, yayinda, kaynak').order('modul_no').order('unite_no');
+    MF.rows = (data || []).map(r => Object.assign(r, { p: ekParse(r.kaynak || '') }));
+  } catch (e) { MF.rows = []; }
+}
+function mfTopic(kod) { return (EKA.topics || []).find(t => t.kod === kod); }
+function mfModuller() {
+  const m = new Map();
+  MF.rows.forEach(r => { if (!m.has(r.modul_no)) m.set(r.modul_no, { no: r.modul_no, ad: r.modul_ad || '', units: [] }); m.get(r.modul_no).units.push(r); });
+  return [...m.values()].sort((a, b) => a.no - b.no);
+}
+function mfAtananlar() {
+  const s = new Set();
+  MF.rows.forEach(r => r.p.sections.forEach(sec => {
+    sec.konular.forEach(k => s.add(k));
+    sec.blocks.forEach(b => { if (b.t === 'act') (b.konu || []).forEach(k => s.add(k)); });
+  }));
+  return s;
+}
+function mfChip(kod, u, si, pasif) {
+  const t = mfTopic(kod);
+  const ad = t ? t.ad : kod;
+  return `<span class="mf-chip${t ? '' : ' yok'}${pasif ? ' pasif' : ''}" ${pasif ? '' : 'draggable="true"'} data-kod="${ekEsc(kod)}" data-u="${u == null ? '' : u}" data-s="${si == null ? '' : si}"
+    title="${ekEsc(kod)}${t ? '' : ' — konu listesinde yok'}${pasif ? ' — yalnızca bir etkinliğin konu: alanında geçiyor' : ''}">${ekEsc(ad)}${pasif || u == null ? '' : `<button class="mf-x" data-mf="kcikar" title="Bu dersten çıkar">×</button>`}</span>`;
+}
+function mfRender() {
+  const box = document.getElementById('mf-tree'); if (!box) return;
+  const mods = mfModuller();
+  if (!mods.length) { box.innerHTML = '<div class="profile-empty">Henüz ünite yok. "+ Yeni modül" ile ilk modülü ve ünitesini oluştur ya da "Toplu müfredat" ile tüm ağacı tek seferde kur.</div>'; mfAtanmamisRender(); return; }
+  const sel = '<option value="">Konu seç…</option>' + (EKA.topics || []).map(t => `<option value="${ekEsc(t.kod)}">${ekEsc(t.ad)} (${ekEsc(t.kod)})</option>`).join('');
+  let h = '';
+  mods.forEach(m => {
+    const mk = 'm' + m.no, mKapali = MF.kapali.has(mk);
+    const adlar = new Set(m.units.map(u => u.modul_ad || ''));
+    const dSay = m.units.reduce((a, u) => a + u.p.sections.filter(s => s.tur === 'ders').length, 0);
+    h += `<div class="mf-node mf-mod">
+      <div class="mf-row mf-l0"><button class="mf-tg" data-mf="tg" data-k="${mk}">${mKapali ? '▸' : '▾'}</button>
+        <span class="mf-tag">Modül ${m.no}</span><b class="mf-ad">${ekEsc(m.ad || '(adsız)')}</b>
+        <span class="mf-meta">${m.units.length} ünite · ${dSay} ders</span>
+        ${adlar.size > 1 ? '<span class="mf-uyari" title="Bu modüldeki ünitelerde farklı modül adları yazılı. Adı değiştirince hepsi eşitlenir.">ad uyuşmuyor</span>' : ''}
+        <span class="mf-acts"><button class="mail-act" data-mf="madi" data-m="${m.no}">Adını değiştir</button><button class="mail-act" data-mf="uyeni" data-m="${m.no}">+ Ünite</button></span></div>`;
+    if (!mKapali) {
+      h += '<div class="mf-kids">';
+      m.units.forEach(u => {
+        const uk = 'u' + u.id, uKapali = MF.kapali.has(uk);
+        const secs = u.p.sections.map((s, si) => ({ s, si })).filter(x => MF_TUR[x.s.tur] && x.s.ln);
+        const hata = u.p.errors.length;
+        h += `<div class="mf-node">
+          <div class="mf-row mf-l1"><button class="mf-tg" data-mf="tg" data-k="${uk}">${uKapali ? '▸' : '▾'}</button>
+            <span class="mf-tag">Ünite ${u.unite_no}</span><b class="mf-ad">${ekEsc(u.unite_ad || '(adsız)')}</b>
+            <button class="mf-sev" data-mf="sev" data-u="${u.id}" title="Seviyeyi değiştir">${ekEsc(u.seviye || 'seviye?')}</button>
+            <span class="cw-cat" style="background:${u.yayinda ? '#dcfce7' : '#fef3c7'}">${u.yayinda ? 'Yayında' : 'Taslak'}</span>
+            ${hata ? `<span class="mf-uyari">${hata} metin hatası</span>` : ''}
+            <span class="mf-acts"><button class="mail-act" data-mf="uadi" data-u="${u.id}">Adını değiştir</button><button class="mail-act" data-mf="dyeni" data-u="${u.id}">+ Ders</button><button class="mail-act" data-mf="metin" data-u="${u.id}">Metni aç</button></span></div>`;
+        if (!uKapali) {
+          h += '<div class="mf-kids">';
+          if (!secs.length) h += '<div class="mf-bos">Bu ünitede henüz ders yok. "+ Ders" ile ekle.</div>';
+          secs.forEach(({ s, si }) => {
+            const etk = new Set(); s.blocks.forEach(b => { if (b.t === 'act') (b.konu || []).forEach(k => { if (!s.konular.includes(k)) etk.add(k); }); });
+            const acik = MF.ekle === u.id + ':' + si;
+            h += `<div class="mf-row mf-l2 mf-ders" data-u="${u.id}" data-s="${si}">
+              <div class="mf-ders-bas"><span class="mf-tag ${s.tur}">${MF_TUR[s.tur]}${s.no != null ? ' ' + s.no : ''}</span><b class="mf-ad">${ekEsc(s.ad)}</b>
+                <span class="mf-meta">${s.blocks.filter(b => b.t === 'act').length} etkinlik</span>
+                <span class="mf-acts"><button class="mail-act" data-mf="dadi" data-u="${u.id}" data-s="${si}">Adını değiştir</button><button class="mail-act" data-mf="kac" data-u="${u.id}" data-s="${si}">+ Konu</button>${!s.blocks.length ? `<button class="mail-act red" data-mf="dsil" data-u="${u.id}" data-s="${si}">Sil</button>` : ''}</span></div>
+              <div class="mf-konular">${s.konular.map(k => mfChip(k, u.id, si)).join('')}${[...etk].map(k => mfChip(k, u.id, si, true)).join('')}${!s.konular.length && !etk.size ? '<span class="mf-bos">Konu atanmadı — buraya konu sürükle ya da "+ Konu"</span>' : ''}</div>
+              ${acik ? `<div class="mf-ekle"><select class="pq-input mf-ekle-sel">${sel}</select><span>ya da</span><input class="pq-input mf-ekle-yeni" placeholder="Yeni konu adı" autocomplete="off" data-lpignore="true" data-form-type="other"><button class="set-btn" data-mf="kekle" data-u="${u.id}" data-s="${si}">Ekle</button><button class="set-btn ghost" data-mf="kac" data-u="${u.id}" data-s="${si}">Kapat</button></div>` : ''}
+            </div>`;
+          });
+          h += '</div>';
+        }
+        h += '</div>';
+      });
+      h += '</div>';
+    }
+    h += '</div>';
+  });
+  box.innerHTML = h;
+  mfAtanmamisRender();
+}
+function mfAtanmamisRender() {
+  const box = document.getElementById('mf-atanmamis'); if (!box) return;
+  const at = mfAtananlar(); const T = EKA.topics || [];
+  const cocuk = {}; T.forEach(t => { if (t.ust_kod) (cocuk[t.ust_kod] = cocuk[t.ust_kod] || []).push(t.kod); });
+  const atanmis = kod => at.has(kod) || (cocuk[kod] || []).some(atanmis);
+  const liste = T.filter(t => !atanmis(t.kod));
+  const say = document.getElementById('mf-atanmamis-say'); if (say) say.textContent = liste.length ? liste.length + ' konu' : '';
+  if (!liste.length) { box.innerHTML = '<div class="mf-bos">Tüm konular en az bir derse bağlı.</div>'; return; }
+  const dersler = []; MF.rows.forEach(u => u.p.sections.forEach((s, si) => { if (MF_TUR[s.tur] && s.ln) dersler.push(`<option value="${u.id}:${si}">M${u.modul_no} · Ü${u.unite_no} · ${MF_TUR[s.tur]}${s.no != null ? ' ' + s.no : ''} — ${ekEsc(s.ad)}</option>`); }));
+  box.innerHTML = `<div class="mf-konular mf-havuz">${liste.map(t => mfChip(t.kod, null, null)).join('')}</div>
+    ${dersler.length ? `<div class="mf-ekle"><select id="mf-havuz-konu" class="pq-input">${liste.map(t => `<option value="${ekEsc(t.kod)}">${ekEsc(t.ad)}</option>`).join('')}</select><span>→</span><select id="mf-havuz-ders" class="pq-input">${dersler.join('')}</select><button class="set-btn" data-mf="havuzata">Derse ata</button></div>` : ''}`;
+}
+
+/* ---- Metin üzerinde düzenleme yardımcıları ---- */
+function mfAralik(p, si, L) {
+  const st = p.sections[si].ln; let en = L.length;
+  for (let k = si + 1; k < p.sections.length; k++) if (p.sections[k].ln) { en = p.sections[k].ln - 1; break; }
+  return [st, en]; // 1 tabanlı, ikisi dahil
+}
+function mfKonuYaz(src, si, liste) {
+  const p = ekParse(src), L = src.replace(/\r/g, '').split('\n'), s = p.sections[si];
+  if (!s || !s.ln) return src;
+  const [st, en] = mfAralik(p, si, L);
+  const sil = []; let blok = false;
+  for (let i = st; i < en; i++) {
+    const t = L[i].trim();
+    if (blok) { if (t === ':::') blok = false; continue; }
+    if (/^:::\s*\S/.test(t)) { blok = true; continue; }
+    if (/^@konu\s/i.test(t)) sil.push(i);
+  }
+  sil.reverse().forEach(i => L.splice(i, 1));
+  const tekil = [...new Set(liste.filter(Boolean))];
+  if (tekil.length) L.splice(st, 0, '@konu ' + tekil.join(', '));
+  return L.join('\n');
+}
+function mfBaslikYaz(src, re, yeni) {
+  const L = src.replace(/\r/g, '').split('\n'); const i = L.findIndex(l => re.test(l.trim()));
+  if (i > -1) L[i] = yeni; else L.unshift(yeni);
+  return L.join('\n');
+}
+function mfSeviyeYaz(src, sev) {
+  const L = src.replace(/\r/g, '').split('\n'); const i = L.findIndex(l => /^@seviye\s/i.test(l.trim()));
+  if (i > -1) L[i] = '@seviye ' + sev;
+  else { const u = L.findIndex(l => /^@[üu]nite\s/i.test(l.trim())); L.splice(u > -1 ? u + 1 : 0, 0, '@seviye ' + sev); }
+  return L.join('\n');
+}
+function mfDersAdYaz(src, si, ad) {
+  const p = ekParse(src), s = p.sections[si]; if (!s || !s.ln) return src;
+  const L = src.replace(/\r/g, '').split('\n');
+  L[s.ln - 1] = L[s.ln - 1].replace(/\|.*$/, '| ' + ad);
+  return L.join('\n');
+}
+function mfDersEkleYaz(src, ad, konular) {
+  const p = ekParse(src), L = src.replace(/\r/g, '').split('\n');
+  const dersler = p.sections.map((s, si) => ({ s, si })).filter(x => x.s.tur === 'ders' && x.s.ln);
+  const no = dersler.reduce((a, x) => Math.max(a, x.s.no || 0), 0) + 1;
+  let yer;
+  if (dersler.length) yer = mfAralik(p, dersler[dersler.length - 1].si, L)[1];
+  else { const ilk = p.sections.find(s => s.ln); yer = ilk ? ilk.ln - 1 : L.length; }
+  while (yer > 0 && !L[yer - 1].trim()) yer--;
+  const ek = (yer > 0 ? [''] : []).concat(['# Ders ' + no + ' | ' + ad]).concat(konular && konular.length ? ['@konu ' + konular.join(', ')] : []).concat(yer < L.length && !L[yer].trim() ? [] : ['']);
+  L.splice(yer, 0, ...ek);
+  return { src: L.join('\n'), no };
+}
+function mfIskelet(mNo, mAd, uNo, uAd, sev) { return `@modül ${mNo} | ${mAd}\n@ünite ${uNo} | ${uAd}\n@seviye ${sev || 'A1'}\n`; }
+function mfAdTemiz(s) { return String(s || '').replace(/[|\r\n]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+function mfSatir(src, eski) {
+  const p = ekParse(src);
+  if (eski && p.errors.length > eski.errors.length) return { hata: 'Bu değişiklik metinde yeni bir hata oluşturuyor; işlem iptal edildi.' };
+  const toc = p.sections.map(s => ({ tur: s.tur, no: s.no, ad: s.ad }));
+  if (p.actSay) toc.push({ tur: 'anahtar', no: null, ad: 'Cevap anahtarı' });
+  return { p, row: { modul_no: p.meta.modul_no, modul_ad: p.meta.modul_ad || null, unite_no: p.meta.unite_no, unite_ad: p.meta.unite_ad || null,
+    seviye: p.meta.seviye || null, kaynak: src, toc, konular: [...p.konular], kontrol_say: p.kontrolSay, updated_at: new Date().toISOString() } };
+}
+async function mfYaz(u, yeniSrc) {
+  if (yeniSrc === u.kaynak) return true;
+  const r = mfSatir(yeniSrc, u.p);
+  if (r.hata) { uiAlert(r.hata); return false; }
+  const { error } = await sb.from('ek_units').update(r.row).eq('id', u.id);
+  if (error) { uiAlert('Kaydedilemedi: ' + (error.message || error)); return false; }
+  Object.assign(u, r.row, { p: r.p });
+  EK.loaded = false; if (EK.unit && EK.unit.id === u.id) { EK.unit = null; EK.pages = []; }
+  return true;
+}
+async function mfYeniUnite(mNo, mAd, uNo, uAd, sev) {
+  const src = mfIskelet(mNo, mAd, uNo, uAd, sev);
+  const r = mfSatir(src);
+  r.row.yayinda = false;
+  const { data, error } = await sb.from('ek_units').insert(r.row).select('id').single();
+  if (error) { uiAlert('Ünite oluşturulamadı: ' + (error.message || error)); return null; }
+  const u = Object.assign({ id: data.id, yayinda: false }, r.row, { p: r.p });
+  MF.rows.push(u); MF.rows.sort((a, b) => a.modul_no - b.modul_no || a.unite_no - b.unite_no);
+  EK.loaded = false;
+  return u;
+}
+async function mfKonuOlustur(ad, sev) {
+  const kod = ekKodTemizle(ad); if (!kod) return null;
+  if (mfTopic(kod)) return kod;
+  const { error } = await sb.from('topics').insert({ kod, ad: mfAdTemiz(ad), seviye: sev || null });
+  if (error) { uiAlert('Konu oluşturulamadı: ' + (error.message || error)); return null; }
+  EKA.topics.push({ kod, ad: mfAdTemiz(ad), seviye: sev || null, ust_kod: null });
+  return kod;
+}
+async function mfYenile() { await Promise.all([ekTopicsFetch(), ekKullanimYukle()]); ekTopicsRender(); mfRender(); }
+
+/* ---- Eylemler ---- */
+function mfU(id) { return MF.rows.find(r => String(r.id) === String(id)); }
+async function mfEylem(e) {
+  const b = e.target.closest('[data-mf]'); if (!b) return;
+  const a = b.dataset.mf, u = b.dataset.u ? mfU(b.dataset.u) : null, si = b.dataset.s !== undefined && b.dataset.s !== '' ? +b.dataset.s : null;
+  if (a === 'tg') { const k = b.dataset.k; MF.kapali.has(k) ? MF.kapali.delete(k) : MF.kapali.add(k); return mfRender(); }
+  if (a === 'kac') { const k = u.id + ':' + si; MF.ekle = MF.ekle === k ? null : k; mfRender(); const inp = document.querySelector('.mf-ekle-sel'); if (inp) inp.focus(); return; }
+  if (a === 'madi') {
+    const no = +b.dataset.m, units = MF.rows.filter(r => r.modul_no === no);
+    const ad = mfAdTemiz(await uiPrompt('Modül ' + no + ' için yeni ad:', { title: 'Modül adı', value: units[0] && units[0].modul_ad || '' })); if (!ad) return;
+    for (const r of units) if (!(await mfYaz(r, mfBaslikYaz(r.kaynak, /^@mod[üu]l\s/i, `@modül ${no} | ${ad}`)))) break;
+    toast('Modül adı güncellendi.'); return mfRender();
+  }
+  if (a === 'uadi') {
+    const ad = mfAdTemiz(await uiPrompt('Ünite ' + u.unite_no + ' için yeni ad:', { title: 'Ünite adı', value: u.unite_ad || '' })); if (!ad) return;
+    if (await mfYaz(u, mfBaslikYaz(u.kaynak, /^@[üu]nite\s/i, `@ünite ${u.unite_no} | ${ad}`))) toast('Ünite adı güncellendi.');
+    return mfRender();
+  }
+  if (a === 'sev') {
+    const sev = String(await uiPrompt('Seviye (A1, A2, B1, B2, C1):', { title: 'Ünite seviyesi', value: u.seviye || '' }) || '').trim().toUpperCase();
+    if (!sev) return;
+    if (!/^(A1|A2|B1|B2|C1|C2)$/.test(sev)) { uiAlert('Seviye A1, A2, B1, B2, C1 ya da C2 olmalı.'); return; }
+    if (await mfYaz(u, mfSeviyeYaz(u.kaynak, sev))) toast('Seviye güncellendi.');
+    return mfRender();
+  }
+  if (a === 'dadi') {
+    const s = u.p.sections[si];
+    const ad = mfAdTemiz(await uiPrompt((MF_TUR[s.tur] || '') + (s.no != null ? ' ' + s.no : '') + ' için yeni ad:', { title: 'Ders adı', value: s.ad || '' })); if (!ad) return;
+    if (await mfYaz(u, mfDersAdYaz(u.kaynak, si, ad))) toast('Ders adı güncellendi.');
+    return mfRender();
+  }
+  if (a === 'dyeni') {
+    const ad = mfAdTemiz(await uiPrompt('Yeni dersin adı:', { title: 'Ders ekle', placeholder: 'ör. İsimlerde çoğul' })); if (!ad) return;
+    const r = mfDersEkleYaz(u.kaynak, ad);
+    if (await mfYaz(u, r.src)) { toast('Ders ' + r.no + ' eklendi.'); MF.kapali.delete('u' + u.id); }
+    return mfRender();
+  }
+  if (a === 'dsil') {
+    const s = u.p.sections[si];
+    if (s.blocks.length) { uiAlert('İçeriği olan bir ders buradan silinemez; ünite metninden silebilirsin.'); return; }
+    if (!(await uiConfirm(`"${s.ad}" dersi silinsin mi?`, 'Dersi Sil', { danger: true }))) return;
+    const L = u.kaynak.replace(/\r/g, '').split('\n'), [st, en] = mfAralik(u.p, si, L);
+    L.splice(st - 1, en - st + 1);
+    if (await mfYaz(u, L.join('\n'))) toast('Ders silindi.');
+    return mfRender();
+  }
+  if (a === 'uyeni') {
+    const no = +b.dataset.m, units = MF.rows.filter(r => r.modul_no === no);
+    const ad = mfAdTemiz(await uiPrompt('Modül ' + no + ' içine eklenecek ünitenin adı:', { title: 'Ünite ekle' })); if (!ad) return;
+    const son = units[units.length - 1];
+    const uNo = MF.rows.filter(r => r.modul_no === no).reduce((x, r) => Math.max(x, r.unite_no), 0) + 1;
+    if (await mfYeniUnite(no, (son && son.modul_ad) || '', uNo, ad, son && son.seviye)) toast('Ünite ' + uNo + ' taslak olarak eklendi.');
+    return mfRender();
+  }
+  if (a === 'metin') { await icTab('unite'); return ekAdmEdit(u.id); }
+  if (a === 'kcikar') {
+    const c = b.closest('.mf-chip'), kod = c.dataset.kod, uu = mfU(c.dataset.u), s2 = +c.dataset.s;
+    if (await mfYaz(uu, mfKonuYaz(uu.kaynak, s2, uu.p.sections[s2].konular.filter(k => k !== kod)))) toast('Konu dersten çıkarıldı.');
+    return mfRender();
+  }
+  if (a === 'kekle') {
+    const kutu = b.closest('.mf-ekle'), secim = kutu.querySelector('.mf-ekle-sel').value, yeni = kutu.querySelector('.mf-ekle-yeni').value.trim();
+    let kod = secim;
+    if (yeni) { kod = await mfKonuOlustur(yeni, u.seviye); if (!kod) return; }
+    if (!kod) { uiAlert('Bir konu seç ya da yeni konu adı yaz.'); return; }
+    if (await mfYaz(u, mfKonuYaz(u.kaynak, si, u.p.sections[si].konular.concat(kod)))) { toast('Konu derse atandı.'); MF.ekle = null; }
+    await ekKullanimYukle(); ekTopicsRender(); return mfRender();
+  }
+  if (a === 'havuzata') {
+    const kod = document.getElementById('mf-havuz-konu').value, hedef = document.getElementById('mf-havuz-ders').value.split(':');
+    const uu = mfU(hedef[0]), s2 = +hedef[1]; if (!uu || !kod) return;
+    if (await mfYaz(uu, mfKonuYaz(uu.kaynak, s2, uu.p.sections[s2].konular.concat(kod)))) toast('Konu derse atandı.');
+    await ekKullanimYukle(); ekTopicsRender(); return mfRender();
+  }
+}
+async function mfTasi(kod, kU, kS, hU, hS) {
+  const h = mfU(hU); if (!h) return;
+  if (kU && String(kU) === String(hU) && kS === hS) return;
+  if (kU && String(kU) === String(hU)) {
+    let src = mfKonuYaz(h.kaynak, kS, h.p.sections[kS].konular.filter(k => k !== kod));
+    src = mfKonuYaz(src, hS, ekParse(src).sections[hS].konular.concat(kod));
+    if (await mfYaz(h, src)) toast('Konu taşındı.');
+  } else {
+    if (!(await mfYaz(h, mfKonuYaz(h.kaynak, hS, h.p.sections[hS].konular.concat(kod))))) return mfRender();
+    if (kU) { const k = mfU(kU); if (k) await mfYaz(k, mfKonuYaz(k.kaynak, kS, k.p.sections[kS].konular.filter(x => x !== kod))); }
+    toast(kU ? 'Konu taşındı.' : 'Konu derse atandı.');
+  }
+  await ekKullanimYukle(); ekTopicsRender(); mfRender();
+}
+function mfBagla() {
+  const kok = document.getElementById('ic-konular'); if (!kok || kok.dataset.mf) return;
+  kok.dataset.mf = '1';
+  kok.addEventListener('click', e => { if (e.target.closest('#mf-tree, #mf-atanmamis')) mfEylem(e); });
+  kok.addEventListener('dragstart', e => {
+    const c = e.target.closest && e.target.closest('.mf-chip[draggable="true"]'); if (!c) return;
+    e.dataTransfer.setData('text/plain', JSON.stringify({ kod: c.dataset.kod, u: c.dataset.u, s: c.dataset.s === '' ? null : +c.dataset.s }));
+    e.dataTransfer.effectAllowed = 'move'; c.classList.add('drag');
+  });
+  kok.addEventListener('dragend', e => { const c = e.target.closest && e.target.closest('.mf-chip'); if (c) c.classList.remove('drag'); });
+  kok.addEventListener('dragover', e => { const d = e.target.closest && e.target.closest('.mf-ders'); if (!d) return; e.preventDefault(); d.classList.add('ust'); });
+  kok.addEventListener('dragleave', e => { const d = e.target.closest && e.target.closest('.mf-ders'); if (d && !d.contains(e.relatedTarget)) d.classList.remove('ust'); });
+  kok.addEventListener('drop', e => {
+    const d = e.target.closest && e.target.closest('.mf-ders'); if (!d) return;
+    e.preventDefault(); d.classList.remove('ust');
+    let v; try { v = JSON.parse(e.dataTransfer.getData('text/plain')); } catch (x) { return; }
+    if (!v || !v.kod) return;
+    mfTasi(v.kod, v.u || null, v.s, d.dataset.u, +d.dataset.s);
+  });
+}
+async function mfYeniModul() {
+  const mAd = mfAdTemiz(await uiPrompt('Yeni modülün adı:', { title: 'Modül ekle', placeholder: 'ör. Temel Dilbilgisi' })); if (!mAd) return;
+  const uAd = mfAdTemiz(await uiPrompt('Bu modülün ilk ünitesinin adı:', { title: 'İlk ünite', placeholder: 'ör. İsimler' })); if (!uAd) return;
+  const mNo = MF.rows.reduce((a, r) => Math.max(a, r.modul_no || 0), 0) + 1;
+  if (await mfYeniUnite(mNo, mAd, 1, uAd, 'A1')) toast('Modül ' + mNo + ' oluşturuldu (ünite taslak).');
+  mfRender();
+}
+function mfTumu(ac) {
+  MF.kapali.clear();
+  if (!ac) MF.rows.forEach(r => { MF.kapali.add('u' + r.id); });
+  mfRender();
+}
+
+/* ---- Toplu müfredat: dışa aktar / içe al ---- */
+function mfDisaAktar() {
+  let t = '';
+  mfModuller().forEach(m => {
+    t += `@modül ${m.no} | ${m.ad}\n`;
+    m.units.forEach(u => {
+      t += `@ünite ${u.unite_no} | ${u.unite_ad || ''}${u.seviye ? ' | ' + u.seviye : ''}\n`;
+      u.p.sections.forEach(s => {
+        if (s.tur !== 'ders' || !s.ln) return;
+        t += `# Ders ${s.no} | ${s.ad}\n`;
+        s.konular.forEach(k => { const tp = mfTopic(k); t += tp ? `${k} | ${tp.ad}\n` : `${k}\n`; });
+      });
+      t += '\n';
+    });
+  });
+  const ta = document.getElementById('mf-toplu'); if (ta) { ta.value = t.trim() + '\n'; ta.focus(); }
+  mfPlanTemizle();
+}
+function mfTopluCoz(txt) {
+  const out = [], hatalar = []; let m = null, u = null, d = null;
+  String(txt || '').replace(/\r/g, '').split('\n').forEach((raw, i) => {
+    const s = raw.trim().replace(/^[-•*]\s+/, ''), ln = i + 1; let q;
+    if (!s || s.startsWith('//')) return;
+    if ((q = s.match(/^@mod[üu]l\s+(\d+)\s*(?:\|\s*(.*))?$/i))) { m = { no: +q[1], ad: mfAdTemiz(q[2] || '') }; u = d = null; return; }
+    if ((q = s.match(/^@[üu]nite\s+(\d+)\s*(?:\|\s*(.*))?$/i))) {
+      if (!m) { hatalar.push(`Satır ${ln}: ünite bir "@modül" satırından önce geliyor.`); return; }
+      const p = (q[2] || '').split('|').map(x => x.trim());
+      const sev = p.length > 1 && /^(A1|A2|B1|B2|C1|C2)$/i.test(p[p.length - 1]) ? p.pop().toUpperCase() : '';
+      u = { m, no: +q[1], ad: mfAdTemiz(p.join(' ')), sev, dersler: [] }; out.push(u); d = null; return;
+    }
+    if ((q = s.match(/^#\s*Ders\s+(\d+)\s*(?:\|\s*(.*))?$/i))) {
+      if (!u) { hatalar.push(`Satır ${ln}: ders bir "@ünite" satırından önce geliyor.`); return; }
+      d = { no: +q[1], ad: mfAdTemiz(q[2] || ''), konular: [] }; u.dersler.push(d); return;
+    }
+    if (/^[@#]/.test(s)) { hatalar.push(`Satır ${ln}: tanınmayan satır "${s.slice(0, 40)}".`); return; }
+    if (!d) { hatalar.push(`Satır ${ln}: konu satırı bir "# Ders" satırının altında olmalı.`); return; }
+    const p = s.split('|').map(x => x.trim());
+    let kod, ad;
+    if (p.length > 1) { kod = ekKodTemizle(p[0]); ad = p.slice(1).join(' ').trim() || p[0]; }
+    else if (/^[a-z0-9-]+$/.test(s)) { kod = s; ad = (mfTopic(s) || {}).ad || s; }
+    else { kod = ekKodTemizle(s); ad = s; }
+    if (!kod) { hatalar.push(`Satır ${ln}: konu kodu üretilemedi.`); return; }
+    d.konular.push({ kod, ad });
+  });
+  return { units: out, hatalar };
+}
+function mfPlanTemizle() { MF.plan = null; const r = document.getElementById('mf-toplu-rapor'); if (r) r.innerHTML = ''; }
+function mfTopluOnizle() {
+  const ta = document.getElementById('mf-toplu'); if (!ta) return;
+  const degistir = document.getElementById('mf-toplu-degistir') && document.getElementById('mf-toplu-degistir').checked;
+  let { units, hatalar } = mfTopluCoz(ta.value);
+  const rap = document.getElementById('mf-toplu-rapor');
+  if (hatalar.length || !units.length) {
+    rap.innerHTML = (hatalar.length ? hatalar : ['Metinde hiç ünite yok.']).map(x => `<div class="ek-rep-row bad">${ekEsc(x)}</div>`).join('');
+    MF.plan = null; return;
+  }
+  const plan = { yaz: [], yeni: [], konu: new Map(), satir: [] };
+  const modAd = new Map(); units.forEach(x => { if (x.m.ad) modAd.set(x.m.no, x.m.ad); });
+  const islenen = new Set(), calis = new Map();
+  // Aynı ünite listede iki kez geçerse dersleri birleştir
+  const tek = []; units.forEach(x => { const o = tek.find(y => y.m.no === x.m.no && y.no === x.no); if (o) { if (x.ad) o.ad = x.ad; if (x.sev) o.sev = x.sev; o.dersler = o.dersler.concat(x.dersler); } else tek.push(x); });
+  units = tek;
+  const uygula = (src, x, notlar) => {
+    if (x.ad) { const p0 = ekParse(src); if (p0.meta.unite_ad !== x.ad) { src = mfBaslikYaz(src, /^@[üu]nite\s/i, `@ünite ${x.no} | ${x.ad}`); notlar.push('ünite adı → ' + x.ad); } }
+    if (x.sev) { const p0 = ekParse(src); if (p0.meta.seviye !== x.sev) { src = mfSeviyeYaz(src, x.sev); notlar.push('seviye → ' + x.sev); } }
+    x.dersler.forEach(d => {
+      let p = ekParse(src), si = p.sections.findIndex(s => s.tur === 'ders' && s.no === d.no && s.ln);
+      if (si < 0) {
+        const r = mfDersEkleYaz(src, d.ad || ('Ders ' + d.no), []);
+        src = r.src; p = ekParse(src); si = p.sections.findIndex(s => s.tur === 'ders' && s.no === r.no && s.ln);
+        notlar.push(`Ders ${r.no} eklenecek` + (r.no !== d.no ? ` (listede ${d.no} yazıyordu, sıradaki numara ${r.no})` : ''));
+      } else if (d.ad && p.sections[si].ad !== d.ad) { src = mfDersAdYaz(src, si, d.ad); notlar.push(`Ders ${d.no} adı → ${d.ad}`); p = ekParse(src); }
+      const eski = p.sections[si].konular, liste = d.konular.map(k => k.kod);
+      const son = degistir ? liste : [...new Set(eski.concat(liste))];
+      if (son.join(',') !== eski.join(',')) {
+        src = mfKonuYaz(src, si, son);
+        const ek = son.filter(k => !eski.includes(k)).length, cik = eski.filter(k => !son.includes(k)).length;
+        notlar.push(`Ders ${d.no}: ` + [ek ? ek + ' konu eklenecek' : '', cik ? cik + ' konu çıkarılacak' : ''].filter(Boolean).join(', ') || `Ders ${d.no}: konu sırası değişecek`);
+      }
+      d.konular.forEach(k => { if (!mfTopic(k.kod) && !plan.konu.has(k.kod)) plan.konu.set(k.kod, { ad: k.ad, sev: x.sev || null }); });
+    });
+    return src;
+  };
+  units.forEach(x => {
+    const mAd = modAd.get(x.m.no) || '';
+    const var0 = MF.rows.find(r => r.modul_no === x.m.no && r.unite_no === x.no);
+    const notlar = [];
+    if (var0) {
+      islenen.add(var0.id);
+      const c = calis.get(var0.id) || { u: var0, src: var0.kaynak, notlar: [] }; calis.set(var0.id, c);
+      if (mAd && ekParse(c.src).meta.modul_ad !== mAd) { c.src = mfBaslikYaz(c.src, /^@mod[üu]l\s/i, `@modül ${x.m.no} | ${mAd}`); c.notlar.push('modül adı → ' + mAd); }
+      c.src = uygula(c.src, x, c.notlar);
+    } else {
+      if (!x.ad) { plan.satir.push(`<span class="bad">Modül ${x.m.no} · Ünite ${x.no} yok ve adı yazılmamış; atlanacak.</span>`); return; }
+      const src = uygula(mfIskelet(x.m.no, mAd || ('Modül ' + x.m.no), x.no, x.ad, x.sev || 'A1'), Object.assign({}, x, { ad: '', sev: '' }), notlar);
+      plan.yeni.push({ src });
+      plan.satir.push(`<b>Modül ${x.m.no} · Ünite ${x.no}</b> — yeni ünite (taslak) oluşturulacak` + (notlar.length ? '; ' + notlar.map(ekEsc).join('; ') : ''));
+    }
+  });
+  // Modül adı değiştiyse listede olmayan diğer ünitelerine de yaz
+  modAd.forEach((ad, no) => MF.rows.filter(r => r.modul_no === no && !islenen.has(r.id) && r.modul_ad !== ad).forEach(r => {
+    calis.set(r.id, { u: r, src: mfBaslikYaz(r.kaynak, /^@mod[üu]l\s/i, `@modül ${no} | ${ad}`), notlar: ['modül adı → ' + ad] });
+  }));
+  const ust = [];
+  [...calis.values()].sort((a, b) => a.u.modul_no - b.u.modul_no || a.u.unite_no - b.u.unite_no).forEach(c => {
+    if (c.src === c.u.kaynak) return;
+    plan.yaz.push({ u: c.u, src: c.src });
+    ust.push(`<b>Modül ${c.u.modul_no} · Ünite ${c.u.unite_no}</b> — ${c.notlar.map(ekEsc).join('; ')}`);
+  });
+  plan.satir = ust.concat(plan.satir);
+  plan.konu.forEach((v, k) => plan.satir.push(`Yeni konu: <b>${ekEsc(v.ad)}</b> <span class="cw-cat">${ekEsc(k)}</span>`));
+  MF.plan = plan;
+  const bos = !plan.yaz.length && !plan.yeni.length && !plan.konu.size;
+  rap.innerHTML = bos ? '<div class="ek-rep-row good">Ağaç zaten bu listeyle aynı; yapılacak değişiklik yok.</div>'
+    : `<div class="ek-rep-sum"><span>${plan.yaz.length} ünite güncellenecek</span><span>${plan.yeni.length} yeni ünite</span><span>${plan.konu.size} yeni konu</span></div>`
+      + plan.satir.map(x => `<div class="ek-rep-row">${x}</div>`).join('')
+      + `<button class="set-btn" style="margin-top:10px" onclick="mfTopluUygula()">Değişiklikleri uygula</button>`;
+  if (bos) MF.plan = null;
+}
+async function mfTopluUygula() {
+  const plan = MF.plan; if (!plan) return;
+  const rows = []; plan.konu.forEach((v, kod) => rows.push({ kod, ad: v.ad, seviye: v.sev }));
+  try {
+    if (rows.length) { const { error } = await sb.from('topics').upsert(rows, { onConflict: 'kod' }); if (error) throw error; }
+    let ok = 0;
+    for (const x of plan.yaz) if (await mfYaz(x.u, x.src)) ok++;
+    for (const x of plan.yeni) {
+      const r = mfSatir(x.src); r.row.yayinda = false;
+      const { error } = await sb.from('ek_units').insert(r.row); if (error) throw error; ok++;
+    }
+    MF.plan = null; document.getElementById('mf-toplu-rapor').innerHTML = '';
+    EK.loaded = false;
+    await mfYukle(); await mfYenile();
+    toast(ok + ' ünite güncellendi' + (rows.length ? ', ' + rows.length + ' konu eklendi.' : '.'));
+  } catch (e) { uiAlert('Uygulanamadı: ' + ((e && e.message) || e)); await mfYukle(); mfRender(); }
+}
+
 if (typeof window !== 'undefined') {
-  Object.assign(window, { icKartInit, icKartYukle, icKartSil, icInit, icTab, ekTopicYeni, ekAdmGorunum, ekAdmSayfalar, ekPdBol, ekPdKaldir, ekPdGoster, ozInit, ozRender, ozCmd, ozClear, ozEdit, ozSave, ozToggle, ozDelete, ekOpenRef, gwInit, gwOpen, gwBack, gwFiltre, gwSeviye, gwKural, gwAdmMove, ekAdmTab, ekOpen, ekAdmInit, ekAdmNew, ekAdmEdit, ekAdmCheck, ekAdmSave, ekAdmToggle, ekAdmDelete, ekAdmInsert,
+  Object.assign(window, { mfYeniModul, mfTumu, mfDisaAktar, mfTopluOnizle, mfTopluUygula, mfPlanTemizle, icKartInit, icKartYukle, icKartSil, icInit, icTab, ekTopicYeni, ekAdmGorunum, ekAdmSayfalar, ekPdBol, ekPdKaldir, ekPdGoster, ozInit, ozRender, ozCmd, ozClear, ozEdit, ozSave, ozToggle, ozDelete, ekOpenRef, gwInit, gwOpen, gwBack, gwFiltre, gwSeviye, gwKural, gwAdmMove, ekAdmTab, ekOpen, ekAdmInit, ekAdmNew, ekAdmEdit, ekAdmCheck, ekAdmSave, ekAdmToggle, ekAdmDelete, ekAdmInsert,
     ekAdmImage, ekAdmCopyFormat, ekAdmList, ekTopicsInit, ekTopicSave, ekTopicDelete, ekTopicBulk, ekTopicEdit, ekParse });
 }
