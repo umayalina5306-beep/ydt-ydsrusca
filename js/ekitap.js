@@ -179,7 +179,7 @@ function ekParse(src, opt) {
           else if (cur) { if (cur.arka) cur.arka += ' ' + s; else cur.on += ' ' + s; }
         });
         if (cur) cards.push(cur);
-        P({ t: 'kartlar', cards });
+        P({ t: 'kartlar', cards, son: j + 1 });
       } else if (tip === 'kutular') {
         const kutular = body.map(l => l.trim()).filter(Boolean).map(l => {
           const q = l.match(/^\[(мн|м|ж|с)\]\s*(.*)$/); if (!q) return null;
@@ -978,6 +978,7 @@ function ekLog(id, dogru) {
   reg.cozuldu = reg.cozuldu || dogru;
   const el = document.querySelector(`.ek-act[data-act="${id}"]`); if (el && dogru) el.classList.add('ek-cozuldu');
   if (typeof currentUser === 'undefined' || !currentUser || typeof sb === 'undefined') return;
+  if (typeof logActivity === 'function') { try { logActivity('ekActs', 1); } catch (x) {} }
   sb.from('ek_answers').insert({ user_id: currentUser.id, unit_id: EK.unit.id, act_key: reg.key, tip: reg.act.tip, konular: reg.act.konu || [], dogru: !!dogru }).then(() => {}, () => {});
 }
 
@@ -993,9 +994,6 @@ function ekShellHTML() {
       <button class="ek-ttab active" data-ek="ttab" data-v="kitap"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><line x1="12" y1="5" x2="12" y2="19"/></svg>E-Kitap</button>
       <button class="ek-ttab" data-ek="ttab" data-v="notlar"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="14" y2="14"/></svg>Notlar</button>
       <button class="ek-ttab" data-ek="ttab" data-v="kartlar"><svg viewBox="0 0 24 24"><rect x="6" y="3" width="13" height="16" rx="2"/><path d="M4 7v12a2 2 0 0 0 2 2h9"/></svg>Kartlar</button>
-      <div class="ek-tt-r">
-        <button class="ek-ico-btn ek-tb-tog" data-ek="tbtog" title="Araç çubuğunu aç / kapat"><svg viewBox="0 0 24 24"><path d="M4 20l1.5-5L16 4.5a2.1 2.1 0 0 1 3 3L8.5 18z"/><path d="M14 6.5l3 3"/></svg><span>Araçlar</span></button>
-      </div>
     </div>
     <div class="ek-view" id="ek-v-kitap">
       <div class="ek-main">
@@ -1026,6 +1024,8 @@ function ekShellHTML() {
             <button class="ek-nav-btn" data-ek="prev"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="11 6 5 12 11 18"/></svg>Önceki Sayfa</button>
             <input type="range" class="ek-slider" id="ek-slider" min="0" max="0" value="0" data-ek-slider="1">
             <span class="ek-bottom-n" id="ek-bottom-n">–</span>
+            <span class="ek-bt-git"><input type="number" id="ek-rb-input" min="1" placeholder="Sayfa" autocomplete="off"><button class="ek-btn sm" data-ek="gopg">Git</button></span>
+            <select class="ek-zoom" id="ek-zoom" data-ek-zoom="1" title="Yakınlaştır"><option value="90">%90</option><option value="100" selected>%100</option><option value="110">%110</option><option value="125">%125</option></select>
             <button class="ek-nav-btn" data-ek="next">Sonraki Sayfa<svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg></button>
           </div>
         </div>
@@ -1196,7 +1196,7 @@ function ekPageSize() {
   EK.single = bw < 700;
   const w = EK.single ? Math.min(bw - 8, 640) : Math.floor((bw - 8) / 2);
   wrap.classList.toggle('ek-narrow', w < 470);
-  const h = Math.max(520, Math.min(fs ? 2000 : 1150, window.innerHeight - (fs ? 120 : 225)));
+  const h = Math.max(520, Math.min(fs ? 2000 : 1150, window.innerHeight - (fs ? 120 : 240)));
   wrap.style.setProperty('--ek-pg-h', h + 'px');
   wrap.style.setProperty('--ek-fs', (EK.zoom / 100) + '');
   return { w, h };
@@ -1246,17 +1246,13 @@ function ekRender() {
   const n = EK.pages.length;
   const a = EK.cur + 1, b = EK.single ? a : Math.min(n, EK.cur + 2);
   const etiket = a === b ? `${a} / ${n}` : `${a}–${b} / ${n}`;
-  EK.pages.forEach(pp => { const o = pp.querySelector(':scope > .ek-ribbon'); if (o) o.remove(); });
+  EK.pages.forEach(pp => { const o = pp.querySelector(':scope > .ek-ribbons'); if (o) o.remove(); });
   if (sol) {
-    const wr = document.getElementById('ek-wrap'), fs = !!(wr && wr.classList.contains('ek-fs'));
-    sol.appendChild(ekEl(`<div class="ek-ribbon${EK.rbAcik ? ' acik' : ''}">
-      <button class="ek-rb-serit" data-ek="ribbon" title="Sayfa ve görünüm"><span>${a}</span></button>
-      <div class="ek-rb-menu">
-        <div class="ek-rb-sayfa" id="ek-tb-page">Sayfa ${etiket}</div>
-        <div class="ek-rb-git"><input type="number" id="ek-rb-input" min="1" max="${n}" placeholder="Sayfa no"><button class="ek-btn sm" data-ek="gopg">Git</button></div>
-        <label class="ek-rb-sat"><span>Yakınlaştır</span><select class="ek-zoom" id="ek-zoom" data-ek-zoom="1">${[90, 100, 110, 125].map(z => `<option value="${z}"${EK.zoom === z ? ' selected' : ''}>%${z}</option>`).join('')}</select></label>
-        <button class="ek-btn ghost sm" data-ek="fs">${fs ? 'Tam ekrandan çık' : 'Tam ekran'}</button>
-      </div></div>`));
+    const wr = document.getElementById('ek-wrap'), fs = !!(wr && wr.classList.contains('ek-fs')), tb = !!(wr && wr.classList.contains('ek-tb-acik'));
+    sol.appendChild(ekEl(`<div class="ek-ribbons">
+      <button class="ek-rb${tb ? ' active' : ''}" data-ek="tbtog" title="${tb ? 'Araçları gizle' : 'Araçlar'}"><svg viewBox="0 0 24 24"><path d="M4 20l1.5-5L16 4.5a2.1 2.1 0 0 1 3 3L8.5 18z"/><path d="M14 6.5l3 3"/></svg></button>
+      <button class="ek-rb${fs ? ' active' : ''}" data-ek="fs" title="${fs ? 'Tam ekrandan çık' : 'Tam ekran'}"><svg viewBox="0 0 24 24"><polyline points="4 9 4 4 9 4"/><polyline points="20 9 20 4 15 4"/><polyline points="4 15 4 20 9 20"/><polyline points="20 15 20 20 15 20"/></svg></button>
+    </div>`));
   }
   const bn = document.getElementById('ek-bottom-n'); if (bn) bn.textContent = etiket;
   const sl = document.getElementById('ek-slider'); if (sl) { sl.max = n - 1; sl.value = EK.cur; }
@@ -1404,7 +1400,7 @@ function ekRenderSideNotes() {
   const si = ekCurSection();
   const benim = (EK.notes || []).filter(n => +n.sec_idx === si);
   h += `<div class="ek-side-sec" style="margin-top:14px">Bu derse ait notlarım (${benim.length})</div>`;
-  benim.forEach(n => { h += `<button class="ek-sn ek-sn-my" data-ek="nopen" data-id="${n.id}"><b>${ekEsc(n.baslik || 'Başlıksız not')}</b><span>${ekEsc((n.metin || '').slice(0, 90))}</span></button>`; });
+  benim.forEach(n => { h += `<button class="ek-sn ek-sn-my" data-ek="nopen" data-id="${n.id}"><b>${ekEsc(n.baslik || 'Başlıksız not')}${n.kart_aktif ? ' <em class="ek-nl-kart">kart</em>' : ''}</b><span>${ekEsc((n.metin || '').slice(0, 90))}</span></button>`; });
   h += `<button class="ek-btn ghost" style="width:100%;margin-top:6px" data-ek="nnew">+ Yeni Not</button>`;
   box.innerHTML = h;
 }
@@ -1576,7 +1572,7 @@ function ekBookClick(e) {
     return true;
   }
   if (EK.tool === 'note') {
-    if (e.target.closest('.ek-sticky, .ek-ribbon')) return true;
+    if (e.target.closest('.ek-sticky, .ek-ribbons')) return true;
     const page = e.target.closest('.ek-page'); if (!page) return true;
     const yer = ekStYer(page, e.clientX, e.clientY); if (!yer) return true;
     ekAnnPush();
@@ -1630,7 +1626,7 @@ function ekRenderNotesTab(acId) {
   let liste = '';
   Object.keys(gruplar).sort((a, b) => a - b).forEach(si => {
     liste += `<div class="ek-nl-sec">${ekEsc(ekSecAd(+si))}</div>`;
-    gruplar[si].forEach(n => { liste += `<button class="ek-nl-it${String(n.id) === String(acId) ? ' active' : ''}" data-ek="nopen" data-id="${n.id}"><b>${ekEsc(n.baslik || 'Başlıksız not')}</b><span>${ekEsc((n.metin || '').slice(0, 80))}</span></button>`; });
+    gruplar[si].forEach(n => { liste += `<button class="ek-nl-it${String(n.id) === String(acId) ? ' active' : ''}" data-ek="nopen" data-id="${n.id}"><b>${ekEsc(n.baslik || 'Başlıksız not')}${n.kart_aktif ? ' <em class="ek-nl-kart">kart</em>' : ''}</b><span>${ekEsc((n.metin || '').slice(0, 80))}</span></button>`; });
   });
   if (!liste) liste = '<div class="ek-side-empty">Bu ünitede henüz notun yok.</div>';
   const n = acId === 'yeni' ? { id: 'yeni', sec_idx: Math.max(0, ekCurSection()), baslik: '', metin: '' } : (EK.notes || []).find(x => String(x.id) === String(acId));
@@ -1639,6 +1635,11 @@ function ekRenderNotesTab(acId) {
       <select id="ek-ne-sec" class="ek-ne-in">${toc.map((t, i) => t.tur === 'anahtar' ? '' : `<option value="${i}"${i === +n.sec_idx ? ' selected' : ''}>${ekEsc(ekSecAd(i))}</option>`).join('')}</select>
       <input id="ek-ne-bas" class="ek-ne-in" placeholder="Not başlığı" value="${ekEsc(n.baslik || '')}" autocomplete="off" data-lpignore="true" data-form-type="other">
       <textarea id="ek-ne-met" class="ek-ne-ta" placeholder="Bu konu hakkındaki notlarını buraya yaz…">${ekEsc(n.metin || '')}</textarea>
+      <label class="ek-ne-kart"><input type="checkbox" id="ek-ne-kart"${n.kart_aktif ? ' checked' : ''} onchange="document.getElementById('ek-ne-kartalan').style.display=this.checked?'':'none'"> Bu notu çalışma kartı olarak da kullan</label>
+      <div id="ek-ne-kartalan" class="ek-ne-kartalan"${n.kart_aktif ? '' : ' style="display:none"'}>
+        <textarea id="ek-ne-on" class="ek-ne-in" rows="2" placeholder="Kartın ön yüzü (soru, kelime…)">${ekEsc(n.kart_on || '')}</textarea>
+        <textarea id="ek-ne-arka" class="ek-ne-in" rows="2" placeholder="Kartın arka yüzü (cevap, açıklama…)">${ekEsc(n.kart_arka || '')}</textarea>
+      </div>
       <div class="ek-ne-f"><button class="ek-btn" data-ek="nsave" data-id="${n.id}">Kaydet</button>
         ${n.id !== 'yeni' ? `<button class="ek-btn ghost" data-ek="ndel" data-id="${n.id}">Sil</button>` : ''}
         <button class="ek-btn ghost" data-ek="ngo" data-s="${n.sec_idx}">Kitapta bu derse git</button></div></div>`
@@ -1649,11 +1650,18 @@ async function ekNoteSave(id) {
   if (!currentUser || !EK.unit) return;
   const row = { user_id: currentUser.id, unit_id: EK.unit.id, sec_idx: +document.getElementById('ek-ne-sec').value || 0,
     baslik: document.getElementById('ek-ne-bas').value.trim() || null, metin: document.getElementById('ek-ne-met').value, updated_at: new Date().toISOString() };
+  const kartEl = document.getElementById('ek-ne-kart');
+  if (kartEl) { row.kart_aktif = kartEl.checked; row.kart_on = document.getElementById('ek-ne-on').value.trim() || null; row.kart_arka = document.getElementById('ek-ne-arka').value.trim() || null; }
+  if (row.kart_aktif && !row.kart_on) { if (typeof uiAlert === 'function') uiAlert('Kart olarak kullanmak için ön yüzü doldur.'); return; }
   try {
-    let r;
-    if (id === 'yeni') r = await sb.from('ek_notes').insert(row).select('id').single();
-    else r = await sb.from('ek_notes').update(row).eq('id', id).select('id').single();
+    const yaz = rw => id === 'yeni' ? sb.from('ek_notes').insert(rw).select('id').single() : sb.from('ek_notes').update(rw).eq('id', id).select('id').single();
+    let r = await yaz(row);
+    if (r.error && /kart_/.test(r.error.message || '')) {   // kartlar_gunluk.sql çalıştırılmamış
+      delete row.kart_aktif; delete row.kart_on; delete row.kart_arka; r = await yaz(row);
+      if (!r.error && typeof uiAlert === 'function') uiAlert('Not kaydedildi ama kart alanları için kartlar_gunluk.sql çalıştırılmalı.');
+    }
     if (r.error) throw r.error;
+    EK.deck = null;
     await ekNotesLoad(EK.unit.id); ekRenderNotesTab(r.data.id); ekRenderSideNotes();
     if (typeof toast === 'function') toast('Not kaydedildi.');
   } catch (e) { if (typeof uiAlert === 'function') uiAlert('Not kaydedilemedi: ' + ((e && e.message) || e)); }
@@ -1684,12 +1692,18 @@ function ekCardStat(key, yon) {
     sb.from('ek_card_stats').upsert({ user_id: currentUser.id, card_key: key, tekrar: s.tekrar, tamam: s.tamam, ardisik: s.ardisik, son: s.son, sonraki: s.sonraki }, { onConflict: 'user_id,card_key' }).then(() => {}, () => {});
   }
 }
+function ekHash(s) { let h = 5381; s = String(s || ''); for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
 function ekDeckCards(kapsam) {
   const out = []; if (!EK.parsed || !EK.unit) return out;
   EK.parsed.sections.forEach((s, si) => {
     if (kapsam !== 'unit' && si !== +kapsam) return;
     let ci = 0;
-    s.blocks.forEach(b => { if (b.t === 'kartlar') b.cards.forEach(c => out.push({ key: EK.unit.id + ':' + si + ':' + (ci++), on: c.on, arka: c.arka, si })); });
+    s.blocks.forEach(b => { if (b.t === 'kartlar') b.cards.forEach(c => { ci++; out.push({ key: EK.unit.id + ':' + si + ':h' + ekHash(c.on + '|' + c.arka), on: c.on, arka: c.arka, si }); }); });
+  });
+  // Öğrencinin "kart olarak kullan" dediği kendi notları
+  (EK.notes || []).forEach(n => {
+    if (n.kart_aktif && n.kart_on && (kapsam === 'unit' || +n.sec_idx === +kapsam))
+      out.push({ key: 'n:' + n.id, on: n.kart_on, arka: n.kart_arka || '', si: +n.sec_idx || 0, kendi: true });
   });
   return out;
 }
@@ -1743,7 +1757,7 @@ function ekRenderCards() {
       <div class="ek-dc ek-dc-top${d.flipped ? ' flipped' : ''}" id="ek-dc-top">
         <span class="ek-dc-lbl l">Tekrar</span><span class="ek-dc-lbl r">Tamamladım</span>
         <div class="ek-dc-ders">${ekEsc(ekSecAd(c.si))}</div>
-        <div class="ek-dc-face">${ekInline(d.flipped ? c.arka : c.on)}</div>
+        ${c.kendi ? '<span class="ek-dc-kendi">Kendi kartın</span>' : ''}<div class="ek-dc-face">${ekInline(d.flipped ? c.arka : c.on)}</div>
         <div class="ek-dc-hint">${d.flipped ? 'Arka yüz' : 'Çevirmek için tıkla'}</div>
       </div></div>
       <div class="ek-dk-btns">
@@ -1768,6 +1782,7 @@ function ekDeckMove(yon) {
     if (yon === 'L') { d.queue.push(idx); d.zor.add(idx); } else d.done.push(idx);
     d.hist.push({ yon, idx }); d.flipped = false;
     ekCardStat(d.cards[idx].key, yon); ekRenderCards();
+    if (typeof logActivity === 'function') { try { logActivity('cards', 1); } catch (x) {} }
   };
   if (top) { top.classList.add(yon === 'L' ? 'fly-l' : 'fly-r'); setTimeout(uygula, 230); } else uygula();
 }
@@ -2041,7 +2056,7 @@ function ekPenNokta(e) {
 document.addEventListener('pointerdown', function (e) {
   if (EK.tool !== 'pen' || e.button > 0) return;
   const book = document.getElementById('ek-book'); if (!book || !book.contains(e.target)) return;
-  const page = e.target.closest('.ek-page'); if (!page || page.classList.contains('ek-page-blank') || e.target.closest('.ek-sticky, .ek-ribbon')) return;
+  const page = e.target.closest('.ek-page'); if (!page || page.classList.contains('ek-page-blank') || e.target.closest('.ek-sticky, .ek-ribbons')) return;
   let bl = e.target.closest('.ek-pg-body > [data-bid]');
   if (!bl) { const bs = [...page.querySelectorAll('.ek-pg-body > [data-bid]')]; bl = bs.find(b => b.getBoundingClientRect().bottom > e.clientY) || bs[bs.length - 1]; }
   if (!bl) return;
@@ -2181,6 +2196,7 @@ function gwLog(reg, id, dogru) {
   const el = document.querySelector(`.ek-act[data-act="${id}"]`); if (el && dogru) el.classList.add('ek-cozuldu');
   if (dogru) { (GW.cozulen[GW.set.id] = GW.cozulen[GW.set.id] || new Set()).add(reg.key); gwIlerleme(); }
   if (typeof currentUser === 'undefined' || !currentUser || typeof sb === 'undefined') return;
+  if (typeof logActivity === 'function') { try { logActivity('ekActs', 1); } catch (x) {} }
   sb.from('ek_answers').insert({ user_id: currentUser.id, set_id: GW.set.id, unit_id: null, act_key: reg.key, tip: reg.act.tip, konular: reg.act.konu || [], dogru: !!dogru }).then(() => {}, () => {});
 }
 function gwBack() {
@@ -2522,11 +2538,59 @@ function icInit() { icTab(IC.tab); }
 async function icTab(t) {
   IC.tab = t;
   document.querySelectorAll('#ic-tabs .mail-tab').forEach(b => b.classList.toggle('active', b.dataset.v === t));
-  const hedef = { konular: 'ic-konular', ozet: 'ic-ozet', unite: 'ic-ekitap', set: 'ic-ekitap' }[t];
-  ['ic-konular', 'ic-ozet', 'ic-ekitap'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = id === hedef ? '' : 'none'; });
+  const hedef = { konular: 'ic-konular', ozet: 'ic-ozet', unite: 'ic-ekitap', set: 'ic-ekitap', kartlar: 'ic-kartlar' }[t];
+  ['ic-konular', 'ic-ozet', 'ic-ekitap', 'ic-kartlar'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = id === hedef ? '' : 'none'; });
+  if (t === 'kartlar') return icKartInit();
   if (t === 'konular') await ekTopicsInit();
   else if (t === 'ozet') { await ekTopicsFetch(); ozInit(); }
   else { await ekTopicsFetch(); EKA.mode = t === 'set' ? 'set' : 'unit'; ekAdmList(); }
+}
+/* İçerik Merkezi → Kartlar: hazırladığımız çalışma kartlarını incele / sil */
+const ICK = { units: [], row: null, parsed: null };
+async function icKartInit() {
+  try { const { data } = await sb.from('ek_units').select('id, modul_no, unite_no, unite_ad').order('modul_no').order('unite_no'); ICK.units = data || []; } catch (e) { ICK.units = []; }
+  const sel = document.getElementById('ic-kart-unite'); if (!sel) return;
+  const v = sel.value;
+  sel.innerHTML = ICK.units.length ? ICK.units.map(u => `<option value="${u.id}">Modül ${u.modul_no} · Ünite ${u.unite_no} — ${ekEsc(u.unite_ad || '')}</option>`).join('') : '<option value="">Henüz ünite yok</option>';
+  if (v && ICK.units.some(u => String(u.id) === v)) sel.value = v;
+  icKartYukle();
+}
+async function icKartYukle() {
+  const sel = document.getElementById('ic-kart-unite'), box = document.getElementById('ic-kart-list'), oz = document.getElementById('ic-kart-ozet');
+  if (!sel || !box) return;
+  if (!sel.value) { box.innerHTML = '<div class="profile-empty">Kart görmek için önce bir e-kitap ünitesi ekle.</div>'; if (oz) oz.textContent = ''; return; }
+  try { const { data } = await sb.from('ek_units').select('id, kaynak').eq('id', sel.value).single(); ICK.row = data; } catch (e) { ICK.row = null; }
+  if (!ICK.row) { box.innerHTML = '<div class="profile-empty">Ünite yüklenemedi.</div>'; return; }
+  ICK.parsed = ekParse(ICK.row.kaynak);
+  let h = '', top = 0;
+  ICK.parsed.sections.forEach((s, si) => {
+    const kart = []; s.blocks.forEach((b, bi) => { if (b.t === 'kartlar') b.cards.forEach((k, ci) => kart.push({ k, bi, ci })); });
+    if (!kart.length) return;
+    top += kart.length;
+    h += `<div class="ic-k-sec">${s.tur === 'ders' ? 'Ders ' + s.no + ' · ' : ''}${ekEsc(s.ad)} <span>${kart.length} kart</span></div><div class="ic-k-grid">` +
+      kart.map(x => `<div class="ic-k"><div class="ic-k-y"><small>Ön</small>${ekInline(x.k.on)}</div><div class="ic-k-y arka"><small>Arka</small>${ekInline(x.k.arka)}</div>
+        <div class="ic-k-f">${x.k.konu ? `<span class="cw-cat">${ekEsc(x.k.konu)}</span>` : '<span></span>'}<button class="mail-act red" onclick="icKartSil(${si}, ${x.bi}, ${x.ci})">Sil</button></div></div>`).join('') + '</div>';
+  });
+  if (oz) oz.textContent = top + ' kart';
+  box.innerHTML = h || '<div class="profile-empty">Bu ünitede hazırlanmış kart yok. Kartlar ünite metnine :::kartlar bloğuyla eklenir.</div>';
+}
+async function icKartSil(si, bi, ci) {
+  const b = ICK.parsed && ICK.parsed.sections[si] && ICK.parsed.sections[si].blocks[bi];
+  if (!b || b.t !== 'kartlar' || !b.ln || !b.son) return;
+  const k = b.cards[ci];
+  if (!(await uiConfirm(`"${String(k.on).replace(/[{}\[\]]/g, '').slice(0, 60)}" kartı üniteden silinsin mi?`, 'Kartı Sil', { danger: true }))) return;
+  const L = ICK.row.kaynak.split('\n');
+  const kalan = b.cards.filter((_, i) => i !== ci);
+  const ic = kalan.map(x => ['ön: ' + x.on, 'arka: ' + x.arka].concat(x.konu ? ['konu: ' + x.konu] : []).join('\n')).join('\n---\n');
+  L.splice(b.ln - 1, b.son - b.ln + 1, ...(kalan.length ? [L[b.ln - 1]].concat(ic.split('\n'), [':::']) : []));
+  const yeni = L.join('\n'), kontrol = ekParse(yeni);
+  if (kontrol.errors.length > ICK.parsed.errors.length) { uiAlert('Kart silinirken metin bozuldu; işlem iptal edildi.'); return; }
+  try {
+    const { error } = await sb.from('ek_units').update({ kaynak: yeni, updated_at: new Date().toISOString() }).eq('id', ICK.row.id);
+    if (error) throw error;
+    toast('Kart silindi.'); EK.loaded = false; if (EK.unit && EK.unit.id === ICK.row.id) { EK.unit = null; EK.pages = []; }
+    icKartYukle();
+  } catch (e) { uiAlert('Silinemedi: ' + ((e && e.message) || e)); }
 }
 function ekTopicYeni() {
   ['tp-kod', 'tp-ad'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
@@ -2613,6 +2677,6 @@ async function ekTopicBulk() {
 }
 
 if (typeof window !== 'undefined') {
-  Object.assign(window, { icInit, icTab, ekTopicYeni, ekAdmGorunum, ekAdmSayfalar, ekPdBol, ekPdKaldir, ekPdGoster, ozInit, ozRender, ozCmd, ozClear, ozEdit, ozSave, ozToggle, ozDelete, ekOpenRef, gwInit, gwOpen, gwBack, gwFiltre, gwSeviye, gwKural, gwAdmMove, ekAdmTab, ekOpen, ekAdmInit, ekAdmNew, ekAdmEdit, ekAdmCheck, ekAdmSave, ekAdmToggle, ekAdmDelete, ekAdmInsert,
+  Object.assign(window, { icKartInit, icKartYukle, icKartSil, icInit, icTab, ekTopicYeni, ekAdmGorunum, ekAdmSayfalar, ekPdBol, ekPdKaldir, ekPdGoster, ozInit, ozRender, ozCmd, ozClear, ozEdit, ozSave, ozToggle, ozDelete, ekOpenRef, gwInit, gwOpen, gwBack, gwFiltre, gwSeviye, gwKural, gwAdmMove, ekAdmTab, ekOpen, ekAdmInit, ekAdmNew, ekAdmEdit, ekAdmCheck, ekAdmSave, ekAdmToggle, ekAdmDelete, ekAdmInsert,
     ekAdmImage, ekAdmCopyFormat, ekAdmList, ekTopicsInit, ekTopicSave, ekTopicDelete, ekTopicBulk, ekTopicEdit, ekParse });
 }
