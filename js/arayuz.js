@@ -9,6 +9,7 @@
     saat: sv('<circle cx="12" cy="13" r="8"/><polyline points="12 9 12 13 14.5 14.5"/><line x1="9.5" y1="2.5" x2="14.5" y2="2.5"/><line x1="12" y1="2.5" x2="12" y2="5"/>', 22),
     takvim: sv('<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/><line x1="8" y1="3" x2="8" y2="6.5"/><line x1="16" y1="3" x2="16" y2="6.5"/><circle cx="8.5" cy="13.5" r=".6" fill="currentColor"/><circle cx="12" cy="13.5" r=".6" fill="currentColor"/><circle cx="15.5" cy="13.5" r=".6" fill="currentColor"/><circle cx="8.5" cy="17" r=".6" fill="currentColor"/><circle cx="12" cy="17" r=".6" fill="currentColor"/>', 22),
     kapat: sv('<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>', 18),
+    yildiz: sv('<polygon points="12 3 14.8 8.7 21 9.6 16.5 14 17.6 20.2 12 17.3 6.4 20.2 7.5 14 3 9.6 9.2 8.7"/>', 16),
     bilgi: sv('<circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.8" r=".6" fill="currentColor"/>', 16)
   };
 
@@ -46,9 +47,9 @@
     d.id = 'yan-dock';
     d.innerHTML =
       '<div class="yd-sekme" role="toolbar" aria-label="Araçlar">' +
-      '  <button type="button" class="yd-b" data-p="pomo" title="Odak Zamanlayıcı" aria-label="Odak Zamanlayıcı">' + IC.saat + '<i class="yd-nokta"></i></button>' +
+      '  <button type="button" class="yd-b" id="yd-b-pomo" data-p="pomo" title="Odak Zamanlayıcı" aria-label="Odak Zamanlayıcı"><span class="yd-ic">' + IC.saat + '</span><span class="yd-sayi" id="yd-pomo-sayi"></span></button>' +
       '  <span class="yd-ayrac"></span>' +
-      '  <button type="button" class="yd-b" data-p="sinav" title="Sınavlara Kalan Süre" aria-label="Sınavlara Kalan Süre">' + IC.takvim + '</button>' +
+      '  <button type="button" class="yd-b" id="yd-b-sinav" data-p="sinav" title="Sınavlara Kalan Süre" aria-label="Sınavlara Kalan Süre"><span class="yd-ic">' + IC.takvim + '</span><span class="yd-sayi" id="yd-sinav-sayi"></span></button>' +
       '</div>' +
       '<div class="yd-panel" id="yd-pomo" role="dialog" aria-label="Odak Zamanlayıcı">' +
       '  <div class="yd-bas">' + IC.saat + '<span>Odak Zamanlayıcı</span><button type="button" class="yd-x" aria-label="Kapat">' + IC.kapat + '</button></div>' +
@@ -92,20 +93,67 @@
     g.dataset.tasindi = '1';
     const w = document.getElementById('pomo-wrap'); if (w) w.classList.add('yd-gizli');
   }
-  /* Zamanlayıcı çalışıyorsa sekmedeki saat simgesinde küçük altın nokta */
+  /* Zamanlayıcı başladıysa sekmede ikon yerine kalan dakika (yumuşak geçişle) */
   setInterval(function () {
-    const b = document.getElementById('pomo-startbtn'), n = document.querySelector('#yan-dock .yd-nokta');
-    if (n) n.classList.toggle('gor', !!(b && /duraklat/i.test(b.textContent || '')));
+    const b = document.getElementById('pomo-startbtn'), t = document.getElementById('pomo-time');
+    const yb = document.getElementById('yd-b-pomo'), say = document.getElementById('yd-pomo-sayi');
+    const basladi = !!(b && /duraklat|devam/i.test(b.textContent || ''));
+    if (yb && say) {
+      if (basladi && t) { const m = (t.textContent || '').split(':'); const dk = (+m[0] || 0) + ((+m[1] || 0) > 0 ? 1 : 0); say.textContent = dk; }
+      yb.classList.toggle('sayili', basladi);
+      yb.classList.toggle('duraklatildi', basladi && /devam/i.test(b.textContent || ''));
+      yb.title = basladi ? 'Odak Zamanlayıcı · ' + (t ? t.textContent : '') : 'Odak Zamanlayıcı';
+    }
     if (!document.getElementById('yd-pomo-g') || !document.getElementById('yd-pomo-g').dataset.tasindi) pomoTasi();
   }, 1000);
+
+  /* Hedef sınav: profilde seçilir (sunucuya kaydedilir; sütun yoksa bu tarayıcıda tutulur) */
+  let hedef = null;
+  try { hedef = localStorage.getItem('ydt_hedef_sinav') || null; } catch (e) {}
+  async function hedefYukle() {
+    try {
+      if (typeof sb === 'undefined' || !sb || typeof currentUser === 'undefined' || !currentUser) return;
+      const { data, error } = await sb.from('profiles').select('hedef_sinav').eq('id', currentUser.id).single();
+      if (!error && data) { hedef = data.hedef_sinav || null; try { hedef ? localStorage.setItem('ydt_hedef_sinav', hedef) : localStorage.removeItem('ydt_hedef_sinav'); } catch (x) {} sinavCiz(); }
+    } catch (e) {}
+  }
+  async function hedefSinavKaydet(v) {
+    hedef = v || null;
+    try { hedef ? localStorage.setItem('ydt_hedef_sinav', hedef) : localStorage.removeItem('ydt_hedef_sinav'); } catch (e) {}
+    sinavCiz();
+    try {
+      if (typeof sb !== 'undefined' && sb && typeof currentUser !== 'undefined' && currentUser) {
+        const { error } = await sb.from('profiles').update({ hedef_sinav: hedef }).eq('id', currentUser.id);
+        if (error && typeof toast === 'function') { toast('Hedef sınav bu cihazda kaydedildi.'); return; }
+      }
+      if (typeof toast === 'function') toast(hedef ? 'Hedef sınavın kaydedildi.' : 'Hedef sınav kaldırıldı.');
+    } catch (e) {}
+  }
+  setTimeout(hedefYukle, 2500);
+  /* Profil → Ayarlar → Site Ayarları'na "Hedef sınavım" seçimi ekle */
+  if (typeof window.siteAyarlariHTML === 'function') {
+    const eskiSA = window.siteAyarlariHTML;
+    window.siteAyarlariHTML = function () {
+      const s = (k, ad) => '<option value="' + k + '"' + (hedef === k ? ' selected' : '') + '>' + ad + '</option>';
+      return eskiSA.apply(this, arguments) + '<div class="profile-panel"><div class="panel-title">Hedef sınavım</div>' +
+        '<div class="pq-row2" style="align-items:center;"><span style="font-size:.86rem;">Sağ kenardaki sayaçta kalan gün sayısı gösterilecek sınav:</span>' +
+        '<select class="pq-input" style="max-width:200px" onchange="hedefSinavKaydet(this.value)">' + s('', 'Seçilmedi') + s('ydt', 'YDT') + s('yds', 'YDS') + s('eyds', 'E-YDS') + '</select></div></div>';
+    };
+    try { siteAyarlariHTML = window.siteAyarlariHTML; } catch (e) {}
+  }
 
   /* Sınav listesi */
   const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
   function sinavCiz() {
     const g = document.getElementById('yd-sinav-g'); if (!g) return;
     const t = (typeof _examDates !== 'undefined' && _examDates) || {};
-    const liste = [['YDT', t.ydt], ['YDS', t.yds], ['E-YDS', t.eyds]];
-    g.innerHTML = liste.map(([ad, tarih]) => {
+    const liste = [['YDT', t.ydt, 'ydt'], ['YDS', t.yds, 'yds'], ['E-YDS', t.eyds, 'eyds']];
+    // Sekmede hedef sınavın kalan günü (yoksa ya da geçtiyse yalnız ikon)
+    const yb = document.getElementById('yd-b-sinav'), say = document.getElementById('yd-sinav-sayi');
+    const hs = liste.find(x => x[2] === hedef);
+    const hk = hs && hs[1] ? Math.ceil((new Date(hs[1] + 'T09:00:00') - new Date()) / 864e5) : null;
+    if (yb && say) { const var_ = hk != null && hk >= 0; say.textContent = var_ ? hk : ''; yb.classList.toggle('sayili', var_); yb.title = var_ ? hs[0] + ' sınavına ' + hk + ' gün' : 'Sınavlara Kalan Süre'; }
+    g.innerHTML = liste.map(([ad, tarih, k]) => {
       let gun = 'Açıklanmadı', alt = 'Tarih henüz belli değil', cls = 'bos';
       if (tarih) {
         const kalan = Math.ceil((new Date(tarih + 'T09:00:00') - new Date()) / 864e5);
@@ -113,7 +161,9 @@
         alt = d.getDate() + ' ' + AY[d.getMonth()] + ' ' + d.getFullYear();
         if (kalan < 0) { gun = 'Geçti'; cls = 'gecti'; } else if (kalan === 0) { gun = 'Bugün'; cls = 'yakin'; } else { gun = kalan + ' gün'; cls = kalan <= 30 ? 'yakin' : ''; }
       }
-      return '<div class="yd-sinav ' + cls + '"><span class="yd-s-ic">' + IC.takvim + '</span><div><small>' + ad + '</small><b>' + gun + '</b><span>' + alt + '</span></div></div>';
+      const h = hedef === k;
+      return '<div class="yd-sinav ' + cls + (h ? ' hedef' : '') + '"><span class="yd-s-ic">' + IC.takvim + '</span><div><small>' + ad + (h ? ' <em>Hedefim</em>' : '') + '</small><b>' + gun + '</b><span>' + alt + '</span></div>' +
+        '<button type="button" class="yd-hedef-b" onclick="hedefSinavKaydet(\'' + (h ? '' : k) + '\')" title="' + (h ? 'Hedef sınavı kaldır' : 'Hedef sınavım yap') + '" aria-label="' + (h ? 'Hedef sınavı kaldır' : 'Hedef sınavım yap') + '">' + IC.yildiz + '</button></div>';
     }).join('');
   }
   // Sınav tarihleri sunucudan gelince panel de güncellensin
@@ -126,5 +176,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(dockKur, 0)); else setTimeout(dockKur, 0);
   setTimeout(sinavCiz, 1500);
 
-  Object.assign(window, { hesapMenu, hesapKapat, hesapGit, dockAc, dockKapat });
+  Object.assign(window, { hesapMenu, hesapKapat, hesapGit, dockAc, dockKapat, hedefSinavKaydet });
 })();
