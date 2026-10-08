@@ -3308,7 +3308,7 @@ function vdKartHTML(v) {
   return `<article class="vd-card${kilit ? ' kilitli' : ''}">
     <button class="vd-thumb" data-vd="play" data-i="${i}" aria-label="${ekEsc(v.title || 'Video')} — oynat">
       ${th ? `<img src="${ekEsc(th)}" alt="" loading="lazy" onerror="this.remove()">` : ''}
-      <span class="vd-play">${kilit ? '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>' : '<svg viewBox="0 0 24 24"><polygon points="9 6.5 18 12 9 17.5"/></svg>'}</span>
+      <span class="vd-play">${kilit ? '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>' : '<svg viewBox="0 0 24 24"><polygon points="7.5 4 20 12 7.5 20"/></svg>'}</span>
       ${sure ? `<span class="vd-sure">${sure}</span>` : ''}
       ${dur === 'devam' && v.dur ? `<span class="vd-ilerleme"><i style="width:${Math.min(100, Math.round((VD.views[v.id].pos || 0) / v.dur * 100))}%"></i></span>` : ''}
     </button>
