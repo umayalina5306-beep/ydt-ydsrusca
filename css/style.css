@@ -3383,3 +3383,9 @@ body.admin-acik #exam-countdown-wrap { display: none !important; }
 
 /* ═══ v144: Alt bilgi her zaman sayfanın en altında ═══ */
 body > .page.active { min-height: calc(100vh - var(--ust-h, 68px) - var(--alt-h, 90px)); }
+
+/* ============ Şifre alanı: göz ikonu, tarayıcının kendi düğmesi gizli ============ */
+.pw-eye { display: grid; place-items: center; color: #6b7280; opacity: 1; width: 34px; height: 34px; padding: 0; border-radius: 8px; }
+.pw-eye:hover { color: var(--dark, #0d1b2a); background: rgba(13,27,42,.06); }
+.pw-wrap input::-ms-reveal, .pw-wrap input::-ms-clear { display: none; }
+.pw-wrap input::-webkit-credentials-auto-fill-button, .pw-wrap input::-webkit-contacts-auto-fill-button { visibility: hidden; display: none !important; pointer-events: none; }
