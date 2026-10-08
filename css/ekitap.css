@@ -1028,3 +1028,174 @@ input[readonly]#tp-kod { background: #f3f4f6; color: #6b7280; }
 @media (max-width: 640px) { .vd-dd-b { min-height: 44px; width: 100%; } .vd-dd-m { left: 0; right: 0; width: auto; } }
 .vd-grid { grid-auto-rows: max-content; }
 .vd-thumb { flex-shrink: 0; }
+
+/* ============================================================
+   v148 · Video listesi: belirgin oynat düğmesi + sayfalama
+   ============================================================ */
+.vd-play { width: 68px; height: 48px; margin: -24px 0 0 -34px; border-radius: 14px; background: rgba(13,27,42,.86);
+  box-shadow: 0 8px 22px rgba(0,0,0,.35); }
+.vd-play svg { width: 30px; height: 30px; margin-left: 3px; }
+.vd-card:hover .vd-play { transform: scale(1.06); }
+.vd-card.kilitli .vd-play svg { width: 24px; height: 24px; margin-left: 0; }
+.vd-pager { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-top: 6px; padding: 14px 4px 2px; border-top: 1px solid #efe7d6; }
+.vd-pg-bilgi { font-size: .82rem; color: #6b7280; }
+.vd-pg-ic { display: flex; align-items: center; gap: 6px; }
+.vd-pg-n { min-width: 38px; height: 38px; padding: 0 10px; border-radius: 11px; border: 1px solid #e6dcc8; background: #fff; color: var(--dark, #0d1b2a);
+  font: 600 .88rem 'Inter', sans-serif; cursor: pointer; display: grid; place-items: center; transition: background .15s, border-color .15s; }
+.vd-pg-n:hover:not(:disabled):not(.sec) { border-color: var(--gold, #c9a84c); background: #fbf7ee; }
+.vd-pg-n.sec { background: var(--dark, #0d1b2a); border-color: var(--dark, #0d1b2a); color: #fff; }
+.vd-pg-n:disabled { opacity: .4; cursor: default; }
+.vd-pg-n svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.vd-pg-gap { color: #9ca3af; padding: 0 2px; }
+.vd-tn.izleniyor { background: #fbf1d8; color: var(--dark, #0d1b2a); font-weight: 600; box-shadow: inset 3px 0 0 var(--gold, #c9a84c); }
+
+/* ============================================================
+   v148 · İzleme sayfası: Eğitim Merkezi düzeninde, açık tema
+   ============================================================ */
+#learn-content > #page-watch.active { display: block; background: #fff; border: 1px solid #ece4d3; border-radius: 18px; overflow: hidden; margin-bottom: 14px; }
+@media (min-width: 861px) { #learn-layout:has(#page-watch.active) { grid-template-columns: 262px minmax(0, 1fr); gap: 20px; }
+  #learn-layout:has(#page-watch.active) .profile-sidebar { height: calc(100vh - 104px); margin-bottom: 14px; }
+  #learn-layout:has(#page-watch.active) .vd-tree { flex: 1 1 auto; } }
+#learn-content .watch-wrap { background: #fff; color: var(--dark, #0d1b2a); min-height: 0; }
+#learn-content .watch-wrap svg { flex-shrink: 0; }
+.watch-topbar { display: block; background: #fff; border-bottom: 0; padding: 18px 24px 6px; }
+.watch-bc-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.watch-back { width: 36px; height: 36px; border-radius: 11px; background: #fff; border: 1px solid #e6dcc8; color: var(--dark, #0d1b2a); font-size: 0; }
+.watch-back:hover { background: var(--dark, #0d1b2a); color: #fff; border-color: var(--dark, #0d1b2a); }
+.watch-bc { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: .84rem; min-width: 0; }
+.wbc-l { border: 0; background: transparent; color: #5b6472; font: inherit; cursor: pointer; padding: 4px 6px; border-radius: 7px; display: inline-flex; align-items: center; }
+.wbc-l:hover { background: #f7f2e8; color: var(--dark, #0d1b2a); }
+.wbc-home svg { width: 16px; height: 16px; }
+.wbc-sep { color: #b9ae96; display: inline-flex; }
+.wbc-sep svg { width: 13px; height: 13px; }
+.wbc-cur { font-weight: 700; color: var(--dark, #0d1b2a); padding: 4px 6px; }
+.watch-head-title { font-size: 1.7rem; font-weight: 800; color: var(--dark, #0d1b2a); margin: 0; letter-spacing: -.01em; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.watch-head-crumb { font-size: .92rem; color: #8b6a24; margin-top: 4px; font-weight: 500; }
+.watch-level-badge { font-size: .76rem; padding: 3px 10px; border-radius: 8px; }
+.watch-body { background: #fff; padding: 14px 24px 26px; grid-template-columns: minmax(0, 1fr) 400px; gap: 20px; align-items: start; }
+.watch-player-box { border-radius: 14px; box-shadow: 0 10px 30px -14px rgba(13,27,42,.45); }
+
+/* Kontrol çubuğu: ikonlar + bilgi balonları */
+.watch-controls { gap: 6px; }
+.wc-btn { display: inline-flex; align-items: center; justify-content: center; padding: 6px 7px; position: relative; }
+.wc-btn svg { display: block; }
+.wc-acts { display: inline-flex; align-items: center; gap: 2px; }
+.wc-act.active { color: var(--gold, #c9a84c); }
+.wc-act.active svg { fill: rgba(201,168,76,.25); }
+.wc-sep { width: 1px; height: 20px; background: rgba(255,255,255,.25); margin: 0 4px; }
+.wc-speed-btn { font-weight: 700; }
+[data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translate(-50%, 4px); white-space: nowrap;
+  background: rgba(13,27,42,.95); color: #fff; font: 600 .74rem 'Inter', sans-serif; padding: 5px 9px; border-radius: 7px; pointer-events: none;
+  opacity: 0; transition: opacity .15s, transform .15s; z-index: 20; }
+[data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+.watch-controls [data-tip]:first-child::after { left: 0; transform: translate(0, 4px); }
+.watch-controls [data-tip]:first-child:hover::after { transform: translate(0, 0); }
+.watch-controls > .wc-btn:last-of-type::after { left: auto; right: 0; transform: translate(0, 4px); }
+.watch-controls > .wc-btn:last-of-type:hover::after { transform: translate(0, 0); }
+.wc-speed-wrap { position: relative; }
+
+/* Ders hakkında */
+.watch-info-row { margin-top: 18px; }
+.watch-desc-box { display: flex; gap: 12px; align-items: flex-start; background: #fbf7ee; border: 1px solid #efe4cb; border-radius: 14px; padding: 14px 18px; }
+.wdesc-ic { color: var(--gold, #c9a84c); margin-top: 1px; }
+.watch-desc-title { font-size: .98rem; font-weight: 700; color: var(--dark, #0d1b2a); margin: 0 0 3px; }
+.watch-desc-text { font-size: .9rem; color: #5b6472; line-height: 1.55; margin: 0; }
+.watch-desc-text:empty::before { content: 'Bu video için açıklama eklenmedi.'; color: #9ca3af; }
+
+/* Sağ sütun: sekmeler lacivert, içerik beyaz */
+.watch-side-col { position: sticky; top: 14px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.watch-side { position: static; background: #fff; border: 1px solid #e6dcc8; border-radius: 16px; max-height: calc(100vh - 230px);
+  box-shadow: 0 6px 20px -12px rgba(13,27,42,.25); }
+.watch-side-tabs { background: var(--dark, #0d1b2a); border-bottom: 0; padding: 4px 6px 0; }
+.wst-tab { display: flex; align-items: center; justify-content: center; gap: 6px; color: #9fb0c6; font-size: .78rem; padding: 13px 4px 11px; border-bottom: 3px solid transparent; }
+.wst-tab svg { opacity: .9; }
+.wst-tab:hover { color: #fff; }
+.wst-tab.active { color: var(--gold, #c9a84c); border-bottom-color: var(--gold, #c9a84c); }
+@media (max-width: 1500px) { .wst-tab span { display: none; } .wst-tab { padding: 13px 4px 11px; } .wst-tab.active span { display: inline; } }
+.wst-panel { padding: 14px; background: #fff; }
+.watch-side .profile-empty { background: #faf7f0; color: #6b7280; border: 1px dashed #e6dcc8; border-radius: 12px; }
+
+/* Altyazılar */
+.wsub-line { gap: 12px; align-items: center; padding: 10px 10px; border-bottom: 1px solid #f1ebdd; border-radius: 12px; }
+.wsub-line:hover { background: #fbf7ee; }
+.wsub-time { background: #f5efe2; border: 0; color: var(--dark, #0d1b2a); font-weight: 700; border-radius: 8px; padding: 6px 9px; font-size: .78rem; flex-shrink: 0; }
+.wsub-time:hover { background: var(--dark, #0d1b2a); color: #fff; }
+.wsub-text { flex: 1; min-width: 0; color: var(--dark, #0d1b2a); font-size: .95rem; line-height: 1.5; }
+.wsub-word { color: var(--dark, #0d1b2a); }
+.wsub-word:hover { background: #fbf1d8; color: var(--dark, #0d1b2a); }
+.wsub-tr { font-size: .82rem; color: #8b6a24; margin-top: 2px; font-family: 'Inter', sans-serif; }
+.wsub-play { width: 34px; height: 34px; border-radius: 50%; border: 1px solid #e6dcc8; background: #fff; color: var(--dark, #0d1b2a); cursor: pointer; display: grid; place-items: center; flex-shrink: 0; padding: 0; }
+.wsub-play svg { width: 14px; height: 14px; margin-left: 2px; }
+.wsub-play:hover { background: var(--dark, #0d1b2a); color: #fff; border-color: var(--dark, #0d1b2a); }
+
+/* Kartlar */
+.wcf-chip { background: #fff; border: 1px solid #e6dcc8; color: var(--dark, #0d1b2a); }
+.wcf-chip:hover { border-color: var(--gold, #c9a84c); }
+.wcf-chip.active { background: var(--dark, #0d1b2a); color: #fff; border-color: var(--dark, #0d1b2a); }
+.wcard { background: #fff; border: 1px solid #ece4d3; }
+.wcard:hover { background: #fbf7ee; border-color: #e2d4b4; }
+.wcard.active { background: #fbf1d8; border-color: var(--gold, #c9a84c); }
+.wcard-ru { color: var(--dark, #0d1b2a); }
+.wcard-tr, .wcard-time { color: #6b7280; }
+.wcard-typeic { background: #f5efe2 !important; color: #8b6a24 !important; display: grid; place-items: center; font-size: 0; }
+.wcard-typeic.t-quiz { background: #fde8ec !important; color: #be123c !important; }
+.wcard-typeic.t-poll { background: #e8f0fb !important; color: #1d5fbf !important; }
+.wcard-typeic.t-topic { background: #e7f6ec !important; color: #15803d !important; }
+.wcard-typeic.t-checkpoint { background: #efe9fb !important; color: #5b3fa8 !important; }
+.wcard-star { color: #cfc5b0; display: grid; place-items: center; }
+.wcard-star.on { color: var(--gold, #c9a84c); }
+.wcard-star.on svg { fill: currentColor; }
+.wcard-sound { background: #f5efe2; color: #8b6a24; }
+
+/* Bölümler */
+.wch-section-title { color: var(--dark, #0d1b2a); }
+.wch-item { color: var(--dark, #0d1b2a); }
+.wch-item:hover { background: #fbf7ee; }
+.wch-item.active { background: #fbf1d8; }
+.wch-play { background: #f5efe2; color: var(--dark, #0d1b2a); }
+.wch-play svg { width: 13px; height: 13px; }
+.wch-item.active .wch-play { background: var(--dark, #0d1b2a); color: #fff; }
+.wch-title { color: var(--dark, #0d1b2a); }
+.wch-time { color: #8b6a24; }
+
+/* Notlar */
+.wn-add-head span { color: var(--dark, #0d1b2a); display: inline-flex; align-items: center; gap: 6px; }
+.wn-time-toggle { background: #fbf1d8; border: 1px solid #efdcaa; color: #8b6a24; }
+.wn-textarea { background: #fff; color: var(--dark, #0d1b2a); border: 1px solid #e6dcc8; }
+.wn-item { background: #fff; border: 1px solid #ece4d3; }
+.wn-item.wn-timed:hover { background: #fbf7ee; }
+.wn-time { color: #8b6a24; display: inline-flex; align-items: center; gap: 5px; }
+.wn-time-gen { color: #6b7280; }
+.wn-body { color: var(--dark, #0d1b2a); }
+
+/* Dokümanlar */
+.wdoc-item { background: #fff; border: 1px solid #ece4d3; }
+.wdoc-item:hover { background: #fbf7ee; border-color: #e2d4b4; }
+.wdoc-ic { background: #f5efe2; color: #8b6a24; display: grid; place-items: center; }
+.wdoc-title { color: var(--dark, #0d1b2a); }
+.wdoc-desc { color: #6b7280; }
+.wdoc-arrow { color: #8b6a24; display: grid; place-items: center; }
+
+/* Önceki / sonraki: hep yerinde; yoksa beyaz, varsa lacivert */
+.watch-navrow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.watch-nav-box { min-width: 0; margin: 0; background: var(--dark, #0d1b2a); border: 1px solid var(--dark, #0d1b2a); color: #fff; border-radius: 13px; padding: 11px 14px; gap: 10px; }
+.watch-nav-next { justify-content: flex-end; margin-left: 0; }
+.watch-nav-box:hover:not(:disabled) { border-color: var(--gold, #c9a84c); box-shadow: 0 6px 16px -8px rgba(13,27,42,.5); }
+.watch-nav-box .wnav-txt { min-width: 0; }
+.watch-nav-box .wnav-txt small { color: #9fb0c6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 140px; }
+.watch-nav-box.yok { background: #fff; color: #9ca3af; border-color: #e6dcc8; cursor: default; }
+.watch-nav-box.yok .wnav-txt small { color: #b6ad99; }
+.watch-wrap.watch-fs .watch-navrow { display: none; }
+.watch-wrap.watch-fs .watch-side { max-height: calc(100vh - 94px); }
+@media (max-width: 1100px) { .watch-body { grid-template-columns: 1fr; } .watch-side-col { position: static; } .watch-side { max-height: 70vh; } }
+@media (max-width: 640px) { .watch-topbar { padding: 14px 14px 4px; } .watch-body { padding: 10px 14px 20px; } .watch-head-title { font-size: 1.3rem; } .wc-vol-range { display: none; } }
+
+/* ============ Şifre alanı: göz ikonu, tarayıcının kendi düğmesi gizli ============ */
+.pw-eye { display: grid; place-items: center; color: #6b7280; opacity: 1; width: 34px; height: 34px; padding: 0; border-radius: 8px; }
+.pw-eye:hover { color: var(--dark, #0d1b2a); background: rgba(13,27,42,.06); }
+.pw-wrap input::-ms-reveal, .pw-wrap input::-ms-clear { display: none; }
+.pw-wrap input::-webkit-credentials-auto-fill-button, .pw-wrap input::-webkit-contacts-auto-fill-button { visibility: hidden; display: none !important; pointer-events: none; }
+@media (max-width: 1750px) { .wst-tab span { display: none; } .wst-tab.active span { display: inline; } .wst-tab { flex: 0 0 auto; padding: 13px 12px 11px; } .wst-tab.active { flex: 1 1 auto; } }
+.wsub-word { padding: 0 1px; border-bottom-color: transparent; }
+.wsub-word:hover { border-bottom-color: var(--gold, #c9a84c); }
