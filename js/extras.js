@@ -31,7 +31,7 @@
         mode = "break"; remaining = breakMin * 60;
       }
       else { mode = "work"; remaining = workMin * 60; }
-      if (typeof window.uiAlert === "function") window.uiAlert(mode === "break" ? "Çalışma bitti! 5 dakika mola ver. ☕" : "Mola bitti! Çalışmaya devam. 💪", "Pomodoro"); else alert(mode === "break" ? "Çalışma bitti! 5 dakika mola ver." : "Mola bitti! Çalışmaya devam.");
+      if (typeof window.uiAlert === "function") window.uiAlert(mode === "break" ? "Çalışma süresi bitti. " + breakMin + " dakika mola ver." : "Mola bitti. Çalışmaya devam.", "Pomodoro"); else alert(mode === "break" ? "Çalışma süresi bitti. " + breakMin + " dakika mola ver." : "Mola bitti. Çalışmaya devam.");
       const btn = document.getElementById("pomo-startbtn");
       if (btn) btn.textContent = "Başlat";
     }
@@ -64,7 +64,7 @@
     focusOn = !focusOn;
     document.body.classList.toggle("focus-mode", focusOn);
     const b = document.getElementById("focus-toggle");
-    if (b) b.textContent = focusOn ? "Odak modu: AÇIK" : "Odak modu: kapalı";
+    if (b) b.textContent = focusOn ? "Odak modunu kapat" : "Odak modunu aç"; b.classList.toggle("acik", focusOn);
     // Odak modunda bildirimler susturulur (zil rozeti gizlenir)
     window.focusActive = focusOn;
     if (focusOn) { const c = document.getElementById("notif-count"); if (c) c.style.display = "none"; }
@@ -80,7 +80,7 @@
     const wrap = document.createElement("div");
     wrap.id = "pomo-wrap";
     wrap.innerHTML =
-      '<button id="pomo-fab" title="Odak / Pomodoro"><span class="pomo-fab-icon">⏱️</span></button>' +
+      '<button id="pomo-fab" title="Odak / Pomodoro"><span class="pomo-fab-icon"></span></button>' +
       '<div id="pomo-panel">' +
       '  <div class="pomo-head"><span>Odak & Pomodoro</span><button id="pomo-x">✕</button></div>' +
       '  <div id="pomo-mode" class="pomo-mode">Çalışma</div>' +
@@ -91,8 +91,8 @@
       '  </div>' +
       '  <div class="pomo-row"><label>Çalışma (dk)</label><input id="pomo-work" type="number" min="1" max="90" value="25"></div>' +
       '  <div class="pomo-row"><label>Mola (dk)</label><input id="pomo-break" type="number" min="1" max="30" value="5"></div>' +
-      '  <button id="focus-toggle" class="pomo-btn focus">Odak modu: kapalı</button>' +
-      '  <div class="pomo-hint">Odak modu sayfadaki dikkat dağıtıcıları sessizleştirir.</div>' +
+      '  <button id="focus-toggle" class="pomo-btn focus">Odak modunu aç</button>' +
+      '  <div class="pomo-hint">Odak modunda üst menü soluklaşır, bildirim işareti gizlenir.</div>' +
       '</div>';
     document.body.appendChild(wrap);
 
