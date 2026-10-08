@@ -326,6 +326,7 @@ async function togglePremium(userId, currentPlan) {
     if (fark < 86400 * 30) return Math.floor(fark / 86400) + ' gün önce';
     return new Date(t).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
   }
+  window.ypOnceKadar = t => onceKadar(t);
   const tarihKisa = t => t ? new Date(t).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
   function lsOku(k, v) { try { const x = localStorage.getItem(k); return x == null ? v : JSON.parse(x); } catch (e) { return v; } }
   function lsYaz(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
