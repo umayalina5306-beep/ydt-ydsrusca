@@ -3240,7 +3240,21 @@ async function vdYukle(zorla) {
 }
 async function vdOpen(zorla) { await vdYukle(zorla); vdRender(); }
 
+function vdIzlenenMi(f) {
+  const wp = document.getElementById('page-watch'); if (!wp || !wp.classList.contains('active') || !VD.izlenen) return false;
+  const v = { mf: VD.izlenen }; if (f === 'yok' || !f) return false;
+  if (f.startsWith('k:')) return VD.izlenen === f;
+  const r = vdRef(VD.izlenen); if (!r) return false;
+  const p = f.slice(1).split('.').map(Number);
+  return f[0] === 'd' ? r.m === p[0] && r.u === p[1] && r.d === p[2] : f[0] === 'u' ? r.m === p[0] && r.u === p[1] && !r.d : f[0] === 'm' ? r.m === p[0] && !r.u : false;
+}
 function vdTreeHTML() {
+  const _izl = (() => { const wp = document.getElementById('page-watch'); return !!(wp && wp.classList.contains('active')); })();
+  const _fs = VD.filtre; if (_izl) VD.filtre = '\u0000';
+  try { return vdTreeHTML2(); } finally { VD.filtre = _fs; }
+}
+function vdTreeHTML2() {
+  const _r = vdRef(VD.izlenen); if (_r && document.getElementById('page-watch') && document.getElementById('page-watch').classList.contains('active')) { VD.acik.add('m' + _r.m); if (_r.u) VD.acik.add('u' + _r.m + '.' + _r.u); }
   const say = f => (videos || []).filter(v => vdEslesir(v, f)).length;
   const ok = '<svg class="vd-chev" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>';
   let h = `<div class="vd-tree-bas">Kurs İçeriği</div>
@@ -3259,11 +3273,11 @@ function vdTreeHTML() {
         const dersler = un ? (un.toc || []).filter(t => t.tur === 'ders') : [];
         h += `<div class="vd-node${uAcik ? ' acik' : ''}">
           <div class="vd-tn-r"><button class="vd-tg" data-vd="tg" data-k="${uk}" aria-label="Aç/kapat"${dersler.length ? '' : ' style="visibility:hidden"'}>${ok}</button>
-          <button class="vd-tn vd-l2${VD.filtre === uk ? ' active' : ''}" data-vd="f" data-f="${uk}"><span class="vd-tn-ad"><b>Ünite ${u}</b>${un && un.unite_ad ? ' — ' + ekEsc(un.unite_ad) : ''}</span><em>${say(uk)}</em></button></div>`;
+          <button class="vd-tn vd-l2${VD.filtre === uk ? ' active' : ''}${vdIzlenenMi(uk) ? ' izleniyor' : ''}" data-vd="f" data-f="${uk}"><span class="vd-tn-ad"><b>Ünite ${u}</b>${un && un.unite_ad ? ' — ' + ekEsc(un.unite_ad) : ''}</span><em>${say(uk)}</em></button></div>`;
         if (uAcik && dersler.length) {
           h += '<div class="vd-kids vd-dersler">';
           dersler.forEach(t => { const dk = 'd' + m + '.' + u + '.' + t.no;
-            h += `<button class="vd-tn vd-l3${VD.filtre === dk ? ' active' : ''}" data-vd="f" data-f="${dk}"><i class="vd-dot"></i><span class="vd-tn-ad">Ders ${t.no} — ${ekEsc(t.ad)}</span><em>${say(dk)}</em></button>`; });
+            h += `<button class="vd-tn vd-l3${VD.filtre === dk ? ' active' : ''}${vdIzlenenMi(dk) ? ' izleniyor' : ''}" data-vd="f" data-f="${dk}"><i class="vd-dot"></i><span class="vd-tn-ad">Ders ${t.no} — ${ekEsc(t.ad)}</span><em>${say(dk)}</em></button>`; });
           h += '</div>';
         }
         h += '</div>';
@@ -3273,7 +3287,7 @@ function vdTreeHTML() {
     h += '</div>';
   });
   h += '<div class="vd-tree-bas vd-dis">Müfredat dışı</div>';
-  VD_KAT.forEach(([k, ad]) => { h += `<button class="vd-tn vd-l0${VD.filtre === k ? ' active' : ''}" data-vd="f" data-f="${k}"><span class="vd-tn-ad">${ad}</span><em>${say(k)}</em></button>`; });
+  VD_KAT.forEach(([k, ad]) => { h += `<button class="vd-tn vd-l0${VD.filtre === k ? ' active' : ''}${vdIzlenenMi(k) ? ' izleniyor' : ''}" data-vd="f" data-f="${k}"><span class="vd-tn-ad">${ad}</span><em>${say(k)}</em></button>`; });
   const bag = say('yok');
   if (bag) h += `<button class="vd-tn vd-l0${VD.filtre === 'yok' ? ' active' : ''}" data-vd="f" data-f="yok"><span class="vd-tn-ad">Diğer videolar</span><em>${bag}</em></button>`;
   return h;
@@ -3351,7 +3365,7 @@ function vdRender() {
       <div class="vd-filtre" id="vd-filtre"></div>
       <div class="vd-grid" id="vd-grid"></div>
     </div>`;
-    const qi = document.getElementById('vd-q'); qi.addEventListener('input', () => { VD.q = qi.value; vdRenderGrid(); });
+    const qi = document.getElementById('vd-q'); qi.addEventListener('input', () => { VD.q = qi.value; VD.sayfa = 1; vdRenderGrid(); });
     vdDdCiz();
     pg.addEventListener('click', vdTik);
   }
@@ -3371,25 +3385,44 @@ function vdDdCiz() {
 document.addEventListener('mousedown', function (e) { const d = document.getElementById('vd-dd'); if (d && d.classList.contains('acik') && !d.contains(e.target)) { d.classList.remove('acik'); } });
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { const d = document.getElementById('vd-dd'); if (d) d.classList.remove('acik'); } });
 function vdRenderTree() { const t = document.getElementById('vd-tree'); if (t) t.innerHTML = vdTreeHTML(); }
+const VD_SAYFA_BOY = 12;
+function vdSayfaHTML(c, top, n) {
+  const ok = d => `<svg viewBox="0 0 24 24"><polyline points="${d}"/></svg>`;
+  const no = []; const ekle = x => { if (!no.includes(x)) no.push(x); };
+  ekle(1); for (let i = c - 1; i <= c + 1; i++) if (i > 1 && i < top) ekle(i); ekle(top);
+  let h = '', onc = 0;
+  no.sort((a, b) => a - b).forEach(x => { if (x - onc > 1) h += '<span class="vd-pg-gap">…</span>'; h += `<button class="vd-pg-n${x === c ? ' sec' : ''}" data-vd="pg" data-p="${x}"${x === c ? ' aria-current="page"' : ''}>${x}</button>`; onc = x; });
+  const bas = (c - 1) * VD_SAYFA_BOY + 1, son = Math.min(n, c * VD_SAYFA_BOY);
+  return `<div class="vd-pager" role="navigation" aria-label="Sayfalar"><span class="vd-pg-bilgi">${bas}–${son} / ${n} video</span>
+    <div class="vd-pg-ic"><button class="vd-pg-n ok" data-vd="pg" data-p="${c - 1}"${c <= 1 ? ' disabled' : ''} aria-label="Önceki sayfa">${ok('15 18 9 12 15 6')}</button>${h}
+    <button class="vd-pg-n ok" data-vd="pg" data-p="${c + 1}"${c >= top ? ' disabled' : ''} aria-label="Sonraki sayfa">${ok("9 6 15 12 9 18")}</button></div></div>`;
+}
 function vdRenderGrid() {
   const g = document.getElementById('vd-grid'); if (!g) return;
   const l = vdListe(), fb = document.getElementById('vd-filtre'), bas = vdBaslikFiltre();
   if (fb) fb.innerHTML = bas ? `<span>${ekEsc(bas)}</span><em>${l.length} video</em><button class="vd-temizle" data-vd="f" data-f="">Filtreyi kaldır ×</button>` : '';
-  g.innerHTML = l.length ? l.map(vdKartHTML).join('')
+  const SAY = VD_SAYFA_BOY, top = Math.max(1, Math.ceil(l.length / SAY));
+  VD.sayfa = Math.min(Math.max(1, VD.sayfa || 1), top);
+  const parca = l.slice((VD.sayfa - 1) * SAY, VD.sayfa * SAY);
+  g.innerHTML = l.length ? parca.map(vdKartHTML).join('') + (top > 1 ? vdSayfaHTML(VD.sayfa, top, l.length) : '')
     : `<div class="vd-bos"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><polygon points="10 9 15 12 10 15"/></svg>
         <b>${(videos || []).length ? 'Bu seçimde video yok' : 'Henüz video eklenmedi'}</b><span>${VD.q ? 'Aramayı değiştirmeyi dene.' : (VD.filtre ? 'Başka bir modül, ünite ya da ders seç.' : '')}</span></div>`;
 }
 function vdTik(e) {
   const t = e.target.closest('[data-vd]'); if (!t) return;
   const a = t.dataset.vd;
-  if (a === 'f') { vdFiltre(t.dataset.f); return; }
+  if (a === 'f') {
+    const wp = document.getElementById('page-watch');
+    if (wp && wp.classList.contains('active') && typeof _wKonumGit === 'function') { _wKonumGit(t.dataset.f); return; }
+    vdFiltre(t.dataset.f); return; }
+  if (a === 'pg') { VD.sayfa = +t.dataset.p || 1; vdRenderGrid(); const g = document.getElementById('vd-grid'); if (g) g.scrollTop = 0; return; }
   if (a === 'tg') { const k = t.dataset.k; VD.acik.has(k) ? VD.acik.delete(k) : VD.acik.add(k); vdRenderTree(); return; }
   if (a === 'play') { if (typeof playVideo === 'function') playVideo(+t.dataset.i); return; }
   if (a === 'dd') { const d = document.getElementById('vd-dd'); const ac = !d.classList.contains('acik'); d.classList.toggle('acik', ac); t.setAttribute('aria-expanded', ac); return; }
-  if (a === 'sira') { VD.sira = t.dataset.v; vdDdCiz(); vdRenderGrid(); const g = document.getElementById('vd-grid'); if (g) g.scrollTop = 0; }
+  if (a === 'sira') { VD.sira = t.dataset.v; VD.sayfa = 1; vdDdCiz(); vdRenderGrid(); const g = document.getElementById('vd-grid'); if (g) g.scrollTop = 0; }
 }
 function vdFiltre(f) {
-  VD.filtre = f || '';
+  VD.filtre = f || ''; VD.sayfa = 1;
   if (f && f !== 'yok' && !f.startsWith('k:')) { const p = f.slice(1).split('.'); VD.acik.add('m' + p[0]); if (p.length > 1) VD.acik.add('u' + p[0] + '.' + p[1]); }
   vdRenderTree(); vdRenderGrid();
   const g = document.getElementById('page-video'); if (g && g.getBoundingClientRect().top < 0) g.scrollIntoView({ behavior: 'smooth', block: 'start' });
