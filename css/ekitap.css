@@ -713,6 +713,14 @@ input[readonly]#tp-kod { background: #f3f4f6; color: #6b7280; }
 .ic-k-y small { display: block; font-size: .66rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 2px; }
 .ic-k-y.arka { background: #fbf8f1; border-top: 1px dashed #e3d9c5; flex: 1; }
 .ic-k-f { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-top: 1px solid #f1ebdd; }
+.ic-k-f-a { display: flex; gap: 6px; }
+.ic-k-sec { display: flex; align-items: center; gap: 4px; }
+.ic-k-sec .ic-k-ekle { margin-left: auto; }
+.ic-k-form { padding: 12px; gap: 8px; border-color: #c9a84c; box-shadow: 0 0 0 3px rgba(201,168,76,.12); }
+.ic-k-form label { display: flex; flex-direction: column; gap: 4px; font-size: .72rem; font-weight: 700; color: #6b7280; }
+.ic-k-form label small { font-weight: 500; color: #9ca3af; }
+.ic-k-form .pq-input { margin: 0; font-weight: 400; color: #1f2a37; }
+.ic-k-form-a { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 
 /* ---- İçerik Merkezi: Müfredat ağacı ---- */
 .mf-bas { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
