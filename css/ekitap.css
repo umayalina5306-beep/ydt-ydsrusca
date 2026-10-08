@@ -1199,3 +1199,57 @@ input[readonly]#tp-kod { background: #f3f4f6; color: #6b7280; }
 @media (max-width: 1750px) { .wst-tab span { display: none; } .wst-tab.active span { display: inline; } .wst-tab { flex: 0 0 auto; padding: 13px 12px 11px; } .wst-tab.active { flex: 1 1 auto; } }
 .wsub-word { padding: 0 1px; border-bottom-color: transparent; }
 .wsub-word:hover { border-bottom-color: var(--gold, #c9a84c); }
+
+/* ============================================================
+   v149 · Liste oynat düğmesi: yuvarlak, büyük üçgen, altın cam efekti
+   ============================================================ */
+.vd-play { width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; background: rgba(13,27,42,.78);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,.18);
+  box-shadow: 0 8px 22px rgba(0,0,0,.32); transition: transform .2s, background .25s, box-shadow .25s, border-color .25s; }
+.vd-play svg { width: 36px; height: 36px; margin-left: 3px; }
+.vd-card:hover .vd-play { transform: scale(1.07); background: rgba(201,168,76,.72); color: #fff; border-color: rgba(255,255,255,.35);
+  box-shadow: 0 0 0 6px rgba(201,168,76,.16), 0 0 26px rgba(201,168,76,.45), 0 8px 20px rgba(0,0,0,.25); }
+.vd-card.kilitli .vd-play svg { width: 24px; height: 24px; margin-left: 0; }
+
+/* ============================================================
+   v149 · Video kartları: buzlu füme cam
+   ============================================================ */
+.sv-card-overlay { background: rgba(8,12,20,.18) !important; -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.sv-card-overlay.center { background: rgba(8,12,20,.32) !important; }
+.sv-card { background: linear-gradient(160deg, rgba(48,54,66,.62) 0%, rgba(22,26,34,.58) 100%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(255,255,255,.18) !important; border-radius: 18px !important;
+  box-shadow: 0 18px 48px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.12) !important; color: #fff; }
+.sv-card-head { color: #fff; font-size: 1.15rem; }
+.sv-card-head svg { color: var(--gold, #c9a84c); }
+.sv-card-sub { color: rgba(255,255,255,.72); }
+.sv-opt { background: rgba(255,255,255,.07) !important; border: 1px solid rgba(255,255,255,.16) !important; color: #fff !important; border-radius: 12px !important; padding: 11px 14px !important; }
+.sv-opt:hover:not(:disabled) { background: rgba(255,255,255,.12) !important; border-color: rgba(255,255,255,.3) !important; }
+.sv-opt-num { background: rgba(255,255,255,.12) !important; color: #fff !important; border-radius: 7px !important; }
+.sv-opt.sel { border-color: var(--gold, #c9a84c) !important; background: rgba(201,168,76,.16) !important; box-shadow: 0 0 0 1px rgba(201,168,76,.45) !important; }
+.sv-opt.sel .sv-opt-num { background: var(--gold, #c9a84c) !important; color: #0d1b2a !important; }
+.sv-opt.ok { background: rgba(34,197,94,.2) !important; border-color: rgba(34,197,94,.75) !important; }
+.sv-opt.no { background: rgba(239,68,68,.2) !important; border-color: rgba(239,68,68,.75) !important; }
+.sv-card-x { background: rgba(255,255,255,.1) !important; border: 1px solid rgba(255,255,255,.2) !important; color: #fff !important; border-radius: 10px !important;
+  display: grid; place-items: center; width: 32px !important; height: 32px !important; }
+.sv-card-x:hover { background: rgba(255,255,255,.22) !important; border-color: rgba(255,255,255,.35) !important; color: #fff !important; }
+.sv-card .set-btn { border-radius: 10px; }
+
+/* ============================================================
+   v149 · Tam ekran: klasik görünümle aynı, büyük video
+   ============================================================ */
+.wc-fsnav { display: none !important; }
+.wc-fsnav:disabled { opacity: .35; cursor: default; }
+.watch-wrap.watch-fs .wc-fsnav { display: inline-flex !important; }
+.watch-wrap.watch-fs { position: fixed; inset: 0; z-index: 99999; background: #fff !important; color: var(--dark, #0d1b2a);
+  display: flex; flex-direction: column; height: 100vh; overflow: hidden; border-radius: 0; }
+.watch-wrap.watch-fs .watch-topbar { background: #fff !important; padding: 16px 28px 8px; flex-shrink: 0; }
+.watch-wrap.watch-fs .watch-body { flex: 1; min-height: 0; height: auto !important; background: #fff !important; display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px; align-items: stretch; gap: 20px; padding: 8px 28px 22px; overflow: hidden; }
+.watch-wrap.watch-fs .watch-main { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.watch-wrap.watch-fs .watch-player-box { flex: 1; min-height: 0; aspect-ratio: auto; height: auto; border-radius: 14px; }
+.watch-wrap.watch-fs .watch-info-row, .watch-wrap.watch-fs .watch-navrow { display: none; }
+.watch-wrap.watch-fs .watch-side-col { position: static; min-height: 0; height: 100%; display: flex; flex-direction: column; }
+.watch-wrap.watch-fs .watch-side { flex: 1; min-height: 0; max-height: none !important; height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+.watch-wrap.watch-fs .wst-panel { flex: 1; min-height: 0; overflow-y: auto; }
+@media (max-width: 1100px) { .watch-wrap.watch-fs .watch-body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) 38vh; } }
