@@ -7059,12 +7059,12 @@ async function logAccessOnce() {
       body: { fp: _fingerprint(), city: geo ? geo.city : null, country: geo ? geo.country : null }
     });
     // Edge function şehri yazmadıysa, en son access_log kaydını client geo'suyla güncelle
-    if (geo && geo.city) {
+    if (geo && (geo.city || geo.country)) {
       try {
-        const { data: son } = await sb.from('access_log').select('id, city')
+        const { data: son } = await sb.from('access_log').select('id, city, country')
           .eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(1);
-        if (son && son[0] && !son[0].city) {
-          await sb.from('access_log').update({ city: geo.city, country: geo.country }).eq('id', son[0].id);
+        if (son && son[0] && (!son[0].city || !son[0].country)) {
+          await sb.from('access_log').update({ city: son[0].city || geo.city, country: geo.country }).eq('id', son[0].id);
         }
       } catch (e) {}
     }
@@ -7083,13 +7083,25 @@ async function adminUserDetail(id, showAll) {
     const logQ = showAll
       ? sbFetchAll('access_log', null, q => q.eq('user_id', id).order('created_at', { ascending: false })).then(d => ({ data: d }))
       : sb.from('access_log').select('*').eq('user_id', id).order('created_at', { ascending: false }).limit(8);
-    const [logs, tests, acts] = await Promise.all([
+    const [logs, tests, acts, pv] = await Promise.all([
       logQ,
       sb.from('test_results').select('id', { count: 'exact', head: true }).eq('user_id', id),
-      sb.from('activity_log').select('kind, amount, created_at').eq('user_id', id).gte('created_at', new Date(Date.now() - 14 * 86400000).toISOString()).limit(1000)
+      sb.from('activity_log').select('kind, amount, created_at').eq('user_id', id).gte('created_at', new Date(Date.now() - 14 * 86400000).toISOString()).limit(1000),
+      sb.from('page_views').select('country, city, created_at').eq('user_id', id).not('country', 'is', null).order('created_at', { ascending: false }).limit(200).then(r => r, () => ({ data: [] }))
     ]);
+    // Erişim kaydında ülke boşsa, aynı kullanıcının sayfa görüntülemelerinden (aynı şehir ya da en yakın zaman) tamamla
+    const pvL = (pv && pv.data) || [];
+    const ulkeBul = l => {
+      if (l.country) return l.country;
+      const ayniSehir = l.city && pvL.find(p => p.city && p.city === l.city);
+      if (ayniSehir) return ayniSehir.country;
+      const t = new Date(l.created_at).getTime();
+      let en = null, fark = Infinity; pvL.forEach(p => { const d = Math.abs(new Date(p.created_at).getTime() - t); if (d < fark) { fark = d; en = p; } });
+      return en && fark < 3 * 86400000 ? en.country : '';
+    };
+    const sonKonum = (() => { const l = (logs.data || [])[0]; const c = l ? [l.city, ulkeBul(l)].filter(Boolean).join(', ') : ''; return c || (pvL[0] ? [pvL[0].city, pvL[0].country].filter(Boolean).join(', ') : ''); })();
     const rows = (logs.data || []).map(l => {
-      const konum = [l.city, l.country].filter(Boolean).join(', ') || '—';
+      const konum = [l.city, ulkeBul(l)].filter(Boolean).join(', ') || '—';
       return `<div class="udet-log"><span class="udet-ip">${_escHtml(l.ip || '—')}</span> <span class="cw-cat">📍 ${_escHtml(konum)}</span> <span class="cw-cat">${_escHtml(l.fp || '')}</span><div class="err-meta">${_escHtml((l.ua || '').slice(0, 110))} · ${new Date(l.created_at).toLocaleString('tr-TR')}</div></div>`;
     }).join('');
     // Son 14 gün aktivite özeti
@@ -7099,7 +7111,7 @@ async function adminUserDetail(id, showAll) {
     const actHtml = Object.keys(agg).length
       ? '<div class="udet-acts">' + Object.entries(agg).map(([k, v]) => `<span class="cw-cat">${AK[k] || k}: <b>${v}</b></span>`).join(' ') + '</div>'
       : '<div class="err-meta">Son 14 günde kayıtlı aktivite yok. (activity_log kuruluysa bundan sonra birikir.)</div>';
-    box.innerHTML = `<div class="udet-stats">Çözülen test (DB): <b>${tests.count ?? '—'}</b></div>
+    box.innerHTML = `<div class="udet-stats">Çözülen test (DB): <b>${tests.count ?? '—'}</b>${sonKonum ? ` · Son bilinen konum: <b>${_escHtml(sonKonum)}</b>` : ''}</div>
       <h5 class="udet-h5">Son 14 Gün Aktivite</h5>${actHtml}
       <h5 class="udet-h5">Erişimler (IP · konum · parmak izi · cihaz) ${showAll ? '— tümü (' + (logs.data || []).length + ')' : '— son 8'}</h5>
       ${rows || '<div class="profile-empty">Henüz erişim kaydı yok.</div>'}
@@ -7968,7 +7980,7 @@ async function adminStaffLogLoad() {
     const { data } = await sb.from('action_log').select('*').order('created_at', { ascending: false }).limit(300);
     const rows = data || [];
     if (!rows.length) { box.innerHTML = '<div class="profile-empty">Henüz işlem kaydı yok.</div>'; return; }
-    const AD = { rol_degistir: '🔧 Rol değişimi', ogrenci_ata: '🎓 Öğrenci atama', ogrenci_atama_kaldir: '❌ Atama kaldırma', premium_tanim: '👑 Premium tanımlama', ticket_mail: '📧 Talep maili', bildirim: '🔔 Bildirim' };
+    const AD = { rol_degistir: '🔧 Rol değişimi', ogrenci_ata: '🎓 Öğrenci atama', ogrenci_atama_kaldir: '❌ Atama kaldırma', premium_tanim: '👑 Premium tanımlama', ticket_mail: '📧 Talep maili', bildirim: '🔔 Bildirim', kullanici_sil: '🗑️ Kullanıcı silme' };
     const kim = id => { const u = (_adminUsers || []).find(x => x.id === id); return u ? _escHtml(u.display_name || (u.email || '').split('@')[0]) : (id || '').slice(0, 8) + '…'; };
     box.innerHTML = rows.map(r => `
       <div class="err-row"><div class="err-msg"><b>${AD[r.action] || _escHtml(r.action)}</b> — ${kim(r.actor_id)} <span class="cw-cat">${_escHtml(r.actor_role || '')}</span></div>
