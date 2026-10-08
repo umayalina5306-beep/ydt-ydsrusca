@@ -49,8 +49,8 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=148">
-<link rel="stylesheet" href="css/ekitap.css?v=148">
+<link rel="stylesheet" href="css/style.css?v=149">
+<link rel="stylesheet" href="css/ekitap.css?v=149">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -73,7 +73,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=148" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=149" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -2084,7 +2084,7 @@
   <div class="watch-wrap" id="watch-wrap">
     <div class="watch-topbar">
       <div class="watch-bc-row">
-        <button class="watch-back" onclick="closeWatch()" title="Video Derslere dön" aria-label="Geri"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <button class="watch-back" onclick="watchBack()" title="Geri" aria-label="Geri"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
         <div class="watch-bc" id="watch-bc" role="navigation" aria-label="Konum"></div>
       </div>
       <div class="watch-head-info">
@@ -2109,6 +2109,8 @@
           <div id="watch-card-overlay" class="sv-card-overlay" style="display:none;"></div>
           <div class="watch-controls" id="watch-controls">
             <button class="wc-btn wc-play-btn" id="wc-play" onclick="watchTogglePlay()" data-tip="Oynat / Duraklat" aria-label="Oynat / Duraklat"></button>
+            <button class="wc-btn wc-fsnav" id="wc-prev" onclick="_wGoAdjacent(-1)" data-tip="Önceki video" aria-label="Önceki video"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 5 9 12 19 19" fill="currentColor" stroke="none"/><line x1="5" y1="5" x2="5" y2="19"/></svg></button>
+            <button class="wc-btn wc-fsnav" id="wc-next" onclick="_wGoAdjacent(1)" data-tip="Sonraki video" aria-label="Sonraki video"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 5 15 12 5 19" fill="currentColor" stroke="none"/><line x1="19" y1="5" x2="19" y2="19"/></svg></button>
             <button class="wc-btn" onclick="watchSeek(-10)" data-tip="10 sn geri" aria-label="10 saniye geri"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 3 3 8 8 8"/><text x="12" y="15.5" font-size="7.5" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="Inter,sans-serif">10</text></svg></button>
             <button class="wc-btn" onclick="watchSeek(10)" data-tip="10 sn ileri" aria-label="10 saniye ileri"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 8 16 8"/><text x="12" y="15.5" font-size="7.5" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="Inter,sans-serif">10</text></svg></button>
             <button class="wc-btn wc-vol" id="wc-vol" onclick="watchToggleMute()" data-tip="Ses" aria-label="Ses"></button>
@@ -2226,13 +2228,13 @@
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=148"></script>
-<script defer src="js/auth.js?v=148"></script>
-<script defer src="js/admin.js?v=148"></script>
-<script defer src="js/profile.js?v=148"></script>
-<script defer src="js/extras.js?v=148"></script>
-<script defer src="js/app.js?v=148"></script>
-<script defer src="js/ekitap.js?v=148"></script>
+<script defer src="js/supabase-config.js?v=149"></script>
+<script defer src="js/auth.js?v=149"></script>
+<script defer src="js/admin.js?v=149"></script>
+<script defer src="js/profile.js?v=149"></script>
+<script defer src="js/extras.js?v=149"></script>
+<script defer src="js/app.js?v=149"></script>
+<script defer src="js/ekitap.js?v=149"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
