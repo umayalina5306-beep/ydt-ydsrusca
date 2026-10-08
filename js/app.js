@@ -4184,6 +4184,7 @@ function updateNotifBadge() {
   if (typeof window !== 'undefined' && window.focusActive) { c.style.display = 'none'; return; }
   const u = notifUnread();
   if (u > 0) { c.textContent = u > 9 ? '9+' : String(u); c.style.display = 'flex'; } else { c.style.display = 'none'; }
+  const zil = document.getElementById('notif-bell'); if (zil) zil.title = u > 0 ? u + ' okunmamış bildirim' : 'Bildirimler';
 }
 function toggleNotifPanel(ev) {
   if (ev) ev.stopPropagation();
