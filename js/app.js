@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v151';
+var YDT_SURUM = 'v152';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -6133,6 +6133,9 @@ function renderCvList() {
 function adminVidFormClear() {
   ['cv-id','cv-num','cv-title','cv-desc','cv-vid','cv-thumb'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const mfS = document.getElementById('cv-mf'); if (mfS) mfS.value = '';
+  const fl = document.getElementById('cv-file'); if (fl) fl.value = '';
+  const fth = document.getElementById('cv-thumb-file'); if (fth) fth.value = '';
+  ['cv-upload-status', 'cv-thumb-status'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
   const pr = document.getElementById('cv-premium'); if (pr) pr.checked = false;
   const btn = document.getElementById('cv-save-btn'); if (btn) btn.textContent = 'Video Ekle';
 }
