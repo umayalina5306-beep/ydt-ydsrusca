@@ -4035,7 +4035,7 @@ function uyelikHTML() {
     <h3 class="set-h3 danger">⚠️ Tehlikeli Bölge</h3>
     <p class="set-sub">Bu işlemler dikkat gerektirir. Verilerin (kayıtlı/öğrenilen kelimeler) dondurmada korunur.</p>
     <button class="set-btn warn" onclick="freezeAccount()">Hesabı Dondur</button>
-    <button class="set-btn danger" onclick="deleteAccount()">Hesabı Sil</button>
+    ${(currentProfile && currentProfile.is_admin) ? '<div class="set-note">Yönetici hesapları silinemez. Silmek için önce hesabın yönetici yetkisinin kaldırılması gerekir.</div>' : '<button class="set-btn danger" onclick="deleteAccount()">Hesabı Sil</button>'}
   </div>`;
 }
 
@@ -4092,6 +4092,7 @@ async function freezeAccount() {
   } catch (e) { toast('İşlem başarısız. Lütfen tekrar dene.'); }
 }
 async function deleteAccount() {
+  if (currentProfile && currentProfile.is_admin) { uiAlert('Yönetici hesapları silinemez. Silmek için önce hesabın yönetici yetkisinin kaldırılması gerekir.', 'Hesabı Sil'); return; }
   if (!(await uiConfirm('Hesabını ve tüm verilerini silmek istediğine emin misin? Bu işlem geri alınamaz.', 'Hesabı Sil', { danger: true }))) return;
   const typed = await uiPrompt('Onaylamak için büyük harflerle  SİL  yaz:', { title: 'Hesabı Sil', placeholder: 'SİL' });
   if (typed !== 'SİL') { toast('İşlem iptal edildi.'); return; }
@@ -4200,15 +4201,19 @@ function _notifOutside(e) {
 }
 function renderNotifPanel() {
   const p = document.getElementById('notif-panel'); if (!p) return;
-  const head = `<div class="notif-head"><span>Bildirimler</span>${myNotifications.length ? `<button class="notif-allread" onclick="markAllNotifRead(event)">Tümünü okundu yap</button>` : ''}</div>`;
-  if (!myNotifications.length) { p.innerHTML = head + `<div class="notif-empty">Henüz bildirim yok.</div>`; return; }
+  const ic = (n, sz) => (typeof window.ypIc === 'function' ? window.ypIc(n, sz) : '');
+  const zaman = t => (typeof window.ypOnceKadar === 'function' ? window.ypOnceKadar(t) : new Date(t).toLocaleString('tr-TR'));
+  const okunmamis = myNotifications.filter(n => !n.is_read).length;
+  const head = `<div class="yp-acilir-bas"><span>Bildirimler</span>${okunmamis ? `<button type="button" class="yp-link" onclick="markAllNotifRead(event)">Tümünü okundu say</button>` : ''}</div>`;
+  if (!myNotifications.length) { p.innerHTML = head + `<div class="yp-bos kucuk">${ic('onay', 24)}<span>Henüz bildirim yok.</span></div>`; return; }
+  const TUR = { success: ['onay', 'yesil'], warning: ['hata', 'turuncu'], admin: ['bildirim', 'altin'] };
   const items = myNotifications.map(n => {
-    const d = new Date(n.created_at);
-    const icon = n.type === 'success' ? '✅' : (n.type === 'warning' ? '⚠️' : (n.type === 'admin' ? '📢' : '🔔'));
-    return `<div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="markNotifRead('${n.id}', event)">
-      <div class="notif-ic">${icon}</div>
-      <div class="notif-body"><div class="notif-t">${_escHtml(n.title||'')}</div>${n.body ? `<div class="notif-d">${_escHtml(n.body)}</div>` : ''}<div class="notif-time">${d.toLocaleDateString('tr-TR')} ${d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}</div></div>
-      <button class="notif-x" title="Sil" onclick="deleteNotif('${n.id}', event)">×</button>
+    const t = TUR[n.type] || ['bildirim', 'mavi'];
+    return `<div class="yp-bek${n.is_read ? ' okundu' : ''}" role="button" tabindex="0" onclick="markNotifRead('${n.id}', event)">
+      <span class="yp-bek-ic r-${t[1]}">${ic(t[0], 17)}</span>
+      <div><b>${_escHtml(n.title || '')}</b>${n.body ? `<span>${_escHtml(n.body)}</span>` : ''}<small>${zaman(n.created_at)}</small></div>
+      <div class="yp-bek-sag">${n.is_read ? '' : `<button type="button" class="yp-okundu-b" title="Okundu say" aria-label="Okundu say" onclick="markNotifRead('${n.id}', event)">${ic('onay', 16)}</button>`}
+        <button type="button" class="yp-okundu-b sil" title="Sil" aria-label="Bildirimi sil" onclick="deleteNotif('${n.id}', event)">${ic('cop', 15)}</button></div>
     </div>`;
   }).join('');
   p.innerHTML = head + `<div class="notif-list">${items}</div>`;
