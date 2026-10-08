@@ -49,9 +49,11 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=154">
-<link rel="stylesheet" href="css/ekitap.css?v=154">
-<link rel="stylesheet" href="css/video.css?v=154">
+<link rel="stylesheet" href="css/style.css?v=155">
+<link rel="stylesheet" href="css/ekitap.css?v=155">
+<link rel="stylesheet" href="css/video.css?v=155">
+<script>try{if(localStorage.getItem('ydt_prof_ui'))document.documentElement.classList.add('oturum-var');}catch(e){}</script>
+<style>html.oturum-var #nav-auth-buttons{display:none!important}</style>
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -74,7 +76,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=154" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=155" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -100,6 +102,14 @@
     </div>
   </div>
 </nav>
+<script>/* Hızlı açılış: son oturumun üst bar bilgisi hemen görünsün (kayma olmasın); asıl bilgi birazdan sunucudan tazelenir */
+try{var _c=JSON.parse(localStorage.getItem('ydt_prof_ui')||'null');if(_c&&_c.p){var _p=_c.p,_a=document.getElementById('nav-account'),_n=document.getElementById('account-name'),_b=document.getElementById('account-plan'),_r=_p.role||'user';
+if(_a)_a.style.display='flex';if(_n)_n.textContent=_c.ad||_p.display_name||'';
+if(_b){if(_p.is_admin){_b.textContent='Yönetici';_b.className='plan-badge plan-admin';}else{var _pr=_p.plan==='premium';_b.textContent=_pr?'Premium':'Ücretsiz';_b.className='plan-badge '+(_pr?'plan-premium':'plan-free');}}
+var _al=document.getElementById('nav-admin-link');if(_al&&(_p.is_admin||_r==='destek'))_al.style.display='inline-block';
+var _tl=document.getElementById('nav-teacher-link');if(_tl&&_r==='ogretmen')_tl.style.display='inline-block';
+var _kl=document.getElementById('nav-kurum-link');if(_kl&&_r==='kurum')_kl.style.display='inline-block';
+var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-flex';}}catch(e){}</script>
 
 <!-- ===== HOME ===== -->
 <div id="page-home" class="page active">
@@ -2229,14 +2239,14 @@
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=154"></script>
-<script defer src="js/auth.js?v=154"></script>
-<script defer src="js/admin.js?v=154"></script>
-<script defer src="js/profile.js?v=154"></script>
-<script defer src="js/extras.js?v=154"></script>
-<script defer src="js/app.js?v=154"></script>
-<script defer src="js/ekitap.js?v=154"></script>
-<script defer src="js/video.js?v=154"></script>
+<script defer src="js/supabase-config.js?v=155"></script>
+<script defer src="js/auth.js?v=155"></script>
+<script defer src="js/admin.js?v=155"></script>
+<script defer src="js/profile.js?v=155"></script>
+<script defer src="js/extras.js?v=155"></script>
+<script defer src="js/app.js?v=155"></script>
+<script defer src="js/ekitap.js?v=155"></script>
+<script defer src="js/video.js?v=155"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
