@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v153';
+var YDT_SURUM = 'v154';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1358,9 +1358,25 @@ function _wSetupNav(v) {
   if (nb) { nb.classList.toggle('yok', !next); nb.disabled = !next; if (nt) nt.textContent = next ? (next.title||'') : 'Son video'; }
   _w._prev = prev; _w._next = next;
 }
+/* Premium olmayan kullanıcı için kilitli video mu? */
+function _wKilitli(v) { return !!(v && v.locked && !(typeof userHasPremium === 'function' && userHasPremium())); }
+/* Ekranın altında beyaz, yuvarlak köşeli kısa uyarı */
+function _wUyari(msg) {
+  let el = document.getElementById('w-uyari');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'w-uyari'; el.className = 'w-uyari'; el.setAttribute('role', 'status');
+  }
+  const ebeveyn = document.fullscreenElement || document.body;   // tam ekrandayken de görünsün
+  if (el.parentElement !== ebeveyn) ebeveyn.appendChild(el);
+  el.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
+    + '<span>' + _escHtml(msg) + '</span><button type="button" onclick="showPage(\'pricing\')">Planları gör</button>';
+  el.classList.remove('acik'); void el.offsetWidth; el.classList.add('acik');
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('acik'), 3800);
+}
 function _wGoAdjacent(dir) {
   const hedef = dir < 0 ? _w._prev : _w._next;
   if (!hedef) { toast(dir<0?'İlk video':'Son video'); return; }
+  if (_wKilitli(hedef)) { _wUyari(dir < 0 ? 'Önceki video premium üyelere özel.' : 'Sonraki video premium üyelere özel.'); return; }
   _wCleanup();
   openWatch(hedef);
 }
@@ -2641,7 +2657,14 @@ function _wSuggestNext() {
   const box = document.getElementById('watch-card-overlay');
   if (!box) return;
   box.className = 'sv-card-overlay center';
-  if (next) {
+  if (next && _wKilitli(next)) {
+    box.innerHTML = `<div class="sv-card sv-card-done">
+      <div class="sv-card-head" style="justify-content:center;">Ders tamamlandı!</div>
+      <div class="sv-card-body" style="text-align:center;">Sıradaki ders <b>${_escHtml(next.title||'')}</b> premium üyelere özel.</div>
+      <button class="set-btn" style="width:100%;" onclick="showPage('pricing')">Planları gör</button>
+      <button class="set-btn ghost" style="width:100%;margin-top:8px;" onclick="_wCancelNext()">Kapat</button></div>`;
+    box.style.display = 'flex';
+  } else if (next) {
     const idx = videos.indexOf(next);
     box.innerHTML = `<div class="sv-card sv-card-done">
       <div class="sv-card-head" style="justify-content:center;">Ders tamamlandı!</div>
@@ -2674,6 +2697,7 @@ function _wCancelNext() {
 function _wPlayNext(idx) {
   if (_wNextTimer) { clearInterval(_wNextTimer); _wNextTimer = null; }
   const v = videos[idx]; if (!v) { closeWatch(); return; }
+  if (_wKilitli(v)) { _wCloseCard(); _wUyari('Sıradaki video premium üyelere özel.'); return; }
   _wCleanup();
   // Oynatıcı tam temizlensin, sonra yeni video kurulsun (YouTube çakışma hatasını önler)
   setTimeout(() => openWatch(v), 600);
