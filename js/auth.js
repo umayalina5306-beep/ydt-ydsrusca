@@ -441,10 +441,10 @@ function openPwReset() {
     '<h3 class="ui-modal-title">🔑 Yeni Şifre Belirle</h3>' +
     '<p class="ui-modal-msg">Sıfırlama bağlantısı doğrulandı. Hesabın için yeni bir şifre seç.</p>' +
     '<div class="pw-wrap" style="margin-bottom:10px;"><input id="pwr-1" class="form-input" type="password" placeholder="Yeni şifre (en az 6 karakter)" autocomplete="new-password" oninput="pwStrengthPaint(this.value, \'pwr-bar\', \'pwr-bar-t\')">' +
-    '<button type="button" class="pw-eye" onclick="pwToggle(this, \'pwr-1\')">👁</button></div>' +
+    '<button type="button" class="pw-eye" onclick="pwToggle(this, \'pwr-1\')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>' +
     '<div class="pwbar"><div id="pwr-bar" class="pwbar-fill"></div></div><div id="pwr-bar-t" class="pwbar-t"></div>' +
     '<div class="pw-wrap" style="margin-bottom:12px;"><input id="pwr-2" class="form-input" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password">' +
-    '<button type="button" class="pw-eye" onclick="pwToggle(this, \'pwr-2\')">👁</button></div>' +
+    '<button type="button" class="pw-eye" onclick="pwToggle(this, \'pwr-2\')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>' +
     '<div id="pwr-msg" style="font-size:.84rem; color:#b91c1c; min-height:18px; margin-bottom:8px;"></div>' +
     '<button class="set-btn" style="width:100%;" onclick="pwResetSubmit()">Şifreyi Güncelle</button>' +
     '</div>';
