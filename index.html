@@ -49,9 +49,9 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=155">
-<link rel="stylesheet" href="css/ekitap.css?v=155">
-<link rel="stylesheet" href="css/video.css?v=155">
+<link rel="stylesheet" href="css/style.css?v=156">
+<link rel="stylesheet" href="css/ekitap.css?v=156">
+<link rel="stylesheet" href="css/video.css?v=156">
 <script>try{if(localStorage.getItem('ydt_prof_ui'))document.documentElement.classList.add('oturum-var');}catch(e){}</script>
 <style>html.oturum-var #nav-auth-buttons{display:none!important}</style>
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
@@ -76,11 +76,12 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=155" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=156" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
-    <li><button onclick="showPage('recs')" id="nav-recs">Öneriler</button></li>
+    <li><button onclick="showPage('recs')" id="nav-recs">Blog</button></li>
+    <li><button onclick="showPage('makaleler')" id="nav-makaleler">Makaleler</button></li>
     <li><button onclick="showPage('pricing')" id="nav-pricing">Fiyatlar</button></li>
   </ul>
   <div class="nav-auth">
@@ -89,16 +90,25 @@
       <button class="btn-signup" onclick="openAuth('register')">Üye Ol</button>
     </div>
     <div id="nav-account" style="display:none; align-items:center; gap:10px;">
-      <span id="account-avatar" class="nav-avatar" onclick="showPage('profile')" title="Profilim"></span>
-      <span id="account-name" class="account-name"></span>
-      <span id="account-plan" class="plan-badge plan-free">FREE</span>
-      <span id="account-admin" title="Yönetici" style="display:none; color:var(--gold); font-weight:700;">★</span>
-      <span id="notif-bell" class="notif-bell" onclick="toggleNotifPanel(event)" title="Bildirimler" style="display:none;">🔔<span id="notif-count" class="notif-count" style="display:none;">0</span><div id="notif-panel" class="notif-panel" style="display:none;"></div></span>
-      <button id="nav-profile-link" class="btn-login" onclick="showPage('profile')">Profilim</button>
-      <button id="nav-teacher-link" class="btn-login" style="display:none;" onclick="showPage('teacher')">Öğretmen</button>
-      <button id="nav-kurum-link" class="btn-login" style="display:none;" onclick="showPage('kurum')">🏫 Kurum</button>
-      <button id="nav-admin-link" class="btn-login" style="display:none;" onclick="showPage('admin')">Yönetim</button>
-      <button class="btn-login" onclick="authLogout()">Çıkış</button>
+      <span class="nav-ayrac" aria-hidden="true"></span>
+      <span id="notif-bell" class="notif-bell" onclick="toggleNotifPanel(event)" title="Bildirimler" style="display:none;"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span id="notif-count" class="notif-count" style="display:none;">0</span><div id="notif-panel" class="notif-panel" style="display:none;"></div></span>
+      <div class="hesap" id="hesap">
+        <button type="button" class="hesap-b" onclick="hesapMenu(event)" aria-haspopup="menu" aria-expanded="false">
+          <span id="account-avatar" class="nav-avatar"></span>
+          <span class="hesap-ad"><span id="account-name" class="account-name"></span><span id="account-plan" class="plan-badge plan-free"></span></span>
+          <span class="hesap-ok"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+        </button>
+        <div class="hesap-menu" id="hesap-menu" role="menu">
+          <div class="hm-bas"><span class="hm-av" id="hm-av"></span><div class="hm-kim"><b id="hm-ad"></b><small id="hm-rol"></small></div></div>
+          <button type="button" class="hm-item" id="nav-profile-link" role="menuitem" onclick="hesapGit('profile')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Profilim</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></button>
+          <button type="button" class="hm-item" id="nav-teacher-link" role="menuitem" style="display:none;" onclick="hesapGit('teacher')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/></svg><span>Öğretmen paneli</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></button>
+          <button type="button" class="hm-item" id="nav-kurum-link" role="menuitem" style="display:none;" onclick="hesapGit('kurum')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V8l7-4 7 4v13"/><path d="M10 21v-5h4v5"/></svg><span>Kurum paneli</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></button>
+          <button type="button" class="hm-item" id="nav-admin-link" role="menuitem" style="display:none;" onclick="hesapGit('admin')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Yönetim</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></button>
+          <div class="hm-ayrac"></div>
+          <button type="button" class="hm-item hm-cikis" role="menuitem" onclick="hesapKapat(); authLogout()"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span>Çıkış</span></button>
+        </div>
+      </div>
+      <span id="account-admin" style="display:none;"></span>
     </div>
   </div>
 </nav>
@@ -1003,6 +1013,15 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
       <button class="rec-chip" data-rt="kitap" onclick="recsSetType('kitap', this)">📚 Kitap</button>
     </div>
     <div id="recs-grid" class="recs-grid"><div class="profile-empty">Yükleniyor...</div></div>
+  </section>
+</div>
+
+<div id="page-makaleler" class="page">
+  <section class="mk-yakinda">
+    <div class="mk-ic"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12l4 4v12H4z"/><polyline points="16 4 16 8 20 8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg></div>
+    <h2>Rusça <span>Makaleler</span></h2>
+    <p>Farklı alanlardan özgün Rusça makaleler burada olacak. Bu bölüm hazırlanıyor.</p>
+    <button class="btn-signup" onclick="showPage('learn')">Eğitime dön</button>
   </section>
 </div>
 
@@ -2239,14 +2258,15 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=155"></script>
-<script defer src="js/auth.js?v=155"></script>
-<script defer src="js/admin.js?v=155"></script>
-<script defer src="js/profile.js?v=155"></script>
-<script defer src="js/extras.js?v=155"></script>
-<script defer src="js/app.js?v=155"></script>
-<script defer src="js/ekitap.js?v=155"></script>
-<script defer src="js/video.js?v=155"></script>
+<script defer src="js/supabase-config.js?v=156"></script>
+<script defer src="js/auth.js?v=156"></script>
+<script defer src="js/admin.js?v=156"></script>
+<script defer src="js/profile.js?v=156"></script>
+<script defer src="js/extras.js?v=156"></script>
+<script defer src="js/app.js?v=156"></script>
+<script defer src="js/ekitap.js?v=156"></script>
+<script defer src="js/video.js?v=156"></script>
+<script defer src="js/arayuz.js?v=156"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
