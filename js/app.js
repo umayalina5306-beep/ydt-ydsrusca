@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v148';
+var YDT_SURUM = 'v149';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1351,6 +1351,9 @@ function _wSetupNav(v) {
   const next = idx >= 0 && idx < videos.length-1 ? videos[idx+1] : (videos.find(x => x.num === (v.num||0)+1));
   const pb = document.getElementById('watch-prev'), nb = document.getElementById('watch-next');
   const pt = document.getElementById('watch-prev-title'), nt = document.getElementById('watch-next-title');
+  const fp = document.getElementById('wc-prev'), fn = document.getElementById('wc-next');
+  if (fp) { fp.disabled = !prev; fp.setAttribute('data-tip', prev ? 'Önceki: ' + (prev.title || '') : 'İlk video'); }
+  if (fn) { fn.disabled = !next; fn.setAttribute('data-tip', next ? 'Sonraki: ' + (next.title || '') : 'Son video'); }
   if (pb) { pb.classList.toggle('yok', !prev); pb.disabled = !prev; if (pt) pt.textContent = prev ? (prev.title||'') : 'İlk video'; }
   if (nb) { nb.classList.toggle('yok', !next); nb.disabled = !next; if (nt) nt.textContent = next ? (next.title||'') : 'Son video'; }
   _w._prev = prev; _w._next = next;
@@ -1901,6 +1904,17 @@ function _wBigState(playing) {
     el.classList.add('show-play');
   }
 }
+/* Geri: tam ekrandaysa önce tam ekrandan çık, değilse video listesine dön */
+function watchBack() {
+  const wrap = document.getElementById('watch-wrap');
+  if (document.fullscreenElement || (wrap && wrap.classList.contains('watch-fs'))) {
+    try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch (e) {}
+    if (wrap) wrap.classList.remove('watch-fs');
+    return;
+  }
+  closeWatch();
+}
+if (typeof window !== 'undefined') window.watchBack = watchBack;
 function watchFullscreen() {
   const wrap = document.getElementById('watch-wrap');
   if (!document.fullscreenElement) {
@@ -2168,7 +2182,7 @@ function _wShowCard(card, opts) {
     const cardEl = box.querySelector('.sv-card');
     if (cardEl && !cardEl.querySelector('.sv-card-x')) {
       const x = document.createElement('button');
-      x.className = 'sv-card-x'; x.innerHTML = '×'; x.title = 'Kapat';
+      x.className = 'sv-card-x'; x.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>'; x.title = 'Kapat';
       x.onclick = function(ev) { ev.stopPropagation(); _wCloseCard(); };
       cardEl.appendChild(x);
     }
