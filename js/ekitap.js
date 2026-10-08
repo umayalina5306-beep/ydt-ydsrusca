@@ -2582,6 +2582,7 @@ async function icTab(t) {
 /* İçerik Merkezi → Kartlar: hazırladığımız çalışma kartlarını incele / sil */
 const ICK = { units: [], row: null, parsed: null };
 async function icKartInit() {
+  try { if (typeof ekTopicsFetch === 'function') await ekTopicsFetch(); } catch (e) {}
   try { const { data } = await sb.from('ek_units').select('id, modul_no, unite_no, unite_ad').order('modul_no').order('unite_no'); ICK.units = data || []; } catch (e) { ICK.units = []; }
   const sel = document.getElementById('ic-kart-unite'); if (!sel) return;
   const v = sel.value;
@@ -2592,21 +2593,72 @@ async function icKartInit() {
 async function icKartYukle() {
   const sel = document.getElementById('ic-kart-unite'), box = document.getElementById('ic-kart-list'), oz = document.getElementById('ic-kart-ozet');
   if (!sel || !box) return;
+  ICK.form = null;
   if (!sel.value) { box.innerHTML = '<div class="profile-empty">Kart görmek için önce bir e-kitap ünitesi ekle.</div>'; if (oz) oz.textContent = ''; return; }
   try { const { data } = await sb.from('ek_units').select('id, kaynak').eq('id', sel.value).single(); ICK.row = data; } catch (e) { ICK.row = null; }
   if (!ICK.row) { box.innerHTML = '<div class="profile-empty">Ünite yüklenemedi.</div>'; return; }
-  ICK.parsed = ekParse(ICK.row.kaynak);
+  ICK.parsed = ekParse(ICK.row.kaynak || '');
+  icKartCiz();
+}
+/* Kart listesi: her bölümün kartları + kart ekle / düzenle formu */
+function icKartCiz() {
+  const box = document.getElementById('ic-kart-list'), oz = document.getElementById('ic-kart-ozet'); if (!box || !ICK.parsed) return;
+  const f = ICK.form;
+  const form = (k) => `<div class="ic-k ic-k-form">
+      <label>Ön yüz<input id="ick-on" class="pq-input" value="${ekEsc(k ? k.on : '')}" placeholder="Örn. книга" autocomplete="off"></label>
+      <label>Arka yüz<input id="ick-arka" class="pq-input" value="${ekEsc(k ? k.arka : '')}" placeholder="Örn. kitap (dişil)" autocomplete="off"></label>
+      <label>Konu <small>(isteğe bağlı)</small><input id="ick-konu" class="pq-input" list="ick-konular" value="${ekEsc(k ? k.konu : '')}" placeholder="konu kodu" autocomplete="off"></label>
+      <div class="ic-k-form-a"><button class="mail-act" onclick="icKartVazgec()">Vazgeç</button><button class="set-btn" onclick="icKartKaydet()">${k ? 'Kaydet' : 'Kartı ekle'}</button></div></div>`;
   let h = '', top = 0;
   ICK.parsed.sections.forEach((s, si) => {
     const kart = []; s.blocks.forEach((b, bi) => { if (b.t === 'kartlar') b.cards.forEach((k, ci) => kart.push({ k, bi, ci })); });
-    if (!kart.length) return;
     top += kart.length;
-    h += `<div class="ic-k-sec">${s.tur === 'ders' ? 'Ders ' + s.no + ' · ' : ''}${ekEsc(s.ad)} <span>${kart.length} kart</span></div><div class="ic-k-grid">` +
-      kart.map(x => `<div class="ic-k"><div class="ic-k-y"><small>Ön</small>${ekInline(x.k.on)}</div><div class="ic-k-y arka"><small>Arka</small>${ekInline(x.k.arka)}</div>
-        <div class="ic-k-f">${x.k.konu ? `<span class="cw-cat">${ekEsc(x.k.konu)}</span>` : '<span></span>'}<button class="mail-act red" onclick="icKartSil(${si}, ${x.bi}, ${x.ci})">Sil</button></div></div>`).join('') + '</div>';
+    const ekleAcik = f && f.si === si && f.ci == null;
+    h += `<div class="ic-k-sec">${s.tur === 'ders' ? 'Ders ' + s.no + ' · ' : ''}${ekEsc(s.ad)} <span>${kart.length ? kart.length + ' kart' : 'kart yok'}</span>
+      ${ekleAcik ? '' : `<button class="mail-act ic-k-ekle" onclick="icKartEkle(${si})">+ Kart ekle</button>`}</div>`;
+    if (!kart.length && !ekleAcik) return;
+    h += '<div class="ic-k-grid">' + kart.map(x => (f && f.si === si && f.bi === x.bi && f.ci === x.ci) ? form(x.k) :
+      `<div class="ic-k"><div class="ic-k-y"><small>Ön</small>${ekInline(x.k.on)}</div><div class="ic-k-y arka"><small>Arka</small>${ekInline(x.k.arka)}</div>
+        <div class="ic-k-f">${x.k.konu ? `<span class="cw-cat">${ekEsc(x.k.konu)}</span>` : '<span></span>'}<span class="ic-k-f-a"><button class="mail-act" onclick="icKartDuzenle(${si}, ${x.bi}, ${x.ci})">Düzenle</button><button class="mail-act red" onclick="icKartSil(${si}, ${x.bi}, ${x.ci})">Sil</button></span></div></div>`).join('') +
+      (ekleAcik ? form(null) : '') + '</div>';
   });
   if (oz) oz.textContent = top + ' kart';
-  box.innerHTML = h || '<div class="profile-empty">Bu ünitede hazırlanmış kart yok. Kartlar ünite metnine :::kartlar bloğuyla eklenir.</div>';
+  const konular = (typeof EKA !== 'undefined' && EKA.topics) ? EKA.topics : [];
+  box.innerHTML = (h || '<div class="profile-empty">Bu ünitede bölüm yok.</div>') + `<datalist id="ick-konular">${konular.map(t => `<option value="${ekEsc(t.kod)}">${ekEsc(t.ad)}</option>`).join('')}</datalist>`;
+  if (f) setTimeout(() => { const el = document.getElementById('ick-on'); if (el) { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }, 30);
+}
+function icKartEkle(si) { ICK.form = { si, bi: null, ci: null }; icKartCiz(); }
+function icKartDuzenle(si, bi, ci) { ICK.form = { si, bi, ci }; icKartCiz(); }
+function icKartVazgec() { ICK.form = null; icKartCiz(); }
+async function icKartKaydet() {
+  const f = ICK.form; if (!f || !ICK.row) return;
+  const al = id => String((document.getElementById(id) || {}).value || '').replace(/\r?\n/g, ' ').trim();
+  const yeni = { on: al('ick-on'), arka: al('ick-arka'), konu: al('ick-konu') };
+  if (!yeni.on || !yeni.arka) { uiAlert('Kartın ön ve arka yüzü boş olamaz.'); return; }
+  const kartMetin = x => ['ön: ' + x.on, 'arka: ' + x.arka].concat(x.konu ? ['konu: ' + x.konu] : []).join('\n');
+  const L = (ICK.row.kaynak || '').split('\n'), sec = ICK.parsed.sections[f.si]; if (!sec) return;
+  const b = f.bi != null ? sec.blocks[f.bi] : sec.blocks.find(x => x.t === 'kartlar' && x.ln && x.son);
+  const once = ICK.parsed.sections.reduce((t, s) => t + s.blocks.filter(x => x.t === 'kartlar').reduce((a, x) => a + x.cards.length, 0), 0);
+  if (b) {
+    if (!b.ln || !b.son) return;
+    const cards = b.cards.slice(); if (f.ci != null) cards[f.ci] = yeni; else cards.push(yeni);
+    L.splice(b.ln - 1, b.son - b.ln + 1, ...[L[b.ln - 1]].concat(cards.map(kartMetin).join('\n---\n').split('\n'), [':::']));
+  } else {
+    // Bölümde kart bloğu yoksa bölümün sonuna yeni bir :::kartlar bloğu ekle
+    const sonraki = ICK.parsed.sections.slice(f.si + 1).find(s => s.ln);
+    let idx = sonraki ? sonraki.ln - 1 : L.length;
+    while (idx > 0 && L[idx - 1].trim() === '') idx--;
+    L.splice(idx, 0, '', ':::kartlar', ...kartMetin(yeni).split('\n'), ':::', '');
+  }
+  const metin = L.join('\n'), kontrol = ekParse(metin);
+  const sonra = kontrol.sections.reduce((t, s) => t + s.blocks.filter(x => x.t === 'kartlar').reduce((a, x) => a + x.cards.length, 0), 0);
+  if (kontrol.errors.length > ICK.parsed.errors.length || sonra !== once + (f.ci != null ? 0 : 1)) { uiAlert('Kart kaydedilirken ünite metni bozulacaktı; işlem iptal edildi.'); return; }
+  try {
+    const { error } = await sb.from('ek_units').update({ kaynak: metin, updated_at: new Date().toISOString() }).eq('id', ICK.row.id);
+    if (error) throw error;
+    toast(f.ci != null ? 'Kart güncellendi.' : 'Kart eklendi.'); EK.loaded = false; if (EK.unit && EK.unit.id === ICK.row.id) { EK.unit = null; EK.pages = []; }
+    icKartYukle();
+  } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
 }
 async function icKartSil(si, bi, ci) {
   const b = ICK.parsed && ICK.parsed.sections[si] && ICK.parsed.sections[si].blocks[bi];
