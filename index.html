@@ -49,8 +49,8 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=147">
-<link rel="stylesheet" href="css/ekitap.css?v=147">
+<link rel="stylesheet" href="css/style.css?v=148">
+<link rel="stylesheet" href="css/ekitap.css?v=148">
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
 <style id="psb-hotfix">
   #page-profile .profile-sidebar { display:flex !important; flex-direction:column !important; gap:4px !important; position:sticky !important; top:90px !important; float:none !important; }
@@ -73,7 +73,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=147" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=148" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -1332,12 +1332,12 @@
             <h3 class="an-h3">🔒 Şifre Değiştir</h3>
             <p class="pq-hint">Güvenliğin için önce mevcut şifreni doğruluyoruz.</p>
             <label class="cwbp-lbl">Mevcut şifre</label>
-            <div class="pw-wrap"><input id="cpw-old" class="form-input" type="password" autocomplete="current-password" placeholder="Mevcut şifren"><button type="button" class="pw-eye" onclick="pwToggle(this, 'cpw-old')">👁</button></div>
+            <div class="pw-wrap"><input id="cpw-old" class="form-input" type="password" autocomplete="current-password" placeholder="Mevcut şifren"><button type="button" class="pw-eye" onclick="pwToggle(this, 'cpw-old')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
             <label class="cwbp-lbl">Yeni şifre</label>
-            <div class="pw-wrap"><input id="cpw-new" class="form-input" type="password" autocomplete="new-password" placeholder="En az 6 karakter" oninput="pwStrengthPaint(this.value, 'cpw-bar', 'cpw-bar-t')"><button type="button" class="pw-eye" onclick="pwToggle(this, 'cpw-new')">👁</button></div>
+            <div class="pw-wrap"><input id="cpw-new" class="form-input" type="password" autocomplete="new-password" placeholder="En az 6 karakter" oninput="pwStrengthPaint(this.value, 'cpw-bar', 'cpw-bar-t')"><button type="button" class="pw-eye" onclick="pwToggle(this, 'cpw-new')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
             <div class="pwbar"><div id="cpw-bar" class="pwbar-fill"></div></div><div id="cpw-bar-t" class="pwbar-t"></div>
             <label class="cwbp-lbl">Yeni şifre (tekrar)</label>
-            <div class="pw-wrap"><input id="cpw-new2" class="form-input" type="password" autocomplete="new-password" placeholder="Tekrar yaz"><button type="button" class="pw-eye" onclick="pwToggle(this, 'cpw-new2')">👁</button></div>
+            <div class="pw-wrap"><input id="cpw-new2" class="form-input" type="password" autocomplete="new-password" placeholder="Tekrar yaz"><button type="button" class="pw-eye" onclick="pwToggle(this, 'cpw-new2')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
             <div id="cpw-msg" style="font-size:.84rem; min-height:18px; margin:6px 0;"></div>
             <button class="set-btn" onclick="changePassword()">Şifreyi Güncelle</button>
           </div>
@@ -2047,7 +2047,7 @@
       </div>
       <div class="form-group">
         <label class="form-label">Şifre</label>
-        <div class="pw-wrap"><input id="login-pass" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password"><button type="button" class="pw-eye" onclick="pwToggle(this, 'login-pass')" title="Şifreyi göster/gizle">👁</button></div>
+        <div class="pw-wrap"><input id="login-pass" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password"><button type="button" class="pw-eye" onclick="pwToggle(this, 'login-pass')" title="Şifreyi göster/gizle"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
       </div>
       <div id="turnstile-box" class="turnstile-box"></div>
       <button class="btn-auth" onclick="authLogin()">Giriş Yap</button>
@@ -2067,7 +2067,7 @@
       </div>
       <div class="form-group">
         <label class="form-label">Şifre</label>
-        <div class="pw-wrap"><input id="reg-pass" class="form-input" type="password" placeholder="En az 6 karakter" autocomplete="new-password" oninput="pwStrengthPaint(this.value, 'reg-bar', 'reg-bar-t')"><button type="button" class="pw-eye" onclick="pwToggle(this, 'reg-pass')" title="Şifreyi göster/gizle">👁</button></div>
+        <div class="pw-wrap"><input id="reg-pass" class="form-input" type="password" placeholder="En az 6 karakter" autocomplete="new-password" oninput="pwStrengthPaint(this.value, 'reg-bar', 'reg-bar-t')"><button type="button" class="pw-eye" onclick="pwToggle(this, 'reg-pass')" title="Şifreyi göster/gizle"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
         <div class="pwbar"><div id="reg-bar" class="pwbar-fill"></div></div><div id="reg-bar-t" class="pwbar-t"></div>
       </div>
       <button class="btn-auth" onclick="authRegister()">Hesap Oluştur</button>
@@ -2082,18 +2082,18 @@
 <!-- Tam sayfa video izleme arayüzü -->
 <div id="page-watch" class="page">
   <div class="watch-wrap" id="watch-wrap">
-    <!-- Sayfa içi başlık (mevcut üst nav'ın ALTINDA; nav'a dokunulmaz) -->
     <div class="watch-topbar">
-      <button class="watch-back" onclick="closeWatch()" title="Geri">‹</button>
+      <div class="watch-bc-row">
+        <button class="watch-back" onclick="closeWatch()" title="Video Derslere dön" aria-label="Geri"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <div class="watch-bc" id="watch-bc" role="navigation" aria-label="Konum"></div>
+      </div>
       <div class="watch-head-info">
-        <div class="watch-head-title"><span id="watch-title">Video</span> <span id="watch-level" class="watch-level-badge"></span></div>
+        <h1 class="watch-head-title"><span id="watch-title">Video</span> <span id="watch-level" class="watch-level-badge"></span></h1>
         <div class="watch-head-crumb" id="watch-crumb"></div>
       </div>
-      <button class="watch-fs-btn" onclick="watchFullscreen()" title="Tam ekran">⛶ Tam Ekran</button>
     </div>
 
     <div class="watch-body">
-      <!-- Sol: oynatıcı -->
       <div class="watch-main">
         <div id="watch-player-box" class="watch-player-box">
           <div id="watch-player"></div>
@@ -2107,18 +2107,24 @@
             </div>
           </div>
           <div id="watch-card-overlay" class="sv-card-overlay" style="display:none;"></div>
-          <!-- Alt kontrol barı (gömülü, otomatik gizlenen) -->
           <div class="watch-controls" id="watch-controls">
-            <button class="wc-btn wc-play-btn" id="wc-play" onclick="watchTogglePlay()" title="Oynat/Duraklat">⏸</button>
-            <button class="wc-btn" onclick="watchSeek(-10)" title="10 sn geri"><span class="wc-seek">↺<b>10</b></span></button>
-            <button class="wc-btn" onclick="watchSeek(10)" title="10 sn ileri"><span class="wc-seek">↻<b>10</b></span></button>
-            <button class="wc-btn wc-vol" id="wc-vol" onclick="watchToggleMute()" title="Ses"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
-            <input type="range" class="wc-vol-range" id="wc-vol-range" min="0" max="100" value="100" oninput="watchSetVolume(this.value)">
+            <button class="wc-btn wc-play-btn" id="wc-play" onclick="watchTogglePlay()" data-tip="Oynat / Duraklat" aria-label="Oynat / Duraklat"></button>
+            <button class="wc-btn" onclick="watchSeek(-10)" data-tip="10 sn geri" aria-label="10 saniye geri"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 3 3 8 8 8"/><text x="12" y="15.5" font-size="7.5" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="Inter,sans-serif">10</text></svg></button>
+            <button class="wc-btn" onclick="watchSeek(10)" data-tip="10 sn ileri" aria-label="10 saniye ileri"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 8 16 8"/><text x="12" y="15.5" font-size="7.5" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="Inter,sans-serif">10</text></svg></button>
+            <button class="wc-btn wc-vol" id="wc-vol" onclick="watchToggleMute()" data-tip="Ses" aria-label="Ses"></button>
+            <input type="range" class="wc-vol-range" id="wc-vol-range" min="0" max="100" value="100" oninput="watchSetVolume(this.value)" aria-label="Ses düzeyi">
             <span class="wc-time"><span id="wc-cur">0:00</span> / <span id="wc-dur">0:00</span></span>
             <span class="wc-spacer"></span>
-            <button class="wc-btn wc-cc-btn" onclick="watchToggleCaption()" id="wc-cc" title="Altyazı"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 4H5a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zM9.5 11.2c-.3-.4-.7-.6-1.2-.6-.9 0-1.5.7-1.5 1.6s.6 1.6 1.5 1.6c.5 0 .9-.2 1.2-.6l1 .8c-.5.7-1.3 1.1-2.2 1.1-1.7 0-3-1.2-3-2.9s1.3-2.9 3-2.9c.9 0 1.7.4 2.2 1.1l-1 .7zm7 0c-.3-.4-.7-.6-1.2-.6-.9 0-1.5.7-1.5 1.6s.6 1.6 1.5 1.6c.5 0 .9-.2 1.2-.6l1 .8c-.5.7-1.3 1.1-2.2 1.1-1.7 0-3-1.2-3-2.9s1.3-2.9 3-2.9c.9 0 1.7.4 2.2 1.1l-1 .7z"/></svg></button>
+            <span class="wc-acts" id="wc-acts">
+              <button class="wc-btn wc-act" id="wc-like" onclick="_wLikeVideo(1)" data-tip="Beğen" aria-label="Beğen"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H4V10z"/><path d="M7 10l4-7a2.5 2.5 0 0 1 2.6 3l-.8 4H19a2 2 0 0 1 2 2.3l-1.3 7A2 2 0 0 1 17.7 21H7"/></svg></button>
+              <button class="wc-btn wc-act" id="wc-dislike" onclick="_wLikeVideo(-1)" data-tip="Beğenme" aria-label="Beğenme"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 14V3H4v11z"/><path d="M7 14l4 7a2.5 2.5 0 0 0 2.6-3l-.8-4H19a2 2 0 0 0 2-2.3l-1.3-7A2 2 0 0 0 17.7 3H7"/></svg></button>
+              <button class="wc-btn wc-act" id="wc-save" onclick="_wBookmarkVideo()" data-tip="Kaydet" aria-label="Kaydet"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg></button>
+              <button class="wc-btn wc-act" onclick="_wRepeatLine()" data-tip="Son cümleyi tekrar et" aria-label="Son cümleyi tekrar et"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 9"/><polyline points="20 4 20 9 15 9"/><path d="M20 12a8 8 0 0 1-13.7 5.6L4 15"/><polyline points="4 20 4 15 9 15"/></svg></button>
+            </span>
+            <span class="wc-sep"></span>
+            <button class="wc-btn wc-cc-btn" onclick="watchToggleCaption()" id="wc-cc" data-tip="Altyazı" aria-label="Altyazı"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 4H5a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zM9.5 11.5H8v-.5H6.5v3H8v-.5h1.5V14a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1zm7 0H15v-.5h-1.5v3H15v-.5h1.5V14a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1z"/></svg></button>
             <div class="wc-speed-wrap">
-              <button class="wc-speed-btn" id="wc-speed-btn" onclick="_wToggleSpeedMenu(event)" title="Hız">1.0x ▾</button>
+              <button class="wc-speed-btn" id="wc-speed-btn" onclick="_wToggleSpeedMenu(event)" data-tip="Oynatma hızı">1.0x</button>
               <div class="wc-speed-menu" id="wc-speed-menu">
                 <button onclick="_wPickSpeed(0.5)">0.5x</button>
                 <button onclick="_wPickSpeed(0.75)">0.75x</button>
@@ -2129,76 +2135,63 @@
                 <button onclick="_wPickSpeed(2)">2.0x</button>
               </div>
             </div>
-            <button class="wc-btn" onclick="watchFullscreen()" title="Tam ekran">⛶</button>
+            <button class="wc-btn" onclick="watchFullscreen()" data-tip="Tam ekran" aria-label="Tam ekran"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 9 4 4 9 4"/><polyline points="20 9 20 4 15 4"/><polyline points="4 15 4 20 9 20"/><polyline points="20 15 20 20 15 20"/></svg></button>
             <div class="wc-progress" id="wc-progress" onclick="watchSeekBar(event)">
               <div class="wc-progress-fill" id="wc-progress-fill"></div>
             </div>
           </div>
         </div>
 
-        <!-- Oynatıcı altı: gezinme + aksiyonlar -->
-        <div class="watch-underbar">
-          <button class="watch-nav-box" id="watch-prev" onclick="_wGoAdjacent(-1)">
-            <span class="wnav-ic">‹</span>
-            <span class="wnav-txt"><b>Önceki Video</b><small id="watch-prev-title"></small></span>
-          </button>
-          <div class="watch-underbar-mid">
-            <button class="wu-act" onclick="_wLikeVideo(1)" title="Beğen">👍</button>
-            <button class="wu-act" onclick="_wLikeVideo(-1)" title="Beğenme">👎</button>
-            <button class="wu-act" onclick="_wBookmarkVideo()" title="Kaydet">🔖</button>
-            <button class="wu-act wu-repeat" onclick="_wRepeatLine()">↺ Son cümleyi tekrar et</button>
-          </div>
-          <button class="watch-nav-box watch-nav-next" id="watch-next" onclick="_wGoAdjacent(1)">
-            <span class="wnav-txt right"><b>Sonraki Video</b><small id="watch-next-title"></small></span>
-            <span class="wnav-ic">›</span>
-          </button>
-        </div>
-
-        <!-- Açıklama -->
         <div class="watch-info-row">
           <div class="watch-desc-box">
-            <h2 class="watch-desc-title"><span id="watch-desc-h"></span> <span id="watch-level2" class="watch-level-badge"></span></h2>
-            <p class="watch-desc-text" id="watch-desc"></p>
+            <span class="wdesc-ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.8" r=".6" fill="currentColor"/></svg></span>
+            <div><h2 class="watch-desc-title">Ders Hakkında</h2>
+            <p class="watch-desc-text" id="watch-desc"></p></div>
           </div>
         </div>
       </div>
 
-      <!-- Sağ: sekmeli panel -->
-      <aside class="watch-side" id="watch-side">
-        <div class="watch-side-tabs">
-          <button class="wst-tab active" data-tab="subs" onclick="watchSideTab('subs',this)">💬 Altyazılar</button>
-          <button class="wst-tab" data-tab="cards" onclick="watchSideTab('cards',this)">▣ Kartlar</button>
-          <button class="wst-tab" data-tab="chapters" onclick="watchSideTab('chapters',this)">▦ Bölümler</button>
-          <button class="wst-tab" data-tab="notes" onclick="watchSideTab('notes',this)">🔖 Notlar</button>
-          <button class="wst-tab" data-tab="docs" onclick="watchSideTab('docs',this)">📄 Dökümanlar</button>
-        </div>
-        <div id="wst-cards" class="wst-panel" style="display:none;">
-          <div class="wcard-filters" id="wcard-filters"></div>
-          <div id="wcard-list"></div>
-        </div>
-        <div id="wst-chapters" class="wst-panel" style="display:none;"></div>
-        <div id="wst-notes" class="wst-panel" style="display:none;">
-          <div class="wn-add">
-            <div class="wn-add-head">
-              <span>✎ Notlar</span>
-              <button class="wn-time-toggle" id="wn-time-toggle" onclick="wnCycleTimeMode()">📌 Şu ana bağlı</button>
-            </div>
-            <textarea id="wn-note" class="wn-textarea" rows="3" placeholder="Bu video ile ilgili notlarınızı buraya yazın..."></textarea>
-            <div class="wn-add-row" id="wn-custom-row" style="display:none;">
-              <input id="wn-min" class="pq-input wn-time-inp" type="number" min="0" placeholder="Dk">
-              <input id="wn-sec" class="pq-input wn-time-inp" type="number" min="0" max="59" placeholder="Sn">
-            </div>
-            <button class="set-btn wn-add-btn" onclick="watchAddNote()">+ Not Ekle</button>
+      <div class="watch-side-col">
+        <aside class="watch-side" id="watch-side">
+          <div class="watch-side-tabs">
+            <button class="wst-tab active" data-tab="subs" onclick="watchSideTab('subs',this)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><line x1="7" y1="11" x2="13" y2="11"/><line x1="15" y1="11" x2="17" y2="11"/><line x1="7" y1="15" x2="9" y2="15"/><line x1="11" y1="15" x2="17" y2="15"/></svg><span>Altyazılar</span></button>
+            <button class="wst-tab" data-tab="cards" onclick="watchSideTab('cards',this)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="10" x2="9" y2="20"/></svg><span>Kartlar</span></button>
+            <button class="wst-tab" data-tab="chapters" onclick="watchSideTab('chapters',this)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg><span>Bölümler</span></button>
+            <button class="wst-tab" data-tab="notes" onclick="watchSideTab('notes',this)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><line x1="13.5" y1="6.5" x2="17.5" y2="10.5"/></svg><span>Notlar</span></button>
+            <button class="wst-tab" data-tab="docs" onclick="watchSideTab('docs',this)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><polyline points="14 3 14 7 18 7"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg><span>Dokümanlar</span></button>
           </div>
-          <div id="wn-list"></div>
+          <div id="wst-cards" class="wst-panel" style="display:none;">
+            <div class="wcard-filters" id="wcard-filters"></div>
+            <div id="wcard-list"></div>
+          </div>
+          <div id="wst-chapters" class="wst-panel" style="display:none;"></div>
+          <div id="wst-notes" class="wst-panel" style="display:none;">
+            <div class="wn-add">
+              <div class="wn-add-head">
+                <span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><line x1="13.5" y1="6.5" x2="17.5" y2="10.5"/></svg> Notlar</span>
+                <button class="wn-time-toggle" id="wn-time-toggle" onclick="wnCycleTimeMode()">Şu ana bağlı</button>
+              </div>
+              <textarea id="wn-note" class="wn-textarea" rows="3" placeholder="Bu video ile ilgili notlarını buraya yaz..."></textarea>
+              <div class="wn-add-row" id="wn-custom-row" style="display:none;">
+                <input id="wn-min" class="pq-input wn-time-inp" type="number" min="0" placeholder="Dk">
+                <input id="wn-sec" class="pq-input wn-time-inp" type="number" min="0" max="59" placeholder="Sn">
+              </div>
+              <button class="set-btn wn-add-btn" onclick="watchAddNote()">+ Not Ekle</button>
+            </div>
+            <div id="wn-list"></div>
+          </div>
+          <div id="wst-docs" class="wst-panel" style="display:none;">
+            <div id="wdoc-list"></div>
+          </div>
+          <div id="wst-subs" class="wst-panel">
+            <div id="wsub-list"></div>
+          </div>
+        </aside>
+        <div class="watch-navrow">
+          <button class="watch-nav-box" id="watch-prev" onclick="_wGoAdjacent(-1)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span class="wnav-txt"><b>Önceki Video</b><small id="watch-prev-title"></small></span></button>
+          <button class="watch-nav-box watch-nav-next" id="watch-next" onclick="_wGoAdjacent(1)"><span class="wnav-txt right"><b>Sonraki Video</b><small id="watch-next-title"></small></span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></button>
         </div>
-        <div id="wst-docs" class="wst-panel" style="display:none;">
-          <div id="wdoc-list"></div>
-        </div>
-        <div id="wst-subs" class="wst-panel">
-          <div id="wsub-list"></div>
-        </div>
-      </aside>
+      </div>
     </div>
   </div>
 </div>
@@ -2233,13 +2226,13 @@
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=147"></script>
-<script defer src="js/auth.js?v=147"></script>
-<script defer src="js/admin.js?v=147"></script>
-<script defer src="js/profile.js?v=147"></script>
-<script defer src="js/extras.js?v=147"></script>
-<script defer src="js/app.js?v=147"></script>
-<script defer src="js/ekitap.js?v=147"></script>
+<script defer src="js/supabase-config.js?v=148"></script>
+<script defer src="js/auth.js?v=148"></script>
+<script defer src="js/admin.js?v=148"></script>
+<script defer src="js/profile.js?v=148"></script>
+<script defer src="js/extras.js?v=148"></script>
+<script defer src="js/app.js?v=148"></script>
+<script defer src="js/ekitap.js?v=148"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
