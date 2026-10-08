@@ -211,8 +211,7 @@ function vdRender() {
   if (lk) lk.style.display = (videos || []).some(v => v.locked) && !(typeof userHasPremium === 'function' && userHasPremium()) ? '' : 'none';
   vdRenderTree(); vdRenderGrid();
 }
-const VD_SIRA = [['sira', 'Video sırası', 'Yönetimde belirlenen sıra'], ['mufredat', 'Müfredat sırası', 'Modül › Ünite › Ders'], ['onerilen', 'Kaldığım yerden', 'Yarım kalanlar önce'],
-  ['ad', 'Ada göre', 'A’dan Z’ye'], ['sure', 'Süreye göre', 'Kısadan uzuna']];
+const VD_SIRA = [['sira', 'Video sırası', 'Yüklenme sırasına göre'], ['mufredat', 'Müfredat sırası', 'Modül, ünite ve derse göre'], ['onerilen', 'Kaldığım yerden', 'Yarım kalanlar önce']];
 function vdDdCiz() {
   const v = document.getElementById('vd-dd-v'), m = document.getElementById('vd-dd-m'), d = document.getElementById('vd-dd');
   if (d) { d.classList.remove('acik'); const b = d.querySelector('.vd-dd-b'); if (b) b.setAttribute('aria-expanded', 'false'); }
