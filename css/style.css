@@ -3521,3 +3521,10 @@ body.admin-acik #yan-dock { display: none; }
 #notif-bell { position: relative; }
 #notif-bell:has(#notif-panel[style*="block"])::after { content: ''; position: absolute; top: calc(100% + 4px); left: 50%; width: 12px; height: 12px; margin-left: -6px; background: #fff;
   border-left: 1px solid var(--light-gray); border-top: 1px solid var(--light-gray); border-radius: 3px 0 0 0; transform: rotate(45deg); z-index: 2001; pointer-events: none; }
+
+/* v158: bildirim sayısı yerine minimal nokta (sayı zilin ipucu yazısında) */
+.notif-bell .notif-count { top: 7px; right: 7px; min-width: 0; width: 9px; height: 9px; padding: 0; font-size: 0; color: transparent; overflow: visible;
+  background: var(--gold); border-radius: 50%; box-shadow: 0 0 0 2px var(--dark); animation: notifNokta .5s cubic-bezier(.3,1.6,.5,1) both; }
+.notif-bell .notif-count::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--gold); animation: notifHalka 1.6s ease-out .3s 2; pointer-events: none; }
+@keyframes notifNokta { from { transform: scale(0); } to { transform: scale(1); } }
+@keyframes notifHalka { from { transform: scale(1); opacity: .6; } to { transform: scale(2.6); opacity: 0; } }
