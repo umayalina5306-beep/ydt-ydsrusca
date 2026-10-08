@@ -3389,3 +3389,10 @@ body > .page.active { min-height: calc(100vh - var(--ust-h, 68px) - var(--alt-h,
 .pw-eye:hover { color: var(--dark, #0d1b2a); background: rgba(13,27,42,.06); }
 .pw-wrap input::-ms-reveal, .pw-wrap input::-ms-clear { display: none; }
 .pw-wrap input::-webkit-credentials-auto-fill-button, .pw-wrap input::-webkit-contacts-auto-fill-button { visibility: hidden; display: none !important; pointer-events: none; }
+
+/* Sol müfredat / ünite kutuları: kaydırma çubuğu köşeleri taşmasın, her sayfada yuvarlak */
+.vd-tree, .ek-tree { scrollbar-width: thin; scrollbar-color: #ddd0b4 transparent; }
+.vd-tree::-webkit-scrollbar, .ek-tree::-webkit-scrollbar { width: 8px; }
+.vd-tree::-webkit-scrollbar-track, .ek-tree::-webkit-scrollbar-track { background: transparent; margin: 14px 0; }
+.vd-tree::-webkit-scrollbar-thumb, .ek-tree::-webkit-scrollbar-thumb { background: #ddd0b4; border-radius: 8px; border: 2px solid #fff; }
+.vd-tree::-webkit-scrollbar-button, .ek-tree::-webkit-scrollbar-button { display: none; height: 0; }
