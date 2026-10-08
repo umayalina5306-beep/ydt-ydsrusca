@@ -76,7 +76,7 @@ async function vdYukle(zorla) {
   })();
   try { await VD._yukleniyor; } finally { VD._yukleniyor = null; }
 }
-async function vdOpen(zorla) { await vdYukle(zorla); vdRender(); }
+async function vdOpen(zorla) { try { vdRender(); } catch (e) {} await vdYukle(zorla); vdRender(); }   // önce eldekini anında göster, sonra tazele
 
 function vdIzlenenMi(f) {
   const wp = document.getElementById('page-watch'); if (!wp || !wp.classList.contains('active') || !VD.izlenen) return false;
