@@ -3589,6 +3589,9 @@ body.yp-aktif.admin-acik #yp-ust { display: flex; align-items: center; gap: 14px
 .yp-ara kbd { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 600 .66rem 'Inter', sans-serif; color: #9aa6b6; border: 1px solid rgba(255,255,255,.14); border-radius: 6px; padding: 2px 6px; background: transparent; }
 .yp-ust-sag { display: flex; align-items: center; gap: 10px; margin-left: auto; padding-left: 14px; border-left: 1px solid rgba(255,255,255,.08); }
 .yp-zil-k, .yp-hesap-k, .yp-yeni-k { position: relative; }
+.yp-ana { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 13px; border-radius: 10px; border: 1px solid rgba(255,255,255,.12); background: transparent; color: #e6dcc6; font: 500 .82rem 'Inter', sans-serif; cursor: pointer; white-space: nowrap; }
+.yp-ana:hover { border-color: rgba(201,168,76,.5); color: #c9a84c; }
+@media (max-width: 960px) { .yp-ana span { display: none; } .yp-ana { padding: 0 10px; } }
 .yp-zil { position: relative; background: none; border: 0; color: #e6dcc6; cursor: pointer; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; }
 .yp-zil:hover { background: rgba(255,255,255,.07); color: #c9a84c; }
 #yp-zil-say { display: none; position: absolute; top: 4px; right: 3px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #dc2626; color: #fff; font: 800 .62rem/17px 'Inter', sans-serif; font-style: normal; box-shadow: 0 0 0 2px #0d1b2a; }
