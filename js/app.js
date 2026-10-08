@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v154';
+var YDT_SURUM = 'v155';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -6,6 +6,11 @@ let wordsByRu = {};
 
 
 let videos = [];
+/* Video satırını arayüz nesnesine çevir */
+function _vidMap(r) { return { id: r.id, num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb, sub_default: r.sub_default, crumb: r.crumb, mf: r.mf_ref || null, dur: r.duration_sec || null }; }
+/* Hızlı açılış: son görülen video listesi (yalnız görünüm için; açılışta sunucudan tazelenir) */
+try { const _vc = JSON.parse(localStorage.getItem('ydt_vid_cache') || 'null'); if (Array.isArray(_vc)) videos = _vc; } catch (e) {}
+function _vidCacheKaydet() { try { localStorage.setItem('ydt_vid_cache', JSON.stringify(videos.slice(0, 400))); } catch (e) {} }
 
 // EŞ ANLAMLILAR
 let synonymGroups = [];
@@ -1354,8 +1359,8 @@ function _wSetupNav(v) {
   const fp = document.getElementById('wc-prev'), fn = document.getElementById('wc-next');
   if (fp) { fp.disabled = !prev; fp.setAttribute('data-tip', prev ? 'Önceki: ' + (prev.title || '') : 'İlk video'); }
   if (fn) { fn.disabled = !next; fn.setAttribute('data-tip', next ? 'Sonraki: ' + (next.title || '') : 'Son video'); }
-  if (pb) { pb.classList.toggle('yok', !prev); pb.disabled = !prev; if (pt) pt.textContent = prev ? (prev.title||'') : 'İlk video'; }
-  if (nb) { nb.classList.toggle('yok', !next); nb.disabled = !next; if (nt) nt.textContent = next ? (next.title||'') : 'Son video'; }
+  if (pb) { pb.classList.toggle('yok', !prev); pb.disabled = !prev; if (pt) pt.textContent = prev ? (prev.title||'') : ''; }
+  if (nb) { nb.classList.toggle('yok', !next); nb.disabled = !next; if (nt) nt.textContent = next ? (next.title||'') : ''; }
   _w._prev = prev; _w._next = next;
 }
 /* Premium olmayan kullanıcı için kilitli video mu? */
@@ -1376,7 +1381,7 @@ function _wUyari(msg) {
 function _wGoAdjacent(dir) {
   const hedef = dir < 0 ? _w._prev : _w._next;
   if (!hedef) { toast(dir<0?'İlk video':'Son video'); return; }
-  if (_wKilitli(hedef)) { _wUyari(dir < 0 ? 'Önceki video premium üyelere özel.' : 'Sonraki video premium üyelere özel.'); return; }
+  if (_wKilitli(hedef)) { _wUyari('Premium videoları izlemek için bir plan satın almalısın.'); return; }
   _wCleanup();
   openWatch(hedef);
 }
@@ -2697,7 +2702,7 @@ function _wCancelNext() {
 function _wPlayNext(idx) {
   if (_wNextTimer) { clearInterval(_wNextTimer); _wNextTimer = null; }
   const v = videos[idx]; if (!v) { closeWatch(); return; }
-  if (_wKilitli(v)) { _wCloseCard(); _wUyari('Sıradaki video premium üyelere özel.'); return; }
+  if (_wKilitli(v)) { _wCloseCard(); _wUyari('Premium videoları izlemek için bir plan satın almalısın.'); return; }
   _wCleanup();
   // Oynatıcı tam temizlensin, sonra yeni video kurulsun (YouTube çakışma hatasını önler)
   setTimeout(() => openWatch(v), 600);
@@ -2777,7 +2782,7 @@ setTimeout(() => {
 async function refreshVideosFromDb() {
   try {
     const { data } = await sb.from('content_videos').select('*').eq('active', true).order('num').limit(1000);
-    if (data) { videos = data.map(r => ({ id: r.id, num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb, sub_default: r.sub_default, crumb: r.crumb, mf: r.mf_ref || null, dur: r.duration_sec || null })); renderVideos(); }
+    if (data) { videos = data.map(_vidMap); _vidCacheKaydet(); renderVideos(); }
   } catch (e) {}
 }
 async function refreshPqFromDb() {
@@ -2865,7 +2870,7 @@ function learnNav(sub, btn) {
   if (sub === 'grammar' && typeof ekOpen === 'function') setTimeout(ekOpen, 30);
   const vdTree = document.getElementById('vd-tree');
   if (vdTree) vdTree.style.display = sub === 'video' ? '' : 'none';
-  if (sub === 'video' && typeof vdOpen === 'function') { vdOpen(true); setTimeout(vdOpen, 900); }
+  if (sub === 'video' && typeof vdOpen === 'function') vdOpen(true);
   if (typeof trackPageView === 'function') trackPageView(sub);
 }
 /* Çalışmalar kartlarından yönlendirme */
@@ -2905,14 +2910,18 @@ async function loadData() {
   let dbW = [], dbSyn = [], dbAnt = [], dbFam = [], dbVid = [];
   try {
     if (typeof sb !== 'undefined' && sb) {
-      const all = await sbFetchAll('content_words', 'ru');
-      dbW = all.filter(r => r.active !== false);
-      const [s1, s2, s3, s4] = await Promise.all([
+      // Videolar kelime listesini beklemesin: paralel iste, gelir gelmez listeyi çiz
+      const pVid = sb.from('content_videos').select('*').eq('active', true).order('num').limit(1000);
+      pVid.then(r => { if (r && r.data && r.data.length) { videos = r.data.map(_vidMap); _vidCacheKaydet(); try { renderVideos(); } catch (x) {} } }, () => {});
+      const pRest = Promise.all([
         sbFetchAll('content_synonyms', null, q => q.eq('active', true)),
         sb.from('content_antonyms').select('*').eq('active', true).limit(2000),
         sb.from('content_families').select('*').eq('active', true).limit(2000),
-        sb.from('content_videos').select('*').eq('active', true).order('num').limit(1000)
+        pVid
       ]);
+      const all = await sbFetchAll('content_words', 'ru');
+      dbW = all.filter(r => r.active !== false);
+      const [s1, s2, s3, s4] = await pRest;
       dbSyn = s1 || []; dbAnt = s2.data || []; dbFam = s3.data || []; dbVid = s4.data || [];
     }
   } catch (e) {}
@@ -2939,7 +2948,7 @@ async function loadData() {
     if (dbSyn.length) synonymGroups = dbSyn.map(r => ({ grup: r.grup, kelimeler: Array.isArray(r.kelimeler) ? r.kelimeler : JSON.parse(r.kelimeler || '[]') }));
     if (dbAnt.length) antonymPairs = dbAnt.map(r => ({ ru1: r.ru1, tr1: r.tr1, p1: r.p1, ru2: r.ru2, tr2: r.tr2, p2: r.p2 }));
     if (dbFam.length) wordFamilies = dbFam.map(r => ({ kok: r.kok, anlam: r.anlam, kelimeler: Array.isArray(r.kelimeler) ? r.kelimeler : JSON.parse(r.kelimeler || '[]') }));
-    if (dbVid.length) videos = dbVid.map(r => ({ id: r.id, num: r.num, level: r.level, title: r.title, desc: r.descr, locked: !!r.premium, source: r.source, video_id: r.video_id, thumb: r.thumb, sub_default: r.sub_default, crumb: r.crumb, mf: r.mf_ref || null, dur: r.duration_sec || null }));
+    if (dbVid.length) videos = dbVid.map(_vidMap);
   } catch (e) { _logDev('DB içerikleri işlenemedi:', e); }
   // Paragraf soruları (dosya yoksa site yine çalışsın diye ayrı try/catch)
   try {
