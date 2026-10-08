@@ -137,12 +137,44 @@ function renderAdminUsers(list) {
             <option value="ogretmen" ${u.role==='ogretmen'?'selected':''}>Rol: Öğretmen</option>
             <option value="kurum" ${u.role==='kurum'?'selected':''}>Rol: Kurum Admin</option>
           </select>` : ''}
+          ${(_isSuper() && !u.is_admin && !(currentUser && currentUser.id === u.id)) ? `<button class="mail-act red" onclick="adminUserDelete('${u.id}')">🗑️ Kullanıcıyı Sil</button>` : ''}
         </div>
         <div id="udet-${u.id}" class="udet-box" style="display:none;"></div>
       </div>
       ${btn}
     </div>`;
   }).join("");
+}
+
+/* Kullanıcıyı kalıcı sil — iki aşamalı onay (uyarı + e-posta yazdırma); asıl silme sunucudaki
+   admin_kullanici_sil fonksiyonunda yapılır (yalnız yöneticiler çalıştırabilir, yönetici hesabı silinemez). */
+async function adminUserDelete(id) {
+  const u = (_adminUsers || []).find(x => x.id === id); if (!u) return;
+  if (u.is_admin) { uiAlert('Yönetici hesapları silinemez.'); return; }
+  const ad = u.display_name || (u.email || '').split('@')[0] || 'Bu kullanıcı';
+  const ilk = await uiConfirm(`${ad}${u.email ? ' (' + u.email + ')' : ''} hesabı ve bu hesaba ait tüm veriler (kelime kasası, test sonuçları, notlar, destek talepleri vb.) kalıcı olarak silinecek. Bu işlem geri alınamaz.`,
+    'Kullanıcıyı Sil', { danger: true, confirmText: 'Devam et' });
+  if (!ilk) return;
+  const beklenen = u.email ? String(u.email).trim().toLowerCase() : 'SİL';
+  const yazilan = await uiPrompt(u.email ? 'Son onay: silmek için kullanıcının e-posta adresini aynen yaz.\n' + u.email : 'Son onay: silmek için büyük harflerle SİL yaz.',
+    { title: 'Silmeyi onayla', placeholder: u.email ? 'e-posta adresi' : 'SİL' });
+  if (yazilan == null) return;
+  const ok = u.email ? String(yazilan).trim().toLowerCase() === beklenen : String(yazilan).trim() === 'SİL';
+  if (!ok) { uiAlert('Yazdığın eşleşmedi; silme iptal edildi.'); return; }
+  try {
+    const { error } = await sb.rpc('admin_kullanici_sil', { hedef: id });
+    if (error) throw error;
+  } catch (e) {
+    const m = String((e && e.message) || e || '');
+    if (/function|does not exist|could not find/i.test(m)) uiAlert('Silme özelliği henüz kurulmamış. Önce kullanici_silme.sql dosyasını veritabanında çalıştır.');
+    else uiAlert('Kullanıcı silinemedi: ' + m);
+    return;
+  }
+  try { if (typeof staffLog === 'function') staffLog('kullanici_sil', null, { email: u.email || '', ad: u.display_name || '' }); } catch (e) {}
+  _adminUsers = _adminUsers.filter(x => x.id !== id);
+  toast('Kullanıcı silindi.');
+  const ara = document.getElementById('admin-search');
+  if (typeof filterAdminUsers === 'function') filterAdminUsers(ara ? ara.value : ''); else renderAdminUsers(_adminUsers);
 }
 
 function filterAdminUsers(q) {
@@ -342,7 +374,7 @@ async function togglePremium(userId, currentPlan) {
       });
       if (g.g) h += '</div></div>';
     });
-    h += '</div><button type="button" class="yp-siteye" onclick="ypSiteye()">' + ic('siteye', 16) + '<span>Siteye dön</span></button>';
+    h += '</div><button type="button" class="yp-siteye" onclick="ypSiteye()">' + ic('siteye', 16) + '<span>Ana sayfaya dön</span></button>';
     yan.innerHTML = h;
 
     // Üst bar
@@ -352,10 +384,11 @@ async function togglePremium(userId, currentPlan) {
       '<button type="button" class="yp-ham" onclick="ypMenuAc()" aria-label="Menü">' + ic('menu', 20) + '</button>' +
       '<div class="yp-ara"><span class="yp-ara-ic">' + ic('ara', 17) + '</span><input id="yp-ara-in" type="search" placeholder="Ara… (sayfa, içerik, kullanıcı)" autocomplete="off" aria-label="Yönetim panelinde ara"><kbd>Ctrl K</kbd><div id="yp-ara-son" class="yp-acilir" role="listbox"></div></div>' +
       '<div class="yp-ust-sag">' +
+      '  <button type="button" class="yp-ana" onclick="ypSiteye()" title="Ana sayfaya dön">' + ic('ev', 18) + '<span>Ana sayfa</span></button>' +
       '  <div class="yp-zil-k"><button type="button" class="yp-zil" id="yp-zil" onclick="ypZil(event)" aria-label="Bildirimler" title="Bildirimler">' + ic('bildirim', 20) + '<i id="yp-zil-say"></i></button><div id="yp-zil-p" class="yp-acilir yp-zil-p"></div></div>' +
       '  <div class="yp-hesap-k"><button type="button" class="yp-hesap" onclick="ypHesap(event)"><span class="yp-hesap-av" id="yp-av"></span><span class="yp-hesap-ad"><b id="yp-ad"></b><small id="yp-rol"></small></span>' + ic('asagi', 15) + '</button>' +
       '    <div id="yp-hesap-p" class="yp-acilir yp-hesap-p">' +
-      '      <button type="button" onclick="ypSiteye()">' + ic('siteye', 17) + 'Siteye dön</button>' +
+      '      <button type="button" onclick="ypSiteye()">' + ic('ev', 17) + 'Ana sayfaya dön</button>' +
       '      <button type="button" onclick="ypKapatHepsi(); showPage(\'profile\')">' + ic('kullanici', 17) + 'Profilim</button>' +
       '      <div class="yp-ayrac"></div><button type="button" class="kirmizi" onclick="ypKapatHepsi(); authLogout()">' + ic('cikis', 17) + 'Çıkış</button>' +
       '    </div></div>' +
@@ -802,7 +835,7 @@ async function togglePremium(userId, currentPlan) {
     kul.forEach(u => { if (u.created_at) L.push({ ic: 'kullanici', renk: 'yesil', baslik: 'Yeni kullanıcı', alt: u.display_name || (u.email || '').split('@')[0], zaman: u.created_at, git: "ypGit('users')" }); });
     try {
       const { data } = await sb.from('action_log').select('*').order('created_at', { ascending: false }).limit(10);
-      const AD = { rol_degistir: 'Rol değiştirildi', ogrenci_ata: 'Öğrenci atandı', ogrenci_atama_kaldir: 'Öğrenci ataması kaldırıldı', premium_tanim: 'Premium tanımlandı', ticket_mail: 'Talep maili gönderildi', bildirim: 'Bildirim gönderildi' };
+      const AD = { rol_degistir: 'Rol değiştirildi', ogrenci_ata: 'Öğrenci atandı', ogrenci_atama_kaldir: 'Öğrenci ataması kaldırıldı', premium_tanim: 'Premium tanımlandı', ticket_mail: 'Talep maili gönderildi', bildirim: 'Bildirim gönderildi', kullanici_sil: 'Kullanıcı silindi' };
       const kim = id => { const u = kul.find(x => x.id === id); return u ? (u.display_name || (u.email || '').split('@')[0]) : ''; };
       (data || []).forEach(r => L.push({ ic: 'log', renk: 'mavi', baslik: AD[r.action] || r.action, alt: [kim(r.actor_id), r.target ? '→ ' + kim(r.target) : ''].filter(Boolean).join(' '), zaman: r.created_at, git: "ypGit('stafflog')" }));
     } catch (e) {}
