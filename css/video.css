@@ -387,3 +387,40 @@
   100% { background: #fff; border-color: #ece4d3; box-shadow: none; }
 }
 .watch-side .wcard-flash { animation: wcardAltin 2.2s ease-in-out !important; }
+
+/* ============ v151 ============ */
+/* Kart parlaması: ~0,85 sn, tek altın vuruş */
+.watch-side .wcard-flash { animation: wcardAltin .85s ease-in-out !important; }
+@keyframes wcardAltin {
+  0%   { background: #fff; border-color: #ece4d3; box-shadow: none; }
+  22%  { background: #fbf1d8; border-color: var(--gold, #c9a84c); box-shadow: 0 0 0 3px rgba(201,168,76,.18); }
+  60%  { background: #fbf1d8; border-color: var(--gold, #c9a84c); box-shadow: 0 0 0 3px rgba(201,168,76,.18); }
+  100% { background: #fff; border-color: #ece4d3; box-shadow: none; }
+}
+/* Oynatınca ortadaki duraklat ikonu hızlı ve yumuşak kaybolsun */
+.watch-bigstate.flash { opacity: 1; }
+.watch-bigstate.flash .wbs-circle { animation: wbsFlash .38s cubic-bezier(.2,.7,.3,1) forwards; }
+@keyframes wbsFlash { 0% { transform: scale(1); opacity: .85; } 100% { transform: scale(1.25); opacity: 0; } }
+
+/* Normal izleme düzeni: video ile sağ panel alttan hizalı, altta Ders Hakkında + önceki/sonraki */
+@media (min-width: 1101px) {
+  #learn-content .watch-wrap:not(.watch-fs) .watch-body {
+    display: grid; grid-template-columns: minmax(0, 1fr) 370px; grid-template-rows: auto auto; column-gap: 18px; row-gap: 16px;
+    padding: 12px 22px 16px; align-items: stretch; }
+  #learn-content .watch-wrap:not(.watch-fs) .watch-main, #learn-content .watch-wrap:not(.watch-fs) .watch-side-col { display: contents; }
+  #learn-content .watch-wrap:not(.watch-fs) .watch-player-box { grid-column: 1; grid-row: 1; }
+  #learn-content .watch-wrap:not(.watch-fs) .watch-info-row { grid-column: 1; grid-row: 2; margin: 0; }
+  #learn-content .watch-wrap:not(.watch-fs) .watch-side { grid-column: 2; grid-row: 1; contain: size; height: auto; max-height: none; min-height: 0;
+    display: flex; flex-direction: column; position: static; }
+  #learn-content .watch-wrap:not(.watch-fs) .wst-panel { flex: 1; min-height: 0; overflow-y: auto; }
+  #learn-content .watch-wrap:not(.watch-fs) .watch-navrow { grid-column: 2; grid-row: 2; align-self: start; }
+  #learn-content .watch-wrap:not(.watch-fs) .watch-topbar { padding: 16px 22px 4px; }
+}
+.watch-desc-box { padding: 12px 16px; }
+.watch-desc-title { font-size: .92rem; margin-bottom: 2px; }
+.watch-desc-text { font-size: .86rem; }
+/* Sekmeler: dar panelde hep sığsın — seçili sekme yazılı, diğerleri ikon (üzerine gelince ad) */
+.wst-tab span { display: none; }
+.wst-tab.active span { display: inline; }
+.wst-tab { flex: 0 0 auto; padding: 13px 12px 11px; }
+.wst-tab.active { flex: 1 1 auto; }
