@@ -7607,13 +7607,13 @@ async function adminRcReload() {
   const st = document.getElementById('rc-stats');
   if (st) {
     const act = _rcRows.filter(r => r.active !== false);
-    st.innerHTML = `Toplam <b>${act.length}</b> öneri (${['film','dizi','anime','kitap'].map(t => RC_EMO[t] + ' ' + act.filter(r => r.rtype === t).length).join(' · ')}) · gizli: ${_rcRows.length - act.length}`;
+    st.innerHTML = `Toplam <b>${act.length}</b> blog yazısı (${['film','dizi','anime','kitap'].map(t => RC_EMO[t] + ' ' + act.filter(r => r.rtype === t).length).join(' · ')}) · gizli: ${_rcRows.length - act.length}`;
   }
   renderRcList();
 }
 function renderRcList() {
   const box = document.getElementById('rc-list'); if (!box) return;
-  if (!_rcRows.length) { box.innerHTML = '<div class="profile-empty">Henüz öneri yok. Yukarıdan ilkini ekle! (content_recs.sql çalıştırıldı mı?)</div>'; return; }
+  if (!_rcRows.length) { box.innerHTML = '<div class="profile-empty">Henüz blog yazısı yok. Yukarıdan ilkini ekle.</div>'; return; }
   box.innerHTML = _rcRows.map(r => `
     <div class="cw-row ${r.active === false ? 'off' : ''}">
       <div class="cv-thumbbox">${r.thumb ? `<img src="${_escAttr(r.thumb)}" alt="">` : (RC_EMO[r.rtype] || '⭐')}</div>
@@ -7632,7 +7632,7 @@ function renderRcList() {
 function adminRcFormClear() {
   ['rc-id','rc-title','rc-title-ru','rc-desc-ru','rc-thumb','rc-trailer','rc-link'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const rd = document.getElementById('rc-desc'); if (rd) rd.innerHTML = '';
-  const btn = document.getElementById('rc-save-btn'); if (btn) btn.textContent = 'Öneri Ekle';
+  const btn = document.getElementById('rc-save-btn'); if (btn) btn.textContent = 'Yazıyı Ekle';
 }
 function adminRcEdit(id) {
   const r = _rcRows.find(x => x.id === id); if (!r) return;
@@ -7662,13 +7662,13 @@ async function adminRcSave() {
     if (id) ({ error } = await sb.from('content_recs').update(row).eq('id', id));
     else ({ error } = await sb.from('content_recs').insert(row));
     if (error) throw error;
-    toast('Öneri kaydedildi.'); adminRcFormClear(); adminRcReload(); loadRecs();
+    toast('Blog yazısı kaydedildi.'); adminRcFormClear(); adminRcReload(); loadRecs();
   } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e) + ' — content_recs.sql çalıştı mı?'); }
 }
 async function adminRcHide(id) { try { await sb.from('content_recs').update({ active: false }).eq('id', id); adminRcReload(); loadRecs(); } catch (e) {} }
 async function adminRcRestore(id) { try { await sb.from('content_recs').update({ active: true }).eq('id', id); adminRcReload(); loadRecs(); } catch (e) {} }
 async function adminRcPurge(id) {
-  if (!(await uiConfirm('Bu öneri temelli silinsin mi?', 'Temelli Sil', { danger: true }))) return;
+  if (!(await uiConfirm('Bu blog yazısı temelli silinsin mi?', 'Temelli Sil', { danger: true }))) return;
   try { await sb.from('content_recs').delete().eq('id', id); adminRcReload(); loadRecs(); } catch (e) {}
 }
 
