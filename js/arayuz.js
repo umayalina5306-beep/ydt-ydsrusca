@@ -31,6 +31,7 @@
       if (had && ad) had.textContent = ad.textContent;
       if (hrol && rol) hrol.textContent = rol.textContent;
       dockKapat();
+      const np = document.getElementById('notif-panel'); if (np) np.style.display = 'none';
     }
     h.classList.toggle('acik', ac);
     const b = h.querySelector('.hesap-b'); if (b) b.setAttribute('aria-expanded', ac ? 'true' : 'false');
@@ -176,5 +177,11 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(dockKur, 0)); else setTimeout(dockKur, 0);
   setTimeout(sinavCiz, 1500);
 
+  /* Bildirim paneli açılırken hesap menüsü kapansın (ve tersi, hesapMenu içinde) */
+  if (typeof window.toggleNotifPanel === 'function') {
+    const eskiTN = window.toggleNotifPanel;
+    window.toggleNotifPanel = function (ev) { hesapKapat(); dockKapat(); return eskiTN.apply(this, arguments); };
+    try { toggleNotifPanel = window.toggleNotifPanel; } catch (e) {}
+  }
   Object.assign(window, { hesapMenu, hesapKapat, hesapGit, dockAc, dockKapat, hedefSinavKaydet });
 })();
