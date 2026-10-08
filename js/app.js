@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v149';
+var YDT_SURUM = 'v150';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -2009,9 +2009,13 @@ function _wFlashCard(cardId) {
   try {
     const el = document.querySelector('.wcard[data-cid="' + cardId + '"]');
     if (!el) return;
+    _w._fl = _w._fl || {};
+    if (_w._fl[cardId] && Date.now() - _w._fl[cardId] < 2200 && el.classList.contains('wcard-flash')) return;   // zaten parlıyor: yeniden başlatma
+    _w._fl[cardId] = Date.now();
+    el.style.animationDelay = '';
     el.classList.remove('wcard-flash'); void el.offsetWidth;
     el.classList.add('wcard-flash');
-    setTimeout(() => el.classList.remove('wcard-flash'), 720);
+    clearTimeout(el._flT); el._flT = setTimeout(() => el.classList.remove('wcard-flash'), 2300);
   } catch (e) {}
 }
 function _wTriggerCard(card) {
@@ -2397,7 +2401,9 @@ function _wCardItemHTML(card) {
   const yildiz = _w.answered[card.id] ? 'on' : '';
   const thumb = card.thumb ? `<img class="wcard-thumb" src="${_escAttr(card.thumb)}" alt="">` : '';
   const solIkon = `<span class="wcard-typeic t-${card.card_type || 'info'}">${W_IC[card.card_type] || W_IC.info}</span>`;
-  return `<div class="wcard${_w.activeCard&&_w.activeCard.id===card.id?' active':''}" data-cid="${card.id}" data-t="${card.t_sec}" onclick="_wOpenCard(${card.id})">
+  const flGecen = _w._fl && _w._fl[card.id] ? Date.now() - _w._fl[card.id] : 1e9;   // liste yenilense de parlama kaldığı yerden sürsün
+  const flH = flGecen < 2200 ? ` wcard-flash" style="animation-delay:-${flGecen}ms` : '';
+  return `<div class="wcard${_w.activeCard&&_w.activeCard.id===card.id?' active':''}${flH}" data-cid="${card.id}" data-t="${card.t_sec}" onclick="_wOpenCard(${card.id})">
     ${solIkon}
     <div class="wcard-mid"><div class="wcard-ru">${_escHtml(ana)}</div>
       ${alt?`<div class="wcard-tr">${_escHtml(alt)}</div>`:''}</div>
