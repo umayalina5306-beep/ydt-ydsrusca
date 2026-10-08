@@ -106,10 +106,16 @@ function authInit() {
 async function handleSession(session) {
   currentUser = session ? session.user : null;
   if (currentUser) {
+    // Hızlı açılış: son bilinen profil bilgisiyle üst barı hemen çiz (yalnız görünüm; yetkiler sunucuda denetlenir)
+    if (!currentProfile) { try { const c = JSON.parse(localStorage.getItem('ydt_prof_ui') || 'null'); if (c && c.id === currentUser.id) { currentProfile = c.p; updateAuthUI(); } } catch (e) {} }
     await loadProfile();
-    await syncName();            // YENİ: Google adını profile yaz
+    updateAuthUI();
+    try { if (currentProfile) localStorage.setItem('ydt_prof_ui', JSON.stringify({ id: currentUser.id, ad: bestName(), p: { display_name: currentProfile.display_name, plan: currentProfile.plan, is_admin: currentProfile.is_admin, role: currentProfile.role, avatar_seed: currentProfile.avatar_seed, premium_until: currentProfile.premium_until } })); } catch (e) {}
+    syncName().then(() => updateAuthUI()).catch(() => {});   // Google adını profile yaz (üst barı bekletmeden)
   } else {
     currentProfile = null;
+    try { localStorage.removeItem('ydt_prof_ui'); } catch (e) {}
+    try { document.documentElement.classList.remove('oturum-var'); } catch (e) {}
   }
   updateAuthUI();
   updateVerifyBanner();
@@ -288,6 +294,7 @@ function updateAuthUI() {
   const account = document.getElementById("nav-account");
   if (!buttons || !account) return;
 
+  try { document.documentElement.classList.toggle('oturum-var', !!currentUser); } catch (e) {}
   if (currentUser) {
     buttons.style.display = "none";
     account.style.display = "flex";
