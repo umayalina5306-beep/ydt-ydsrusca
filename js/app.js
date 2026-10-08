@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v147';
+var YDT_SURUM = 'v148';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1228,6 +1228,30 @@ function playVideo(i) {
 /* ============================================================
    🎬 TAM SAYFA İZLEME ARAYÜZÜ — YouTube + Stream ortak adaptör
    ============================================================ */
+/* İzleme arayüzü minimal ikonları */
+const W_IC = (function () {
+  const sv = (d, w) => '<svg viewBox="0 0 24 24" width="' + (w || 18) + '" height="' + (w || 18) + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>';
+  return {
+    play: sv('<polygon points="7 4.5 19 12 7 19.5" fill="currentColor" stroke="none"/>', 20),
+    pause: sv('<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/>', 20),
+    mute: sv('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>'),
+    info: sv('<path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>', 16),
+    quiz: sv('<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 0 1 5 1c0 1.8-2.5 2.2-2.5 3.8"/><circle cx="12" cy="17.2" r=".5" fill="currentColor"/>', 16),
+    poll: sv('<line x1="6" y1="20" x2="6" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="18" y1="20" x2="18" y2="9"/>', 16),
+    topic: sv('<path d="M12 6.5C10.5 5 8 4.5 4 5v13c4-.5 6.5 0 8 1.5"/><path d="M12 6.5C13.5 5 16 4.5 20 5v13c-4-.5-6.5 0-8 1.5"/><line x1="12" y1="6.5" x2="12" y2="19.5"/>', 16),
+    checkpoint: sv('<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>', 16),
+    star: sv('<polygon points="12 3 14.8 8.7 21 9.6 16.5 14 17.6 20.2 12 17.3 6.4 20.2 7.5 14 3 9.6 9.2 8.7"/>', 16),
+    pdf: sv('<path d="M6 3h8l4 4v14H6z"/><polyline points="14 3 14 7 18 7"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>', 20),
+    link: sv('<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>', 20),
+    file: sv('<path d="M20 11.5l-8 8a5 5 0 0 1-7-7l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.4 8.4a1.7 1.7 0 0 1-2.4-2.4l7.6-7.6"/>', 20),
+    open: sv('<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>', 16),
+    ext: sv('<path d="M14 4h6v6"/><line x1="20" y1="4" x2="11" y2="13"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/>', 16),
+    pin: sv('<circle cx="12" cy="12" r="8.5"/><polyline points="12 7.5 12 12 15 14"/>', 14),
+    note: sv('<path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5"/>', 14),
+    home: sv('<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/>', 16),
+    chev: sv('<polyline points="9 6 15 12 9 18"/>', 14)
+  };
+})();
 let _w = {
   video: null, player: null, kind: null, // 'yt' | 'stream'
   viewId: null, cards: [], chapters: [], notes: [],
@@ -1241,9 +1265,7 @@ async function openWatch(v) {
          duration: 0, lastPos: 0, ready: false, activeCard: null, watchedBefore: false, _ytRetried: false,
          cardFilter: 'all', muted: false, ccOn: true };
 
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  const wp = document.getElementById('page-watch');
-  if (wp) wp.classList.add('active');
+  _wLearnIcineAc();
   window.scrollTo(0, 0);
 
   // Başlık / seviye / breadcrumb / açıklama
@@ -1253,7 +1275,9 @@ async function openWatch(v) {
   setTxt('watch-desc', v.desc);
   setTxt('watch-level', v.level);
   setTxt('watch-level2', v.level);
-  setTxt('watch-crumb', v.crumb || 'Rusça Grameri');
+  _wKonum(v);
+  const pb0 = document.getElementById('wc-play'); if (pb0) pb0.innerHTML = W_IC.play;
+  const vb0 = document.getElementById('wc-vol'); if (vb0 && !vb0.innerHTML.trim()) vb0.innerHTML = _wVolIcon();
 
   // Önceki/sonraki video başlıkları
   _wSetupNav(v);
@@ -1278,6 +1302,48 @@ async function openWatch(v) {
   _wSyncReactionUI();
 }
 
+/* İzleme sayfasını Eğitim Merkezi düzeninin içinde aç (sol menü + müfredat ağacı görünür kalır) */
+function _wLearnIcineAc() {
+  const lp = document.getElementById('page-learn'), host = document.getElementById('learn-content'), wp = document.getElementById('page-watch');
+  if (!wp) return;
+  if (!lp || !host) { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); wp.classList.add('active'); return; }
+  if (!lp.classList.contains('active')) {
+    document.querySelectorAll('body > .page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-links button').forEach(b => b.classList.remove('active'));
+    lp.classList.add('active'); const nb = document.getElementById('nav-learn'); if (nb) nb.classList.add('active');
+  }
+  if (wp.parentElement !== host) host.appendChild(wp);
+  host.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p === wp));
+  document.querySelectorAll('#learn-layout .psb-item').forEach(b => b.classList.toggle('active', b.id === 'lsb-video'));
+  _learnCurrent = 'video';
+  const et = document.getElementById('ek-tree'); if (et) et.style.display = 'none';
+  const vt = document.getElementById('vd-tree'); if (vt) vt.style.display = '';
+}
+/* Başlık üstündeki konum satırı: Video Dersler › Modül › Ünite › Ders */
+function _wKonum(v) {
+  const bc = document.getElementById('watch-bc'), cr = document.getElementById('watch-crumb');
+  const ref = typeof vdRef === 'function' ? vdRef(v.mf) : null, kat = typeof vdKat === 'function' ? vdKat(v.mf) : null;
+  const ok = '<span class="wbc-sep">' + W_IC.chev + '</span>';
+  const lnk = (f, t, son) => son ? `<span class="wbc-cur">${_escHtml(t)}</span>` : `<button class="wbc-l" onclick="_wKonumGit('${f}')">${_escHtml(t)}</button>`;
+  const par = [`<button class="wbc-l wbc-home" onclick="_wKonumGit('')" aria-label="Video Dersler">${W_IC.home}</button>`, lnk('', 'Video Dersler')];
+  let alt = '';
+  if (ref) {
+    const un = typeof vdUnite === 'function' ? vdUnite(ref.m, ref.u) : null;
+    par.push(lnk('m' + ref.m, 'Modül ' + ref.m, !ref.u));
+    if (ref.u) par.push(lnk('u' + ref.m + '.' + ref.u, 'Ünite ' + ref.u, !ref.d));
+    if (ref.d) par.push(lnk('d' + ref.m + '.' + ref.u + '.' + ref.d, 'Ders ' + ref.d, true));
+    const dAd = ref.d && typeof vdDersAd === 'function' ? vdDersAd(ref.m, ref.u, ref.d) : '';
+    alt = [typeof vdModAd === 'function' ? vdModAd(ref.m) : '', un && un.unite_ad, dAd].filter(Boolean).join(' · ');
+  } else if (kat) { par.push(`<span class="wbc-cur">${_escHtml(kat[1])}</span>`); alt = kat[1]; }
+  else par.push('<span class="wbc-cur">Genel</span>');
+  if (bc) bc.innerHTML = par.join(ok);
+  if (cr) cr.textContent = alt || v.crumb || '';
+  try { if (typeof VD !== 'undefined') { VD.izlenen = v.mf || null; if (typeof vdRenderTree === 'function') vdRenderTree(); } } catch (e) {}
+}
+function _wKonumGit(f) {
+  try { if (typeof VD !== 'undefined') VD.filtre = f || ''; } catch (e) {}
+  closeWatch();
+}
 /* Önceki/sonraki video kutularını hazırla */
 function _wSetupNav(v) {
   const idx = videos.findIndex(x => x.id === v.id);
@@ -1285,8 +1351,8 @@ function _wSetupNav(v) {
   const next = idx >= 0 && idx < videos.length-1 ? videos[idx+1] : (videos.find(x => x.num === (v.num||0)+1));
   const pb = document.getElementById('watch-prev'), nb = document.getElementById('watch-next');
   const pt = document.getElementById('watch-prev-title'), nt = document.getElementById('watch-next-title');
-  if (pb) { pb.style.visibility = prev ? '' : 'hidden'; if (pt) pt.textContent = prev ? (prev.title||'') : ''; }
-  if (nb) { nb.style.visibility = next ? '' : 'hidden'; if (nt) nt.textContent = next ? (next.title||'') : ''; }
+  if (pb) { pb.classList.toggle('yok', !prev); pb.disabled = !prev; if (pt) pt.textContent = prev ? (prev.title||'') : 'İlk video'; }
+  if (nb) { nb.classList.toggle('yok', !next); nb.disabled = !next; if (nt) nt.textContent = next ? (next.title||'') : 'Son video'; }
   _w._prev = prev; _w._next = next;
 }
 function _wGoAdjacent(dir) {
@@ -1305,7 +1371,7 @@ async function _wLikeVideo(v) {
       { onConflict: 'user_id,video_id' });
     _w._reaction = Object.assign({}, cur, { liked: yeni });
     _wSyncReactionUI();
-    toast(yeni === 1 ? '👍 Beğendin' : yeni === -1 ? '👎 Beğenmedin' : 'Geri alındı');
+    toast(yeni === 1 ? 'Beğendin' : yeni === -1 ? 'Beğenmedin' : 'Geri alındı');
   } catch (e) { toast('İşlem başarısız.'); }
 }
 async function _wBookmarkVideo() {
@@ -1318,17 +1384,13 @@ async function _wBookmarkVideo() {
       { onConflict: 'user_id,video_id' });
     _w._reaction = Object.assign({}, cur, { saved: yeni });
     _wSyncReactionUI();
-    toast(yeni ? '🔖 Kaydedildi' : 'Kayıt kaldırıldı');
+    toast(yeni ? 'Kaydedildi' : 'Kayıt kaldırıldı');
   } catch (e) { toast('İşlem başarısız.'); }
 }
 function _wSyncReactionUI() {
   const r = _w._reaction || {};
-  const box = document.querySelector('.watch-underbar-mid');
-  if (!box) return;
-  const btns = box.querySelectorAll('.wu-act');
-  if (btns[0]) btns[0].classList.toggle('active', r.liked === 1);
-  if (btns[1]) btns[1].classList.toggle('active', r.liked === -1);
-  if (btns[2]) btns[2].classList.toggle('active', !!r.saved);
+  const t = (id, on) => { const b = document.getElementById(id); if (b) b.classList.toggle('active', !!on); };
+  t('wc-like', r.liked === 1); t('wc-dislike', r.liked === -1); t('wc-save', r.saved);
 }
 /* Son cümleyi tekrar et — altyazı segmentine bağlı */
 function _wRepeatLine() {
@@ -1469,7 +1531,7 @@ function _wShowVideoError(e) {
   const box = document.getElementById('watch-player'); if (!box) return;
   // Premium/erişim durumu ayrı ele alınır; buradaki mesaj tamamen genel
   box.innerHTML = `<div class="watch-error">
-    <div class="watch-error-ic">⚠️</div>
+    <div class="watch-error-ic"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r=".6" fill="currentColor"/></svg></div>
     <div class="watch-error-title">Video şu anda oynatılamıyor</div>
     <div class="watch-error-sub">Lütfen birazdan tekrar dene. Sorun sürerse destek ekibiyle iletişime geçebilirsin.</div>
     <button class="set-btn" onclick="_wRetryVideo()">Tekrar Dene</button>
@@ -1524,7 +1586,7 @@ function _wIsPlaying() {
   return false;
 }
 function watchSeek(d) {
-  if (_wStrictMode()) { toast('🚧 Sıkı hoca modunda ileri/geri sarma kapalı.'); return; }
+  if (_wStrictMode()) { toast('Sıkı hoca modunda ileri/geri sarma kapalı.'); return; }
   _wSeekTo(Math.max(0, _wGetTime() + d));
 }
 function watchTogglePlay() { _wIsPlaying() ? _wPause() : _wPlay(); }
@@ -1542,7 +1604,7 @@ function _wToggleSpeedMenu(ev) {
 }
 function _wPickSpeed(r) {
   watchSetSpeed(r);
-  const btn = document.getElementById('wc-speed-btn'); if (btn) btn.textContent = r + 'x ▾';
+  const btn = document.getElementById('wc-speed-btn'); if (btn) btn.textContent = r + 'x';
   const menu = document.getElementById('wc-speed-menu');
   if (menu) {
     menu.classList.remove('open');
@@ -1562,7 +1624,7 @@ function watchSetVolume(v) {
     if (_w.kind === 'stream' && _w.player) _w.player.volume = vol / 100;
   } catch (e) {}
   _w.muted = (vol === 0);
-  const b = document.getElementById('wc-vol'); if (b) b.innerHTML = vol === 0 ? '🔇' : _wVolIcon();
+  const b = document.getElementById('wc-vol'); if (b) b.innerHTML = vol === 0 ? W_IC.mute : _wVolIcon();
 }
 function watchToggleMute() {
   const range = document.getElementById('wc-vol-range');
@@ -1610,7 +1672,7 @@ function _wUpdateCaption(t) {
 }
 
 function watchSeekBar(ev) {
-  if (_wStrictMode()) { toast('🚧 Sıkı hoca modunda zaman çubuğu kilitli.'); return; }
+  if (_wStrictMode()) { toast('Sıkı hoca modunda zaman çubuğu kilitli.'); return; }
   const bar = document.getElementById('wc-progress'); if (!bar || !_w.duration) return;
   const rect = bar.getBoundingClientRect();
   const oran = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
@@ -1624,16 +1686,16 @@ function _wRenderDocs() {
     box.innerHTML = '<div class="profile-empty">Bu videoya eklenmiş döküman yok.</div>';
     return;
   }
-  const ikon = { pdf:'📕', link:'🔗', file:'📎' };
+  const ikon = { pdf: W_IC.pdf, link: W_IC.link, file: W_IC.file };
   box.innerHTML = _w.docs.map((d, i) => {
     // PDF/dosya → site içi görüntüleyicide aç; salt bağlantı → yeni sekme
     const icAcilir = (d.doc_type === 'pdf' || d.doc_type === 'file');
     const tik = icAcilir ? `onclick="_wOpenDoc(${i})"` : `onclick="window.open('${_escAttr(d.url)}','_blank')"`;
     return `<div class="wdoc-item" ${tik}>
-      <div class="wdoc-ic">${ikon[d.doc_type] || '📄'}</div>
+      <div class="wdoc-ic">${ikon[d.doc_type] || W_IC.pdf}</div>
       <div class="wdoc-info"><div class="wdoc-title">${_escHtml(d.title)}</div>
         ${d.descr ? `<div class="wdoc-desc">${_escHtml(d.descr)}</div>` : ''}</div>
-      <span class="wdoc-arrow">${icAcilir ? '⤢' : '↗'}</span>
+      <span class="wdoc-arrow">${icAcilir ? W_IC.open : W_IC.ext}</span>
     </div>`;
   }).join('');
 }
@@ -1657,7 +1719,7 @@ function _wOpenDoc(i) {
         <button class="wdv-btn" onclick="_wDocZoomBy(0.2)" title="Yakınlaştır">+</button>`;
   ov.innerHTML = `
     <div class="wdv-bar">
-      <div class="wdv-title">📄 ${_escHtml(d.title)}</div>
+      <div class="wdv-title">${_escHtml(d.title)}</div>
       <div class="wdv-tools">
         ${zoomBtns}
         <a class="wdv-btn" href="${_escAttr(d.url)}" download target="_blank" title="İndir">⬇</a>
@@ -1804,7 +1866,7 @@ function _wCloseDoc() {
 /* Not zaman modu (3'lü döngü: şu an → belirli an → genel) */
 function wnCycleTimeMode() {
   const modes = ['now', 'custom', 'none'];
-  const labels = { now:'📌 Şu ana bağlı', custom:'⏱️ Belirli an', none:'📝 Genel not' };
+  const labels = { now:'Şu ana bağlı', custom:'Belirli an', none:'Genel not' };
   _w._noteMode = modes[(modes.indexOf(_w._noteMode || 'now') + 1) % 3];
   const btn = document.getElementById('wn-time-toggle');
   if (btn) btn.textContent = labels[_w._noteMode];
@@ -1813,7 +1875,7 @@ function wnCycleTimeMode() {
 }
 function _wSyncPlayBtn(playing) {
   const b = document.getElementById('wc-play');
-  if (b) b.textContent = playing ? '⏸' : '▶';
+  if (b) b.innerHTML = playing ? W_IC.pause : W_IC.play;
   const box = document.getElementById('watch-player-box');
   if (box) box.classList.toggle('playing', playing);
   const prog = document.getElementById('wc-progress');
@@ -1960,7 +2022,7 @@ function _wUpdateBadge() {
   }
   // Kartlar sekmesi başlığı sabit (parantez sayı kaldırıldı)
   const tab = document.querySelector('.wst-tab[data-tab="cards"]');
-  if (tab && tab.innerHTML.indexOf('Kartlar') < 0) tab.innerHTML = '▣ Kartlar';
+  
 }
 function watchOpenPanel() {
   _wRenderCards();
@@ -2064,14 +2126,14 @@ function _wShowCard(card, opts) {
   if (card.card_type === 'checkpoint') {
     const cps = _w.cards.filter(x => x.card_type === 'checkpoint').sort((a,b)=>a.t_sec-b.t_sec);
     const idx = cps.findIndex(x => x.id === card.id);
-    inner += `<div class="sv-card-head" style="justify-content:center;text-align:center;display:block;">📋 Kontrol Noktası</div>
+    inner += `<div class="sv-card-head" style="justify-content:center;text-align:center;display:block;">${W_IC.checkpoint} Kontrol Noktası</div>
       <div class="sv-card-sub" style="text-align:center;">Videonun devamı için aşağıdaki soruyu doğru cevaplamalısın.</div>
       ${cps.length > 1 ? `<div class="sv-progress-dots">
         ${cps.map((_,k)=>`<span class="sv-dot ${k<idx?'done':k===idx?'cur':''}"></span>`).join('')}
         <span class="sv-progress-num">${idx+1}/${cps.length}</span>
       </div>` : ''}`;
   } else {
-    const ikon = { info:'💡', quiz:'❓', poll:'📊', topic:'📖' }[card.card_type] || '💡';
+    const ikon = W_IC[card.card_type] || W_IC.info;
     inner += `<div class="sv-card-head">${ikon} ${_escHtml(card.title || '')}</div>`;
   }
 
@@ -2119,16 +2181,16 @@ function _wCardFootHTML(card, soruTip, strict) {
   // Kontrol noktası: şık seçilince anında kontrol edilir (ayrı buton yok)
   if (card.card_type === 'checkpoint') {
     // Devam butonu doğru cevaptan sonra JS ile eklenir; başta gizli
-    f += `<button class="set-btn sv-card-continue" style="display:none;" onclick="_wResumeCard(${card.id})">▶ Devam Et</button>`;
+    f += `<button class="set-btn sv-card-continue" style="display:none;" onclick="_wResumeCard(${card.id})">Devam Et</button>`;
     f += '</div>';
     if (strict) f += `<div class="sv-card-skip"><button onclick="_wSkipCheckpoint(${card.id})">» Bu kontrol noktasını geç (Ayarlardan değiştirilebilir)</button></div>`;
     return f;
   }
   // Diğer soru tipleri (quiz): şık tıklayınca hemen işlenir, devam gizli başlar
   if (soruTip) {
-    f += `<button class="set-btn sv-card-continue" style="display:none;" onclick="_wResumeCard(${card.id})">▶ Devam Et</button>`;
+    f += `<button class="set-btn sv-card-continue" style="display:none;" onclick="_wResumeCard(${card.id})">Devam Et</button>`;
   } else {
-    f += `<button class="set-btn sv-card-continue" onclick="_wResumeCard(${card.id})">▶ Devam Et</button>`;
+    f += `<button class="set-btn sv-card-continue" onclick="_wResumeCard(${card.id})">Devam Et</button>`;
   }
   return f + '</div>';
 }
@@ -2175,7 +2237,7 @@ async function _wAnswerCard(cardId, i, correct, tip) {
     await _wSaveAnswer(cardId, i, null);
     if (card && card.show_results !== false) {
       await _wRenderPollResults(cardId, card.options);
-    } else if (fb) { fb.textContent = '✅ Cevabın kaydedildi, teşekkürler!'; }
+    } else if (fb) { fb.textContent = 'Cevabın kaydedildi, teşekkürler!'; }
     const cont = document.querySelector('.sv-card-continue'); if (cont) cont.style.display = '';
     return;
   }
@@ -2187,12 +2249,12 @@ async function _wAnswerCard(cardId, i, correct, tip) {
     if (dogru) {
       opts.forEach(b => b.disabled = true);
       opts[i].classList.add('ok');
-      if (fb) fb.textContent = '✅ Doğru! Devam edebilirsin.';
+      if (fb) fb.textContent = 'Doğru! Devam edebilirsin.';
       _w.answered[cardId] = true;
       await _wSaveAnswer(cardId, i, true);
       try { logActivity('questions', 1); } catch (e) {}
       const foot = document.querySelector('.sv-card-foot');
-      if (foot) foot.innerHTML = `<button class="set-btn sv-card-continue" onclick="_wResumeCard(${cardId})">▶ Devam Et</button>`;
+      if (foot) foot.innerHTML = `<button class="set-btn sv-card-continue" onclick="_wResumeCard(${cardId})">Devam Et</button>`;
     } else {
       // Yanlış: TÜM şıklar kilitlenir, doğru gösterilmez, geri izlemeye yönlendirilir
       opts.forEach(b => b.disabled = true);
@@ -2209,11 +2271,11 @@ async function _wAnswerCard(cardId, i, correct, tip) {
 
   // ── NORMAL MOD: doğru/yanlış gösterilir
   opts.forEach(b => b.disabled = true);
-  if (dogru) { opts[i].classList.add('ok'); if (fb) fb.textContent = '✅ Doğru!'; }
+  if (dogru) { opts[i].classList.add('ok'); if (fb) fb.textContent = 'Doğru!'; }
   else {
     if (opts[i]) opts[i].classList.add('no');
     if (opts[correct]) opts[correct].classList.add('ok');
-    if (fb) fb.textContent = '❌ Yanlış — doğrusu işaretlendi.';
+    if (fb) fb.textContent = 'Yanlış — doğrusu işaretlendi.';
   }
   _w.answered[cardId] = true;
   await _wSaveAnswer(cardId, i, dogru);
@@ -2221,7 +2283,7 @@ async function _wAnswerCard(cardId, i, correct, tip) {
   // Checkpoint (normal mod): "Cevabı Kontrol Et" butonunu "Devam Et"e dönüştür
   if (tip === 'checkpoint') {
     const foot = document.querySelector('.sv-card-foot');
-    if (foot) foot.innerHTML = `<button class="set-btn sv-card-continue" onclick="_wResumeCard(${cardId})">▶ Devam Et</button>`;
+    if (foot) foot.innerHTML = `<button class="set-btn sv-card-continue" onclick="_wResumeCard(${cardId})">Devam Et</button>`;
   } else {
     const cont = document.querySelector('.sv-card-continue');
     if (cont) cont.style.display = '';
@@ -2282,7 +2344,7 @@ function _wResumeCard(cardId) {
 function _wPauseHint() {
   const h = document.createElement('div');
   h.className = 'watch-pause-hint';
-  h.textContent = '⏸ Otomatik duraklatma etkin — Profil → Ayarlar\'dan değiştirebilirsin';
+  h.textContent = 'Otomatik duraklatma etkin — Profil → Ayarlar\'dan değiştirebilirsin';
   document.getElementById('watch-player-box').appendChild(h);
   setTimeout(() => { h.style.opacity = '0'; }, 3500);
   setTimeout(() => { h.remove(); }, 5000);
@@ -2299,7 +2361,7 @@ function _wRenderChapters() {
   box.innerHTML = baslik + _w.chapters.map((ch, i) => {
     const mm = Math.floor(ch.t_sec/60), ss = String(ch.t_sec%60).padStart(2,'0');
     const sonMu = i === _w.chapters.length - 1;
-    const ikon = sonMu ? '★' : '▶';
+    const ikon = sonMu ? W_IC.star : W_IC.play;
     return `<button class="wch-item${sonMu?' checkpoint':''}" data-t="${ch.t_sec}" onclick="_wSeekTo(${ch.t_sec});_wPlay();">
       <span class="wch-play">${ikon}</span>
       <span class="wch-mid"><span class="wch-time">${mm}:${ss}</span>
@@ -2320,14 +2382,13 @@ function _wCardItemHTML(card) {
   const alt = ({info:'Bilgi',quiz:'Soru',poll:'Anket',topic:'Konu',checkpoint:'Kontrol'}[card.card_type]||'');
   const yildiz = _w.answered[card.id] ? 'on' : '';
   const thumb = card.thumb ? `<img class="wcard-thumb" src="${_escAttr(card.thumb)}" alt="">` : '';
-  const IKON = { info:'💡', quiz:'❓', poll:'📊', topic:'📖', checkpoint:'🚧' };
-  const solIkon = `<span class="wcard-typeic">${IKON[card.card_type]||'💡'}</span>`;
+  const solIkon = `<span class="wcard-typeic t-${card.card_type || 'info'}">${W_IC[card.card_type] || W_IC.info}</span>`;
   return `<div class="wcard${_w.activeCard&&_w.activeCard.id===card.id?' active':''}" data-cid="${card.id}" data-t="${card.t_sec}" onclick="_wOpenCard(${card.id})">
     ${solIkon}
     <div class="wcard-mid"><div class="wcard-ru">${_escHtml(ana)}</div>
       ${alt?`<div class="wcard-tr">${_escHtml(alt)}</div>`:''}</div>
     ${thumb}
-    <button class="wcard-star ${yildiz}" onclick="event.stopPropagation();_wCardStar(${card.id},this)">★</button>
+    <button class="wcard-star ${yildiz}" onclick="event.stopPropagation();_wCardStar(${card.id},this)" aria-label="İşaretle">${W_IC.star}</button>
     <span class="wcard-time">${mm}:${ss}</span>
   </div>`;
 }
@@ -2340,7 +2401,7 @@ function _wRenderCards() {
     return;
   }
   // Filtre çipleri: KART TİPLERİYLE AYNI (Tümü / Bilgi / Soru / Anket / Konu / Kontrol)
-  const TIP_AD = { info:'💡 Bilgi', quiz:'❓ Soru', poll:'📊 Anket', topic:'📖 Konu', checkpoint:'🚧 Kontrol' };
+  const TIP_AD = { info:'Bilgi', quiz:'Soru', poll:'Anket', topic:'Konu', checkpoint:'Kontrol' };
   const say = {};
   ['info','quiz','poll','topic','checkpoint'].forEach(t => { say[t] = _w.cards.filter(c=>c.card_type===t).length; });
   const f = _w.cardFilter || 'all';
@@ -2357,7 +2418,7 @@ function _wRenderCards() {
   const suan = _w.ready ? _wGetTime() : 0;
   const gorunen = list.filter(card => _w._revealed && _w._revealed[card.id]);
   if (!gorunen.length) {
-    box.innerHTML = '<div class="profile-empty">Video ilerledikçe kartlar burada belirecek. ✨</div>';
+    box.innerHTML = '<div class="profile-empty">Video ilerledikçe kartlar burada belirecek.</div>';
     return;
   }
   box.innerHTML = gorunen.map(card => _wCardItemHTML(card)).join('');
@@ -2400,13 +2461,13 @@ function _wRenderNotes() {
     if (n.t_sec != null) {
       const mm = Math.floor(n.t_sec/60), ss = String(n.t_sec%60).padStart(2,'0');
       return `<div class="wn-item wn-timed" onclick="_wSeekTo(${n.t_sec});_wPlay();" title="Bu ana git">
-        <div class="wn-top"><span class="wn-time">📌 ${mm}:${ss}</span>
+        <div class="wn-top"><span class="wn-time">${W_IC.pin} ${mm}:${ss}</span>
           <button class="wn-del" onclick="event.stopPropagation();watchDelNote(${n.id})" title="Sil">×</button></div>
         <div class="wn-body">${_escHtml(n.body||'').replace(/\n/g,'<br>')}</div>
       </div>`;
     }
     return `<div class="wn-item wn-general">
-      <div class="wn-top"><span class="wn-time wn-time-gen">📝 Genel not</span>
+      <div class="wn-top"><span class="wn-time wn-time-gen">${W_IC.note} Genel not</span>
         <button class="wn-del" onclick="watchDelNote(${n.id})" title="Sil">×</button></div>
       <div class="wn-body">${_escHtml(n.body||'').replace(/\n/g,'<br>')}</div>
     </div>`;
@@ -2447,8 +2508,8 @@ async function watchAddNote() {
     inp.value = '';
     _wRenderNotes();
     toast(tSec != null
-      ? `📌 Not eklendi (${Math.floor(tSec/60)}:${String(tSec%60).padStart(2,'0')})`
-      : '📝 Genel not eklendi');
+      ? `Not eklendi (${Math.floor(tSec/60)}:${String(tSec%60).padStart(2,'0')})`
+      : 'Genel not eklendi');
   } catch (e) { uiAlert('Eklenemedi: ' + ((e&&e.message)||e)); }
 }
 async function watchDelNote(id) {
@@ -2486,9 +2547,10 @@ function _wRenderSubs() {
       const on = m[1], kelime = m[2], son = m[3];
       return _escHtml(on) + `<button class="wsub-word" onclick="_wSubWordClick('${_escAttr(kelime)}', ${s.start_sec})">${_escHtml(kelime)}</button>` + _escHtml(son);
     }).join('');
-    return `<div class="wsub-line">
+    return `<div class="wsub-line" data-t="${s.start_sec}">
       <button class="wsub-time" onclick="_wSeekTo(${s.start_sec});_wPlay();">${mm}:${ss}</button>
-      <div class="wsub-text">${kelimeler}</div>
+      <div class="wsub-text"><div class="wsub-ru">${kelimeler}</div>${s.tr ? `<div class="wsub-tr">${_escHtml(s.tr)}</div>` : ''}</div>
+      <button class="wsub-play" onclick="_wSeekTo(${s.start_sec});_wPlay();" aria-label="Bu cümleden oynat">${W_IC.play}</button>
     </div>`;
   }).join('');
 }
@@ -2514,7 +2576,7 @@ function _wResumePlayback() {
   if (_w.duration && sn > _w.duration - 10) { _w.resumeFrom = 0; return; }
   try { _wSeekTo(sn); } catch (e) {}
   const dk = Math.floor(sn / 60), ss = String(sn % 60).padStart(2, '0');
-  if (typeof toast === 'function') toast('▶ Kaldığın yerden devam: ' + dk + ':' + ss);
+  if (typeof toast === 'function') toast('Kaldığın yerden devam: ' + dk + ':' + ss);
   _w.resumeFrom = 0; // bir kez uygula
 }
 
@@ -2540,7 +2602,7 @@ function _wOnEnded() {
   // Birikmiş kart var mı? Sıkı modda tamamlanmadan sonraki video kilitli
   if (_w.pending.length && _wStrictMode()) {
     watchOpenPanel();
-    toast('🚧 Sonraki videoya geçmeden önce biriken kartları tamamla.');
+    toast('Sonraki videoya geçmeden önce biriken kartları tamamla.');
     return;
   }
   // Sıradaki ders önerisi
@@ -2556,10 +2618,10 @@ function _wSuggestNext() {
   if (next) {
     const idx = videos.indexOf(next);
     box.innerHTML = `<div class="sv-card sv-card-done">
-      <div class="sv-card-head" style="justify-content:center;">🎉 Ders tamamlandı!</div>
+      <div class="sv-card-head" style="justify-content:center;">Ders tamamlandı!</div>
       <div class="sv-card-body" style="text-align:center;">Sıradaki ders:<br><b>${_escHtml(next.title||'')}</b>
         <div class="wnext-count" id="wnext-count">3 sn içinde geçiliyor…</div></div>
-      <button class="set-btn" style="width:100%;" onclick="_wPlayNext(${idx})">▶ Şimdi Geç</button>
+      <button class="set-btn" style="width:100%;" onclick="_wPlayNext(${idx})">Şimdi Geç</button>
       <button class="set-btn ghost" style="width:100%;margin-top:8px;" onclick="_wCancelNext()">İptal / Kapat</button></div>`;
     box.style.display = 'flex';
     // 3 sn geri sayımlı otomatik geçiş
@@ -2572,7 +2634,7 @@ function _wSuggestNext() {
     }, 1000);
   } else {
     box.innerHTML = `<div class="sv-card sv-card-done">
-      <div class="sv-card-head" style="justify-content:center;">🎉 Ders tamamlandı!</div>
+      <div class="sv-card-head" style="justify-content:center;">Ders tamamlandı!</div>
       <div class="sv-card-body" style="text-align:center;">Bu serinin son dersiydi, tebrikler!</div>
       <button class="set-btn ghost" style="width:100%;margin-top:8px;" onclick="_wCloseCard()">Kapat</button></div>`;
     box.style.display = 'flex';
@@ -2654,7 +2716,7 @@ document.addEventListener('keydown', function(e) {
 /* Kaydedilmiş hız tercihi */
 setTimeout(() => {
   const sp = localStorage.getItem('ydt_video_speed');
-  if (sp) { const btn = document.getElementById('wc-speed-btn'); if (btn) btn.textContent = sp + 'x ▾'; }
+  if (sp) { const btn = document.getElementById('wc-speed-btn'); if (btn) btn.textContent = sp + 'x'; }
   // Video izleme tercihleri
   const cm = document.getElementById('set-card-mode');
   if (cm) cm.value = localStorage.getItem('ydt_card_mode') || 'pause';
@@ -2722,6 +2784,12 @@ function _openLearn(sub) {
 }
 function learnNav(sub, btn) {
   if (!LEARN_PAGES.includes(sub)) sub = 'words';
+  const _wpg = document.getElementById('page-watch');
+  if (_wpg && _wpg.classList.contains('active')) {
+    try { if (typeof _wSaveProgress === 'function') _wSaveProgress(false); } catch (e) {}
+    try { if (typeof _wCleanup === 'function') _wCleanup(); } catch (e) {}
+    _wpg.classList.remove('active');
+  }
   _learnCurrent = sub;
   const host = document.getElementById('learn-content');
   if (!host) return;
@@ -5085,7 +5153,8 @@ function pwToggle(btn, id) {
   const inp = document.getElementById(id); if (!inp) return;
   const goster = inp.type === 'password';
   inp.type = goster ? 'text' : 'password';
-  btn.textContent = goster ? '🙈' : '👁';
+  btn.innerHTML = goster ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19c-6.4 0-10-7-10-7a18.6 18.6 0 0 1 5.1-5.9"/><path d="M9.9 5.2A9.7 9.7 0 0 1 12 5c6.4 0 10 7 10 7a18.5 18.5 0 0 1-2.2 3.2"/><path d="M14.1 14.2a3 3 0 0 1-4.2-4.2"/><line x1="2" y1="2" x2="22" y2="22"/></svg>' : '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  btn.setAttribute('aria-label', goster ? 'Şifreyi gizle' : 'Şifreyi göster');
 }
 if (typeof window !== 'undefined') {
   window.logError = logError;
