@@ -6,7 +6,7 @@
    VİDEO DERSLER — müfredata bağlı liste (Modül → Ünite → Ders)
    content_videos.mf_ref: "M.Ü.D" (ör. 1.2.3) ya da "M.Ü" (tüm ünite)
    ============================================================ */
-const VD = { units: [], views: {}, filtre: '', q: '', sira: 'onerilen', acik: new Set(['m1', 'u1.1']), yuklendi: false, _yukleniyor: null };
+const VD = { units: [], views: {}, filtre: '', q: '', sira: 'sira', acik: new Set(['m1', 'u1.1']), yuklendi: false, _yukleniyor: null };
 const VD_KAT = [['k:soru', 'Soru Çözümleri'], ['k:deneme', 'Deneme Çözümleri']];
 function vdKat(s) { return VD_KAT.find(k => k[0] === s) || null; }
 function vdRef(s) {
@@ -211,7 +211,7 @@ function vdRender() {
   if (lk) lk.style.display = (videos || []).some(v => v.locked) && !(typeof userHasPremium === 'function' && userHasPremium()) ? '' : 'none';
   vdRenderTree(); vdRenderGrid();
 }
-const VD_SIRA = [['onerilen', 'Önerilen', 'Yarım kalanlar önce'], ['mufredat', 'Müfredat sırası', 'Modül › Ünite › Ders'], ['sira', 'Video sırası', 'Eklenme sırası'],
+const VD_SIRA = [['sira', 'Video sırası', 'Yönetimde belirlenen sıra'], ['mufredat', 'Müfredat sırası', 'Modül › Ünite › Ders'], ['onerilen', 'Kaldığım yerden', 'Yarım kalanlar önce'],
   ['ad', 'Ada göre', 'A’dan Z’ye'], ['sure', 'Süreye göre', 'Kısadan uzuna']];
 function vdDdCiz() {
   const v = document.getElementById('vd-dd-v'), m = document.getElementById('vd-dd-m'), d = document.getElementById('vd-dd');
