@@ -49,10 +49,9 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=160">
-<link rel="stylesheet" href="css/ekitap.css?v=160">
-<link rel="stylesheet" href="css/video.css?v=160">
-<link rel="stylesheet" href="css/yonetim.css?v=160">
+<link rel="stylesheet" href="css/style.css?v=161">
+<link rel="stylesheet" href="css/ekitap.css?v=161">
+<link rel="stylesheet" href="css/video.css?v=161">
 <script>try{if(localStorage.getItem('ydt_prof_ui'))document.documentElement.classList.add('oturum-var');}catch(e){}</script>
 <style>html.oturum-var #nav-auth-buttons{display:none!important}</style>
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
@@ -77,7 +76,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=160" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=161" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -411,7 +410,7 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
 <!-- ÇALIŞMALAR ara sayfası (Testler + Gramer Çalışmaları kartları) -->
 <div id="page-works" class="page">
   <div class="works-wrap">
-    <h1 class="works-title">Çalışmalar</h1>
+    <h2 class="works-title">Çalışmalar</h2>
     <p class="works-sub">Konuları pekiştirmek, bilgilerini ölçmek ve daha fazla pratik yapmak için aşağıdaki bölümlerden birini seçebilirsin.</p>
     <div class="works-cards">
       <div class="works-card" tabindex="0" onclick="worksGo('quiz')" onkeydown="if(event.key==='Enter')worksGo('quiz')">
@@ -1744,7 +1743,7 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
           <p class="profile-sub">Film, dizi, anime ve kitap önerileri. Değişiklikler anında yayına girer.</p>
           <div class="pq-stats" id="rc-stats">Yükleniyor...</div>
           <div class="admin-notif-card">
-            <h3 class="an-h3">✏️ Öneri Ekle / Düzenle</h3>
+            <h3 class="an-h3">✏️ Blog Yazısı Ekle / Düzenle</h3>
             <input type="hidden" id="rc-id">
             <div class="pq-row2">
               <select id="rc-type" class="pq-input"><option value="film">🎬 Film</option><option value="dizi">📺 Dizi</option><option value="anime">🌸 Anime</option><option value="kitap">📚 Kitap</option></select>
@@ -1780,11 +1779,11 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
               <input id="rc-trailer" class="pq-input" placeholder="YouTube fragman ID (opsiyonel)" autocomplete="off" data-lpignore="true" data-form-type="other">
             </div>
             <input id="rc-link" class="pq-input" placeholder="Nerede izlenir/alınır linki (opsiyonel)" autocomplete="off" data-lpignore="true" data-form-type="other">
-            <div><button class="set-btn" id="rc-save-btn" onclick="adminRcSave()">Öneri Ekle</button>
+            <div><button class="set-btn" id="rc-save-btn" onclick="adminRcSave()">Yazıyı Ekle</button>
             <button class="set-btn ghost" onclick="adminRcFormClear()" style="margin-left:8px;">Temizle</button></div>
           </div>
           <div class="admin-notif-card">
-            <h3 class="an-h3">📋 Öneri Listesi</h3>
+            <h3 class="an-h3">📋 Blog Yazıları</h3>
             <div id="rc-list"><div class="profile-empty">Yükleniyor...</div></div>
           </div>
         </div>
@@ -1908,7 +1907,7 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
           <div id="ic-kartlar" style="display:none;">
             <div class="admin-notif-card">
               <div class="ic-kart-bar"><select id="ic-kart-unite" class="pq-input" onchange="icKartYukle()"></select><span id="ic-kart-ozet" class="ic-kart-ozet"></span></div>
-              <p class="pq-hint">E-kitap ünitelerindeki hazırlanmış çalışma kartları. Silinen kart ünite metninden de kaldırılır; öğrencilerin diğer kartlardaki tekrar geçmişi etkilenmez.</p>
+              <p class="pq-hint">Ünite seç; her bölümün kartlarını buradan ekle, düzenle ya da sil. Değişiklik ünite metnine de yazılır, öğrencilerin diğer kartlardaki tekrar geçmişi etkilenmez.</p>
               <div id="ic-kart-list"></div>
             </div>
           </div>
@@ -2119,7 +2118,7 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
         <div class="watch-bc" id="watch-bc" role="navigation" aria-label="Konum"></div>
       </div>
       <div class="watch-head-info">
-        <h1 class="watch-head-title"><span id="watch-title">Video</span> <span id="watch-level" class="watch-level-badge"></span></h1>
+        <h2 class="watch-head-title"><span id="watch-title">Video</span> <span id="watch-level" class="watch-level-badge"></span></h2>
         <div class="watch-head-crumb" id="watch-crumb"></div>
       </div>
     </div>
@@ -2259,16 +2258,15 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=160"></script>
-<script defer src="js/auth.js?v=160"></script>
-<script defer src="js/admin.js?v=160"></script>
-<script defer src="js/profile.js?v=160"></script>
-<script defer src="js/extras.js?v=160"></script>
-<script defer src="js/app.js?v=160"></script>
-<script defer src="js/ekitap.js?v=160"></script>
-<script defer src="js/video.js?v=160"></script>
-<script defer src="js/arayuz.js?v=160"></script>
-<script defer src="js/yonetim.js?v=160"></script>
+<script defer src="js/supabase-config.js?v=161"></script>
+<script defer src="js/auth.js?v=161"></script>
+<script defer src="js/admin.js?v=161"></script>
+<script defer src="js/profile.js?v=161"></script>
+<script defer src="js/extras.js?v=161"></script>
+<script defer src="js/app.js?v=161"></script>
+<script defer src="js/ekitap.js?v=161"></script>
+<script defer src="js/video.js?v=161"></script>
+<script defer src="js/arayuz.js?v=161"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
