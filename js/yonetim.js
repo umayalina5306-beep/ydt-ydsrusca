@@ -246,6 +246,8 @@
     if (v === 'overview') acts.innerHTML = '<div class="yp-sec"><span>' + ic('takvim', 16) + '</span><select id="yp-aralik" onchange="ypAralik(this.value)" aria-label="Zaman aralığı"><option value="7"' + (aralik === 7 ? ' selected' : '') + '>Son 7 gün</option><option value="30"' + (aralik === 30 ? ' selected' : '') + '>Son 30 gün</option></select></div>' +
       '<button type="button" class="yp-btn" onclick="ypRaporIndir()">' + ic('indir', 16) + 'Rapor indir</button>';
     if (v === 'icerikler') acts.innerHTML = yeniButonu();
+    if (v === 'content') acts.innerHTML = '<button type="button" class="yp-btn" id="yp-kel-csv" onclick="ypKelimeIndir(\'csv\')">' + ic('indir', 16) + 'CSV indir</button>' +
+      '<button type="button" class="yp-btn ana" id="yp-kel-xlsx" onclick="ypKelimeIndir(\'xlsx\')">' + ic('indir', 16) + 'Excel indir</button>';
     if (v === 'icerikler') ilCiz();
     if (v === 'overview') panoCiz();
   }
@@ -674,6 +676,99 @@
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     a.download = 'yonetim-raporu-' + gunAnahtar(new Date()) + '.csv'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   };
+
+  /* ---------- Kelime veritabanını indir (CSV / Excel) ---------- */
+  const KEL_ONCE = ['id', 'ru', 'tr', 'level', 'cat', 'cinsiyet', 'tip', 'padej'];
+  const KEL_SON = ['premium', 'active', 'created_at', 'updated_at'];
+  function kolonlar(rows) {
+    const set = new Set(); rows.forEach(r => Object.keys(r).forEach(k => set.add(k)));
+    const on = KEL_ONCE.filter(k => set.has(k)), son = KEL_SON.filter(k => set.has(k));
+    const orta = [...set].filter(k => !on.includes(k) && !son.includes(k)).sort();
+    return on.concat(orta, son);
+  }
+  const hucre = v => v == null ? '' : (typeof v === 'object' ? JSON.stringify(v) : v);
+  function csvYap(rows) {
+    const k = kolonlar(rows);
+    const q = v => { const x = String(hucre(v)); return /[";\r\n]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; };
+    return '\ufeff' + [k.join(';')].concat(rows.map(r => k.map(c => q(r[c])).join(';'))).join('\r\n');
+  }
+  // Basit .xlsx üretici (dış kütüphane yok): sıkıştırmasız zip + satır içi metin hücreleri
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function zipYap(dosyalar) {
+    const enc = new TextEncoder(), parcalar = [], merkez = []; let ofs = 0;
+    dosyalar.forEach(([ad, icerik]) => {
+      const a = enc.encode(ad), d = typeof icerik === 'string' ? enc.encode(icerik) : icerik, c = crc32(d);
+      const h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+      h.setUint32(14, c, true); h.setUint32(18, d.length, true); h.setUint32(22, d.length, true); h.setUint16(26, a.length, true);
+      parcalar.push(new Uint8Array(h.buffer), a, d);
+      const m = new DataView(new ArrayBuffer(46));
+      m.setUint32(0, 0x02014b50, true); m.setUint16(4, 20, true); m.setUint16(6, 20, true); m.setUint16(8, 0x0800, true);
+      m.setUint32(16, c, true); m.setUint32(20, d.length, true); m.setUint32(24, d.length, true); m.setUint16(28, a.length, true); m.setUint32(42, ofs, true);
+      merkez.push(new Uint8Array(m.buffer), a);
+      ofs += 30 + a.length + d.length;
+    });
+    const mBoy = merkez.reduce((t, x) => t + x.length, 0), e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, dosyalar.length, true); e.setUint16(10, dosyalar.length, true); e.setUint32(12, mBoy, true); e.setUint32(16, ofs, true);
+    return new Blob(parcalar.concat(merkez, [new Uint8Array(e.buffer)]), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  const xe = v => String(v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  function sutunAd(i) { let s = ''; i++; while (i) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+  function sayfaXml(rows) {
+    const k = kolonlar(rows);
+    const satir = (vals, n, baslik) => '<row r="' + n + '">' + vals.map((v, i) => {
+      const ref = sutunAd(i) + n, x = hucre(v);
+      if (x === '') return '';
+      if (typeof x === 'number' && isFinite(x)) return '<c r="' + ref + '"' + (baslik ? ' s="1"' : '') + '><v>' + x + '</v></c>';
+      if (typeof x === 'boolean') return '<c r="' + ref + '" t="b"><v>' + (x ? 1 : 0) + '</v></c>';
+      return '<c r="' + ref + '" t="inlineStr"' + (baslik ? ' s="1"' : '') + '><is><t xml:space="preserve">' + xe(x) + '</t></is></c>';
+    }).join('') + '</row>';
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
+      '<cols>' + k.map((c, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + (c === 'ru' || c === 'tr' ? 28 : c.length > 10 || /ornek|not|aciklama|example/i.test(c) ? 36 : 14) + '" customWidth="1"/>').join('') + '</cols>' +
+      '<sheetData>' + satir(k, 1, true) + rows.map((r, i) => satir(k.map(c => r[c]), i + 2)).join('') + '</sheetData>' +
+      (rows.length ? '<autoFilter ref="A1:' + sutunAd(k.length - 1) + (rows.length + 1) + '"/>' : '') + '</worksheet>';
+  }
+  function xlsxYap(sayfalar) {
+    const W = 'http://schemas.openxmlformats.org/', d = [];
+    d.push(['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="' + W + 'package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+      sayfalar.map((_, i) => '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('') + '</Types>']);
+    d.push(['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="' + W + 'package/2006/relationships"><Relationship Id="rId1" Type="' + W + 'officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>']);
+    d.push(['xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="' + W + 'spreadsheetml/2006/main" xmlns:r="' + W + 'officeDocument/2006/relationships"><sheets>' +
+      sayfalar.map((s, i) => '<sheet name="' + xe(s.ad.slice(0, 31)) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join('') + '</sheets></workbook>']);
+    d.push(['xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="' + W + 'package/2006/relationships">' +
+      sayfalar.map((_, i) => '<Relationship Id="rId' + (i + 1) + '" Type="' + W + 'officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join('') +
+      '<Relationship Id="rId' + (sayfalar.length + 1) + '" Type="' + W + 'officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>']);
+    d.push(['xl/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="' + W + 'spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>' +
+      '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>']);
+    sayfalar.forEach((s, i) => d.push(['xl/worksheets/sheet' + (i + 1) + '.xml', sayfaXml(s.rows)]));
+    return zipYap(d);
+  }
+  function indirBlob(blob, ad) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = ad; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+  async function ypKelimeIndir(tur) {
+    const btn = $(tur === 'csv' ? 'yp-kel-csv' : 'yp-kel-xlsx'), eski = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = ic('kumsaati', 16) + 'Hazırlanıyor…'; }
+    try {
+      if (typeof sbFetchAll !== 'function') throw new Error('yok');
+      const kelimeler = await sbFetchAll('content_words', 'ru');
+      const tarih = gunAnahtar(new Date());
+      if (tur === 'csv') indirBlob(new Blob([csvYap(kelimeler)], { type: 'text/csv;charset=utf-8' }), 'kelimeler-' + tarih + '.csv');
+      else {
+        const sayfalar = [{ ad: 'Kelimeler', rows: kelimeler }];
+        for (const [tablo, ad] of [['content_synonyms', 'Eş anlamlılar'], ['content_antonyms', 'Zıt anlamlılar'], ['content_families', 'Kelime aileleri']]) {
+          try { const r = await sbFetchAll(tablo, null); if (r && r.length) sayfalar.push({ ad, rows: r }); } catch (e) {}
+        }
+        indirBlob(xlsxYap(sayfalar), 'kelimeler-' + tarih + '.xlsx');
+      }
+      if (typeof toast === 'function') toast(kelimeler.length.toLocaleString('tr-TR') + ' kelime indirildi.');
+    } catch (e) {
+      if (typeof uiAlert === 'function') uiAlert('Kelimeler indirilemedi. Bağlantını kontrol edip tekrar dene.'); 
+    } finally { if (btn) { btn.disabled = false; btn.innerHTML = eski; } }
+  }
+  window.ypKelimeIndir = ypKelimeIndir;
 
   /* ---------- Üst bar araması ---------- */
   let araSecili = 0, araSonuc = [];
