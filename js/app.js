@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v155';
+var YDT_SURUM = 'v156';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
