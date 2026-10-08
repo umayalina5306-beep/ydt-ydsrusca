@@ -1,4 +1,4 @@
-var YDT_SURUM = 'v150';
+var YDT_SURUM = 'v151';
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
@@ -1464,7 +1464,7 @@ function _wInitYouTube(v) {
             _wResumePlayback();  // kaldığı yerden devam
           },
           onStateChange: (e) => {
-            _wSyncPlayBtn(e.data === 1);
+            if (e.data !== 3) _wSyncPlayBtn(e.data === 1);   // 3 = yükleniyor: ikon değiştirme (titreme olmasın)
             if (e.data === 0) _wOnEnded();
           },
           onError: (e) => {
@@ -1895,11 +1895,17 @@ function _wBigState(playing) {
   if (_wBigTimer) { clearTimeout(_wBigTimer); _wBigTimer = null; }
   if (playing) {
     // Kısa süre "duraklat" ikonu göster (oynatmaya geçildi geri bildirimi), sonra kaybol
-    el.classList.remove('show-play');
+    el.style.transition = 'none';
+    el.classList.remove('show-play', 'show-pause', 'flash'); void el.offsetWidth;
     el.classList.add('show-pause', 'flash');
-    _wBigTimer = setTimeout(() => { el.classList.remove('show-pause', 'flash'); }, 650);
+    _wBigTimer = setTimeout(() => {
+      el.style.transition = 'none';                       // animasyon bitince ikon geri belirmesin
+      el.classList.remove('show-pause', 'flash'); void el.offsetWidth;
+      el.style.transition = '';
+    }, 400);
   } else {
     // Duraklatıldı → oynat ikonu kalıcı
+    el.style.transition = '';
     el.classList.remove('show-pause', 'flash');
     el.classList.add('show-play');
   }
@@ -2010,12 +2016,12 @@ function _wFlashCard(cardId) {
     const el = document.querySelector('.wcard[data-cid="' + cardId + '"]');
     if (!el) return;
     _w._fl = _w._fl || {};
-    if (_w._fl[cardId] && Date.now() - _w._fl[cardId] < 2200 && el.classList.contains('wcard-flash')) return;   // zaten parlıyor: yeniden başlatma
+    if (_w._fl[cardId] && Date.now() - _w._fl[cardId] < 850 && el.classList.contains('wcard-flash')) return;   // zaten parlıyor: yeniden başlatma
     _w._fl[cardId] = Date.now();
     el.style.animationDelay = '';
     el.classList.remove('wcard-flash'); void el.offsetWidth;
     el.classList.add('wcard-flash');
-    clearTimeout(el._flT); el._flT = setTimeout(() => el.classList.remove('wcard-flash'), 2300);
+    clearTimeout(el._flT); el._flT = setTimeout(() => el.classList.remove('wcard-flash'), 900);
   } catch (e) {}
 }
 function _wTriggerCard(card) {
@@ -2402,7 +2408,7 @@ function _wCardItemHTML(card) {
   const thumb = card.thumb ? `<img class="wcard-thumb" src="${_escAttr(card.thumb)}" alt="">` : '';
   const solIkon = `<span class="wcard-typeic t-${card.card_type || 'info'}">${W_IC[card.card_type] || W_IC.info}</span>`;
   const flGecen = _w._fl && _w._fl[card.id] ? Date.now() - _w._fl[card.id] : 1e9;   // liste yenilense de parlama kaldığı yerden sürsün
-  const flH = flGecen < 2200 ? ` wcard-flash" style="animation-delay:-${flGecen}ms` : '';
+  const flH = flGecen < 850 ? ` wcard-flash" style="animation-delay:-${flGecen}ms` : '';
   return `<div class="wcard${_w.activeCard&&_w.activeCard.id===card.id?' active':''}${flH}" data-cid="${card.id}" data-t="${card.t_sec}" onclick="_wOpenCard(${card.id})">
     ${solIkon}
     <div class="wcard-mid"><div class="wcard-ru">${_escHtml(ana)}</div>
