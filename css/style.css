@@ -4051,12 +4051,15 @@ body.yp-aktif #page-admin .profile-empty, body.yp-aktif #page-admin .admin-loadi
 }
 .ys-kisi-a { color: inherit; text-decoration: none; } .ys-kisi-a:hover { color: #b0862c; text-decoration: underline; }
 
-/* ============ Yönetim · arka katman + daraltılabilir sol menü (v172) ============ */
-body.yp-aktif.admin-acik { background: #0d1b2a; }
+/* ============ Yönetim · arka katman + daraltılabilir sol menü (v173) ============ */
 body.yp-aktif.admin-acik.yp-dar { --yp-yan: 68px; }
-body.yp-aktif #page-admin .admin-wrap { margin: var(--yp-ust) 0 0 var(--yp-yan); padding: 26px 28px 48px; background: var(--yp-zemin, #f6f2ea); border-radius: 22px 0 0 0; min-height: calc(100vh - var(--yp-ust)); box-sizing: border-box; transition: margin-left .2s ease; }
+/* Sayfa içeriği, site zemininin önünde köşeleri yuvarlatılmış ayrı bir katmanda durur */
+body.yp-aktif #page-admin .admin-wrap { margin: calc(var(--yp-ust) + 20px) 20px 20px calc(var(--yp-yan) + 20px); padding: 26px 28px 40px; background: #fbf8f2; border: 1px solid #ebe2cf; border-radius: 22px; box-shadow: 0 1px 2px rgba(13,27,42,.04), 0 12px 32px -18px rgba(13,27,42,.18); min-height: calc(100vh - var(--yp-ust) - 40px); box-sizing: border-box; transition: margin-left .2s ease; }
 body.yp-aktif.admin-acik #yp-yan { transition: width .2s ease; }
 body.yp-aktif.admin-acik #yp-ust { transition: left .2s ease; }
+/* Sol menüde seçili sayfa: altın çerçeve (taslaktaki gibi) */
+body.yp-aktif #yp-yan .yp-it.active { background: rgba(201,168,76,.10); color: #fff; font-weight: 600; box-shadow: inset 0 0 0 1.5px #c9a84c, 0 0 14px -2px rgba(201,168,76,.45); }
+body.yp-aktif #yp-yan .yp-it.active::before { display: none; }
 .yp-logo-k { display: flex; align-items: center; height: var(--yp-ust); border-bottom: 1px solid rgba(255,255,255,.06); flex-shrink: 0; padding-right: 10px; }
 .yp-logo-k .yp-logo { flex: 1; min-width: 0; height: 100%; border-bottom: 0; padding-right: 6px; }
 .yp-logo > div { min-width: 0; white-space: nowrap; overflow: hidden; }
@@ -4071,7 +4074,6 @@ body.yp-aktif.yp-dar #yp-yan .yp-grup-b { display: none; }
 body.yp-aktif.yp-dar #yp-yan .yp-grup.katli .yp-grup-ic { display: grid; }
 body.yp-aktif.yp-dar #yp-yan .yp-it { justify-content: center; padding: 9px 0; }
 body.yp-aktif.yp-dar #yp-yan .yp-it span { display: none; }
-body.yp-aktif.yp-dar #yp-yan .yp-it.active::before { left: -10px; }
 body.yp-aktif.yp-dar #yp-yan .yp-rozet.gor { position: absolute; top: 4px; right: 6px; min-width: 8px; width: 8px; height: 8px; padding: 0; font-size: 0; }
 @media (max-width: 960px) {
   body.yp-aktif.admin-acik.yp-dar { --yp-yan: 0px; }
@@ -4082,7 +4084,7 @@ body.yp-aktif.yp-dar #yp-yan .yp-rozet.gor { position: absolute; top: 4px; right
   body.yp-aktif.yp-dar #yp-yan .yp-grup { border-top: 0; padding-top: 0; margin-top: 14px; }
   body.yp-aktif.yp-dar #yp-yan .yp-rozet.gor { position: static; width: auto; min-width: 18px; height: 18px; padding: 0 5px; font-size: .66rem; }
   body.yp-aktif.yp-dar #yp-yan .yp-it { justify-content: flex-start; padding: 8px 11px; }
-  body.yp-aktif #page-admin .admin-wrap { padding: 18px 16px 40px; border-radius: 18px 18px 0 0; }
+  body.yp-aktif #page-admin .admin-wrap { margin: calc(var(--yp-ust) + 10px) 8px 8px; padding: 18px 14px 32px; border-radius: 18px; min-height: calc(100vh - var(--yp-ust) - 18px); }
 }
 
 /* ============ Yönetim · Kullanıcı yönetimi sayfaları (v172) ============ */
@@ -4121,8 +4123,8 @@ tr.acik > td { background: #fcf8ef !important; }
 .ys-sekme-cubuk { display: flex; gap: 4px; flex-wrap: wrap; }
 .ys-sekme-cubuk button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: 0; border-radius: 10px; background: none; color: #5b6472; font: 600 .86rem 'Inter', sans-serif; cursor: pointer; }
 .ys-sekme-cubuk button:hover { background: #f6f1e6; color: #0d1b2a; }
-.ys-sekme-cubuk button.aktif { background: #0d1b2a; color: #fff; }
-.ys-sekme-cubuk button.aktif .yp-svg { color: #c9a84c; }
+.ys-sekme-cubuk button.aktif { background: #fdf6e3; color: #0d1b2a; box-shadow: inset 0 0 0 1.5px #c9a84c; }
+.ys-sekme-cubuk button.aktif .yp-svg { color: #b0862c; }
 .ys-sekme-cubuk button i { font-style: normal; font-size: .7rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: rgba(201,168,76,.2); color: inherit; }
 .ys-ic-bas { padding: 16px 18px 0; }
 /* Eşleştirme */
@@ -4180,3 +4182,13 @@ tr.acik > td { background: #fcf8ef !important; }
   .ys-esle-ok { transform: rotate(90deg); justify-self: center; }
 }
 body.yp-aktif.admin-acik > .verify-banner, body.yp-aktif.admin-acik > #site-announce { display: none !important; }
+.ys-modal.genis { max-width: 620px; max-height: calc(100vh - 40px); overflow-y: auto; }
+.ys-iki { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ys-secenek { display: grid; gap: 8px; }
+.ys-secenek label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid #ece4d3; border-radius: 11px; cursor: pointer; }
+.ys-secenek label:has(input:checked) { border-color: #c9a84c; background: #fdf8ec; }
+.ys-secenek input { margin-top: 3px; accent-color: #0d1b2a; }
+.ys-secenek b { display: block; font-size: .86rem; color: #0d1b2a; }
+.ys-secenek small { display: block; font-size: .76rem; color: #6b7280; margin-top: 2px; }
+.ys-alan > .ys-girdi + .ys-girdi, .ys-alan .ys-secenek + .ys-girdi { margin-top: 8px; }
+@media (max-width: 600px) { .ys-iki { grid-template-columns: 1fr; } }
