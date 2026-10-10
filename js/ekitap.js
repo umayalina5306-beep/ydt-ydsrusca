@@ -63,7 +63,9 @@ function ekWrapWords(text) {
 
 /* ---------- Satır içi biçimlendirme ----------
    ctx.act: etkinlik içindeysek boşluklar giriş kutusu olur */
-const EK_INLINE = /\{\{([^}]+)\}\}|\{(мн|м|ж|с)(\*?)(?:=([^:{}]+))?:([^{}]+)\}|\{=([^:{}]+):([^{}]+)\}|\[\[([^\]]+)\]\]|\*\*(.+?)\*\*|==(.+?)==|\*([^*\s][^*]*?)\*/g;
+const EK_INLINE = /\{\{([^}]+)\}\}|\{(мн|м|ж|с)(\*?)(?:=([^:{}]+))?:([^{}]+)\}|\{=([^:{}]+):([^{}]+)\}|\[\[([^\]]+)\]\]|\*\*(.+?)\*\*|==(.+?)==|\*([^*\s][^*]*?)\*|__([^_\s][^_]*?)__|~~([^~\s][^~]*?)~~|\{(renk|zemin|boyut)=([^:{}]+):((?:[^{}]|\{[^{}]*\})+)\}/g;
+// Görsel düzenleyicinin ek biçimleri: __altı çizili__, ~~üstü çizili~~, {renk=#hex:metin}, {zemin=#hex:metin}, {boyut=kucuk|buyuk|cokbuyuk:metin}
+const EK_RENK_OK = v => /^#[0-9a-f]{3,8}$/i.test(String(v).trim()) ? String(v).trim() : null;
 function ekInline(str, ctx) {
   str = String(str || '');
   // Her çağrıda ayrı regex örneği: iç içe (özyinelemeli) çağrılar sayacı bozmasın
@@ -98,6 +100,14 @@ function ekInline(str, ctx) {
       out += '<mark class="ek-hl">' + ekInline(m[10], ctx) + '</mark>';
     } else if (m[11] !== undefined) {
       out += '<i>' + ekInline(m[11], ctx) + '</i>';
+    } else if (m[12] !== undefined) {
+      out += '<u>' + ekInline(m[12], ctx) + '</u>';
+    } else if (m[13] !== undefined) {
+      out += '<s>' + ekInline(m[13], ctx) + '</s>';
+    } else if (m[14] !== undefined) {
+      const tur = m[14], deger = m[15].trim(), ic = ekInline(m[16], ctx);
+      if (tur === 'boyut') out += /^(kucuk|buyuk|cokbuyuk)$/.test(deger) ? `<span class="ek-boy-${deger}">${ic}</span>` : ic;
+      else { const r = EK_RENK_OK(deger); out += r ? (tur === 'renk' ? `<span class="ek-renk" style="color:${r}">${ic}</span>` : `<mark class="ek-zemin" style="background:${r}">${ic}</mark>`) : ic; }
     }
   }
   out += ekWrapWords(str.slice(last));
