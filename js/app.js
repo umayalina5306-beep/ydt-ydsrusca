@@ -4052,8 +4052,9 @@ async function sendPasswordReset() {
   if (!email) { toast('E-posta bulunamadı.'); return; }
   const _tk = (typeof captchaPrompt === 'function') ? await captchaPrompt() : null;
   if (typeof TURNSTILE_SITE_KEY !== 'undefined' && TURNSTILE_SITE_KEY && !_tk) { toast('Doğrulama tamamlanmadı, işlem iptal edildi.'); return; }
-  try { const { error } = await sb.auth.resetPasswordForEmail(email, Object.assign({ redirectTo: location.origin + location.pathname }, _tk ? { captchaToken: _tk } : {})); if (error) throw error; toast('Şifre yenileme bağlantısı ve kodu e-postana gönderildi.'); }
-  catch (e) { toast('Gönderilemedi. Lütfen tekrar dene.'); }
+  const r = (typeof sifirlaFonksiyon === 'function') ? await sifirlaFonksiyon({ islem: 'gonder', email, turnstile: _tk || undefined }) : { ok: false };
+  if (r.ok) toast('Şifre yenileme bağlantısı e-postana gönderildi. Bağlantıyı açınca gösterilen kodla yeni şifreni belirleyebilirsin.');
+  else toast(r.hata || 'Gönderilemedi. Lütfen tekrar dene.');
 }
 async function changeEmail() {
   const el = document.getElementById('set-newemail'); const em = ((el && el.value) || '').trim();
@@ -5817,11 +5818,9 @@ async function adminUserResetPw(email) {
   if (!(await uiConfirm(email + ' adresine şifre sıfırlama bağlantısı gönderilsin mi?', 'Şifre Sıfırlama'))) return;
   const tk = (typeof captchaPrompt === 'function') ? await captchaPrompt() : null;
   if (typeof TURNSTILE_SITE_KEY !== 'undefined' && TURNSTILE_SITE_KEY && !tk) { toast('Doğrulama tamamlanmadı.'); return; }
-  try {
-    const { error } = await sb.auth.resetPasswordForEmail(email, Object.assign({ redirectTo: location.origin + location.pathname }, tk ? { captchaToken: tk } : {}));
-    if (error) throw error;
-    toast('Sıfırlama maili gönderildi: ' + email);
-  } catch (e) { uiAlert('Gönderilemedi. (Kısa sürede çok istek atıldıysa biraz bekle.)'); }
+  const r = (typeof sifirlaFonksiyon === 'function') ? await sifirlaFonksiyon({ islem: 'gonder', email: String(email).toLowerCase(), turnstile: tk || undefined }) : { ok: false };
+  if (r.ok) toast('Şifre yenileme bağlantısı gönderildi: ' + email);
+  else uiAlert(r.hata || 'Gönderilemedi. (Kısa sürede çok istek atıldıysa biraz bekle.)');
 }
 async function adminUserChangeEmail(userId, oldEmail) {
   const yeni = await uiPrompt('Yeni e-posta adresi:', { title: 'E-posta Değiştir', placeholder: oldEmail });
