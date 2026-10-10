@@ -49,9 +49,9 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=164">
-<link rel="stylesheet" href="css/ekitap.css?v=164">
-<link rel="stylesheet" href="css/video.css?v=164">
+<link rel="stylesheet" href="css/style.css?v=165">
+<link rel="stylesheet" href="css/ekitap.css?v=165">
+<link rel="stylesheet" href="css/video.css?v=165">
 <script>try{if(localStorage.getItem('ydt_prof_ui'))document.documentElement.classList.add('oturum-var');}catch(e){}</script>
 <style>html.oturum-var #nav-auth-buttons{display:none!important}</style>
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
@@ -76,7 +76,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=164" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=165" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -1983,8 +1983,8 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
           <p class="profile-sub">Site genelini etkileyen ayarlar.</p>
           <div class="admin-notif-card">
             <h3 class="an-h3">Kayıt: izin verilen e-posta uzantıları</h3>
-            <p class="pq-hint">Yeni üyeler yalnızca bu uzantılardaki adreslerle (onay koduyla) kayıt olabilir; Google ile girişte de geçerlidir. Her satıra bir uzantı yaz. "edu.tr" yazmak tüm üniversite adreslerini (ör. ogrenci.hacettepe.edu.tr) kapsar. Liste boş bırakılırsa kısıtlama kalkar. Mevcut üyeler etkilenmez.</p>
-            <textarea id="set-mail-uzanti" class="an-textarea" rows="7" placeholder="gmail.com&#10;outlook.com&#10;edu.tr"></textarea>
+            <p class="pq-hint">Yeni üyeler yalnızca bu uzantılardaki adreslerle (onay koduyla) kayıt olabilir; Google ile girişte de geçerlidir. Her satıra bir uzantı yaz (ör. gmail.com). Bir uzantı alt alan adlarını da kapsar; ör. "edu.tr" yazılırsa tüm üniversite adresleri kabul edilir. Liste boş bırakılırsa kısıtlama kalkar. Mevcut üyeler etkilenmez.</p>
+            <textarea id="set-mail-uzanti" class="an-textarea" rows="7" placeholder="gmail.com&#10;hotmail.com&#10;outlook.com"></textarea>
             <div class="mail-actions" style="margin-top:8px;"><button class="set-btn" onclick="adminSaveMailDomains()">Kaydet</button></div>
           </div>
           <div class="admin-notif-card">
@@ -2106,14 +2106,14 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
         <div class="pw-wrap"><input id="reg-pass" class="form-input" type="password" placeholder="En az 6 karakter" autocomplete="new-password" oninput="pwStrengthPaint(this.value, 'reg-bar', 'reg-bar-t')"><button type="button" class="pw-eye" onclick="pwToggle(this, 'reg-pass')" title="Şifreyi göster/gizle"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
         <div class="pwbar"><div id="reg-bar" class="pwbar-fill"></div></div><div id="reg-bar-t" class="pwbar-t"></div>
       </div>
-      <p class="kayit-not">Kayıt için e-posta adresine bir onay kodu gönderilir. Gmail, Outlook, Hotmail, Yandex, iCloud gibi yaygın adresler ve üniversite (edu.tr) adresleri kabul edilir.</p>
+      <p class="kayit-not">Kayıt için e-posta adresine bir onay kodu gönderilir. Gmail, Hotmail, Outlook, Yahoo, Yandex ve iCloud adresleri kabul edilir.</p>
       <button class="btn-auth" id="reg-btn" onclick="authRegister()">Onay kodu gönder</button>
       <div class="auth-divider">veya</div>
       <button class="btn-google" onclick="authGoogle()"><span class="g-icon">G</span> Google ile devam et</button>
       <p style="text-align:center; font-size:0.82rem; color:var(--gray); margin-top:10px;">Hesabın var mı? <a href="#" onclick="switchTab('login')" style="color:var(--red); font-weight:600;">Giriş yap</a></p>
     </div>
     <div id="auth-form-kod" style="display:none;">
-      <p class="kod-bilgi"><b id="kod-email"></b> adresine 6 haneli bir onay kodu gönderdik. Kod 10 dakika geçerli. Gelen kutunda yoksa spam/gereksiz klasörüne de bak.</p>
+      <p class="kod-bilgi"><b id="kod-email"></b> adresine 6 haneli bir onay kodu gönderdik. Kod <span id="kod-sure">30</span> dakika geçerli. Gelen kutunda yoksa spam/gereksiz klasörüne de bak.</p>
       <div class="form-group">
         <label class="form-label" for="kod-in">Onay kodu</label>
         <input id="kod-in" class="form-input kod-in" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)" onkeydown="if(event.key==='Enter')kayitKodDogrula()">
@@ -2274,15 +2274,15 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=164"></script>
-<script defer src="js/auth.js?v=164"></script>
-<script defer src="js/admin.js?v=164"></script>
-<script defer src="js/profile.js?v=164"></script>
-<script defer src="js/extras.js?v=164"></script>
-<script defer src="js/app.js?v=164"></script>
-<script defer src="js/ekitap.js?v=164"></script>
-<script defer src="js/video.js?v=164"></script>
-<script defer src="js/arayuz.js?v=164"></script>
+<script defer src="js/supabase-config.js?v=165"></script>
+<script defer src="js/auth.js?v=165"></script>
+<script defer src="js/admin.js?v=165"></script>
+<script defer src="js/profile.js?v=165"></script>
+<script defer src="js/extras.js?v=165"></script>
+<script defer src="js/app.js?v=165"></script>
+<script defer src="js/ekitap.js?v=165"></script>
+<script defer src="js/video.js?v=165"></script>
+<script defer src="js/arayuz.js?v=165"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
