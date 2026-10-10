@@ -1846,12 +1846,13 @@ async function _wPdfRender() {
     await page.render({ canvasContext: ctx, viewport }).promise;
   }
 }
+let _wPan = null;   // sürüklenen PDF alanı (pencere dinleyicileri bir kez eklenir)
+window.addEventListener('mousemove', e => { if (!_wPan) return; _wPan.sc.scrollLeft = _wPan.sl - (e.clientX - _wPan.sx); _wPan.sc.scrollTop = _wPan.st - (e.clientY - _wPan.sy); });
+window.addEventListener('mouseup', () => { if (_wPan) { _wPan.sc.classList.remove('grabbing'); _wPan = null; } });
 function _wPdfSetupPan() {
-  const sc = document.getElementById('wpdf-scroll'); if (!sc) return;
-  let down = false, sx = 0, sy = 0, sl = 0, st = 0;
-  sc.addEventListener('mousedown', e => { down = true; sx = e.clientX; sy = e.clientY; sl = sc.scrollLeft; st = sc.scrollTop; sc.classList.add('grabbing'); });
-  window.addEventListener('mousemove', e => { if (!down) return; sc.scrollLeft = sl - (e.clientX - sx); sc.scrollTop = st - (e.clientY - sy); });
-  window.addEventListener('mouseup', () => { down = false; sc.classList.remove('grabbing'); });
+  const sc = document.getElementById('wpdf-scroll'); if (!sc || sc.dataset.panBagli) return;
+  sc.dataset.panBagli = '1';
+  sc.addEventListener('mousedown', e => { _wPan = { sc, sx: e.clientX, sy: e.clientY, sl: sc.scrollLeft, st: sc.scrollTop }; sc.classList.add('grabbing'); });
   // Ctrl+tekerlek ile zoom
   sc.addEventListener('wheel', e => {
     if (e.ctrlKey) { e.preventDefault(); _wPdfZoom(e.deltaY < 0 ? 0.15 : -0.15); }
@@ -2634,7 +2635,8 @@ function _wStartLog() {
   sb.from('video_views').insert({
     user_id: currentUser.id, video_id: _w.video.id
   }).select('id').single().then(r => { if (r.data) _w.viewId = r.data.id; }, () => {});
-  setInterval(_wSaveProgress, 30000);
+  if (_w.kayitT) clearInterval(_w.kayitT);
+  _w.kayitT = setInterval(_wSaveProgress, 30000);
 }
 async function _wSaveProgress(bitti) {
   try {
@@ -2719,6 +2721,7 @@ function _wCleanup() {
   // YouTube player'ı düzgün yok et (sonraki videoda çakışma/hata olmasın)
   try { if (_w.kind === 'yt' && _w.player && _w.player.destroy) _w.player.destroy(); } catch (e) {}
   try { if (_w.timer) clearInterval(_w.timer); } catch (e) {}
+  try { if (_w.kayitT) { clearInterval(_w.kayitT); _w.kayitT = null; } } catch (e) {}
   try { _wPause(); } catch (e) {}
   const box = document.getElementById('watch-player'); if (box) box.innerHTML = '';
   const ov = document.getElementById('watch-card-overlay'); if (ov) { ov.style.display='none'; ov.innerHTML=''; }
@@ -2891,6 +2894,7 @@ function closeAuth(){
 function switchTab(tab){
   document.getElementById('auth-form-login').style.display=tab==='login'?'block':'none';
   document.getElementById('auth-form-register').style.display=tab==='register'?'block':'none';
+  const _kf=document.getElementById('auth-form-kod'); if(_kf) _kf.style.display='none';
   document.getElementById('tab-login').classList.toggle('active',tab==='login');
   document.getElementById('tab-register').classList.toggle('active',tab==='register');
 }
@@ -4193,6 +4197,7 @@ function toggleNotifPanel(ev) {
   if (p.style.display === 'block') { p.style.display = 'none'; return; }
   p.style.display = 'block';
   if (typeof loadNotifications === 'function') loadNotifications(); else renderNotifPanel();
+  document.removeEventListener('click', _notifOutside);
   setTimeout(() => document.addEventListener('click', _notifOutside), 0);
 }
 function _notifOutside(e) {
@@ -5253,10 +5258,21 @@ async function adminLoadErrors(showAll) {
     box.innerHTML = foot + data.map(e => {
       const d = new Date(e.created_at);
       return `<div class="err-row"><div class="err-msg">${_escHtml(e.message)} <button class="mail-act red err-del" onclick="adminErrDelete('${e.id}')">🗑️</button></div>
-        <div class="err-meta">📍 ${_escHtml(e.source || '—')}${e.url?' · '+_escHtml(e.url):''} · 👤 ${_escHtml((e.user_id || 'anonim').slice(0,8))} · ${d.toLocaleString('tr-TR')}</div>
+        <div class="err-meta">📍 ${_escHtml(e.source || '—')}${e.url?' · '+_escHtml(e.url):''} · 👤 ${_errKim(e.user_id)} · ${d.toLocaleString('tr-TR')}</div>
         ${e.detail?`<div class="err-meta" style="opacity:.7;">🔎 ${_escHtml(e.detail)}</div>`:''}</div>`;
     }).join('');
   } catch (e) { box.innerHTML = '<div class="profile-empty">Hata kayıtları alınamadı (error_log.sql çalıştırıldı mı?).</div>'; }
+}
+/* Hata kaydındaki kullanıcıyı adıyla göster (yönetici listesinden) */
+function _errKim(id) {
+  if (!id) return 'giriş yapmamış ziyaretçi';
+  const u = (typeof _adminUsers !== 'undefined' ? _adminUsers : []).find(x => x.id === id);
+  if (!u) return _escHtml(String(id).slice(0, 8));
+  return `<a href="javascript:void(0)" onclick="adminErrKullanici('${_escAttr(u.email || '')}')">${_escHtml(u.display_name || (u.email || '').split('@')[0])}</a> (${_escHtml(u.email || '')})`;
+}
+function adminErrKullanici(email) {
+  adminNav('users');
+  setTimeout(() => { const s = document.getElementById('admin-search'); if (s) { s.value = email; if (typeof filterAdminUsers === 'function') filterAdminUsers(email); } }, 100);
 }
 async function adminClearErrors() {
   if (!(await uiConfirm('Tüm hata kayıtları silinsin mi?', 'Kayıtları Temizle', { danger: true }))) return;
@@ -5888,6 +5904,19 @@ async function adminSettingsInit() {
   const map = await loadSiteSettings();
   const inp = document.getElementById('set-announce'); if (inp) inp.value = map['announcement'] || '';
   const mc = document.getElementById('set-maint'); if (mc) mc.checked = (map['maintenance'] || '') === '1';
+  const mu = document.getElementById('set-mail-uzanti'); if (mu) mu.value = map['izinli_mail_uzantilari'] || '';
+}
+async function adminSaveMailDomains() {
+  const el = document.getElementById('set-mail-uzanti'); if (!el) return;
+  const liste = [...new Set(String(el.value || '').split(/[\s,;]+/).map(x => x.trim().toLowerCase().replace(/^@/, '')).filter(Boolean))];
+  const hatali = liste.filter(x => !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(x));
+  if (hatali.length) { uiAlert('Şu satırlar uzantı gibi görünmüyor: ' + hatali.join(', ')); return; }
+  if (!liste.length && !(await uiConfirm('Liste boş kaydedilirse her uzantıyla kayıt olunabilir. Devam edilsin mi?', 'Kısıtlamayı kaldır'))) return;
+  try {
+    const { error } = await sb.from('site_settings').upsert({ key: 'izinli_mail_uzantilari', value: liste.join('\n') }, { onConflict: 'key' });
+    if (error) throw error;
+    el.value = liste.join('\n'); toast('İzin verilen uzantılar kaydedildi.');
+  } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
 }
 async function adminSaveAnnouncement() {
   const inp = document.getElementById('set-announce'); if (!inp) return;
