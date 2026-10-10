@@ -231,8 +231,7 @@ function authMsg(text, ok) {
    1) Bilgiler + robot doğrulaması → sunucu 6 haneli kodu e-postaya gönderir (gönderilemezse kayıt yok)
    2) Kod doğru girilirse hesap sunucuda açılır ve kullanıcı otomatik giriş yapar. */
 const KAYIT = { ad: '', email: '', sifre: '', sayac: null, uzantilar: null };
-const KAYIT_VARSAYILAN = ['gmail.com', 'googlemail.com', 'hotmail.com', 'hotmail.com.tr', 'outlook.com', 'outlook.com.tr', 'live.com', 'msn.com', 'icloud.com', 'me.com',
-  'yahoo.com', 'yahoo.com.tr', 'yandex.com', 'yandex.com.tr', 'yandex.ru', 'mail.ru', 'proton.me', 'protonmail.com', 'edu.tr'];
+const KAYIT_VARSAYILAN = ['gmail.com', 'googlemail.com', 'hotmail.com', 'hotmail.com.tr', 'outlook.com', 'outlook.com.tr', 'live.com', 'msn.com', 'icloud.com', 'me.com', 'yahoo.com', 'yahoo.com.tr', 'yandex.com', 'yandex.com.tr', 'yandex.ru'];
 async function kayitUzantilar() {
   if (KAYIT.uzantilar) return KAYIT.uzantilar;
   try {
@@ -277,6 +276,7 @@ async function kayitKodGonder(tekrar) {
     return false;
   }
   authMsg('');
+  const sd = document.getElementById('kod-sure'); if (sd && r.sure_dk) sd.textContent = r.sure_dk;
   kayitSayac(r.tekrar_sn || 60);
   return true;
 }
@@ -290,7 +290,7 @@ async function authRegister() {
   if (pass.length < 6) { authMsg("Şifre en az 6 karakter olmalı."); return; }
   const alan = email.split('@')[1], liste = await kayitUzantilar();
   if (!liste.some(u => alan === u || alan.endsWith('.' + u))) {
-    authMsg("Bu e-posta uzantısıyla kayıt olunamıyor. Gmail, Outlook, Hotmail, Yandex, iCloud gibi yaygın bir adres ya da üniversite (edu.tr) adresi kullan.");
+    authMsg("Bu e-posta adresiyle kayıt olunamıyor. Lütfen Gmail, Hotmail, Outlook, Yahoo, Yandex ya da iCloud adresi kullan.");
     return;
   }
   const btn = document.getElementById('reg-btn'); if (btn) btn.disabled = true;
@@ -337,7 +337,7 @@ function kayitGeri() { clearInterval(KAYIT.sayac); kayitAdim('form'); authMsg(''
     if (!d) return;
     history.replaceState(null, '', location.pathname);
     const m = /database error saving new user/i.test(d)
-      ? 'Bu e-posta adresiyle kayıt olunamıyor. Lütfen izin verilen uzantılardan biriyle (Gmail, Outlook, Hotmail, Yandex, iCloud, edu.tr vb.) kayıt ol.'
+      ? 'Bu e-posta adresiyle kayıt olunamıyor. Lütfen Gmail, Hotmail, Outlook, Yahoo, Yandex ya da iCloud adresiyle kayıt ol.'
       : 'Giriş tamamlanamadı: ' + d;
     setTimeout(() => { if (typeof uiAlert === 'function') uiAlert(m, 'Giriş'); }, 800);
   } catch (e) {}
