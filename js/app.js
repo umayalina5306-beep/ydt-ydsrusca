@@ -2895,6 +2895,7 @@ function switchTab(tab){
   document.getElementById('auth-form-login').style.display=tab==='login'?'block':'none';
   document.getElementById('auth-form-register').style.display=tab==='register'?'block':'none';
   const _kf=document.getElementById('auth-form-kod'); if(_kf) _kf.style.display='none';
+  const _sf=document.getElementById('auth-form-sifirla'); if(_sf) _sf.style.display='none';
   document.getElementById('tab-login').classList.toggle('active',tab==='login');
   document.getElementById('tab-register').classList.toggle('active',tab==='register');
 }
@@ -3984,9 +3985,12 @@ function _settingsBox(html) { return html; }
 function guvenlikHTML() {
   return `<div class="profile-panel set-panel">
     <h3 class="set-h3">🔑 Şifre Değiştir</h3>
+    <input id="set-oldpass" type="password" class="set-input" placeholder="Mevcut şifren" autocomplete="current-password">
     <input id="set-newpass" type="password" class="set-input" placeholder="Yeni şifre (en az 6 karakter)" autocomplete="new-password">
     <input id="set-newpass2" type="password" class="set-input" placeholder="Yeni şifre (tekrar)" autocomplete="new-password">
-    <button class="set-btn" onclick="changePassword()">Şifreyi Güncelle</button>
+    <div id="set-pw-msg" style="font-size:.84rem; min-height:18px; margin:4px 0 8px;"></div>
+    <button class="set-btn" onclick="changePassword('set')">Şifreyi Güncelle</button>
+    <div class="set-note">Mevcut şifreni hatırlamıyorsan çıkış yapıp giriş ekranındaki "Şifremi unuttum" ile e-postana gelen kodla yeni şifre belirleyebilirsin.</div>
   </div>
   <div class="profile-panel set-panel">
     <h3 class="set-h3">📧 E-posta Değiştir</h3>
@@ -4043,20 +4047,12 @@ function uyelikHTML() {
   </div>`;
 }
 
-async function changePassword() {
-  const a = document.getElementById('set-newpass'), b = document.getElementById('set-newpass2');
-  const p1 = (a && a.value) || '', p2 = (b && b.value) || '';
-  if (p1.length < 6) { toast('Şifre en az 6 karakter olmalı.'); return; }
-  if (p1 !== p2) { toast('Şifreler eşleşmiyor.'); return; }
-  try { const { error } = await sb.auth.updateUser({ password: p1 }); if (error) throw error; toast('Şifren güncellendi.'); if (a) a.value = ''; if (b) b.value = ''; }
-  catch (e) { toast('Şifre güncellenemedi. Lütfen tekrar dene.'); }
-}
 async function sendPasswordReset() {
   const email = (currentUser && currentUser.email) || '';
   if (!email) { toast('E-posta bulunamadı.'); return; }
   const _tk = (typeof captchaPrompt === 'function') ? await captchaPrompt() : null;
   if (typeof TURNSTILE_SITE_KEY !== 'undefined' && TURNSTILE_SITE_KEY && !_tk) { toast('Doğrulama tamamlanmadı, işlem iptal edildi.'); return; }
-  try { const { error } = await sb.auth.resetPasswordForEmail(email, Object.assign({ redirectTo: location.origin + location.pathname }, _tk ? { captchaToken: _tk } : {})); if (error) throw error; toast('Sıfırlama bağlantısı e-postana gönderildi.'); }
+  try { const { error } = await sb.auth.resetPasswordForEmail(email, Object.assign({ redirectTo: location.origin + location.pathname }, _tk ? { captchaToken: _tk } : {})); if (error) throw error; toast('Şifre yenileme bağlantısı ve kodu e-postana gönderildi.'); }
   catch (e) { toast('Gönderilemedi. Lütfen tekrar dene.'); }
 }
 async function changeEmail() {
@@ -8055,11 +8051,12 @@ function pwStrengthPaint(val, barId, txtId) {
   bar.style.background = r.color;
   if (txt) { txt.textContent = 'Şifre gücü: ' + r.label; txt.style.color = r.color; }
 }
-async function changePassword() {
-  const eski = (document.getElementById('cpw-old') || {}).value || '';
-  const y1 = (document.getElementById('cpw-new') || {}).value || '';
-  const y2 = (document.getElementById('cpw-new2') || {}).value || '';
-  const msg = document.getElementById('cpw-msg');
+async function changePassword(k) {
+  const I = k === 'set' ? { old: 'set-oldpass', y1: 'set-newpass', y2: 'set-newpass2', msg: 'set-pw-msg' } : { old: 'cpw-old', y1: 'cpw-new', y2: 'cpw-new2', msg: 'cpw-msg' };
+  const eski = (document.getElementById(I.old) || {}).value || '';
+  const y1 = (document.getElementById(I.y1) || {}).value || '';
+  const y2 = (document.getElementById(I.y2) || {}).value || '';
+  const msg = document.getElementById(I.msg);
   const de = (t, ok) => { if (msg) { msg.textContent = t; msg.style.color = ok ? '#16a34a' : '#b91c1c'; } };
   if (!currentUser) { de('Önce giriş yapmalısın.'); return; }
   if (!eski) { de('Mevcut şifreni gir.'); return; }
@@ -8067,14 +8064,17 @@ async function changePassword() {
   if (pwStrength(y1).sc < 2) { de('Yeni şifre çok zayıf — harf + rakam karışımı kullan.'); return; }
   if (y1 !== y2) { de('Yeni şifreler birbirini tutmuyor.'); return; }
   if (y1 === eski) { de('Yeni şifre eskisiyle aynı olamaz.'); return; }
+  let _tk = (typeof turnstileToken === 'function') ? turnstileToken() : null;
+  if (typeof TURNSTILE_SITE_KEY !== 'undefined' && TURNSTILE_SITE_KEY && !_tk && typeof captchaPrompt === 'function') _tk = await captchaPrompt();
+  if (typeof TURNSTILE_SITE_KEY !== 'undefined' && TURNSTILE_SITE_KEY && !_tk) { de('Doğrulama tamamlanmadı.'); return; }
   de('Mevcut şifre doğrulanıyor...', true);
   try {
-    const { error: eDogru } = await sb.auth.signInWithPassword({ email: currentUser.email, password: eski });
+    const { error: eDogru } = await sb.auth.signInWithPassword({ email: currentUser.email, password: eski, options: _tk ? { captchaToken: _tk } : undefined });
     if (eDogru) { de('Mevcut şifre yanlış.'); return; }
     const { error } = await sb.auth.updateUser({ password: y1 });
     if (error) throw error;
     de('✅ Şifren güncellendi.', true);
-    ['cpw-old', 'cpw-new', 'cpw-new2'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    [I.old, I.y1, I.y2].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     pwStrengthPaint('', 'cpw-bar', 'cpw-bar-t');
     toast('🔒 Şifre güncellendi.');
   } catch (e) { de('Güncellenemedi: ' + ((e && e.message) || e)); }
