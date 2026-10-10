@@ -339,15 +339,14 @@ async function togglePremium(userId, currentPlan) {
     { g: 'Kullanıcı Yönetimi', k: 'kul', items: [['users', 'Kullanıcılar', 'kullanicilar'], ['assign', 'Öğretmen Atama', 'ogretmen'], ['kurumlar', 'Kurumlar', 'kurum']] },
     { g: 'İçerik Yönetimi', k: 'ic', items: [['icerikler', 'İçerik Listesi', 'liste'], ['icerik', 'Müfredat ve Konular', 'agac', 'konular'], ['icerik', 'E-Kitap Üniteleri', 'kitap', 'unite'],
       ['icerik', 'Çalışma Setleri', 'set', 'set'], ['icerik', 'Notlar ve Kartlar', 'not', 'ozet'], ['videos', 'Videolar', 'video'],
-      ['content', 'Kelimeler', 'kelime'], ['questions', 'Soru Havuzu', 'soru'], ['pquest', 'Paragraf Soruları', 'paragraf'], ['recs', 'Bloglar', 'blog'], ['makaleler', 'Makaleler', 'makale']] },
+      ['content', 'Kelimeler', 'kelime'], ['questions', 'Soru Havuzu', 'soru'], ['pquest', 'Paragraf Soruları', 'paragraf'], ['recs', 'Bloglar ve Makaleler', 'blog']] },
     { g: 'İletişim ve Destek', k: 'il', items: [['notify', 'Bildirim Gönder', 'bildirim'], ['support', 'Destek Talepleri', 'destek'], ['mail', 'Mail Kutusu', 'mail']] },
     { g: 'Site Yönetimi', k: 'site', items: [['visits', 'Ziyaret ve SEO', 'ziyaret'], ['settings', 'Site Ayarları', 'ayar'], ['backup', 'Yedekleme', 'yedek'], ['stafflog', 'İşlem Kayıtları', 'log'], ['errors', 'Hata Kayıtları', 'hata']] }
   ];
   const BASLIK = {   // sayfa başlıkları (görünümdeki h2/p yerine)
     overview: ['Genel Bakış', 'Platformun güncel durumu ve hızlı erişim.'],
     icerikler: ['İçerik Listesi', 'Tüm içerikler tek yerde: ara, filtrele, düzenle ya da yenisini ekle.'],
-    recs: ['Bloglar', 'Blog yazılarını ekle, düzenle ve yayınla.'],
-    makaleler: ['Makaleler', 'Rusça makale bölümü burada yönetilecek.']
+    recs: ['Bloglar ve Makaleler', 'Kendi blog yazılarını oluştur ya da güvenilir kaynaklardan makaleleri ekle.']
   };
   const ICTAB_AD = { konular: 'Müfredat ve Konular', unite: 'E-Kitap Üniteleri', set: 'Çalışma Setleri', ozet: 'Notlar ve Kartlar', kartlar: 'Notlar ve Kartlar' };
   const ICTAB_ALT = { konular: 'Modül, ünite, ders ve konu ağacını düzenle; konuları derslere bağla.', unite: 'E-kitap ünitelerini ekle, düzenle ve yayınla.', set: 'Gramer Çalışmaları setlerini ekle, sırala ve yayınla.', ozet: 'Konulara bağlı özet notları ve ünitelerdeki çalışma kartları.', kartlar: 'Konulara bağlı özet notları ve ünitelerdeki çalışma kartları.' };
@@ -452,6 +451,7 @@ async function togglePremium(userId, currentPlan) {
   function ypGit(v, alt) {
     ypMenuKapat(); ypKapatHepsi();
     if (v === 'icerik' && alt) { try { const icS = gl('IC'); if (icS && typeof icS === 'object' && 'tab' in icS) icS.tab = alt; } catch (e) {} }
+    if (v === 'makaleler') { v = 'recs'; window.__ysBlSekme = 'makale'; }
     if (typeof adminNav === 'function') adminNav(v);
     window.scrollTo({ top: 0 });
   }
@@ -2494,6 +2494,375 @@ async function togglePremium(userId, currentPlan) {
   };
   window.YS_AKS.mail = () => (MK.sekme === 'trash' ? '<button type="button" class="yp-btn kirmizi" onclick="adminEmptyTrash()">' + ic('cop', 16) + 'Çöpü boşalt</button>' : '') + '<button type="button" class="yp-btn" onclick="adminLoadMail()">' + ic('yenile', 16) + 'Yenile</button>';
 
+  /* ============================================================
+     KELİMELER (v175) — eski kaydetme/içe aktarma işlevleri aynen kullanılır
+     ============================================================ */
+  const KEL_TUR = [['all', 'Tümü', 'liste'], ['isim', 'İsim', 'not'], ['fiil', 'Fiil', 'kalem'], ['sıfat', 'Sıfat', 'yildiz'], ['zarf', 'Zarf', 'surgu'], ['diger', 'Diğer', 'nokta3']];
+  const KEL_SIRA = [['yeni', 'Eklenme tarihi (yeni)'], ['eski', 'Eklenme tarihi (eski)'], ['alfabe', 'Alfabetik (Rusça)'], ['seviye', 'Seviye']];
+  const kelAna = r => { const f = gl('_catAna'); return typeof f === 'function' ? f(r.cat) : String(r.cat || '').toLowerCase(); };
+  const kelEksik = r => { const a = kelAna(r); return (a === 'isim' || a === 'sıfat') ? !r.cinsiyet : a === 'fiil' ? !r.tip : a === 'edat' ? !r.padej : false; };
+  function kelimeKpi() {
+    const k = $('cw-stats'); if (!k) return;
+    const R = (gl('_cwRows') || []).filter(r => r.active !== false), T = R.length || 1;
+    const ay = R.filter(r => r.created_at && Date.now() - new Date(r.created_at).getTime() < 30 * GUN).length;
+    const yuzde = n => '<span class="ys-rozet kucuk">%' + Math.round(n / T * 100) + '</span>';
+    const a12 = R.filter(r => r.level === 'A1' || r.level === 'A2').length, pr = R.filter(r => r.premium).length, ek = R.filter(kelEksik).length, orn = R.filter(r => r.ornek).length;
+    k.innerHTML = kpi('kitap', 'altin', 'Toplam kelime', R.length.toLocaleString('tr-TR'), ay ? '<span class="ys-deg art">+' + ay + '</span><small>son 30 gün</small>' : '') +
+      kpi('grafik', 'yesil', 'A1–A2 kelime', a12.toLocaleString('tr-TR'), yuzde(a12)) +
+      kpi('tac', 'altin', 'Premium kelime', pr.toLocaleString('tr-TR'), yuzde(pr)) +
+      kpi('hata', 'kirmizi', 'Eksik etiket', ek.toLocaleString('tr-TR'), '<button type="button" class="yp-link" onclick="cwState.tag=\'eksik\'; cwState.page=1; renderCwList()">göster</button>') +
+      kpi('not', 'mavi', 'Örnek cümleli', orn.toLocaleString('tr-TR'), yuzde(orn));
+  }
+  function kelimeListe() {
+    const box = $('cw-list'); if (!box) return;
+    const cw = gl('cwState'), R = gl('_cwRows') || [];
+    if (!cw.sira) cw.sira = 'yeni';
+    const aktifler = R.filter(r => r.active !== false), cop = R.filter(r => r.active === false);
+    let L = cw.trash ? cop : aktifler;
+    const turSay = t => aktifler.filter(r => t === 'all' ? true : t === 'diger' ? !['isim', 'fiil', 'sıfat', 'zarf'].includes(kelAna(r)) : kelAna(r) === t).length;
+    if (cw.level !== 'all') L = L.filter(r => r.level === cw.level);
+    if (cw.cat && cw.cat !== 'all') L = L.filter(r => cw.cat === 'diger' ? !['isim', 'fiil', 'sıfat', 'zarf'].includes(kelAna(r)) : kelAna(r) === cw.cat);
+    if (cw.prem) L = L.filter(r => r.premium);
+    const t = cw.tag;
+    if (t && t !== 'all') {
+      if (t === 'НСВ' || t === 'СВ') L = L.filter(r => r.tip === t);
+      else if (['м', 'ж', 'с', 'мн', 'м/ж'].includes(t)) L = L.filter(r => r.cinsiyet === t);
+      else if (t === 'padejli') L = L.filter(r => r.padej);
+      else if (t === 'eksik') L = L.filter(kelEksik);
+      else if (t === 'ornekli') L = L.filter(r => r.ornek);
+      else if (t === 'orneksiz') L = L.filter(r => !r.ornek);
+    }
+    const q = (cw.q || '').trim().toLocaleLowerCase('tr');
+    if (q) L = L.filter(r => ((r.ru || '') + ' ' + (r.tr || '')).toLocaleLowerCase('tr').includes(q));
+    const SV = { A1: 1, A2: 2, B1: 3, B2: 4, C1: 5 };
+    L = L.slice().sort(cw.sira === 'alfabe' ? (a, b) => (a.ru || '').localeCompare(b.ru || '', 'ru') : cw.sira === 'seviye' ? (a, b) => (SV[a.level] || 9) - (SV[b.level] || 9) || (a.ru || '').localeCompare(b.ru || '', 'ru')
+      : cw.sira === 'eski' ? (a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0) : (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    const boy = cw.boy || 25, n = Math.max(1, Math.ceil(L.length / boy)); if (cw.page > n) cw.page = n;
+    const dilim = L.slice((cw.page - 1) * boy, cw.page * boy);
+    const sk = $('cw-sira-k'); if (sk) sk.innerHTML = '<label class="yp-sec ince"><span>' + ic('surgu', 15) + '</span><select onchange="ysKel(\'sira\', this.value)" aria-label="Sıralama">' + KEL_SIRA.map(o => '<option value="' + o[0] + '"' + (cw.sira === o[0] ? ' selected' : '') + '>Sıralama: ' + o[1] + '</option>').join('') + '</select></label>';
+    let h = '<div class="ys-arac ust">' + aramaKutusu('ys-kel-ara', cw.q || '', 'Rusça veya Türkçe ara…', 'ysKel(\'q\', this.value)') + '</div>' +
+      '<div class="ys-cipler">' + KEL_TUR.map(x => '<button type="button" class="ys-cip' + (!cw.trash && !cw.prem && (cw.cat || 'all') === x[0] ? ' aktif' : '') + '" onclick="ysKel(\'cat\', \'' + x[0] + '\')">' + ic(x[2], 14) + x[1] + ' <small>(' + turSay(x[0]).toLocaleString('tr-TR') + ')</small></button>').join('') +
+      '<button type="button" class="ys-cip' + (cw.prem && !cw.trash ? ' aktif' : '') + '" onclick="ysKel(\'prem\', 1)">' + ic('tac', 14) + 'Premium <small>(' + aktifler.filter(r => r.premium).length + ')</small></button>' +
+      '<button type="button" class="ys-cip' + (cw.trash ? ' aktif' : '') + '" onclick="ysKel(\'trash\', 1)">' + ic('cop', 14) + 'Çöp kutusu <small>(' + cop.length + ')</small></button></div>' +
+      '<div class="ys-arac alt">' + secim('Seviye', cw.level, [['all', 'Tümü'], ['A1', 'A1'], ['A2', 'A2'], ['B1', 'B1'], ['B2', 'B2'], ['C1', 'C1']], 'ysKel(\'level\', this.value)') +
+      secim('Etiket', cw.tag || 'all', [['all', 'Tümü'], ['eksik', 'Etiketi eksik'], ['ornekli', 'Örnek cümle var'], ['orneksiz', 'Örnek cümle yok'], ['НСВ', 'НСВ'], ['СВ', 'СВ'], ['м', 'м (eril)'], ['ж', 'ж (dişil)'], ['с', 'с (nötr)'], ['padejli', 'Padejli']], 'ysKel(\'tag\', this.value)') +
+      (cw.trash && cop.length ? '<button type="button" class="yp-btn kirmizi" onclick="adminWordPurgeAll()">' + ic('cop', 15) + 'Çöpü boşalt</button>' : '') + '</div>';
+    if (!L.length) h += '<div class="yp-bos">' + ic('kelime', 30) + '<b>' + (cw.trash ? 'Çöp kutusu boş.' : 'Eşleşen kelime yok.') + '</b></div>';
+    else {
+      const CNS = { 'м': 'mavi', 'ж': 'kirmizi', 'с': 'yesil', 'мн': 'mor', 'м/ж': 'mor' };
+      h += '<div class="yp-tablo-k"><table class="yp-tablo ys-tablo ys-orta ys-kel-t"><thead><tr><th>#</th><th>Rusça kelime</th><th>Türkçe anlam</th><th>Seviye</th><th>Tür</th><th>Etiketler / durum</th><th class="ys-sag">İşlemler</th></tr></thead><tbody>';
+      dilim.forEach((r, i) => {
+        const et = [];
+        if (r.cinsiyet) et.push('<span class="yp-durum r-' + (CNS[r.cinsiyet] || 'gri') + '">' + esc(r.cinsiyet) + '</span>');
+        if (r.tip) et.push('<span class="yp-durum r-' + (r.tip === 'СВ' ? 'turuncu' : 'camgobegi') + '">' + esc(r.tip) + '</span>');
+        if (r.padej) et.push('<span class="yp-durum r-mor">' + esc(r.padej) + '</span>');
+        if (r.cekim) et.push('<span class="ys-et yesil">' + ic('onay', 13) + 'Çekim düzeltilmiş</span>');
+        if (r.ornek) et.push('<span class="ys-et mavi">' + ic('not', 13) + 'Örnek cümle</span>');
+        if (r.premium) et.push('<span class="ys-et altin">' + ic('tac', 13) + 'Premium</span>');
+        if (kelEksik(r)) et.push('<span class="ys-et kirmizi">' + ic('hata', 13) + 'Etiket eksik</span>');
+        h += '<tr' + (gl('_cwEditId') === r.id ? ' class="acik"' : '') + '><td class="ys-soluk">' + ((cw.page - 1) * boy + i + 1) + '</td><td><button type="button" class="ys-ru" onclick="ysKelDuzenle(\'' + r.id + '\')">' + esc(r.ru) + '</button></td><td>' + esc(r.tr || '') + '</td>' +
+          '<td><span class="yp-durum r-altin">' + esc(r.level || '') + '</span></td><td><span class="yp-durum r-mavi">' + esc(r.cat || '') + '</span></td><td><div class="ys-etler">' + (et.join('') || '<span class="ys-soluk">—</span>') + '</div></td>' +
+          '<td class="ys-sag"><div class="ys-satir-b">' + (r.active === false ? '<button type="button" class="yp-ikon-b" title="Geri al" aria-label="Geri al" onclick="adminWordRestore(\'' + r.id + '\')">' + ic('geri', 16) + '</button><button type="button" class="yp-ikon-b sil" title="Kalıcı sil" aria-label="Kalıcı sil" onclick="adminWordPurge(\'' + r.id + '\')">' + ic('cop', 16) + '</button>'
+            : '<button type="button" class="ys-uc-nokta" title="Düzenle" aria-label="Düzenle" onclick="ysKelDuzenle(\'' + r.id + '\')">' + ic('kalem', 15) + '</button><button type="button" class="ys-uc-nokta" title="Çöpe at" aria-label="Çöpe at" onclick="adminWordDelete(\'' + r.id + '\')">' + ic('cop', 15) + '</button>') + '</div></td></tr>';
+      });
+      h += '</tbody></table></div>' + sayfalama(L.length, cw.page, boy, 'ysKelSayfa', 'kelime');
+    }
+    box.innerHTML = h;
+  }
+  window.ysKel = (a, v) => {
+    const cw = gl('cwState');
+    if (a === 'cat') { cw.cat = v; cw.trash = false; cw.prem = false; }
+    else if (a === 'prem') { cw.prem = true; cw.trash = false; cw.cat = 'all'; }
+    else if (a === 'trash') { cw.trash = true; cw.prem = false; cw.cat = 'all'; }
+    else cw[a] = v;
+    cw.page = 1; kelimeListe();
+    if (a === 'q') { const i = $('ys-kel-ara'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch (e) {} } }
+  };
+  window.ysKelSayfa = (s, boy) => { const cw = gl('cwState'); if (boy) cw.boy = boy; cw.page = s; kelimeListe(); };
+  window.ysKelDuzenle = id => {
+    if (typeof adminWordEdit === 'function') adminWordEdit(id);
+    const b = $('ys-kel-form-b'); if (b) b.textContent = 'Kelimeyi düzenle';
+    kelimeListe();
+    const f = $('ys-kel-form'); if (f && window.innerWidth < 1200) f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  function gramEtiketi() {
+    const sel = $('cw-gram'); if (!sel) return;
+    const k = sel.closest('.ys-alan'); if (k) k.style.display = sel.style.display === 'none' ? 'none' : '';
+    const ana = kelAna({ cat: ($('cw-cat') || {}).value }), l = $('cw-gram-lbl');
+    if (l) l.textContent = ana === 'fiil' ? 'Görünüş' : 'Cinsiyet';
+  }
+  window.YS_AKS.content = () => '<button type="button" class="yp-btn" onclick="document.getElementById(\'cw-file\').click()">' + ic('yukle', 16) + 'Dosya içe aktar</button>' +
+    '<div class="ys-acilir-k"><button type="button" class="yp-btn" onclick="ysMenuAc(event, \'keldisa\', \'x\')">' + ic('indir', 16) + 'Dışa aktar' + ic('asagi', 14) + '</button></div>' +
+    '<button type="button" class="yp-btn ana" onclick="ysKelYeni()">' + ic('arti', 16) + 'Yeni kelime</button>';
+  MENULER.keldisa = () => [{ ic: 'indir', ad: 'CSV olarak indir', fn: "ypKelimeIndir('csv')" }, { ic: 'indir', ad: 'Excel olarak indir', fn: "ypKelimeIndir('xlsx')" }];
+  window.ysKelYeni = () => {
+    if (typeof adminWordFormClear === 'function') adminWordFormClear();
+    const b = $('ys-kel-form-b'); if (b) b.textContent = 'Kelime ekle / düzenle';
+    kelimeListe(); const i = $('cw-ru'); if (i) { i.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => i.focus(), 250); }
+  };
+
+  /* ============================================================
+     VİDEOLAR (v175)
+     ============================================================ */
+  const VD = { filtre: 'hepsi', ara: '', sira: 'num' };
+  const sureYaz = s => { s = Math.round(s || 0); if (!s) return ''; const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
+  function videoKpi() {
+    const k = $('cv-stats'); if (!k) return;
+    const R = (gl('_cvRows') || []).filter(r => r.active !== false), T = R.length || 1;
+    const yz = n => '<span class="ys-rozet kucuk">%' + Math.round(n / T * 100) + '</span>';
+    const pr = R.filter(r => r.premium).length, st = R.filter(r => r.source === 'stream').length, mf = R.filter(r => r.mf_ref).length;
+    const ay = R.filter(r => r.created_at && Date.now() - new Date(r.created_at).getTime() < 30 * GUN).length;
+    k.innerHTML = kpi('video', 'altin', 'Toplam video', R.length, ay ? '<span class="ys-deg art">+' + ay + '</span><small>son 30 gün</small>' : '') + kpi('tac', 'altin', 'Premium video', pr, yz(pr)) +
+      kpi('hediye', 'mavi', 'Ücretsiz video', R.length - pr, yz(R.length - pr)) + kpi('yukle', 'mor', 'CF Stream', st, yz(st)) + kpi('kitap', 'yesil', 'Müfredata bağlı', mf, yz(mf));
+  }
+  function videoListe() {
+    const box = $('cv-list'); if (!box) return;
+    const R = gl('_cvRows') || [], akt = R.filter(r => r.active !== false), sil = R.filter(r => r.active === false);
+    const F = { hepsi: akt, premium: akt.filter(r => r.premium), ucretsiz: akt.filter(r => !r.premium), baglisiz: akt.filter(r => !r.mf_ref), silinen: sil };
+    let L = F[VD.filtre] || akt;
+    const q = VD.ara.trim().toLocaleLowerCase('tr');
+    if (q) L = L.filter(r => [r.title, r.descr, r.video_id, String(r.num || '')].filter(Boolean).join(' ').toLocaleLowerCase('tr').includes(q));
+    const SV = { A1: 1, A2: 2, B1: 3, B2: 4, C1: 5 };
+    L = L.slice().sort(VD.sira === 'yeni' ? (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0) : VD.sira === 'baslik' ? (a, b) => (a.title || '').localeCompare(b.title || '', 'tr') : VD.sira === 'seviye' ? (a, b) => (SV[a.level] || 9) - (SV[b.level] || 9) || (a.num || 0) - (b.num || 0) : (a, b) => (a.num || 0) - (b.num || 0));
+    const sk = $('cv-sira-k'); if (sk) sk.innerHTML = '<label class="yp-sec ince"><span>' + ic('surgu', 15) + '</span><select onchange="ysVd(\'sira\', this.value)" aria-label="Sıralama">' + [['num', 'Sıra no'], ['yeni', 'Eklenme (yeni)'], ['baslik', 'Başlık'], ['seviye', 'Seviye']].map(o => '<option value="' + o[0] + '"' + (VD.sira === o[0] ? ' selected' : '') + '>Sıralama: ' + o[1] + '</option>').join('') + '</select></label>';
+    const kat = r => { const f = gl('vdKat'); const k = typeof f === 'function' && r.mf_ref ? f(r.mf_ref) : null; return k ? k[1] : (r.mf_ref ? 'Müfredat ' + r.mf_ref : ''); };
+    let h = '<div class="ys-arac ust">' + aramaKutusu('ys-vd-ara', VD.ara, 'Video ara… (başlık, açıklama, ID)', 'ysVd(\'ara\', this.value)') + '</div><div class="ys-cipler">' +
+      [['hepsi', 'Tümü', 'liste'], ['premium', 'Premium', 'tac'], ['ucretsiz', 'Ücretsiz', 'hediye'], ['baglisiz', 'Müfredata bağlı değil', 'link'], ['silinen', 'Silinenler', 'cop']].map(x => '<button type="button" class="ys-cip' + (VD.filtre === x[0] ? ' aktif' : '') + '" onclick="ysVd(\'filtre\', \'' + x[0] + '\')">' + ic(x[2], 14) + x[1] + ' <small>(' + F[x[0]].length + ')</small></button>').join('') +
+      (VD.filtre === 'silinen' && sil.length ? '<button type="button" class="yp-btn kucuk kirmizi" onclick="adminVidEmptyTrash()">' + ic('cop', 15) + 'Çöpü boşalt (Stream\'den de siler)</button>' : '') + '</div>';
+    if (!L.length) h += '<div class="yp-bos">' + ic('video', 30) + '<b>' + (VD.filtre === 'silinen' ? 'Silinen video yok.' : 'Eşleşen video yok.') + '</b></div>';
+    else h += '<div class="ys-videolar">' + L.map(r => {
+      const silinmis = r.active === false, k = kat(r), ti = jsq(r.title || '');
+      const resim = r.thumb || (r.source !== 'stream' && r.video_id ? 'https://i.ytimg.com/vi/' + encodeURIComponent(r.video_id) + '/mqdefault.jpg' : '');
+      const B = (ikon, ad, fn, ek) => '<button type="button" class="ys-vb' + (ek || '') + '" onclick="' + fn + '">' + ic(ikon, 15) + ad + '</button>';
+      return '<div class="ys-video' + (silinmis ? ' silik' : '') + '"><div class="ys-v-resim">' + (resim ? '<img src="' + esc(resim) + '" alt="" loading="lazy">' : ic('video', 26)) + (r.duration_sec ? '<span>' + sureYaz(r.duration_sec) + '</span>' : '') + '</div>' +
+        '<div class="ys-v-g"><div class="ys-v-ust"><div><b>' + (r.num ? '<span class="ys-soluk">' + r.num + '.</span> ' : '') + esc(r.title || '(başlıksız)') + '</b>' + (r.descr ? '<p>' + esc(String(r.descr).slice(0, 140)) + '</p>' : '') + '</div>' +
+        '<div class="ys-v-sag">' + (silinmis ? '<span class="yp-durum d-kirmizi">Silindi</span>' : '<label class="ys-anahtar kucuk" title="Kapatırsan video gizlenir ve Silinenler\'e taşınır"><input type="checkbox" checked onchange="adminVidHide(\'' + r.id + '\')"><i></i><span>Aktif</span></label>') + menuB('video', r.id) + '</div></div>' +
+        '<div class="ys-etler"><span class="yp-durum r-altin">' + esc(r.level || '—') + '</span>' + (r.source === 'stream' ? '<span class="yp-durum r-mor">CF Stream</span>' : '<span class="yp-durum r-kirmizi">YouTube</span>') +
+        (r.premium ? '<span class="ys-et altin">' + ic('tac', 13) + 'Premium</span>' : '<span class="ys-et yesil">' + ic('hediye', 13) + 'Ücretsiz</span>') +
+        (k ? '<span class="ys-et mavi">' + ic('kitap', 13) + esc(k) + '</span>' : '<span class="ys-et gri">' + ic('link', 13) + 'Müfredata bağlı değil</span>') + (!r.video_id ? '<span class="ys-et kirmizi">' + ic('hata', 13) + 'ID eksik</span>' : '') + '</div>' +
+        (silinmis ? '<div class="ys-v-b">' + B('geri', 'Geri al', "adminVidRestore('" + r.id + "')") + B('cop', 'Temelli sil', "adminVidPurge('" + r.id + "')", ' sil') + '</div>'
+          : '<div class="ys-v-b">' + B('kalem', 'Düzenle', "ysVdDuzenle('" + r.id + "')") + B('kart', 'Kartlar', "adminVidCards('" + r.id + "', '" + ti + "')") + B('liste', 'Bölümler', "adminVidChapters('" + r.id + "', '" + ti + "')") +
+            B('not', 'Dokümanlar', "adminVidDocs('" + r.id + "', '" + ti + "')") + B('paragraf', 'Altyazı', "adminVidSubs('" + r.id + "', '" + ti + "')") + B('grafik', 'İstatistik', "adminVidStats('" + r.id + "', '" + ti + "')") + B('cop', 'Sil', "adminVidHide('" + r.id + "')", ' sil') + '</div>') + '</div></div>';
+    }).join('') + '</div>';
+    box.innerHTML = h;
+  }
+  MENULER.video = id => {
+    const r = (gl('_cvRows') || []).find(x => x.id === id); if (!r) return [];
+    if (r.active === false) return [{ ic: 'geri', ad: 'Geri al', fn: "adminVidRestore('" + id + "')" }, { ic: 'cop', ad: 'Temelli sil', fn: "adminVidPurge('" + id + "')", tehlike: 1 }];
+    return [{ ic: 'kalem', ad: 'Düzenle', fn: "ysVdDuzenle('" + id + "')" }, { ic: r.premium ? 'hediye' : 'tac', ad: r.premium ? 'Ücretsiz yap' : 'Premium yap', fn: "adminVidTogglePremium('" + id + "', " + !r.premium + ")" }, { ayrac: 1 },
+      { ic: 'yukari2', ad: 'En başa taşı', fn: "adminVidMoveEdge('" + id + "', 'top')" }, { ic: 'yukari', ad: 'Bir yukarı', fn: "adminVidMove('" + id + "', -1)" }, { ic: 'asagi2', ad: 'Bir aşağı', fn: "adminVidMove('" + id + "', 1)" }, { ic: 'asagi', ad: 'En sona taşı', fn: "adminVidMoveEdge('" + id + "', 'bottom')" },
+      { ayrac: 1 }, { ic: 'cop', ad: 'Sil (çöpe taşı)', fn: "adminVidHide('" + id + "')", tehlike: 1 }];
+  };
+  window.ysVd = (a, v) => { VD[a] = v; videoListe(); if (a === 'ara') { const i = $('ys-vd-ara'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch (e) {} } } };
+  window.ysVdDuzenle = id => {
+    if (typeof adminVidEdit === 'function') adminVidEdit(id);
+    ysVidKaynakCiz(); const b = $('ys-vid-form-b'); if (b) b.textContent = 'Videoyu düzenle';
+    const d = $('cv-desc'), s = $('cv-desc-say'); if (d && s) s.textContent = d.value.length;
+    const f = $('ys-vid-form'); if (f && window.innerWidth < 1200) f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  window.ysVidKaynak = k => { const s = $('cv-source'); if (!s) return; s.value = k; if (typeof adminVidSourceChanged === 'function') adminVidSourceChanged(); ysVidKaynakCiz(); };
+  window.ysVidKaynakCiz = () => {
+    const k = ($('cv-source') || {}).value || 'youtube';
+    document.querySelectorAll('#ys-vid-kaynak .ys-hedef').forEach(b => b.classList.toggle('aktif', b.dataset.k === k));
+    const l = $('cv-vid-lbl'); if (l) l.innerHTML = (k === 'stream' ? 'Stream video UID' : 'YouTube video ID') + ' <em>*</em>';
+  };
+  window.ysVdYeni = () => {
+    if (typeof adminVidFormClear === 'function') adminVidFormClear();
+    ysVidKaynakCiz(); const b = $('ys-vid-form-b'); if (b) b.textContent = 'Video ekle / düzenle';
+    const s = $('cv-desc-say'); if (s) s.textContent = '0';
+    const i = $('cv-title'); if (i) { i.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => i.focus(), 250); }
+  };
+  window.YS_AKS.videos = () => '<button type="button" class="yp-btn ana" onclick="ysVdYeni()">' + ic('arti', 16) + 'Yeni video ekle</button>';
+
+  /* ============================================================
+     BLOGLAR VE MAKALELER (v175)
+     Bloglar: content_recs (film/dizi/anime/kitap önerileri) · Makaleler: content_articles (dış kaynak)
+     ============================================================ */
+  const BL = { sekme: 'blog', ara: '', tur: 'hepsi', durum: 'hepsi', sayfa: 1, boy: 10, makaleler: null, mkHata: false, duzen: null };
+  const BLOG_TUR = { film: ['Film', 'mavi'], dizi: ['Dizi', 'mor'], anime: ['Anime', 'kirmizi'], kitap: ['Kitap', 'altin'] };
+  const MK_DURUM = { yayinda: ['Yayında', 'd-yesil'], taslak: ['Taslak', 'd-sari'], arsiv: ['Arşivde', 'd-gri'] };
+  function editorCubugu(hedef) {
+    const b = (k, ikon, ad, deger) => '<button type="button" class="ys-rte-b" title="' + ad + '" aria-label="' + ad + '" onmousedown="event.preventDefault()" onclick="ysRte(\'' + hedef + '\', \'' + k + '\'' + (deger ? ', \'' + deger + '\'' : '') + ')">' + ikon + '</button>';
+    return '<div class="ys-rte">' + b('bold', '<b>K</b>', 'Kalın') + b('italic', '<i>İ</i>', 'İtalik') + b('underline', '<u>A</u>', 'Altı çizili') + b('strikeThrough', '<s>S</s>', 'Üstü çizili') + '<span></span>' +
+      b('insertUnorderedList', ic('liste', 15), 'Madde listesi') + b('insertOrderedList', '1.', 'Numaralı liste') + '<span></span>' + b('justifyLeft', ic('menu', 15), 'Sola yasla') + b('justifyCenter', '≡', 'Ortala') + '<span></span>' +
+      '<label class="ys-rte-b" title="Yazı rengi"><span style="border-bottom:3px solid #b0862c">A</span><input type="color" onchange="ysRte(\'' + hedef + '\', \'foreColor\', this.value)"></label>' + b('removeFormat', ic('kapat', 14), 'Biçimi temizle') + '</div>';
+  }
+  window.ysRte = (hedef, k, v) => { const a = $(hedef); if (a) a.focus(); try { document.execCommand(k, false, v || null); } catch (e) {} };
+  async function blogYukle() {
+    const k = $('ys-blog'); if (!k) return;
+    if (window.__ysBlSekme) { if (BL.sekme !== window.__ysBlSekme) { BL.sekme = window.__ysBlSekme; BL.duzen = null; BL.ara = ''; BL.durum = 'hepsi'; k.innerHTML = ''; } delete window.__ysBlSekme; }
+    if (BL.sekme === 'blog') { if (typeof adminRcReload === 'function' && !BL._icYukleme) { BL._icYukleme = true; try { await adminRcReload(); } finally { BL._icYukleme = false; } return; } }
+    else {
+      try { const { data, error } = await sb.from('content_articles').select('*').order('created_at', { ascending: false }).limit(1000); if (error) throw error; BL.makaleler = data || []; BL.mkHata = false; }
+      catch (e) { BL.makaleler = []; BL.mkHata = true; }
+    }
+    blogCiz();
+  }
+  function blogCiz() {
+    const k = $('ys-blog'); if (!k) return;
+    const odak = document.activeElement && document.activeElement.closest && document.activeElement.closest('#ys-bl-form');
+    if (odak && $('ys-bl-form-ic')) { blogListeCiz(); return; }     // formda yazarken formu bozma
+    let h = '<div class="yp-kart ys-sekme-kart"><div class="ys-sekme-cubuk">' + [['blog', 'Bloglar', 'blog'], ['makale', 'Makaleler (dış kaynak)', 'makale']].map(s => '<button type="button" class="' + (BL.sekme === s[0] ? 'aktif' : '') + '" onclick="ysBl(\'sekme\', \'' + s[0] + '\')">' + ic(s[2], 16) + s[1] + '</button>').join('') + '</div></div>';
+    h += '<div id="ys-bl-kpi" class="ys-kpiler d4"></div><div class="ys-yan-yana"><section class="yp-kart ys-liste" id="ys-bl-liste"></section><section class="yp-kart ys-form-kart" id="ys-bl-form"><div id="ys-bl-form-ic">' + (BL.sekme === 'blog' ? blogForm() : makaleForm()) + '</div></section></div>';
+    k.innerHTML = h;
+    if (BL.sekme === 'blog' && BL.duzen && typeof adminRcEdit === 'function') { adminRcEdit(BL.duzen); }
+    if (BL.sekme === 'makale' && BL.duzen) makaleDoldur(BL.duzen);
+    blogListeCiz();
+  }
+  function blogListeCiz() {
+    const kp = $('ys-bl-kpi'), lk = $('ys-bl-liste'); if (!kp || !lk) return;
+    const q = BL.ara.trim().toLocaleLowerCase('tr');
+    let L, h;
+    if (BL.sekme === 'blog') {
+      const R = gl('_rcRows') || [];
+      kp.innerHTML = kpi('blog', 'mavi', 'Toplam blog yazısı', R.length, '') + kpi('onay', 'yesil', 'Yayında', R.filter(r => r.active !== false).length, '') + kpi('saat', 'turuncu', 'Taslak / gizli', R.filter(r => r.active === false).length, '') + kpi('video', 'mor', 'Fragmanlı', R.filter(r => r.trailer).length, '');
+      L = R.filter(r => (BL.tur === 'hepsi' || r.rtype === BL.tur) && (BL.durum === 'hepsi' || (BL.durum === 'yayinda') === (r.active !== false)) && (!q || [r.title, r.title_ru, String(r.descr || '').replace(/<[^>]*>/g, ' ')].filter(Boolean).join(' ').toLocaleLowerCase('tr').includes(q)));
+      h = '<div class="ys-arac">' + aramaKutusu('ys-bl-ara', BL.ara, 'Başlık veya içerik ara…', 'ysBl(\'ara\', this.value)') + secim('Tür', BL.tur, [['hepsi', 'Tüm türler']].concat(Object.keys(BLOG_TUR).map(t => [t, BLOG_TUR[t][0]])), 'ysBl(\'tur\', this.value)') +
+        secim('Durum', BL.durum, [['hepsi', 'Tüm durumlar'], ['yayinda', 'Yayında'], ['gizli', 'Taslak / gizli']], 'ysBl(\'durum\', this.value)') + '</div>';
+    } else {
+      const R = BL.makaleler || [];
+      kp.innerHTML = kpi('makale', 'mavi', 'Toplam makale', R.length, '') + kpi('onay', 'yesil', 'Yayında', R.filter(r => r.durum === 'yayinda').length, '') + kpi('saat', 'turuncu', 'Taslak', R.filter(r => r.durum === 'taslak').length, '') + kpi('klasor', 'gri', 'Arşivde', R.filter(r => r.durum === 'arsiv').length, '');
+      L = R.filter(r => (BL.durum === 'hepsi' || r.durum === BL.durum) && (!q || [r.baslik, r.ozet, r.kaynak_ad, r.kategori, r.yazar].filter(Boolean).join(' ').toLocaleLowerCase('tr').includes(q)));
+      h = '<div class="ys-arac">' + aramaKutusu('ys-bl-ara', BL.ara, 'Başlık, kaynak veya kategori ara…', 'ysBl(\'ara\', this.value)') + secim('Durum', BL.durum, [['hepsi', 'Tüm durumlar'], ['yayinda', 'Yayında'], ['taslak', 'Taslak'], ['arsiv', 'Arşivde']], 'ysBl(\'durum\', this.value)') + '</div>';
+      if (BL.mkHata) { lk.innerHTML = h + '<div class="yp-bos">' + ic('makale', 30) + '<b>Makaleler tablosu bulunamadı.</b><span>makaleler.sql dosyasını Supabase\'de çalıştırınca bu bölüm açılır.</span></div>'; return; }
+    }
+    const n = Math.max(1, Math.ceil(L.length / BL.boy)); if (BL.sayfa > n) BL.sayfa = n;
+    const dilim = L.slice((BL.sayfa - 1) * BL.boy, BL.sayfa * BL.boy);
+    if (!L.length) h += '<div class="yp-bos">' + ic(BL.sekme === 'blog' ? 'blog' : 'makale', 30) + '<b>' + (BL.sekme === 'blog' ? 'Blog yazısı bulunamadı.' : 'Makale bulunamadı.') + '</b></div>';
+    else if (BL.sekme === 'blog') {
+      h += '<div class="yp-tablo-k"><table class="yp-tablo ys-tablo ys-orta"><thead><tr><th>Başlık</th><th>Tür</th><th>Seviye</th><th>Durum</th><th class="ys-sag">İşlemler</th></tr></thead><tbody>' + dilim.map(r => {
+        const T = BLOG_TUR[r.rtype] || [r.rtype || '—', 'gri'];
+        return '<tr' + (BL.duzen === r.id ? ' class="acik"' : '') + '><td><div class="ys-yazi">' + (r.thumb ? '<img src="' + esc(r.thumb) + '" alt="" loading="lazy">' : '<span class="ys-yazi-ic">' + ic('blog', 20) + '</span>') + '<div><b>' + esc(r.title) + '</b><small>' + esc(String(r.descr || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90)) + '</small></div></div></td>' +
+          '<td><span class="yp-durum r-' + T[1] + '">' + esc(T[0]) + '</span></td><td><span class="yp-durum r-altin">' + esc(r.level || '—') + '+</span></td><td><span class="yp-durum ' + (r.active !== false ? 'd-yesil' : 'd-sari') + '">' + (r.active !== false ? 'Yayında' : 'Taslak / gizli') + '</span></td><td class="ys-sag">' + menuB('blog', r.id) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    } else {
+      h += '<div class="yp-tablo-k"><table class="yp-tablo ys-tablo ys-orta"><thead><tr><th>Başlık</th><th>Kaynak</th><th>Durum</th><th>Okunma</th><th>Tarih</th><th class="ys-sag">İşlemler</th></tr></thead><tbody>' + dilim.map(r => {
+        const D = MK_DURUM[r.durum] || MK_DURUM.taslak;
+        return '<tr' + (BL.duzen === r.id ? ' class="acik"' : '') + '><td><div class="ys-yazi">' + (r.kapak ? '<img src="' + esc(r.kapak) + '" alt="" loading="lazy">' : '<span class="ys-yazi-ic">' + ic('makale', 20) + '</span>') + '<div><b>' + esc(r.baslik) + '</b><small>' + esc((r.ozet || '').slice(0, 90)) + '</small></div></div></td>' +
+          '<td>' + (r.kaynak_url ? '<a class="ys-kaynak" href="' + esc(r.kaynak_url) + '" target="_blank" rel="noopener">' + esc(r.kaynak_ad || r.kaynak_url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) + ic('link', 12) + '</a>' : esc(r.kaynak_ad || '—')) + (r.seviye ? '<small class="ys-soluk">' + esc(r.seviye) + (r.kategori ? ' · ' + esc(r.kategori) : '') + '</small>' : '') + '</td>' +
+          '<td><span class="yp-durum ' + D[1] + '">' + D[0] + '</span></td><td>' + (r.okunma || 0).toLocaleString('tr-TR') + '</td><td class="ys-tar">' + tarih(r.created_at) + '</td><td class="ys-sag">' + menuB('makale', r.id) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    }
+    if (L.length) h += sayfalama(L.length, BL.sayfa, BL.boy, 'ysBlSayfa', BL.sekme === 'blog' ? 'blog yazısı' : 'makale');
+    lk.innerHTML = h;
+  }
+  function blogForm() {
+    return '<div class="yp-kart-bas"><div><h3 id="ys-bl-form-b">Blog yazısı ekle / düzenle</h3><p class="ys-kart-alt">Film, dizi, anime ve kitap önerileri blog sayfasında yayınlanır.</p></div></div><input type="hidden" id="rc-id">' +
+      '<label class="ys-alan"><span>Başlık <em>*</em></span><input id="rc-title" class="ys-girdi" placeholder="Blog yazısı başlığı" autocomplete="off"></label>' +
+      '<div class="ys-iki"><label class="ys-alan"><span>Tür <em>*</em></span><select id="rc-type" class="ys-girdi">' + Object.keys(BLOG_TUR).map(t => '<option value="' + t + '">' + BLOG_TUR[t][0] + '</option>').join('') + '</select></label>' +
+      '<label class="ys-alan"><span>Seviye</span><select id="rc-level" class="ys-girdi"><option>A1</option><option selected>A2</option><option>B1</option><option>B2</option><option>C1</option></select></label></div>' +
+      '<div class="ys-alan"><span>İçerik <em>*</em></span><div class="ys-editor">' + editorCubugu('rc-desc') + '<div id="rc-desc" class="ys-rte-alan" contenteditable="true" data-ph="Neden izlenmeli ya da okunmalı? Yazını buraya yaz…"></div></div></div>' +
+      '<label class="ys-alan"><span>Rusça açıklama <small class="ys-soluk">(isteğe bağlı, RU modunda gösterilir)</small></span><textarea id="rc-desc-ru" class="ys-girdi alan" rows="2"></textarea></label>' +
+      gorselAlan('rc-thumb', 'Kapak görseli', 'blog-kapak') +
+      '<div class="ys-iki"><label class="ys-alan"><span>YouTube fragman</span><input id="rc-trailer" class="ys-girdi" placeholder="Video ID ya da bağlantı" autocomplete="off"></label>' +
+      '<label class="ys-alan"><span>Nerede izlenir / alınır</span><input id="rc-link" class="ys-girdi" placeholder="https://" autocomplete="off"></label></div>' +
+      '<div class="ys-form-alt"><button type="button" class="yp-btn ana" onclick="ysRcKaydet(true)">' + ic('okSag', 16) + 'Yayınla</button><button type="button" class="yp-btn" onclick="ysRcKaydet(false)">' + ic('kaydet', 16) + 'Taslak kaydet</button><button type="button" class="yp-btn" onclick="ysBlTemizle()">' + ic('kapat', 15) + 'Temizle</button></div>';
+  }
+  function makaleForm() {
+    return '<div class="yp-kart-bas"><div><h3 id="ys-bl-form-b">Makale ekle / düzenle</h3><p class="ys-kart-alt">Güvenilir bir kaynaktaki makaleyi bağlantısı ve kaynak bilgisiyle ekle.</p></div></div><input type="hidden" id="mk-id">' +
+      '<label class="ys-alan"><span>Başlık <em>*</em></span><input id="mk-baslik" class="ys-girdi" placeholder="Makale başlığı" autocomplete="off"></label>' +
+      '<div class="ys-iki"><label class="ys-alan"><span>Kaynak adı</span><input id="mk-kaynak" class="ys-girdi" placeholder="Örn. RIA Novosti" autocomplete="off"></label><label class="ys-alan"><span>Kaynak bağlantısı</span><input id="mk-url" class="ys-girdi" placeholder="https://" autocomplete="off"></label></div>' +
+      '<div class="ys-uclu"><label class="ys-alan"><span>Yazar</span><input id="mk-yazar" class="ys-girdi" autocomplete="off"></label><label class="ys-alan"><span>Kategori</span><input id="mk-kategori" class="ys-girdi" placeholder="Örn. Kültür" autocomplete="off"></label>' +
+      '<label class="ys-alan"><span>Seviye</span><select id="mk-seviye" class="ys-girdi"><option value="">—</option><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select></label></div>' +
+      '<label class="ys-alan"><span>Özet</span><div class="ys-sayacli"><textarea id="mk-ozet" class="ys-girdi alan" rows="2" maxlength="400" placeholder="Listede ve kartta görünecek kısa özet" oninput="document.getElementById(\'mk-ozet-say\').textContent=this.value.length"></textarea><small><span id="mk-ozet-say">0</span>/400</small></div></label>' +
+      gorselAlan('mk-kapak', 'Kapak görseli', 'makale-kapak') +
+      '<div class="ys-alan"><span>Makale metni</span><div class="ys-editor">' + editorCubugu('mk-govde') + '<div id="mk-govde" class="ys-rte-alan uzun" contenteditable="true" data-ph="Makalenin metnini buraya yapıştır ya da yaz…"></div></div></div>' +
+      '<div class="ys-not">' + ic('bilgi', 18) + '<div><span>Başka bir sitedeki makaleyi tam metin olarak yayımlamadan önce kaynağın izin verdiğinden emin ol; izin yoksa yalnızca özet ve bağlantı ekle.</span></div></div>' +
+      '<div class="ys-form-alt"><button type="button" class="yp-btn ana" onclick="ysMkKaydet(\'yayinda\')">' + ic('okSag', 16) + 'Yayınla</button><button type="button" class="yp-btn" onclick="ysMkKaydet(\'taslak\')">' + ic('kaydet', 16) + 'Taslak kaydet</button><button type="button" class="yp-btn" onclick="ysBlTemizle()">' + ic('kapat', 15) + 'Temizle</button></div>';
+  }
+  function gorselAlan(id, ad, klasor) {
+    return '<div class="ys-alan"><span>' + ad + '</span><div class="ys-dosya-sec"><span class="ys-ayar-ic">' + ic('resim', 20) + '</span><input id="' + id + '" class="ys-girdi" placeholder="Görsel adresi ya da dosya seç (önerilen 1200 × 630)" autocomplete="off">' +
+      '<input type="file" id="' + id + '-dosya" accept="image/*" style="display:none" onchange="ysGorselYukle(this, \'' + id + '\', \'' + klasor + '\')"><button type="button" class="yp-btn kucuk" onclick="document.getElementById(\'' + id + '-dosya\').click()">Dosya seç</button></div><div id="' + id + '-durum" class="ys-durum-yazi"></div></div>';
+  }
+  window.ysGorselYukle = async (inp, hedef, klasor) => {
+    const f = inp.files && inp.files[0], d = $(hedef + '-durum'); if (!f) return;
+    if (f.size > 3 * 1024 * 1024) { uiAlert('Görsel en fazla 3 MB olabilir.'); return; }
+    if (d) d.textContent = 'Yükleniyor…';
+    try {
+      const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const yol = klasor + '/' + Date.now() + '_' + Math.random().toString(36).slice(2, 7) + '.' + ext;
+      const { error } = await sb.storage.from('docs').upload(yol, f, { cacheControl: '3600', upsert: false }); if (error) throw error;
+      const { data } = sb.storage.from('docs').getPublicUrl(yol);
+      $(hedef).value = (data && data.publicUrl) || ''; if (d) d.textContent = 'Görsel yüklendi.';
+    } catch (e) { if (d) d.textContent = 'Yüklenemedi: ' + ((e && e.message) || e); }
+    inp.value = '';
+  };
+  function makaleDoldur(id) {
+    const r = (BL.makaleler || []).find(x => x.id === id); if (!r) return;
+    const y = (k, v) => { const e = $(k); if (e) e.value = v || ''; };
+    y('mk-id', r.id); y('mk-baslik', r.baslik); y('mk-kaynak', r.kaynak_ad); y('mk-url', r.kaynak_url); y('mk-yazar', r.yazar); y('mk-kategori', r.kategori); y('mk-seviye', r.seviye); y('mk-ozet', r.ozet); y('mk-kapak', r.kapak);
+    const g = $('mk-govde'); if (g) g.innerHTML = typeof _sanitizeRich === 'function' ? _sanitizeRich(r.govde || '') : '';
+    const s = $('mk-ozet-say'); if (s) s.textContent = (r.ozet || '').length;
+    const b = $('ys-bl-form-b'); if (b) b.textContent = 'Makaleyi düzenle';
+  }
+  MENULER.blog = id => {
+    const r = (gl('_rcRows') || []).find(x => x.id === id); if (!r) return [];
+    return [{ ic: 'kalem', ad: 'Düzenle', fn: "ysBlDuzenle('" + id + "')" }, r.active !== false ? { ic: 'goz', ad: 'Yayından kaldır (taslağa al)', fn: "adminRcHide('" + id + "')" } : { ic: 'onay', ad: 'Yayınla', fn: "adminRcRestore('" + id + "')" },
+      { ayrac: 1 }, { ic: 'cop', ad: 'Kalıcı sil', fn: "adminRcPurge('" + id + "')", tehlike: 1 }];
+  };
+  MENULER.makale = id => {
+    const r = (BL.makaleler || []).find(x => x.id === id); if (!r) return [];
+    const L = [{ ic: 'kalem', ad: 'Düzenle', fn: "ysBlDuzenle('" + id + "')" }];
+    if (r.kaynak_url) L.push({ ic: 'link', ad: 'Kaynağı aç', fn: "window.open('" + jsq(r.kaynak_url) + "', '_blank', 'noopener')" });
+    Object.keys(MK_DURUM).filter(d => d !== r.durum).forEach(d => L.push({ ic: d === 'yayinda' ? 'onay' : d === 'taslak' ? 'kalem' : 'klasor', ad: d === 'yayinda' ? 'Yayınla' : d === 'taslak' ? 'Taslağa al' : 'Arşive taşı', fn: "ysMkDurum('" + id + "', '" + d + "')" }));
+    L.push({ ayrac: 1 }, { ic: 'cop', ad: 'Kalıcı sil', fn: "ysMkSil('" + id + "')", tehlike: 1 });
+    return L;
+  };
+  window.ysBl = (a, v) => {
+    if (a === 'sekme') { if (BL.sekme === v) return; BL.sekme = v; BL.ara = ''; BL.durum = 'hepsi'; BL.tur = 'hepsi'; BL.sayfa = 1; BL.duzen = null; const k = $('ys-blog'); if (k) k.innerHTML = ''; return blogYukle(); }
+    BL[a] = v; BL.sayfa = 1; blogListeCiz();
+    if (a === 'ara') { const i = $('ys-bl-ara'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch (e) {} } }
+  };
+  window.ysBlSayfa = (s, boy) => { if (boy) BL.boy = boy; BL.sayfa = s; blogListeCiz(); };
+  window.ysBlDuzenle = id => {
+    BL.duzen = id;
+    if (BL.sekme === 'blog') { if (typeof adminRcEdit === 'function') adminRcEdit(id); const b = $('ys-bl-form-b'); if (b) b.textContent = 'Blog yazısını düzenle'; }
+    else makaleDoldur(id);
+    blogListeCiz();
+    const f = $('ys-bl-form'); if (f) f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  window.ysBlTemizle = () => { BL.duzen = null; const f = $('ys-bl-form-ic'); if (f) f.innerHTML = BL.sekme === 'blog' ? blogForm() : makaleForm(); blogListeCiz(); };
+  window.ysBlYeni = tur => { if (BL.sekme !== tur) { BL.sekme = tur; BL.duzen = null; const k = $('ys-blog'); if (k) k.innerHTML = ''; blogYukle().then(() => { const i = $(tur === 'blog' ? 'rc-title' : 'mk-baslik'); if (i) i.focus(); }); } else { ysBlTemizle(); const i = $(tur === 'blog' ? 'rc-title' : 'mk-baslik'); if (i) { i.scrollIntoView({ behavior: 'smooth', block: 'center' }); i.focus(); } } };
+  window.ysRcKaydet = async yayin => {
+    const v = id => (($(id) || {}).value || '').trim();
+    const title = v('rc-title'); if (!title) { uiAlert('Başlık zorunlu.'); return; }
+    const alan = $('rc-desc'), descr = alan && (alan.textContent || '').trim() ? (typeof _sanitizeRich === 'function' ? _sanitizeRich(alan.innerHTML) : alan.innerHTML) : null;
+    let trailer = v('rc-trailer'); const ym = trailer.match(/(?:youtu\.be\/|v=|embed\/)([\w-]{6,})/); if (ym) trailer = ym[1];
+    const row = { rtype: v('rc-type'), title, level: v('rc-level'), descr, descr_ru: v('rc-desc-ru') || null, thumb: v('rc-thumb') || null, trailer: trailer || null, link: v('rc-link') || null, active: !!yayin };
+    const id = v('rc-id');
+    try {
+      const { error } = id ? await sb.from('content_recs').update(row).eq('id', id) : await sb.from('content_recs').insert(row);
+      if (error) throw error;
+      toast(yayin ? 'Blog yazısı yayınlandı.' : 'Taslak olarak kaydedildi (sitede görünmez).');
+      BL.duzen = null; const f = $('ys-bl-form-ic'); if (f) f.innerHTML = blogForm();
+      if (typeof adminRcReload === 'function') adminRcReload(); if (typeof loadRecs === 'function') loadRecs();
+    } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
+  };
+  window.ysMkKaydet = async durum => {
+    const v = id => (($(id) || {}).value || '').trim();
+    const baslik = v('mk-baslik'); if (!baslik) { uiAlert('Başlık zorunlu.'); return; }
+    const url = v('mk-url'); if (url && !/^https?:\/\//i.test(url)) { uiAlert('Kaynak bağlantısı http:// ya da https:// ile başlamalı.'); return; }
+    const g = $('mk-govde'), govde = g && (g.textContent || '').trim() ? (typeof _sanitizeRich === 'function' ? _sanitizeRich(g.innerHTML) : g.innerHTML) : null;
+    if (durum === 'yayinda' && !govde && !v('mk-ozet')) { uiAlert('Yayınlamak için en azından bir özet ya da makale metni yaz.'); return; }
+    const row = { baslik, kaynak_ad: v('mk-kaynak') || null, kaynak_url: url || null, yazar: v('mk-yazar') || null, kategori: v('mk-kategori') || null, seviye: v('mk-seviye') || null, ozet: v('mk-ozet') || null, kapak: v('mk-kapak') || null, govde, durum, updated_at: new Date().toISOString() };
+    const id = v('mk-id');
+    try {
+      const { error } = id ? await sb.from('content_articles').update(row).eq('id', id) : await sb.from('content_articles').insert(row);
+      if (error) throw error;
+      toast(durum === 'yayinda' ? 'Makale yayınlandı.' : 'Makale taslak olarak kaydedildi.');
+      BL.duzen = null; const f = $('ys-bl-form-ic'); if (f) f.innerHTML = makaleForm();
+      blogYukle(); if (typeof makalelerYukle === 'function') makalelerYukle(true);
+    } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e) + (/relation|does not exist/i.test((e && e.message) || '') ? ' — makaleler.sql çalıştırıldı mı?' : '')); }
+  };
+  window.ysMkDurum = async (id, d) => { try { const { error } = await sb.from('content_articles').update({ durum: d, updated_at: new Date().toISOString() }).eq('id', id); if (error) throw error; toast('Durum: ' + MK_DURUM[d][0]); } catch (e) { uiAlert('Güncellenemedi.'); } blogYukle(); if (typeof makalelerYukle === 'function') makalelerYukle(true); };
+  window.ysMkSil = async id => {
+    const r = (BL.makaleler || []).find(x => x.id === id);
+    if (!(await uiConfirm('"' + ((r && r.baslik) || 'Makale') + '" kalıcı olarak silinsin mi?', 'Makaleyi sil', { danger: true }))) return;
+    try { const { error } = await sb.from('content_articles').delete().eq('id', id); if (error) throw error; toast('Makale silindi.'); } catch (e) { uiAlert('Silinemedi.'); }
+    if (BL.duzen === id) BL.duzen = null; blogYukle(); if (typeof makalelerYukle === 'function') makalelerYukle(true);
+  };
+  window.YS_AKS.recs = () => '<button type="button" class="yp-btn" onclick="ysBlYeni(\'makale\')">' + ic('link', 16) + 'Makale ekle</button><button type="button" class="yp-btn ana" onclick="ysBlYeni(\'blog\')">' + ic('arti', 16) + 'Blog yazısı ekle</button>';
+
   /* ---------- Bağlantılar: eski yükleyiciler yeni sayfaları çizsin ---------- */
   function degistir(ad, fn) { window[ad] = fn; try { (0, eval)(ad + ' = window.' + ad); } catch (e) {} }
   function bagla() {
@@ -2511,6 +2880,22 @@ async function togglePremium(userId, currentPlan) {
     degistir('anTargetChange', function () { return bildirimYukle(); });
     degistir('adminLoadTickets', function () { return destekYukle(); });
     degistir('adminLoadMail', function () { return mailYukle(); });
+    degistir('renderCwStats', function () { kelimeKpi(); });
+    degistir('renderCwList', function () { kelimeListe(); });
+    const eskiKat = window.cwCatChanged;
+    if (typeof eskiKat === 'function') degistir('cwCatChanged', function () { const r = eskiKat.apply(this, arguments); gramEtiketi(); return r; });
+    const eskiTemiz = window.adminWordFormClear;
+    if (typeof eskiTemiz === 'function') degistir('adminWordFormClear', function () { const r = eskiTemiz.apply(this, arguments); const b = $('ys-kel-form-b'); if (b) b.textContent = 'Kelime ekle / düzenle'; const s = $('cw-save-btn'); if (s) s.textContent = 'Kelime ekle'; if ($('cw-list')) kelimeListe(); return r; });
+    const eskiCv = window.adminCvReload;
+    if (typeof eskiCv === 'function') degistir('adminCvReload', async function () { const r = await eskiCv.apply(this, arguments); videoKpi(); return r; });
+    degistir('renderCvList', function () { videoListe(); });
+    const eskiVdTemiz = window.adminVidFormClear;
+    if (typeof eskiVdTemiz === 'function') degistir('adminVidFormClear', function () { const r = eskiVdTemiz.apply(this, arguments); const b = $('ys-vid-form-b'); if (b) b.textContent = 'Video ekle / düzenle'; const s = $('cv-save-btn'); if (s) s.textContent = 'Video ekle'; const d = $('cv-desc-say'); if (d) d.textContent = '0'; return r; });
+    const eskiRc = window.adminRcReload;
+    if (typeof eskiRc === 'function') degistir('adminRcReload', async function () { const r = await eskiRc.apply(this, arguments); if ($('ys-blog')) { if (BL.sekme === 'blog') blogCiz(); } return r; });
+    degistir('renderRcList', function () {});
+    degistir('adminRecsInit', function () { return blogYukle(); });
+    degistir('adminRcFormClear', function () { if ($('ys-bl-form-ic') && BL.sekme === 'blog') { BL.duzen = null; $('ys-bl-form-ic').innerHTML = blogForm(); } });
     ['adminKurumSetAdmin', 'adminKurumRemoveMember'].forEach(ad => {
       const eski = window[ad]; if (typeof eski !== 'function') return;
       degistir(ad, async function () { const r = await eski.apply(this, arguments); if ($('ys-kurum') && $('av-kurumlar').style.display !== 'none') kurumYukle(); return r; });
