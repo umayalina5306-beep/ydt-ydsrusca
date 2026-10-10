@@ -259,6 +259,7 @@ async function togglePremium(userId, currentPlan) {
     asagi: '<path d="M6 9l6 6 6-6"/>',
     sag: '<path d="M9 6l6 6-6 6"/>',
     okSag: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    kod: '<path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/>',
     takvim: '<rect x="3" y="4.5" width="18" height="16.5" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/>',
     saat: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     tac: '<path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/>',
@@ -480,6 +481,7 @@ async function togglePremium(userId, currentPlan) {
     if (v === 'icerikler') acts.innerHTML = yeniButonu();
     if (v === 'content') acts.innerHTML = '<button type="button" class="yp-btn" id="yp-kel-csv" onclick="ypKelimeIndir(\'csv\')">' + ic('indir', 16) + 'CSV indir</button>' +
       '<button type="button" class="yp-btn ana" id="yp-kel-xlsx" onclick="ypKelimeIndir(\'xlsx\')">' + ic('indir', 16) + 'Excel indir</button>';
+    if (window.YS_AKS && typeof window.YS_AKS[v] === 'function') acts.innerHTML = window.YS_AKS[v]();   // sayfaya özel başlık düğmeleri (Bölüm 3)
     if (v === 'icerikler') ilCiz();
     if (v === 'overview') panoCiz();
   }
@@ -1203,4 +1205,452 @@ async function togglePremium(userId, currentPlan) {
   setInterval(() => { if (document.body.classList.contains('yp-aktif') && !document.hidden) bekleyenAl(); }, 120000);
 
   Object.assign(window, { ypGit, ypGrup, ypMenuAc, ypMenuKapat, ypSiteye, ypKapatHepsi, ypHesap, ypZil, ypYeni, ypYeniAc, ypDuzenle });
+})();
+
+/* ============================================================
+   BÖLÜM 3 · YÖNETİM SAYFALARI (v170 — taslaklara göre yeniden tasarım)
+   Her sayfa kendi kutusuna çizilir; veriyi okuyan/yazan eski fonksiyonlar
+   (adminClearErrors, adminBackupTable, adminSaveExamDates …) olduğu gibi kullanılır.
+   ============================================================ */
+(function () {
+  'use strict';
+  const ic = (n, s) => (typeof window.ypIc === 'function' ? window.ypIc(n, s) : '');
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  const $ = id => document.getElementById(id);
+  const gl = ad => { try { return (0, eval)(ad); } catch (e) { return undefined; } };
+  const onceKadar = t => (typeof window.ypOnceKadar === 'function' ? window.ypOnceKadar(t) : '');
+  const tarih = t => t ? new Date(t).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+  const saat = t => t ? new Date(t).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+  const GUN = 86400000;
+  window.YS_AKS = window.YS_AKS || {};
+
+  /* ---------- Ortak parçalar ---------- */
+  function degisim(yeni, eski, etiket) {
+    if (!eski) return yeni ? '<span class="ys-deg art">' + ic('ziyaret', 14) + 'yeni</span><small>' + etiket + '</small>' : '<span class="ys-deg">—</span><small>' + etiket + '</small>';
+    const y = Math.round((yeni - eski) / eski * 100);
+    return '<span class="ys-deg ' + (y > 0 ? 'art' : y < 0 ? 'azl' : '') + '">' + (y !== 0 ? ic(y > 0 ? 'ziyaret' : 'asagi', 14) : '') + '%' + Math.abs(y) + '</span><small>' + etiket + '</small>';
+  }
+  function kpi(ikon, renk, etiket, deger, sag) {
+    return '<div class="ys-kpi"><span class="ys-kpi-ic r-' + renk + '">' + ic(ikon, 22) + '</span><div class="ys-kpi-y"><small>' + etiket + '</small><b>' + deger + '</b>' + (sag ? '<div class="ys-kpi-s">' + sag + '</div>' : '') + '</div></div>';
+  }
+  function secim(etiket, deger, secenekler, onchange, genis) {
+    return '<label class="ys-sec' + (genis ? ' genis' : '') + '"><span>' + etiket + '</span><select onchange="' + onchange + '">' +
+      secenekler.map(o => '<option value="' + esc(o[0]) + '"' + (String(deger) === String(o[0]) ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') + '</select></label>';
+  }
+  function aramaKutusu(id, deger, ph, oninput) {
+    return '<div class="ys-ara">' + ic('ara', 17) + '<input type="search" id="' + id + '" value="' + esc(deger) + '" placeholder="' + esc(ph) + '" oninput="' + oninput + '" autocomplete="off"></div>';
+  }
+  function sayfalama(toplam, sayfa, boy, fnAd, etiket) {
+    const n = Math.max(1, Math.ceil(toplam / boy));
+    let h = '<div class="ys-alt"><span>Toplam ' + toplam.toLocaleString('tr-TR') + ' ' + etiket + '</span><div class="ys-sayfalar">';
+    h += '<button type="button" ' + (sayfa <= 1 ? 'disabled' : '') + ' onclick="' + fnAd + '(' + (sayfa - 1) + ')" aria-label="Önceki">' + ic('siteye', 15) + '</button>';
+    const g = []; for (let i = 1; i <= n; i++) if (i === 1 || i === n || Math.abs(i - sayfa) <= 2) g.push(i);
+    let once = 0; g.forEach(i => { if (i - once > 1) h += '<span>…</span>'; h += '<button type="button" class="' + (i === sayfa ? 'aktif' : '') + '" onclick="' + fnAd + '(' + i + ')">' + i + '</button>'; once = i; });
+    h += '<button type="button" ' + (sayfa >= n ? 'disabled' : '') + ' onclick="' + fnAd + '(' + (sayfa + 1) + ')" aria-label="Sonraki">' + ic('sag', 15) + '</button></div>';
+    h += '<label class="ys-boy">Sayfada <select onchange="' + fnAd + '(1, +this.value)">' + [10, 25, 50, 100].map(b => '<option' + (b === boy ? ' selected' : '') + '>' + b + '</option>').join('') + '</select></label></div>';
+    return h;
+  }
+  const zamanSecenek = [['hepsi', 'Tüm zamanlar'], ['1', 'Bugün'], ['7', 'Son 7 gün'], ['30', 'Son 30 gün'], ['90', 'Son 90 gün']];
+  const zamanUygun = (t, z) => z === 'hepsi' || (t && (Date.now() - new Date(t).getTime()) < (+z) * GUN);
+  let KUL = [];
+  const kullanicilar = () => { const a = gl('_adminUsers'); return a && a.length ? a : KUL; };
+  async function kisilerHazir() {
+    if (kullanicilar().length) return;
+    try { const { data } = await sb.from('profiles').select('id, email, display_name, role, is_admin'); KUL = data || []; } catch (e) {}
+  }
+  const kisiBul = id => kullanicilar().find(u => u.id === id);
+  const kisiAd = u => u ? (u.display_name || (u.email || '').split('@')[0]) : '';
+  function avatar(u, ad) {
+    const harf = String(ad || (u && (u.display_name || u.email)) || '?').trim().charAt(0).toUpperCase() || '?';
+    return '<span class="ys-av">' + esc(harf) + '</span>';
+  }
+
+  /* ============================================================
+     HATA KAYITLARI
+     ============================================================ */
+  const HT = { rows: [], ara: '', cid: 'hepsi', kay: 'hepsi', zaman: 'hepsi', sayfa: 1, boy: 10, secili: new Set(), yuk: false };
+  const CIDDIYET = { kritik: ['Kritik', 'kirmizi', 4], yuksek: ['Yüksek', 'kirmizi', 3], orta: ['Orta', 'turuncu', 2], dusuk: ['Düşük', 'yesil', 1] };
+  function hataCoz(e) {
+    const tum = (e.message || '') + ' ' + (e.detail || '') + ' ' + (e.source || '');
+    const parca = String(e.detail || '').split(' · ');
+    const o = { tarayici: '', ip: '', konum: '', href: '', yigin: '' };
+    parca.forEach((p, i) => {
+      p = p.trim();
+      if (/^(Edge|Chrome|Firefox|Safari|\?)\/[A-Za-z?]+$/.test(p)) o.tarayici = p.replace('/', ' / ');
+      else if (/^IP /.test(p)) { o.ip = p.slice(3); o.konum = (parca[i + 1] || '').trim(); }
+      else if (/^https?:\/\//.test(p) && !o.href) o.href = p;
+      else if (i === 0 && !/^IP /.test(p)) o.yigin = p;
+    });
+    if (o.konum && (/^https?:/.test(o.konum) || /^(Edge|Chrome|Firefox|Safari)/.test(o.konum))) o.konum = '';
+    let kaynak = 'diger';
+    if (/manuel-test/.test(e.source || '')) kaynak = 'test';
+    else if (/chrome-extension:|moz-extension:|safari(-web)?-extension:/i.test(tum)) kaynak = 'eklenti';
+    else if (/^auth/i.test(e.source || '') || /Giriş\/kayıt hatası|captcha/i.test(e.message || '')) kaynak = 'auth';
+    else if (/failed to fetch|networkerror|load failed|network request|timeout|ERR_/i.test(tum)) kaynak = 'ag';
+    else if (/error|exception|cannot read|undefined|is not (a function|defined)|unexpected token|rejection/i.test(tum)) kaynak = 'js';
+    let cid = 'orta';
+    if (kaynak === 'eklenti' || kaynak === 'test') cid = 'dusuk';
+    else if (kaynak === 'auth') cid = /invalid login|şifre hatalı/i.test(e.message) ? 'dusuk' : (/captcha|secret/i.test(e.message) ? 'yuksek' : 'orta');
+    else if (kaynak === 'js') cid = /\/js\/[a-z]+\.js/i.test(tum) ? 'kritik' : 'yuksek';
+    o.kaynak = kaynak; o.cid = cid;
+    return o;
+  }
+  const KAYNAK_AD = { auth: ['Auth', 'mavi'], js: ['JavaScript', 'altin'], eklenti: ['Eklenti', 'gri'], ag: ['Ağ', 'mor'], test: ['Test', 'gri'], diger: ['Diğer', 'gri'] };
+  async function hataYukle() {
+    const k = $('ys-hata'); if (!k) return;
+    if (!HT.rows.length) k.innerHTML = '<div class="yp-kart"><div class="admin-loading">Yükleniyor...</div></div>';
+    try {
+      const [{ data, error }] = await Promise.all([sb.from('error_log').select('*').order('created_at', { ascending: false }).limit(1000), kisilerHazir()]);
+      if (error) throw error;
+      HT.rows = (data || []).map(e => Object.assign(e, { _c: hataCoz(e) }));
+      HT.secili.clear();
+      hataCiz();
+    } catch (e) { k.innerHTML = '<div class="yp-kart"><div class="yp-bos">' + ic('hata', 28) + '<b>Hata kayıtları alınamadı.</b><span>error_log tablosu kurulu mu?</span></div></div>'; }
+  }
+  function hataFiltre() {
+    const q = HT.ara.trim().toLocaleLowerCase('tr');
+    return HT.rows.filter(e => (HT.cid === 'hepsi' || e._c.cid === HT.cid) && (HT.kay === 'hepsi' || e._c.kaynak === HT.kay) && zamanUygun(e.created_at, HT.zaman) &&
+      (!q || ((e.message || '') + ' ' + (e.detail || '') + ' ' + (e.source || '') + ' ' + (e.url || '') + ' ' + kisiAd(kisiBul(e.user_id)) + ' ' + ((kisiBul(e.user_id) || {}).email || '')).toLocaleLowerCase('tr').includes(q)));
+  }
+  function hataCiz() {
+    const k = $('ys-hata'); if (!k) return;
+    const R = HT.rows, simdi = Date.now();
+    const ar = (f, a, b) => R.filter(e => { const t = simdi - new Date(e.created_at).getTime(); return f(e) && t >= a * GUN && t < b * GUN; }).length;
+    const say = f => [R.filter(f).length, ar(f, 0, 7), ar(f, 7, 14)];
+    const top = say(() => true), auth = say(e => e._c.kaynak === 'auth'), js = say(e => e._c.kaynak === 'js'), kr = say(e => e._c.cid === 'kritik');
+    const L = hataFiltre();
+    const n = Math.max(1, Math.ceil(L.length / HT.boy)); if (HT.sayfa > n) HT.sayfa = n;
+    const dilim = L.slice((HT.sayfa - 1) * HT.boy, HT.sayfa * HT.boy);
+    const tumSecili = dilim.length && dilim.every(e => HT.secili.has(String(e.id)));
+    let h = '<div class="ys-kpiler d4">' +
+      kpi('hata', 'kirmizi', 'Toplam hata', top[0], degisim(top[1], top[2], 'önceki 7 güne göre')) +
+      kpi('kilit', 'mavi', 'Giriş/kayıt hatası', auth[0], degisim(auth[1], auth[2], 'önceki 7 güne göre')) +
+      kpi('kod', 'altin', 'JavaScript hatası', js[0], degisim(js[1], js[2], 'önceki 7 güne göre')) +
+      kpi('hata', 'kirmizi', 'Kritik hata', kr[0], degisim(kr[1], kr[2], 'önceki 7 güne göre')) + '</div>';
+    h += '<div class="yp-kart ys-liste"><div class="ys-arac">' +
+      aramaKutusu('ys-ht-ara', HT.ara, 'Hata mesajında ara… (örn. login, undefined, e-posta)', 'ysHt(\'ara\', this.value)') +
+      secim('Ciddiyet', HT.cid, [['hepsi', 'Tüm ciddiyet seviyeleri'], ['kritik', 'Kritik'], ['yuksek', 'Yüksek'], ['orta', 'Orta'], ['dusuk', 'Düşük']], 'ysHt(\'cid\', this.value)') +
+      secim('Kaynak', HT.kay, [['hepsi', 'Tüm kaynaklar'], ['auth', 'Giriş/kayıt (Auth)'], ['js', 'JavaScript'], ['ag', 'Ağ / bağlantı'], ['eklenti', 'Tarayıcı eklentisi'], ['test', 'Test'], ['diger', 'Diğer']], 'ysHt(\'kay\', this.value)') +
+      secim('Tarih', HT.zaman, zamanSecenek, 'ysHt(\'zaman\', this.value)') + '</div>';
+    if (HT.secili.size) h += '<div class="ys-secbar"><b>' + HT.secili.size + ' kayıt seçili</b><button type="button" class="yp-btn kirmizi" onclick="ysHtSilSecili()">' + ic('cop', 16) + 'Seçilenleri sil</button><button type="button" class="yp-link" onclick="ysHtSec(\'temizle\')">Seçimi kaldır</button></div>';
+    if (!L.length) h += '<div class="yp-bos">' + ic('onay', 30) + '<b>' + (R.length ? 'Filtreye uyan kayıt yok.' : 'Kayıtlı hata yok.') + '</b></div>';
+    else {
+      h += '<div class="yp-tablo-k"><table class="yp-tablo ys-tablo"><thead><tr><th class="ys-cb"><input type="checkbox" ' + (tumSecili ? 'checked' : '') + ' onchange="ysHtSec(\'sayfa\', this.checked)" aria-label="Sayfadakileri seç"></th><th>Hata mesajı</th><th>Ciddiyet</th><th>Kaynak</th><th>Kullanıcı / Cihaz</th><th>URL / Sayfa</th><th>Tarih ve saat</th><th class="ys-sag">İşlemler</th></tr></thead><tbody>';
+      dilim.forEach(e => {
+        const c = e._c, C = CIDDIYET[c.cid], K = KAYNAK_AD[c.kaynak], u = kisiBul(e.user_id);
+        const kim = u ? '<b><a href="javascript:void(0)" class="ys-kisi-a" onclick="adminErrKullanici(\'' + esc(u.email || '') + '\')">' + esc(kisiAd(u)) + '</a></b><small>' + esc(u.email || '') + '</small>' : (e.user_id ? '<b>' + esc(String(e.user_id).slice(0, 8)) + '…</b><small>silinmiş/bilinmeyen hesap</small>' : '<b>Ziyaretçi</b><small>giriş yapmamış</small>');
+        const yol = e.url || '/';
+        const kaynakSatiri = [c.kaynak === 'js' && e.source ? String(e.source).replace(/^https?:\/\/[^/]+/, '') : (e.source || ''), c.yigin].filter(Boolean).join(' · ');
+        h += '<tr><td class="ys-cb"><input type="checkbox" ' + (HT.secili.has(String(e.id)) ? 'checked' : '') + ' onchange="ysHtSec(\'' + esc(e.id) + '\', this.checked)" aria-label="Seç"></td>' +
+          '<td class="ys-mesaj"><b>' + esc(e.message || '(boş mesaj)') + '</b>' + (kaynakSatiri ? '<small class="ys-kod">' + esc(kaynakSatiri.slice(0, 160)) + '</small>' : '') + '</td>' +
+          '<td><span class="ys-cid d-' + C[1] + '"><i></i>' + C[0] + '</span></td>' +
+          '<td><span class="yp-durum r-' + K[1] + '">' + K[0] + '</span></td>' +
+          '<td><div class="ys-kim">' + ic('kullanici', 18) + '<div>' + kim + '<small>' + esc([c.tarayici, c.ip ? 'IP ' + c.ip : '', c.konum].filter(Boolean).join(' · ') || '—') + '</small></div></div></td>' +
+          '<td class="ys-url"><b>' + esc(yol) + '</b>' + (c.href ? '<a href="' + esc(c.href) + '" target="_blank" rel="noopener">' + esc(c.href.replace(/^https?:\/\//, '').slice(0, 42)) + ic('link', 13) + '</a>' : '') + '</td>' +
+          '<td class="ys-tar">' + tarih(e.created_at) + '<small>' + saat(e.created_at) + '</small></td>' +
+          '<td class="ys-sag"><button type="button" class="yp-ikon-b sil" title="Sil" aria-label="Sil" onclick="adminErrDelete(\'' + esc(e.id) + '\')">' + ic('cop', 16) + '</button></td></tr>';
+      });
+      h += '</tbody></table></div>' + sayfalama(L.length, HT.sayfa, HT.boy, 'ysHtSayfa', 'kayıt');
+    }
+    k.innerHTML = h + '</div>';
+  }
+  window.ysHt = (a, v) => { HT[a] = v; HT.sayfa = 1; if (a === 'ara') { const p = document.activeElement && document.activeElement.selectionStart; hataCiz(); const i = $('ys-ht-ara'); if (i) { i.focus(); try { i.setSelectionRange(p, p); } catch (e) {} } } else hataCiz(); };
+  window.ysHtSayfa = (s, boy) => { if (boy) HT.boy = boy; HT.sayfa = s; hataCiz(); };
+  window.ysHtSec = (id, acik) => {
+    if (id === 'temizle') HT.secili.clear();
+    else if (id === 'sayfa') { hataFiltre().slice((HT.sayfa - 1) * HT.boy, HT.sayfa * HT.boy).forEach(e => acik ? HT.secili.add(String(e.id)) : HT.secili.delete(String(e.id))); }
+    else acik ? HT.secili.add(String(id)) : HT.secili.delete(String(id));
+    hataCiz();
+  };
+  window.ysHtSilSecili = async () => {
+    const ids = [...HT.secili]; if (!ids.length) return;
+    if (!(await uiConfirm(ids.length + ' hata kaydı silinsin mi?', 'Kayıtları sil', { danger: true }))) return;
+    try { const { error } = await sb.from('error_log').delete().in('id', ids); if (error) throw error; toast(ids.length + ' kayıt silindi.'); } catch (e) { uiAlert('Silinemedi.'); }
+    hataYukle();
+  };
+  window.YS_AKS.errors = () => '<button type="button" class="yp-btn" onclick="adminClearErrors()">' + ic('cop', 16) + 'Temizle</button>' +
+    '<button type="button" class="yp-btn" onclick="adminErrTest()">' + ic('kalem', 16) + 'Sistemi test et</button>' +
+    '<button type="button" class="yp-btn" onclick="adminLoadErrors()">' + ic('yenile', 16) + 'Yenile</button>';
+
+  /* ============================================================
+     İŞLEM KAYITLARI
+     ============================================================ */
+  const IS = { rows: [], kurum: {}, tur: 'hepsi', rol: 'hepsi', zaman: 'hepsi', ara: '', sayfa: 1, boy: 10 };
+  const ISLEM = {
+    kullanici_sil: ['Kullanıcı silme', 'Kullanıcı hesabı silindi.', 'cop', 'kirmizi'],
+    ogrenci_atama_kaldir: ['Atama kaldırma', 'Öğretmen ataması kaldırıldı.', 'carpi', 'kirmizi'],
+    ogrenci_ata: ['Öğrenci atama', 'Öğrenci ataması yapıldı.', 'ogretmen', 'altin'],
+    rol_degistir: ['Rol değişimi', 'Kullanıcı rolü değiştirildi.', 'ayar', 'gri'],
+    premium_tanim: ['Premium tanımlama', 'Premium üyelik tanımlandı.', 'tac', 'altin'],
+    deneme_premium: ['Deneme premium', 'Deneme premium süresi verildi.', 'hediye', 'altin'],
+    kurum_sil: ['Kurum silme', 'Kurum silindi.', 'kurum', 'mor'],
+    kurum_admin_ata: ['Kurum yöneticisi atama', 'Kurum yöneticisi atandı.', 'kullanicilar', 'mavi'],
+    ticket_mail: ['Talep maili', 'Destek talebine e-posta gönderildi.', 'mail', 'yesil'],
+    talep_durum: ['Talep durumu', 'Destek talebinin durumu değişti.', 'destek', 'mavi'],
+    talep_ustlen: ['Talep üstlenme', 'Destek talebi üstlenildi.', 'destek', 'mavi'],
+    sablon_ekle: ['Şablon ekleme', 'Yanıt şablonu eklendi.', 'not', 'gri'],
+    ogretmen_mail: ['Öğretmen maili', 'E-posta gönderildi.', 'mail', 'yesil'],
+    ogretmen_bildirim: ['Öğretmen bildirimi', 'Bildirim gönderildi.', 'bildirim', 'altin'],
+    bildirim: ['Bildirim', 'Bildirim gönderildi.', 'bildirim', 'altin'],
+    dogrulama_maili_tekrar: ['Doğrulama maili', 'Doğrulama maili yeniden gönderildi.', 'mail', 'yesil'],
+    sifre_sifirlama_maili: ['Şifre yenileme maili', 'Şifre yenileme bağlantısı gönderildi.', 'anahtar', 'gri']
+  };
+  const ROL_AD = { superadmin: ['Yönetici', 'altin'], destek: ['Destek', 'mavi'], ogretmen: ['Öğretmen', 'mavi'], kurum: ['Kurum', 'mor'] };
+  const DETAY_AD = { ad: 'Ad', email: 'E-posta', kime: 'Kime', konu: 'Konu', ogretmen: 'Öğretmen', ogrenci: 'Öğrenci', kurum_id: 'Kurum', yeni_rol: 'Yeni rol', eski_rol: 'Eski rol', kullanici: 'Kullanıcı', sure: 'Süre', ticket: 'Talep', durum: 'Durum', baslik: 'Başlık' };
+  function detayYaz(d) {
+    if (!d || typeof d !== 'object') return d ? esc(String(d)) : '';
+    return Object.entries(d).map(([k, v]) => {
+      let deger = v;
+      if (typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v)) { const u = kisiBul(v); deger = u ? kisiAd(u) : (IS.kurum[v] || v.slice(0, 8) + '…'); }
+      else if (v && typeof v === 'object') deger = JSON.stringify(v);
+      return '<span><em>' + esc(DETAY_AD[k] || k) + ':</em> ' + esc(deger) + '</span>';
+    }).join('');
+  }
+  async function islemYukle() {
+    const k = $('ys-islem'); if (!k) return;
+    if (!IS.rows.length) k.innerHTML = '<div class="yp-kart"><div class="admin-loading">Yükleniyor...</div></div>';
+    try {
+      const [a, ku] = await Promise.all([
+        sb.from('action_log').select('*').order('created_at', { ascending: false }).limit(1000),
+        sb.from('kurumlar').select('id, name').then(r => r, () => ({ data: [] })),
+        kisilerHazir()
+      ]);
+      if (a.error) throw a.error;
+      IS.rows = a.data || []; IS.kurum = {}; ((ku && ku.data) || []).forEach(x => IS.kurum[x.id] = x.name);
+      islemCiz();
+    } catch (e) { k.innerHTML = '<div class="yp-kart"><div class="yp-bos">' + ic('log', 28) + '<b>İşlem kayıtları okunamadı.</b><span>roller_altyapi.sql çalıştırıldı mı?</span></div></div>'; }
+  }
+  function islemFiltre() {
+    const q = IS.ara.trim().toLocaleLowerCase('tr');
+    return IS.rows.filter(r => (IS.tur === 'hepsi' || r.action === IS.tur) && (IS.rol === 'hepsi' || r.actor_role === IS.rol) && zamanUygun(r.created_at, IS.zaman) &&
+      (!q || [r.action, (ISLEM[r.action] || [])[0], kisiAd(kisiBul(r.actor_id)), (kisiBul(r.actor_id) || {}).email, kisiAd(kisiBul(r.target)), (kisiBul(r.target) || {}).email, JSON.stringify(r.detail || {}), r.detail && IS.kurum[r.detail.kurum_id]]
+        .filter(Boolean).join(' ').toLocaleLowerCase('tr').includes(q)));
+  }
+  function islemCiz() {
+    const k = $('ys-islem'); if (!k) return;
+    const turler = [...new Set(IS.rows.map(r => r.action))].sort((a, b) => ((ISLEM[a] || [a])[0]).localeCompare((ISLEM[b] || [b])[0], 'tr'));
+    const roller = [...new Set(IS.rows.map(r => r.actor_role).filter(Boolean))];
+    const L = islemFiltre();
+    const n = Math.max(1, Math.ceil(L.length / IS.boy)); if (IS.sayfa > n) IS.sayfa = n;
+    const dilim = L.slice((IS.sayfa - 1) * IS.boy, IS.sayfa * IS.boy);
+    let h = '<div class="yp-kart ys-liste"><div class="ys-arac">' +
+      '<button type="button" class="yp-btn altin" onclick="ysIsYenile()">' + ic('yenile', 17) + 'Yenile</button>' +
+      secim('İşlem türü', IS.tur, [['hepsi', 'Tümü']].concat(turler.map(t => [t, (ISLEM[t] || [t])[0]])), 'ysIs(\'tur\', this.value)') +
+      secim('Rol', IS.rol, [['hepsi', 'Tümü']].concat(roller.map(r => [r, (ROL_AD[r] || [r])[0]])), 'ysIs(\'rol\', this.value)') +
+      secim('Tarih aralığı', IS.zaman, zamanSecenek, 'ysIs(\'zaman\', this.value)') +
+      aramaKutusu('ys-is-ara', IS.ara, 'Kullanıcı, e-posta, kurum, işlem ara…', 'ysIs(\'ara\', this.value)') + '</div>';
+    if (!L.length) h += '<div class="yp-bos">' + ic('log', 30) + '<b>' + (IS.rows.length ? 'Filtreye uyan kayıt yok.' : 'Henüz işlem kaydı yok.') + '</b></div>';
+    else {
+      h += '<div class="yp-tablo-k"><table class="yp-tablo ys-tablo"><thead><tr><th>İşlem</th><th>Kullanıcı</th><th>Hedef / Detay</th><th>Tarih</th><th class="ys-sag"></th></tr></thead><tbody>';
+      dilim.forEach(r => {
+        const M = ISLEM[r.action] || [r.action, 'İşlem kaydı.', 'log', 'gri'];
+        const u = kisiBul(r.actor_id), hd = kisiBul(r.target), d = r.detail || {};
+        const R = ROL_AD[r.actor_role] || [r.actor_role || '—', 'gri'];
+        let hedef = '', hIkon = 'kullanici';
+        if (hd) hedef = esc(kisiAd(hd)) + (hd.email ? ' <small class="ys-ince">(' + esc(hd.email) + ')</small>' : '');
+        else if (d.kurum_id && IS.kurum[d.kurum_id]) { hedef = esc(IS.kurum[d.kurum_id]); hIkon = 'kurum'; }
+        else if (d.kime) { hedef = esc(d.kime); hIkon = 'mail'; }
+        else if (d.email) hedef = esc((d.ad ? d.ad + ' ' : '') + '(' + d.email + ')');
+        else if (r.target) hedef = esc(String(r.target).slice(0, 8)) + '…';
+        else hedef = '—';
+        h += '<tr><td><div class="ys-islem"><span class="ys-islem-ic r-' + M[3] + '">' + ic(M[2], 19) + '</span><div><b>' + esc(M[0]) + '</b><small>' + esc(M[1]) + '</small></div></div></td>' +
+          '<td><div class="ys-kim">' + avatar(u) + '<div><b>' + esc(kisiAd(u) || (r.actor_id ? String(r.actor_id).slice(0, 8) + '…' : '—')) + '</b><span class="yp-durum d-' + (R[1] === 'altin' ? 'sari' : 'gri') + '">' + esc(R[0]) + '</span></div></div></td>' +
+          '<td><div class="ys-kim">' + ic(hIkon, 18) + '<div><b>' + hedef + '</b><div class="ys-detay">' + detayYaz(d) + '</div></div></div></td>' +
+          '<td class="ys-tar">' + tarih(r.created_at) + '<small>' + saat(r.created_at) + '</small></td>' +
+          '<td class="ys-sag"><button type="button" class="yp-ikon-b" title="Ayrıntı" aria-label="Ayrıntı" onclick="ysIsDetay(\'' + esc(r.id) + '\')">' + ic('nokta3', 16) + '</button></td></tr>';
+      });
+      h += '</tbody></table></div>' + sayfalama(L.length, IS.sayfa, IS.boy, 'ysIsSayfa', 'işlem kaydı');
+    }
+    k.innerHTML = h + '</div>';
+  }
+  window.ysIs = (a, v) => { IS[a] = v; IS.sayfa = 1; islemCiz(); if (a === 'ara') { const i = $('ys-is-ara'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch (e) {} } } };
+  window.ysIsSayfa = (s, boy) => { if (boy) IS.boy = boy; IS.sayfa = s; islemCiz(); };
+  window.ysIsYenile = () => islemYukle();
+  window.ysIsDetay = id => {
+    const r = IS.rows.find(x => String(x.id) === String(id)); if (!r) return;
+    const M = ISLEM[r.action] || [r.action];
+    const satir = [['İşlem', M[0]], ['Yapan', kisiAd(kisiBul(r.actor_id)) + ' (' + ((kisiBul(r.actor_id) || {}).email || r.actor_id || '—') + ')'], ['Rol', (ROL_AD[r.actor_role] || [r.actor_role])[0]],
+      ['Hedef', r.target ? (kisiAd(kisiBul(r.target)) || r.target) : '—'], ['Tarih', new Date(r.created_at).toLocaleString('tr-TR')], ['Ayrıntı', JSON.stringify(r.detail || {}, null, 1)]];
+    uiAlert(satir.map(s => s[0] + ': ' + s[1]).join('\n'), 'İşlem ayrıntısı');
+  };
+
+  /* ============================================================
+     YEDEKLEME
+     ============================================================ */
+  function yedekCiz() {
+    const k = $('ys-yedek'); if (!k) return;
+    const T = gl('BACKUP_TABLES') || [];
+    k.innerHTML =
+      '<section class="yp-kart ys-blok"><div class="ys-blok-bas">' + ic('yedek', 24) + '<div><h3>Tam yedek</h3><p>Tüm tablolar tek dosyada iner (kullanıcı profilleri, kelimeler, testler, talepler, mailler, sorular…). Düzenli olarak (haftada bir) almanı öneririm.</p></div></div>' +
+      '<div class="ys-yedek-satir"><button type="button" class="yp-btn ana buyuk" onclick="adminBackupAll()">' + ic('indir', 19) + 'Tüm veritabanını indir</button>' +
+      '<div class="ys-ozellik">' + ic('not', 20) + '<div><b>JSON biçiminde</b><small>Kolay taşınabilir</small></div></div>' +
+      '<div class="ys-ozellik">' + ic('yedek', 20) + '<div><b>Tüm tablolar dahil</b><small>' + T.length + ' tablo, tek dosya</small></div></div>' +
+      '<div class="ys-ozellik">' + ic('saat', 20) + '<div><b>Yaklaşık boyut</b><small>Birkaç MB (içeriğe göre)</small></div></div></div>' +
+      '<div id="backup-status" class="ys-durum-yazi"></div></section>' +
+      '<section class="yp-kart ys-blok"><div class="ys-blok-bas">' + ic('liste', 24) + '<div><h3>Tablo bazında indir</h3><p>Yalnızca ihtiyaç duyduğun tabloları ayrı ayrı indirebilirsin. Her tablo JSON olarak iner.</p></div><span class="ys-rozet">' + ic('bilgi', 15) + T.length + ' tablo</span></div>' +
+      '<div id="backup-tables" class="ys-tablolar">' + T.map(t => '<button type="button" class="yp-btn" onclick="adminBackupTable(\'' + t + '\')">' + ic('indir', 15) + esc(t) + '</button>').join('') + '</div></section>' +
+      '<section class="yp-kart ys-blok"><div class="ys-blok-bas">' + ic('paket', 24) + '<div><h3>Tam kurtarma paketi (kod + kurulum)</h3><p>Tek tıkla: <b>tüm veritabanı</b> + <b>sitenin canlı kod dosyaları</b> + yeniden kurulum rehberi tek zip\'te iner. Siteye bir şey olursa bu paket ve sunucu fonksiyon kodlarıyla her şey yeniden ayağa kaldırılır. Haftada bir almanı öneririm.</p></div></div>' +
+      '<div class="ys-yedek-satir"><button type="button" class="yp-btn ana buyuk" onclick="adminRecoveryZip()">' + ic('paket', 19) + 'Kurtarma paketi oluştur ve indir</button>' +
+      '<div class="ys-ozellik">' + ic('klasor', 20) + '<div><b>Veritabanı + kod</b><small>Tüm dosyalar tek pakette</small></div></div>' +
+      '<div class="ys-ozellik">' + ic('not', 20) + '<div><b>Kurulum rehberi</b><small>Adım adım hazır</small></div></div>' +
+      '<div class="ys-ozellik">' + ic('yonetim', 20) + '<div><b>Güvenli ve tam</b><small>Acil durumlar için</small></div></div></div>' +
+      '<div id="recovery-status" class="ys-durum-yazi"></div></section>';
+  }
+  window.YS_AKS.backup = () => '<div class="ys-bilgi-kart">' + ic('yonetim', 22) + '<div><b>Veri güvenliği</b><small>Yedekler yalnızca yönetici hesabıyla, senin tarayıcında oluşturulur ve bilgisayarına iner.</small></div></div>';
+
+  /* ============================================================
+     SİTE AYARLARI (alanların kimlikleri korunur; kaydetme fonksiyonları eski)
+     ============================================================ */
+  function ayarlarCiz() {
+    const k = $('ys-ayar'); if (!k || k.dataset.kuruldu) return;
+    k.dataset.kuruldu = '1';
+    const tarihAlan = (id, ad) => '<label class="ys-alan"><span>' + ad + '</span><div class="ys-tarih">' + ic('takvim', 17) + '<input id="' + id + '" type="date"><button type="button" class="yp-ikon-b" title="Temizle" aria-label="Temizle" onclick="document.getElementById(\'' + id + '\').value=\'\'">' + ic('kapat', 15) + '</button></div></label>';
+    k.innerHTML =
+      '<section class="yp-kart ys-ayar-k"><span class="ys-ayar-ic">' + ic('mail', 22) + '</span><div class="ys-ayar-g"><h3>Kayıt: izin verilen e-posta uzantıları</h3>' +
+      '<p>Yeni üyeler yalnızca bu uzantılardaki adreslerle (onay koduyla) kayıt olabilir; Google ile girişte de geçerlidir. Bir uzantı alt alan adlarını da kapsar; örneğin "edu.tr" yazılırsa tüm üniversite adresleri kabul edilir. Liste boş bırakılırsa kısıtlama kalkar. Mevcut üyeler etkilenmez.</p>' +
+      '<div class="ys-ayar-ikili"><textarea id="set-mail-uzanti" class="an-textarea" rows="7" placeholder="gmail.com&#10;hotmail.com&#10;outlook.com"></textarea>' +
+      '<div class="ys-not">' + ic('bilgi', 18) + '<div><b>Bilgi</b><span>Her satıra yalnızca bir uzantı yaz.</span><span>Alt alan adları otomatik kabul edilir.</span><span>Liste yalnızca yeni kayıt olacak kullanıcılar için geçerlidir.</span></div></div></div>' +
+      '<button type="button" class="yp-btn ana" onclick="adminSaveMailDomains()">' + ic('kaydet', 16) + 'Kaydet</button></div></section>' +
+      '<section class="yp-kart ys-ayar-k"><span class="ys-ayar-ic">' + ic('takvim', 22) + '</span><div class="ys-ayar-g"><h3>Sınav tarihleri</h3>' +
+      '<p>Girilen tarihler kullanıcılara sağ kenardaki sayaçta kalan gün sayısı olarak gösterilir. Boş bırakılırsa o sınav gösterilmez.</p>' +
+      '<div class="ys-uclu">' + tarihAlan('set-ydt-date', 'YDT tarihi') + tarihAlan('set-yds-date', 'YDS tarihi') + tarihAlan('set-eyds-date', 'e-YDS tarihi') + '</div>' +
+      '<button type="button" class="yp-btn ana" onclick="adminSaveExamDates()">' + ic('kaydet', 16) + 'Kaydet ve yayınla</button></div></section>' +
+      '<section class="yp-kart ys-ayar-k"><span class="ys-ayar-ic">' + ic('bildirim', 22) + '</span><div class="ys-ayar-g"><h3>Duyuru bandı</h3>' +
+      '<p>Buraya yazılan metin sitenin en üstünde herkese görünen bir bant olarak yayınlanır. Boş bırakıp kaydedersen bant kalkar.</p>' +
+      '<textarea id="set-announce" class="an-textarea" rows="2" maxlength="500" placeholder="Örn: 15 Temmuz\'a kadar premium %20 indirimli!" oninput="document.getElementById(\'ys-duyuru-say\').textContent=this.value.length"></textarea>' +
+      '<div class="ys-satir-ara"><button type="button" class="yp-btn ana" onclick="adminSaveAnnouncement()">' + ic('kaydet', 16) + 'Kaydet ve yayınla</button><small><span id="ys-duyuru-say">0</span>/500 karakter</small></div></div></section>' +
+      '<section class="yp-kart ys-ayar-k"><span class="ys-ayar-ic">' + ic('hazirlik', 22) + '</span><div class="ys-ayar-g"><h3>Bakım modu</h3>' +
+      '<p>Açıkken ziyaretçiler "Bakımdayız" ekranı görür; <b>yöneticiler siteyi normal kullanmaya devam eder</b>. Büyük güncelleme yaparken aç.</p>' +
+      '<div class="ys-satir-ara sol"><label class="ys-anahtar"><input type="checkbox" id="set-maint"><i></i><span>Bakım modu açık</span></label><button type="button" class="yp-btn ana" onclick="adminSaveMaintenance()">' + ic('kaydet', 16) + 'Kaydet</button></div></div></section>';
+  }
+
+  /* ============================================================
+     ZİYARET & SEO
+     ============================================================ */
+  const ZV = { gun: 30, veri: null, yuk: null, sekme: 'ulke' };
+  const SAYFA_AD = { home: 'Ana Sayfa', words: 'Kelimeler', works: 'Çalışmalar', quiz: 'Testler', grammarworks: 'Gramer Çalışmaları', grammar: 'Gramer', review: 'Tekrar', testbuilder: 'Test Oluştur', video: 'Videolar', pricing: 'Fiyatlar', profile: 'Profil', admin: 'Yönetim', placement: 'Seviye Sınavı', learn: 'Eğitim', recs: 'Blog', makaleler: 'Makaleler', watch: 'Video izleme', teacher: 'Öğretmen paneli', kurum: 'Kurum paneli' };
+  const KAYNAK_MARKA = [[/google\./, 'Google', '#4285f4', 'G'], [/bing\.com/, 'Bing', '#008373', 'B'], [/yahoo\./, 'Yahoo', '#6001d2', 'Y'], [/yandex\./, 'Yandex', '#fc3f1d', 'Я'],
+    [/duckduckgo/, 'DuckDuckGo', '#de5833', 'D'], [/(^|\.)t\.me$|telegram/, 'Telegram', '#229ed9', 'T'], [/(^|\.)t\.co$|twitter|(^|\.)x\.com$/, 'X (Twitter)', '#111', 'X'],
+    [/instagram/, 'Instagram', '#d62976', 'I'], [/facebook|fb\.com/, 'Facebook', '#1877f2', 'f'], [/youtube|youtu\.be/, 'YouTube', '#ff0000', '▶'], [/whatsapp|wa\.me/, 'WhatsApp', '#25d366', 'W'],
+    [/chatgpt|openai/, 'ChatGPT', '#10a37f', 'C'], [/claude\.ai|anthropic/, 'Claude', '#d97757', 'C']];
+  function kaynakAd(host) {
+    if (!host || host === '(dogrudan)') return ['Doğrudan / uygulama', '#0d1b2a', 'D'];
+    for (const m of KAYNAK_MARKA) if (m[0].test(host)) return [m[1], m[2], m[3]];
+    return [host, '#8a8270', host.charAt(0).toUpperCase()];
+  }
+  async function ziyaretVeri(gun) {
+    try {
+      const { data, error } = await sb.rpc('admin_ziyaret_detay', { gun });
+      if (!error && data && data.gunluk) return data;
+    } catch (e) {}
+    // Yedek yol: kayıtları çekip tarayıcıda say
+    const rows = typeof _visitData === 'function' ? await _visitData(Math.max(gun * 2, 60)) : [];
+    const sinir = Date.now() - gun * GUN, gunluk = {}, ulke = {}, sehir = {}, kaynak = {}, sayfa = {};
+    rows.forEach(r => {
+      if (!r.created_at) return;
+      const d = new Date(r.created_at).toLocaleDateString('sv-SE'); gunluk[d] = (gunluk[d] || 0) + 1;
+      if (new Date(r.created_at).getTime() < sinir) return;
+      if (r.country) ulke[r.country] = (ulke[r.country] || 0) + 1;
+      if (r.country && r.city) { const k = r.country + ' - ' + r.city; sehir[k] = (sehir[k] || 0) + 1; }
+      let h = '(dogrudan)'; try { if (r.referrer) h = new URL(r.referrer).hostname.replace(/^www\./, ''); } catch (e) {}
+      if (!/ydt-ydsrusca/.test(h)) kaynak[h] = (kaynak[h] || 0) + 1;
+      if (r.path) sayfa[r.path] = (sayfa[r.path] || 0) + 1;
+    });
+    const sirala = m => Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    return { gunluk, ulkeler: sirala(ulke), sehirler: sirala(sehir), kaynaklar: sirala(kaynak), sayfalar: sirala(sayfa) };
+  }
+  async function ziyaretYukle() {
+    const k = $('ys-ziyaret'); if (!k) return;
+    if (!ZV.veri) k.innerHTML = '<div class="yp-kart"><div class="admin-loading">Yükleniyor...</div></div>';
+    try { ZV.veri = await ziyaretVeri(ZV.gun); } catch (e) { ZV.veri = { gunluk: {}, ulkeler: [], sehirler: [], kaynaklar: [], sayfalar: [] }; }
+    ziyaretCiz();
+  }
+  function cubukListe(liste, adFn) {
+    if (!liste || !liste.length) return '<div class="yp-bos kucuk"><span>Henüz veri yok.</span></div>';
+    const mx = Math.max(1, ...liste.map(x => x[1]));
+    return '<ol class="ys-cubuklar">' + liste.slice(0, 10).map((x, i) => { const a = adFn ? adFn(x[0]) : [x[0]]; return '<li><span class="ys-sira">' + (i + 1) + '</span>' + (a[2] ? '<span class="ys-marka" style="background:' + a[1] + '">' + esc(a[2]) + '</span>' : '') + '<span class="ys-c-ad" title="' + esc(a[0]) + '">' + esc(a[0]) + '</span><span class="ys-c-iz"><i style="width:' + Math.max(2, Math.round(x[1] / mx * 100)) + '%"></i></span><b>' + x[1].toLocaleString('tr-TR') + '</b></li>'; }).join('') + '</ol>';
+  }
+  function ziyaretCiz() {
+    const k = $('ys-ziyaret'); if (!k || !ZV.veri) return;
+    const g = ZV.veri.gunluk || {}, key = d => d.toLocaleDateString('sv-SE');
+    const top = (a, b) => { let s = 0; for (let i = a; i < b; i++) { const d = new Date(Date.now() - i * GUN); s += g[key(d)] || 0; } return s; };
+    const bugun = top(0, 1), dun = top(1, 2), h7 = top(0, 7), o7 = top(7, 14), h30 = top(0, 30), o30 = top(30, 60);
+    let ad = null; try { ad = new Intl.DisplayNames(['tr'], { type: 'region' }); } catch (e) {}
+    const ulkeAd = n => { const p = String(n).split(' - '); if (ad && /^[A-Z]{2}$/.test(p[0])) { try { p[0] = ad.of(p[0]); } catch (e) {} } return [p.join(' - ')]; };
+    k.innerHTML = '<div class="ys-kpiler d3">' +
+      kpi('kullanicilar', 'mavi', 'Bugün', bugun.toLocaleString('tr-TR'), degisim(bugun, dun, 'düne göre')) +
+      kpi('grafik', 'altin', 'Son 7 gün', h7.toLocaleString('tr-TR'), degisim(h7, o7, 'önceki haftaya göre')) +
+      kpi('saat', 'gri', 'Son 30 gün', h30.toLocaleString('tr-TR'), degisim(h30, o30, 'önceki 30 güne göre')) + '</div>' +
+      '<div class="ys-uc-kart">' +
+      '<section class="yp-kart"><div class="yp-kart-bas"><h3>' + ic('pin', 18) + 'Ülke ve şehir (' + ZV.gun + ' gün)</h3></div>' +
+      '<div class="ys-mini-sekme"><button type="button" class="' + (ZV.sekme === 'ulke' ? 'aktif' : '') + '" onclick="ysZvSekme(\'ulke\')">Ülkeler</button><button type="button" class="' + (ZV.sekme === 'sehir' ? 'aktif' : '') + '" onclick="ysZvSekme(\'sehir\')">Şehirler</button></div>' +
+      cubukListe(ZV.sekme === 'ulke' ? ZV.veri.ulkeler : ZV.veri.sehirler, ulkeAd) + '</section>' +
+      '<section class="yp-kart"><div class="yp-kart-bas"><h3>' + ic('link', 18) + 'Trafik kaynakları (' + ZV.gun + ' gün)</h3></div>' + cubukListe(ZV.veri.kaynaklar, kaynakAd) + '</section>' +
+      '<section class="yp-kart"><div class="yp-kart-bas"><h3>' + ic('not', 18) + 'En çok ziyaret edilen sayfalar</h3></div>' + cubukListe(ZV.veri.sayfalar, p => [SAYFA_AD[p] || p]) + '</section>' +
+      '</div>' +
+      '<div class="ys-gsc-satir"><section class="yp-kart ys-gsc"><div class="yp-kart-bas"><h3><span class="ys-marka" style="background:#4285f4">G</span>Google Search Console</h3><div id="ys-gsc-acts"></div></div><div id="admin-gsc"><div class="admin-loading">Yükleniyor...</div></div></section>' +
+      '<section class="yp-kart ys-seo"><div class="yp-kart-bas"><h3>' + ic('ara', 18) + 'SEO denetimi</h3><span id="ys-seo-puan"></span></div><div id="admin-seo"></div></section></div>';
+    gscDugmeler();
+    if (typeof adminGscShowLast === 'function') adminGscShowLast();
+    seoCiz();
+  }
+  window.ysZvSekme = s => { ZV.sekme = s; ziyaretCiz(); };
+  window.ysZvGun = g => { ZV.gun = +g; ZV.veri = null; ziyaretYukle(); };
+  window.YS_AKS.visits = () => '<div class="yp-sec"><span>' + ic('takvim', 16) + '</span><select onchange="ysZvGun(this.value)" aria-label="Zaman aralığı">' +
+    [[7, 'Son 7 gün'], [30, 'Son 30 gün'], [90, 'Son 90 gün']].map(o => '<option value="' + o[0] + '"' + (ZV.gun === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></div>';
+  function gscDugmeler(gun) {
+    const acts = $('ys-gsc-acts'); if (!acts) return;
+    gun = gun || gl('_gscDays') || 28;
+    acts.innerHTML = '<div class="ys-mini-sekme">' + [7, 28, 90].map(x => '<button type="button" class="' + (x === gun ? 'aktif' : '') + '" onclick="adminGscRange(' + x + ')">' + x + ' gün</button>').join('') + '</div>' +
+      '<button type="button" class="yp-btn kucuk" onclick="adminGscShowLast()">' + ic('indir', 15) + 'Kayıtlı veriyi göster</button><button type="button" class="yp-btn kucuk" onclick="adminGscLoad()">' + ic('yenile', 15) + 'Canlı çek</button>';
+  }
+  function gscCiz(data, fetchedAt) {
+    const box = $('admin-gsc'); if (!box || !data) return;
+    const daily = data.daily || [], queries = data.queries || [], pages = data.pages || [];
+    const tik = daily.reduce((a, r) => a + (r.clicks || 0), 0), gos = daily.reduce((a, r) => a + (r.impressions || 0), 0);
+    const ctr = gos ? (tik / gos * 100).toFixed(1) : '0', gun = (data.range && data.range.days) || gl('_gscDays') || 28;
+    gscDugmeler(gun);
+    const tablo = (bas, rows, kolon) => '<div class="ys-gsc-t"><h4>' + bas + '</h4>' + (rows.length ? '<table class="yp-tablo"><thead><tr><th>#</th>' + kolon.map(c => '<th>' + c[0] + '</th>').join('') + '</tr></thead><tbody>' +
+      rows.slice(0, 8).map((r, i) => '<tr><td>' + (i + 1) + '</td>' + kolon.map(c => '<td>' + esc(c[1](r)) + '</td>').join('') + '</tr>').join('') + '</tbody></table>' : '<div class="yp-bos kucuk"><span>Henüz veri yok.</span></div>') + '</div>';
+    box.innerHTML = '<div class="ys-gsc-kpi"><div>' + ic('okSag', 20) + '<span><small>Tıklama</small><b>' + tik.toLocaleString('tr-TR') + '</b></span></div><div>' + ic('goz', 20) + '<span><small>Gösterim</small><b>' + gos.toLocaleString('tr-TR') + '</b></span></div>' +
+      '<div>' + ic('ziyaret', 20) + '<span><small>CTR</small><b>%' + ctr + '</b></span></div><div class="ys-gsc-son"><small>Son veri</small><b>' + (fetchedAt ? new Date(fetchedAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—') + '</b></div></div>' +
+      '<div class="ys-gsc-tablolar">' + tablo('En iyi aramalar', queries, [['Sorgu', r => r.keys[0]], ['Tıklama', r => r.clicks], ['Gösterim', r => r.impressions], ['Ort. sıra', r => (r.position || 0).toFixed(1)]]) +
+      tablo('En iyi sayfalar', pages, [['Sayfa', r => (r.keys[0] || '').replace(/^https?:\/\/(www\.)?ydt-ydsrusca\.com/, '') || '/'], ['Tıklama', r => r.clicks], ['Gösterim', r => r.impressions]]) + '</div>';
+  }
+  function seoCiz() {
+    const box = $('admin-seo'); if (!box) return;
+    const c = [], t = document.title || '';
+    c.push([t.length >= 25 && t.length <= 65, 'Sayfa başlığı (title) 25-65 karakter', t ? '"' + t + '" (' + t.length + ' karakter)' : 'Yok']);
+    const md = document.querySelector('meta[name="description"]');
+    c.push([!!md && (md.content || '').length >= 60, 'Meta açıklama (description) 60+ karakter', md ? (md.content || '').slice(0, 90) : 'Yok, eklenmeli']);
+    c.push([!!document.querySelector('link[rel*="icon"]'), 'Favicon tanımlı', 'Site simgesi']);
+    c.push([!!document.querySelector('meta[property="og:title"]'), 'Open Graph başlık (link paylaşım kartı)', 'Yoksa WhatsApp/Telegram önizlemesi çıkmaz']);
+    c.push([!!document.querySelector('meta[property="og:image"]'), 'Open Graph görsel', 'Paylaşımda görünen resim']);
+    c.push([!!document.documentElement.lang, 'HTML dil etiketi (lang)', document.documentElement.lang || 'Yok']);
+    const h1 = document.querySelectorAll('h1').length;
+    c.push([h1 === 1, 'Tek H1 başlığı', h1 + ' adet bulundu']);
+    c.push([location.protocol === 'https:', 'HTTPS aktif', 'Site güvenli bağlantıyla açılıyor']);
+    const ok = c.filter(x => x[0]).length, p = $('ys-seo-puan');
+    if (p) p.innerHTML = '<span class="yp-durum ' + (ok === c.length ? 'd-yesil' : 'd-sari') + '">SEO puanı: ' + ok + '/' + c.length + '</span>';
+    box.innerHTML = '<ul class="ys-seo-l">' + c.map(x => '<li class="' + (x[0] ? 'ok' : 'yok') + '">' + ic(x[0] ? 'onay' : 'carpi', 19) + '<div><b>' + esc(x[1]) + '</b><small>' + esc(x[2]) + '</small></div></li>').join('') + '</ul>';
+  }
+
+  /* ---------- Bağlantılar: eski yükleyiciler yeni sayfaları çizsin ---------- */
+  function degistir(ad, fn) { window[ad] = fn; try { (0, eval)(ad + ' = window.' + ad); } catch (e) {} }
+  function bagla() {
+    degistir('adminLoadErrors', function () { return hataYukle(); });
+    degistir('adminStaffLogLoad', function () { return islemYukle(); });
+    degistir('renderBackupView', function () { yedekCiz(); });
+    degistir('renderVisitsFull', function () { return ziyaretYukle(); });
+    degistir('renderSeoCheck', function () { seoCiz(); });
+    degistir('_gscRender', gscCiz);
+    const eskiAyar = window.adminSettingsInit;
+    degistir('adminSettingsInit', async function () {
+      ayarlarCiz();
+      const r = typeof eskiAyar === 'function' ? await eskiAyar.apply(this, arguments) : null;
+      const a = $('set-announce'), s = $('ys-duyuru-say'); if (a && s) s.textContent = a.value.length;
+      return r;
+    });
+  }
+  if (document.readyState === 'complete') bagla(); else document.addEventListener('DOMContentLoaded', bagla);
 })();
