@@ -96,7 +96,7 @@ function authInit() {
 
   // Oturum durumu değişince arayüzü güncelle (giriş, çıkış, Google dönüşü dahil)
   sb.auth.onAuthStateChange((_event, session) => {
-    if (_event === "PASSWORD_RECOVERY") { setTimeout(openPwReset, 300); }
+    if (_event === "PASSWORD_RECOVERY" && !window._sifirlamaKodla) { setTimeout(function () { if (!window._sifirlamaKodla) openPwReset(); }, 300); }
     handleSession(session);
   });
   // Sayfa açılışında mevcut oturumu yükle
@@ -486,19 +486,90 @@ async function resendVerifyMail() {
 }
 
 /* Giriş penceresi: Şifremi Unuttum */
-async function authForgot() {
-  var emailEl = document.getElementById("login-email");
-  var email = (emailEl && emailEl.value || "").trim();
-  if (!email) { authMsg("Önce yukarıya e-posta adresini yaz, sonra 'Şifremi unuttum'a tıkla."); return; }
-  var tk = (typeof captchaPrompt === "function") ? await captchaPrompt() : null;
-  if (TURNSTILE_SITE_KEY && !tk) { authMsg("Doğrulama tamamlanmadı."); return; }
+/* ===== Şifremi unuttum: e-postaya hem bağlantı hem 6 haneli kod gider =====
+   Kod ile: kod + yeni şifre girilir → kod doğrulanır → şifre değişir (oturum açılır).
+   Bağlantı ile: eski akış (mailden gelen linke tıklayınca "Yeni şifre belirle" penceresi). */
+const SIFIRLA = { email: '', sayac: null };
+function sifirlaAdim(adim) {
+  const L = document.getElementById('auth-form-login'), F = document.getElementById('auth-form-sifirla');
+  const a = document.getElementById('sifirla-a1'), b = document.getElementById('sifirla-a2');
+  if (adim === 'kapat') { if (F) F.style.display = 'none'; if (L) L.style.display = 'block'; clearInterval(SIFIRLA.sayac); authMsg(''); return; }
+  if (L) L.style.display = 'none'; if (F) F.style.display = 'block';
+  if (a) a.style.display = adim === 'email' ? 'block' : 'none';
+  if (b) b.style.display = adim === 'kod' ? 'block' : 'none';
+}
+function authForgot() {
+  const le = document.getElementById('login-email'), se = document.getElementById('sifirla-email');
+  if (se && le && le.value && !se.value) se.value = le.value.trim();
+  authMsg('');
+  sifirlaAdim('email');
+  setTimeout(() => { if (se) se.focus(); }, 50);
+}
+function sifirlaSayac(sn) {
+  const b = document.getElementById('sifirla-tekrar'); if (!b) return;
+  clearInterval(SIFIRLA.sayac);
+  let kalan = sn;
+  const yaz = () => { b.disabled = kalan > 0; b.textContent = kalan > 0 ? 'Kodu tekrar gönder (' + kalan + ' sn)' : 'Kodu tekrar gönder'; };
+  yaz(); SIFIRLA.sayac = setInterval(() => { kalan--; yaz(); if (kalan <= 0) clearInterval(SIFIRLA.sayac); }, 1000);
+}
+async function sifirlaKodGonder(tekrar) {
+  const email = tekrar ? SIFIRLA.email : ((document.getElementById('sifirla-email') || {}).value || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { authMsg('Geçerli bir e-posta adresi yaz.'); return; }
+  let tk = turnstileToken();
+  if (TURNSTILE_SITE_KEY && !tk && typeof captchaPrompt === 'function') tk = await captchaPrompt();
+  if (TURNSTILE_SITE_KEY && !tk) { authMsg('Devam etmek için robot doğrulamasını tamamla.'); return; }
+  authMsg('Gönderiliyor...', true);
   try {
-    var opts = { redirectTo: window.location.origin + window.location.pathname };
+    const opts = { redirectTo: window.location.origin + window.location.pathname };
     if (tk) opts.captchaToken = tk;
-    var r = await sb.auth.resetPasswordForEmail(email, opts);
-    if (r.error) throw r.error;
-    authMsg("Sıfırlama bağlantısı e-postana gönderildi. Gelen kutunu (ve spam klasörünü) kontrol et.", true);
-  } catch (e) { authMsg("Gönderilemedi. E-posta adresini kontrol edip tekrar dene."); }
+    const { error } = await sb.auth.resetPasswordForEmail(email, opts);
+    turnstileReset();
+    if (error) throw error;
+  } catch (e) {
+    const m = String((e && e.message) || '');
+    authMsg(/rate|seconds|too many/i.test(m) ? 'Çok sık istek gönderildi. Biraz bekleyip tekrar dene.' : 'Gönderilemedi. E-posta adresini kontrol edip tekrar dene.');
+    return;
+  }
+  SIFIRLA.email = email;
+  const g = document.getElementById('sifirla-giden'); if (g) g.textContent = email;
+  ['sifirla-kod', 'sifirla-p1', 'sifirla-p2'].forEach(id => { const el = document.getElementById(id); if (el && !tekrar) el.value = ''; });
+  authMsg('');
+  sifirlaAdim('kod');
+  sifirlaSayac(60);
+  setTimeout(() => { const k = document.getElementById('sifirla-kod'); if (k) k.focus(); }, 50);
+}
+async function sifirlaTamamla() {
+  const kod = ((document.getElementById('sifirla-kod') || {}).value || '').replace(/\D/g, '');
+  const p1 = (document.getElementById('sifirla-p1') || {}).value || '', p2 = (document.getElementById('sifirla-p2') || {}).value || '';
+  if (kod.length < 6) { authMsg('E-postana gelen 6 haneli kodu yaz.'); return; }
+  if (p1.length < 6) { authMsg('Yeni şifre en az 6 karakter olmalı.'); return; }
+  if (typeof pwStrength === 'function' && pwStrength(p1).sc < 2) { authMsg('Yeni şifre çok zayıf; harf ve rakam karışımı kullan.'); return; }
+  if (p1 !== p2) { authMsg('Şifreler birbirini tutmuyor.'); return; }
+  const btn = document.getElementById('sifirla-btn'); if (btn) btn.disabled = true;
+  authMsg('Kod doğrulanıyor...', true);
+  window._sifirlamaKodla = true;   // bu akışta "Yeni şifre belirle" penceresi ayrıca açılmasın
+  try {
+    const { error } = await sb.auth.verifyOtp({ email: SIFIRLA.email, token: kod, type: 'recovery' });
+    if (error) {
+      const m = String(error.message || '');
+      authMsg(/expired|invalid/i.test(m) ? 'Kod hatalı ya da süresi dolmuş. Kontrol edip tekrar dene ya da yeni kod iste.' : 'Kod doğrulanamadı: ' + m);
+      return;
+    }
+    const { error: e2 } = await sb.auth.updateUser({ password: p1 });
+    if (e2) {
+      const m = String(e2.message || '');
+      authMsg(/different|same/i.test(m) ? 'Yeni şifre eskisiyle aynı olamaz.' : 'Şifre güncellenemedi: ' + m);
+      return;
+    }
+    clearInterval(SIFIRLA.sayac);
+    ['sifirla-kod', 'sifirla-p1', 'sifirla-p2'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    sifirlaAdim('kapat');
+    if (typeof closeAuth === 'function') closeAuth();
+    if (typeof uiAlert === 'function') uiAlert('Şifren güncellendi ve oturumun açıldı. Bundan sonra yeni şifrenle giriş yapabilirsin.', 'Şifre güncellendi');
+  } finally {
+    if (btn) btn.disabled = false;
+    setTimeout(() => { window._sifirlamaKodla = false; }, 2000);
+  }
 }
 
 
@@ -538,7 +609,7 @@ function openPwReset() {
   ov.className = "ui-modal-overlay show";
   ov.style.zIndex = "10000";
   ov.innerHTML = '<div class="ui-modal" style="max-width:400px;">' +
-    '<h3 class="ui-modal-title">🔑 Yeni Şifre Belirle</h3>' +
+    '<h3 class="ui-modal-title">Yeni Şifre Belirle</h3>' +
     '<p class="ui-modal-msg">Sıfırlama bağlantısı doğrulandı. Hesabın için yeni bir şifre seç.</p>' +
     '<div class="pw-wrap" style="margin-bottom:10px;"><input id="pwr-1" class="form-input" type="password" placeholder="Yeni şifre (en az 6 karakter)" autocomplete="new-password" oninput="pwStrengthPaint(this.value, \'pwr-bar\', \'pwr-bar-t\')">' +
     '<button type="button" class="pw-eye" onclick="pwToggle(this, \'pwr-1\')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>' +
@@ -562,7 +633,7 @@ async function pwResetSubmit() {
     if (error) throw error;
     const ov = document.getElementById("pwr-overlay"); if (ov) ov.remove();
     try { history.replaceState(null, "", location.pathname); } catch (e) {}
-    if (typeof uiAlert === "function") uiAlert("Şifren güncellendi ve oturumun açıldı. 🎉\n\nArtık yeni şifrenle giriş yapabilirsin.", "🔑 Şifre Güncellendi");
+    if (typeof uiAlert === "function") uiAlert("Şifren güncellendi ve oturumun açıldı. Artık yeni şifrenle giriş yapabilirsin.", "Şifre güncellendi");
     else alert("Şifren güncellendi.");
     try { if (window.logError) {} } catch (e) {}
   } catch (e) {
