@@ -5964,7 +5964,8 @@ function tkTpl(idx) {
   if (idx === '') return;
   const t = tkTplList()[parseInt(idx, 10)]; if (!t) return;
   const ta = document.getElementById('adm-reply'); if (!ta) return;
-  ta.value = ta.value ? (ta.value + '\n\n' + t.body) : t.body;
+  const m = t.m || t.body || '';
+  ta.value = ta.value ? (ta.value + '\n\n' + m) : m;
   ta.focus();
 }
 async function adminTicketMail(ticketId) {
@@ -8169,14 +8170,14 @@ async function loadTicketTemplates() {
     _tkTpls = (data || []).map(r => ({ id: r.id, t: (r.is_global ? '🌐 ' : '👤 ') + r.title, m: r.body, own: r.owner_id === (currentUser && currentUser.id), glob: r.is_global }));
     // İlk kurulum: tablo boşsa yerleşik şablonları genel şablon olarak taşı (yalnız yönetici)
     if (!_tkTpls.length && currentProfile && currentProfile.is_admin && Array.isArray(TICKET_TEMPLATES) && TICKET_TEMPLATES.length) {
-      const seed = TICKET_TEMPLATES.map(tp => ({ owner_id: currentUser.id, title: tp.t, body: tp.m, is_global: true }));
+      const seed = TICKET_TEMPLATES.map(tp => ({ owner_id: currentUser.id, title: tp.t, body: tp.m || tp.body, is_global: true }));
       await sb.from('ticket_templates').insert(seed);
       return loadTicketTemplates();
     }
   } catch (e) { _tkTpls = null; }
 }
 function tkTplList() {
-  return (_tkTpls && _tkTpls.length) ? _tkTpls : TICKET_TEMPLATES.map(tp => ({ t: tp.t, m: tp.m }));
+  return (_tkTpls && _tkTpls.length) ? _tkTpls : TICKET_TEMPLATES.map(tp => ({ t: tp.t, m: tp.m || tp.body }));
 }
 function tkTplAdd() {
   const ov = document.createElement('div');
