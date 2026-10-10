@@ -4209,11 +4209,12 @@ function renderNotifPanel() {
   const head = `<div class="yp-acilir-bas"><span>Bildirimler</span>${okunmamis ? `<button type="button" class="yp-link" onclick="markAllNotifRead(event)">Tümünü okundu say</button>` : ''}</div>`;
   if (!myNotifications.length) { p.innerHTML = head + `<div class="yp-bos kucuk">${ic('onay', 24)}<span>Henüz bildirim yok.</span></div>`; return; }
   const TUR = { success: ['onay', 'yesil'], warning: ['hata', 'turuncu'], admin: ['bildirim', 'altin'] };
+  const temiz = t => String(t || '').replace(/\p{Extended_Pictographic}\uFE0F?/gu, '').replace(/\s{2,}/g, ' ').trim();
   const items = myNotifications.map(n => {
     const t = TUR[n.type] || ['bildirim', 'mavi'];
     return `<div class="yp-bek${n.is_read ? ' okundu' : ''}" role="button" tabindex="0" onclick="markNotifRead('${n.id}', event)">
       <span class="yp-bek-ic r-${t[1]}">${ic(t[0], 17)}</span>
-      <div><b>${_escHtml(n.title || '')}</b>${n.body ? `<span>${_escHtml(n.body)}</span>` : ''}<small>${zaman(n.created_at)}</small></div>
+      <div><b>${_escHtml(temiz(n.title))}</b>${n.body ? `<span>${_escHtml(temiz(n.body))}</span>` : ''}<small>${zaman(n.created_at)}</small></div>
       <div class="yp-bek-sag">${n.is_read ? '' : `<button type="button" class="yp-okundu-b" title="Okundu say" aria-label="Okundu say" onclick="markNotifRead('${n.id}', event)">${ic('onay', 16)}</button>`}
         <button type="button" class="yp-okundu-b sil" title="Sil" aria-label="Bildirimi sil" onclick="deleteNotif('${n.id}', event)">${ic('cop', 15)}</button></div>
     </div>`;
@@ -5187,12 +5188,17 @@ async function logError(message, source, detail) {
       var os = /Windows/.test(ua)?'Windows':/Android/.test(ua)?'Android':/iPhone|iPad/.test(ua)?'iOS':/Mac/.test(ua)?'macOS':/Linux/.test(ua)?'Linux':'?';
       tarayici = b + '/' + os;
     } catch (e) {}
+    let konum = '';
+    try {
+      const g = await Promise.race([_getGeo(), new Promise(r => setTimeout(() => r(null), 1500))]);
+      if (g) konum = 'IP ' + (g.ip || '?') + ' · ' + ([g.city, g.country].filter(Boolean).join(', ') || 'konum yok');
+    } catch (e) {}
     const insObj = {
       user_id: _uid,
       message: _m,
       source: String(source || '').slice(0, 200),
       url: (location.pathname + location.hash).slice(0, 200),
-      detail: (detail ? String(detail).slice(0, 500) + ' · ' : '') + tarayici + ' · ' + (location.href || '').slice(0, 120)
+      detail: (detail ? String(detail).slice(0, 500) + ' · ' : '') + tarayici + (konum ? ' · ' + konum : '') + ' · ' + (location.href || '').slice(0, 120)
     };
     let { error: _insErr } = await sb.from('error_log').insert(insObj);
     // detail kolonu yoksa (eski şema) onsuz tekrar dene
@@ -5282,17 +5288,38 @@ async function adminClearErrors() {
    ============================================================ */
 let _pvLogged = new Set();
 /* Ziyaretçinin IP/ülke/şehir bilgisi (günde 1 kez çekilir, localStorage'da saklanır) */
+let _geoYuk = null;
 async function _getGeo() {
   try {
-    const cached = JSON.parse(localStorage.getItem('ydt_geo') || 'null');
+    const cached = JSON.parse(localStorage.getItem('ydt_geo2') || 'null');
     if (cached && cached.t && (Date.now() - cached.t) < 86400000) return cached;
-    const res = await fetch('https://ipwho.is/');
-    const j = await res.json();
-    if (!j || j.success === false) return null;
-    const geo = { ip: j.ip || '', country: j.country || '', city: j.city || '', t: Date.now() };
-    localStorage.setItem('ydt_geo', JSON.stringify(geo));
+  } catch (e) {}
+  if (_geoYuk) return _geoYuk;
+  _geoYuk = (async () => {
+    let geo = null;
+    try {   // 1) sitenin kendi sunucusu: IP, şehir, ülke (Vercel başlıklarından)
+      const r = await fetch('/api/konum', { cache: 'no-store' });
+      if (r.ok) {
+        const j = await r.json();
+        if (j && (j.city || j.country)) {
+          let ulke = j.country || '';
+          try { if (/^[A-Z]{2}$/.test(ulke)) ulke = new Intl.DisplayNames(['tr'], { type: 'region' }).of(ulke) || ulke; } catch (e) {}
+          geo = { ip: j.ip || '', country: ulke, city: j.city || '', t: Date.now() };
+        }
+      }
+    } catch (e) {}
+    if (!geo) {   // 2) yedek: dış servis
+      try {
+        const res = await fetch('https://ipwho.is/');
+        const j = await res.json();
+        if (j && j.success !== false) geo = { ip: j.ip || '', country: j.country || '', city: j.city || '', t: Date.now() };
+      } catch (e) {}
+    }
+    if (geo) { try { localStorage.setItem('ydt_geo2', JSON.stringify(geo)); } catch (e) {} }
+    _geoYuk = null;
     return geo;
-  } catch (e) { return null; }
+  })();
+  return _geoYuk;
 }
 function trackPageView(pageId) {
   try {
@@ -7128,9 +7155,15 @@ async function adminUserDetail(id, showAll) {
       let en = null, fark = Infinity; pvL.forEach(p => { const d = Math.abs(new Date(p.created_at).getTime() - t); if (d < fark) { fark = d; en = p; } });
       return en && fark < 3 * 86400000 ? en.country : '';
     };
-    const sonKonum = (() => { const l = (logs.data || [])[0]; const c = l ? [l.city, ulkeBul(l)].filter(Boolean).join(', ') : ''; return c || (pvL[0] ? [pvL[0].city, pvL[0].country].filter(Boolean).join(', ') : ''); })();
+    const sonKonum = (() => { const l = (logs.data || [])[0]; const c = l ? [l.city || (pvL.find(p => p.city) || {}).city, ulkeBul(l)].filter(Boolean).join(', ') : ''; return c || (pvL[0] ? [pvL[0].city, pvL[0].country].filter(Boolean).join(', ') : ''); })();
+    const sehirBul = l => {
+      if (l.city) return l.city;
+      const t = new Date(l.created_at).getTime();
+      let en = null, fark = Infinity; pvL.forEach(p => { if (!p.city) return; const d = Math.abs(new Date(p.created_at).getTime() - t); if (d < fark) { fark = d; en = p; } });
+      return en && fark < 3 * 86400000 ? en.city : '';
+    };
     const rows = (logs.data || []).map(l => {
-      const konum = [l.city, ulkeBul(l)].filter(Boolean).join(', ') || '—';
+      const konum = [sehirBul(l), ulkeBul(l)].filter(Boolean).join(', ') || '—';
       return `<div class="udet-log"><span class="udet-ip">${_escHtml(l.ip || '—')}</span> <span class="cw-cat">📍 ${_escHtml(konum)}</span> <span class="cw-cat">${_escHtml(l.fp || '')}</span><div class="err-meta">${_escHtml((l.ua || '').slice(0, 110))} · ${new Date(l.created_at).toLocaleString('tr-TR')}</div></div>`;
     }).join('');
     // Son 14 gün aktivite özeti
