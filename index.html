@@ -49,9 +49,9 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=169">
-<link rel="stylesheet" href="css/ekitap.css?v=169">
-<link rel="stylesheet" href="css/video.css?v=169">
+<link rel="stylesheet" href="css/style.css?v=170">
+<link rel="stylesheet" href="css/ekitap.css?v=170">
+<link rel="stylesheet" href="css/video.css?v=170">
 <script>try{if(localStorage.getItem('ydt_prof_ui'))document.documentElement.classList.add('oturum-var');}catch(e){}</script>
 <style>html.oturum-var #nav-auth-buttons{display:none!important}</style>
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
@@ -76,7 +76,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=169" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=170" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -1807,12 +1807,9 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
         </div>
 
         <div id="av-stafflog" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">İşlem Logları</h2>
-          <p class="profile-sub">Destek ve öğretmen hesaplarının yaptığı işlemler (rol değişimi, atama, premium tanımlama, talep mailleri).</p>
-          <div class="admin-notif-card">
-            <div style="margin-bottom:10px;"><button class="set-btn ghost" onclick="adminStaffLogLoad()">Yenile</button></div>
-            <div id="stafflog-list"><div class="profile-empty">Yükleniyor...</div></div>
-          </div>
+          <h2 class="profile-h2">İşlem Kayıtları</h2>
+          <p class="profile-sub">Destek, öğretmen ve yönetici hesaplarının yaptığı işlemlerin kaydı.</p>
+          <div id="ys-islem"></div>
         </div>
 
         <div id="av-icerik" class="admin-view" style="display:none;">
@@ -1968,95 +1965,27 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
         </div>
 
         <div id="av-visits" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Ziyaret & SEO</h2>
-          <p class="profile-sub">Trafik istatistikleri ve sayfa içi SEO denetimi.</p>
-          <div class="profile-panel"><div class="panel-title">📈 Ziyaretler</div><div id="admin-visits"></div></div>
-          <div class="profile-panel">
-            <div class="panel-title">🔍 Google Search Console <button class="mail-act" onclick="adminGscLoad()">🔄 Verileri Çek</button></div>
-            <div id="admin-gsc"><div class="pq-hint">Google aramalarından gelen trafiği görmek için "Verileri Çek" butonuna bas. İlk kullanımda kurulum gerekiyorsa yönerge görünecek.</div></div>
-          </div>
-          <div class="profile-panel"><div class="panel-title">🔎 SEO Denetimi</div><div id="admin-seo"></div></div>
+          <h2 class="profile-h2">Ziyaret &amp; SEO</h2>
+          <p class="profile-sub">Trafik istatistikleri, arama performansı ve sayfa içi SEO denetimi.</p>
+          <div id="ys-ziyaret"></div>
         </div>
 
         <div id="av-settings" class="admin-view" style="display:none;">
           <h2 class="profile-h2">Site Ayarları</h2>
           <p class="profile-sub">Site genelini etkileyen ayarlar.</p>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">Kayıt: izin verilen e-posta uzantıları</h3>
-            <p class="pq-hint">Yeni üyeler yalnızca bu uzantılardaki adreslerle (onay koduyla) kayıt olabilir; Google ile girişte de geçerlidir. Her satıra bir uzantı yaz (ör. gmail.com). Bir uzantı alt alan adlarını da kapsar; ör. "edu.tr" yazılırsa tüm üniversite adresleri kabul edilir. Liste boş bırakılırsa kısıtlama kalkar. Mevcut üyeler etkilenmez.</p>
-            <textarea id="set-mail-uzanti" class="an-textarea" rows="7" placeholder="gmail.com&#10;hotmail.com&#10;outlook.com"></textarea>
-            <div class="mail-actions" style="margin-top:8px;"><button class="set-btn" onclick="adminSaveMailDomains()">Kaydet</button></div>
-          </div>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">📅 Sınav Tarihleri</h3>
-            <p class="pq-hint">Girilen tarihler tüm kullanıcılara pomodoro widgetinin üstünde kalan gün sayısı olarak gösterilir. Boş bırakılırsa o sınav gösterilmez.</p>
-            <div style="display:flex;gap:14px;flex-wrap:wrap;margin:10px 0;">
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <span style="font-size:13px;">YDT Tarihi</span>
-                <div style="display:flex;gap:6px;align-items:center;">
-                  <input id="set-ydt-date" type="date" class="an-textarea" style="padding:6px 10px;width:160px;font-size:14px;">
-                  <button class="mail-act" onclick="document.getElementById('set-ydt-date').value=''" title="Temizle">✕</button>
-                </div>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <span style="font-size:13px;">YDS Tarihi</span>
-                <div style="display:flex;gap:6px;align-items:center;">
-                  <input id="set-yds-date" type="date" class="an-textarea" style="padding:6px 10px;width:160px;font-size:14px;">
-                  <button class="mail-act" onclick="document.getElementById('set-yds-date').value=''" title="Temizle">✕</button>
-                </div>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <span style="font-size:13px;">e-YDS Tarihi</span>
-                <div style="display:flex;gap:6px;align-items:center;">
-                  <input id="set-eyds-date" type="date" class="an-textarea" style="padding:6px 10px;width:160px;font-size:14px;">
-                  <button class="mail-act" onclick="document.getElementById('set-eyds-date').value=''" title="Temizle">✕</button>
-                </div>
-              </div>
-            </div>
-            <button class="set-btn" onclick="adminSaveExamDates()">Kaydet & Yayınla</button>
-          </div>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">📢 Duyuru Bandı</h3>
-            <p class="pq-hint">Buraya yazılan metin sitenin en üstünde herkese görünen bir bant olarak yayınlanır. Boş bırakıp kaydedersen bant kalkar.</p>
-            <textarea id="set-announce" class="an-textarea" placeholder="Örn: 15 Temmuz'a kadar premium %20 indirimli!"></textarea>
-            <button class="set-btn" onclick="adminSaveAnnouncement()">Kaydet & Yayınla</button>
-          </div>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">🚧 Bakım Modu</h3>
-            <p class="pq-hint">Açıkken ziyaretçiler "Bakımdayız" ekranı görür; <b>yöneticiler siteyi normal kullanmaya devam eder</b>. Büyük güncelleme yaparken aç.</p>
-            <label class="cw-check"><input type="checkbox" id="set-maint"> Bakım modu AÇIK</label>
-            <button class="set-btn" onclick="adminSaveMaintenance()">Kaydet</button>
-          </div>
+          <div id="ys-ayar"></div>
         </div>
 
         <div id="av-backup" class="admin-view" style="display:none;">
           <h2 class="profile-h2">Yedekleme</h2>
-          <p class="profile-sub">Veritabanındaki tüm tabloları JSON olarak indir.</p>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">💾 Tam Yedek</h3>
-            <p class="pq-hint">Tüm tablolar tek dosyada iner (kullanıcı profilleri, kelimeler, testler, biletler, mailler, sorular...). Düzenli olarak (haftada 1) almanı öneririm.</p>
-            <button class="set-btn" onclick="adminBackupAll()">⬇️ Tüm Veritabanını İndir</button>
-            <div id="backup-status" class="pq-hint" style="margin-top:10px;"></div>
-          </div>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">📁 Tablo Bazında İndir</h3>
-            <div id="backup-tables" class="mail-actions"></div>
-          </div>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">🧰 Tam Kurtarma Paketi (kod + kurulum)</h3>
-            <p class="pq-hint">Tek tıkla: <b>tüm veritabanı</b> + <b>sitenin canlı kod dosyaları</b> + yeniden kurulum rehberi tek zip'te iner. Siteye bir şey olursa bu paket + Supabase fonksiyon kodları (sende mevcut kurulum dosyaları) ile her şey ayağa kaldırılır. Haftada bir almanı öneririm.</p>
-            <button class="set-btn" onclick="adminRecoveryZip()">🧰 Kurtarma Paketi Oluştur & İndir</button>
-            <div id="recovery-status" class="pq-hint" style="margin-top:10px;"></div>
-          </div>
+          <p class="profile-sub">Veritabanını ve sitenin kodunu yedekle; gerektiğinde geri yükle.</p>
+          <div id="ys-yedek"></div>
         </div>
 
         <div id="av-errors" class="admin-view" style="display:none;">
           <h2 class="profile-h2">Hata Kayıtları</h2>
           <p class="profile-sub">Sitede oluşan hataların zaman damgalı kaydı.</p>
-          <div class="admin-notif-card">
-        <div class="an-card-head"><h3 class="an-h3">🛠️ Hata Kayıtları</h3><div><button class="set-btn ghost" onclick="adminClearErrors()">Temizle</button><button class="set-btn ghost" onclick="adminErrTest()" style="margin-right:8px;">🧪 Sistemi Test Et</button><button class="set-btn ghost" onclick="adminLoadErrors()" style="margin-left:8px;">Yenile</button></div></div>
-        <div id="admin-errors"></div>
-      </div>
+          <div id="ys-hata"></div>
         </div>
 
       </div>
@@ -2304,15 +2233,15 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=169"></script>
-<script defer src="js/auth.js?v=169"></script>
-<script defer src="js/admin.js?v=169"></script>
-<script defer src="js/profile.js?v=169"></script>
-<script defer src="js/extras.js?v=169"></script>
-<script defer src="js/app.js?v=169"></script>
-<script defer src="js/ekitap.js?v=169"></script>
-<script defer src="js/video.js?v=169"></script>
-<script defer src="js/arayuz.js?v=169"></script>
+<script defer src="js/supabase-config.js?v=170"></script>
+<script defer src="js/auth.js?v=170"></script>
+<script defer src="js/admin.js?v=170"></script>
+<script defer src="js/profile.js?v=170"></script>
+<script defer src="js/extras.js?v=170"></script>
+<script defer src="js/app.js?v=170"></script>
+<script defer src="js/ekitap.js?v=170"></script>
+<script defer src="js/video.js?v=170"></script>
+<script defer src="js/arayuz.js?v=170"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
