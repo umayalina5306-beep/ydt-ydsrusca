@@ -538,11 +538,11 @@ async function togglePremium(userId, currentPlan) {
       const [un, st, oz, vd, pq, so, on, tp] = await Promise.all([
         sorgu('ek_units', 'id, modul_no, modul_ad, unite_no, unite_ad, seviye, yayinda, kontrol_say, updated_at, toc', 'id, modul_no, modul_ad, unite_no, unite_ad, seviye, yayinda, updated_at, toc'),
         sorgu('gw_sets', 'id, baslik, seviye, konular, kitap_ref, act_say, kontrol_say, yayinda, updated_at', '*'),
-        sorgu('ozet_notlar', '*'),
-        sorgu('content_videos', '*'),
-        sorgu('content_pquestions', '*'),
-        sorgu('placement_questions', '*'),
-        sorgu('content_recs', '*'),
+        sorgu('ozet_notlar', 'id, baslik, konu, aktif, created_at, updated_at', 'id, baslik, konu, aktif, created_at'),
+        sorgu('content_videos', 'id, title, level, mf_ref, active, premium, created_at, descr', '*'),
+        sorgu('content_pquestions', 'id, soru, level, konu, active, created_at', '*'),
+        sorgu('placement_questions', 'id, question, level, tag, active, created_at', 'id, question, level, tag, created_at'),
+        sorgu('content_recs', 'id, title, rtype, level, active, created_at', '*'),
         sorgu('topics', 'kod, ad')
       ]);
       const konuAd = {}; tp.forEach(t => konuAd[t.kod] = t.ad);
@@ -560,7 +560,9 @@ async function togglePremium(userId, currentPlan) {
       on.forEach(r => L.push({ tur: 'oneri', id: r.id, baslik: r.title, alt: ({ film: 'Film', dizi: 'Dizi', anime: 'Anime', kitap: 'Kitap' })[r.rtype] || r.rtype || 'Blog', seviye: r.level, durum: r.active === false ? 'gizli' : 'yayinda', tarih: r.created_at }));
       L.forEach(x => { x.araMetin = (x.baslik + ' ' + (x.alt || '') + ' ' + (x.ara || '') + ' ' + TUR[x.tur].ad).toLocaleLowerCase('tr'); });
       IX = L; ixYukleniyor = null;
-      try { const r = await sb.from('content_words').select('id', { count: 'exact', head: true }); kelimeSay = (r && typeof r.count === 'number') ? r.count : null; } catch (e) {}
+      // Kelime sayısı ayrıca gelir; listeyi bekletmez
+      sb.from('content_words').select('id', { count: 'exact', head: true }).then(r => { kelimeSay = (r && typeof r.count === 'number') ? r.count : null; if (aktifGor === 'icerikler') ilCiz(); }, () => {});
+      if (bekleyenSun) bekleyenHesapla();
       rozetler();
       return L;
     })();
@@ -697,11 +699,24 @@ async function togglePremium(userId, currentPlan) {
   }
 
   /* ---------- Genel Bakış panosu ---------- */
-  let aralik = lsOku('yp_aralik', 7), ziyaretler = null, ziyaretYuk = null, bekleyen = null, aktiviteler = null, sonSekme = 'hepsi';
+  let aralik = lsOku('yp_aralik', 7), ziyaretler = null, ziyaretYuk = null, bekleyen = null, sonSekme = 'hepsi';
   window.ypAralik = v => { aralik = +v; lsYaz('yp_aralik', aralik); panoCiz(); };
+  // ziyaretler = { byDay: {gün: sayı}, sayfa: [yol, sayı] | null, konum: [ad, sayı] | null }
   async function ziyaretAl() {
     if (ziyaretler) return ziyaretler;
-    if (!ziyaretYuk) ziyaretYuk = (async () => { try { ziyaretler = typeof _visitData === 'function' ? await _visitData(30) : []; } catch (e) { ziyaretler = []; } return ziyaretler; })();
+    if (!ziyaretYuk) ziyaretYuk = (async () => {
+      try {   // hızlı yol: özet sunucuda hesaplanır (admin_ziyaret_ozet)
+        const { data, error } = await sb.rpc('admin_ziyaret_ozet', { gun: 60 });
+        if (!error && data && data.gunluk) { ziyaretler = { byDay: data.gunluk || {}, sayfa: data.sayfa || null, konum: data.konum || null }; return ziyaretler; }
+      } catch (e) {}
+      let rows = [];
+      try { rows = typeof _visitData === 'function' ? await _visitData(30) : []; } catch (e) {}
+      const byDay = {}, sy = {}, kn = {};
+      rows.forEach(r => { const d = (r.created_at || '').slice(0, 10); byDay[d] = (byDay[d] || 0) + 1; if (r.path) sy[r.path] = (sy[r.path] || 0) + 1; const k = r.city || r.country; if (k) kn[k] = (kn[k] || 0) + 1; });
+      const enCok = m => Object.entries(m).sort((a, b) => b[1] - a[1])[0] || null;
+      ziyaretler = { byDay, sayfa: enCok(sy), konum: enCok(kn) };
+      return ziyaretler;
+    })();
     return ziyaretYuk;
   }
   const gunAnahtar = d => d.toISOString().slice(0, 10);
@@ -773,6 +788,12 @@ async function togglePremium(userId, currentPlan) {
       const son = (data || []).filter(e => e.created_at >= gun && (!OKU.h || e.created_at > OKU.h));
       if (son.length) L.push({ tur: 'hata', bildirim: true, anahtar: 'h:' + son[0].created_at, okundu: false, baslik: son.length + ' yeni hata kaydı', alt: son[0].message || '', zaman: son[0].created_at, etiket: ['Yeni', 'kirmizi'], git: "ypGit('errors')" });
     } catch (e) {}
+    bekleyenSun = L;
+    return bekleyenHesapla();
+  }
+  let bekleyenSun = null;   // sunucudan gelen bildirimler (destek, hata)
+  function bekleyenHesapla() {
+    const L = (bekleyenSun || []).filter(b => !(b.tur === 'hata' && b.okundu));
     (IX || []).filter(x => x.kontrol).forEach(x => L.push({ tur: 'kontrol', baslik: TUR[x.tur].ad + ' kontrol bekliyor', alt: x.baslik + ' · ' + x.kontrol + ' etkinlik', zaman: x.tarih, etiket: ['Kontrol', 'turuncu'], git: "ypDuzenle('" + x.tur + "', '" + x.id + "')" }));
     (IX || []).filter(x => x.tur === 'unite' && x.durum === 'taslak').forEach(x => L.push({ tur: 'taslak', baslik: 'Taslak ünite', alt: x.alt + ' · ' + x.baslik, zaman: x.tarih, etiket: ['Taslak', 'sari'], git: "ypDuzenle('unite', '" + x.id + "')" }));
     bekleyen = L;
@@ -829,20 +850,25 @@ async function togglePremium(userId, currentPlan) {
     const liste = L.slice(0, 4);
     kutu.innerHTML = liste.length ? liste.map(satir).join('') : '<div class="yp-bos kucuk">' + ic('onay', 24) + '<span>Bekleyen iş yok.</span></div>';
   }
-  async function aktiviteAl() {
+  let aksiyonlar = null;
+  async function aksiyonAl() {
+    try { const { data } = await sb.from('action_log').select('action, actor_id, target, created_at').order('created_at', { ascending: false }).limit(10); aksiyonlar = data || []; }
+    catch (e) { aksiyonlar = []; }
+    return aksiyonlar;
+  }
+  function aktiviteHesapla() {
     const L = [];
     (IX || []).forEach(x => { if (x.tarih) L.push({ ic: TUR[x.tur].ic, renk: TUR[x.tur].renk, baslik: TUR[x.tur].ad + (x.tur === 'unite' || x.tur === 'set' ? ' güncellendi' : ' eklendi'), alt: x.baslik, zaman: x.tarih, git: "ypDuzenle('" + x.tur + "', '" + x.id + "')" }); });
     const kul = gl('_adminUsers') || [];
     kul.forEach(u => { if (u.created_at) L.push({ ic: 'kullanici', renk: 'yesil', baslik: 'Yeni kullanıcı', alt: u.display_name || (u.email || '').split('@')[0], zaman: u.created_at, git: "ypGit('users')" }); });
-    try {
-      const { data } = await sb.from('action_log').select('*').order('created_at', { ascending: false }).limit(10);
+    {
+      const data = aksiyonlar || [];
       const AD = { rol_degistir: 'Rol değiştirildi', ogrenci_ata: 'Öğrenci atandı', ogrenci_atama_kaldir: 'Öğrenci ataması kaldırıldı', premium_tanim: 'Premium tanımlandı', ticket_mail: 'Talep maili gönderildi', bildirim: 'Bildirim gönderildi', kullanici_sil: 'Kullanıcı silindi' };
       const kim = id => { const u = kul.find(x => x.id === id); return u ? (u.display_name || (u.email || '').split('@')[0]) : ''; };
-      (data || []).forEach(r => L.push({ ic: 'log', renk: 'mavi', baslik: AD[r.action] || r.action, alt: [kim(r.actor_id), r.target ? '→ ' + kim(r.target) : ''].filter(Boolean).join(' '), zaman: r.created_at, git: "ypGit('stafflog')" }));
-    } catch (e) {}
+      data.forEach(r => L.push({ ic: 'log', renk: 'mavi', baslik: AD[r.action] || r.action, alt: [kim(r.actor_id), r.target ? '→ ' + kim(r.target) : ''].filter(Boolean).join(' '), zaman: r.created_at, git: "ypGit('stafflog')" }));
+    }
     L.sort((a, b) => new Date(b.zaman) - new Date(a.zaman));
-    aktiviteler = L.slice(0, 6);
-    return aktiviteler;
+    return L.slice(0, 6);
   }
   window.ypSonSekme = t => { sonSekme = t; sonCiz(); };
   function sonCiz() {
@@ -853,17 +879,24 @@ async function togglePremium(userId, currentPlan) {
       (L.length ? '<div class="yp-tablo-k"><table class="yp-tablo"><thead><tr><th>Tür</th><th>Başlık</th><th>Müfredat / Konu</th><th>Durum</th><th>Tarih</th><th></th></tr></thead><tbody>' + L.map(x => satirHTML(x)).join('') + '</tbody></table></div>'
         : '<div class="yp-bos kucuk"><span>Bu türde içerik yok.</span></div>');
   }
-  async function panoCiz() {
+  let panoT = null;
+  function panoCiz() {   // eldeki veriyle hemen çizer; eksik parçalar geldikçe yeniden çizer
+    panoYaz();
+    const isler = [];
+    if (!IX) isler.push(icerikYukle());
+    if (!ziyaretler) isler.push(ziyaretAl());
+    if (!bekleyenSun) isler.push(bekleyenAl());
+    if (!aksiyonlar) isler.push(aksiyonAl());
+    isler.forEach(p => Promise.resolve(p).then(() => { clearTimeout(panoT); panoT = setTimeout(() => { if (aktifGor === 'overview') panoYaz(); }, 80); }, () => {}));
+  }
+  function panoYaz() {
     const k = $('yp-pano'); if (!k) return;
-    const ilk = !k.querySelector('.yp-pano-iz');
-    if (ilk) k.innerHTML = '<div class="yp-pano-iz"><div class="admin-loading">Yükleniyor...</div></div>';
-    const [ , zr] = await Promise.all([icerikYukle(), ziyaretAl()]);
-    if (aktifGor !== 'overview') return;
-    await Promise.all([bekleyen ? null : bekleyenAl(), aktiviteAl()]);
+    const yuk = '<div class="yp-yuk"><span></span><span></span><span></span></div>';
+    const zv = ziyaretler, aktiviteler = aktiviteHesapla();
     const kul = gl('_adminUsers') || [];
     const top = kul.length, prem = kul.filter(u => u.plan === 'premium' && !u.is_admin).length, adm = kul.filter(u => u.is_admin).length;
     const g = gunler(aralik), g14 = gunler(14);
-    const byDay = {}; (zr || []).forEach(r => { const d = (r.created_at || '').slice(0, 10); byDay[d] = (byDay[d] || 0) + 1; });
+    const byDay = (zv && zv.byDay) || {};
     const zToplam = g.reduce((a, d) => a + (byDay[d] || 0), 0);
     const oncekiG = []; for (let i = aralik * 2 - 1; i >= aralik; i--) { const d = new Date(); d.setDate(d.getDate() - i); oncekiG.push(gunAnahtar(d)); }
     const zOnceki = oncekiG.reduce((a, d) => a + (byDay[d] || 0), 0);
@@ -875,9 +908,8 @@ async function togglePremium(userId, currentPlan) {
     const premEgri = g14.map(d => kul.filter(u => u.plan === 'premium' && !u.is_admin && (u.created_at || '').slice(0, 10) <= d).length);
     const degisim = (n, son) => n == null ? '<span class="yp-deg">' + son + '</span>' : '<span class="yp-deg ' + (n > 0 ? 'art' : n < 0 ? 'azl' : '') + '">' + (n > 0 ? '+' : '') + n + '%' + '</span>';
     const sayfaAd = { home: 'Ana Sayfa', words: 'Kelimeler', works: 'Çalışmalar', quiz: 'Testler', grammarworks: 'Gramer Çalışmaları', grammar: 'Gramer', review: 'Tekrar', video: 'Videolar', pricing: 'Fiyatlar', profile: 'Profil', admin: 'Yönetim', placement: 'Seviye Sınavı', learn: 'Eğitim', ekitap: 'E-Kitap' };
-    const say = (arr, f) => { const m = {}; arr.forEach(r => { const v = f(r); if (v) m[v] = (m[v] || 0) + 1; }); return Object.entries(m).sort((a, b) => b[1] - a[1])[0]; };
-    const z30 = (zr || []).length, bugun = byDay[gunAnahtar(new Date())] || 0;
-    const ustSayfa = say(zr || [], r => r.path), ustSehir = say(zr || [], r => r.city || r.country);
+    const z30 = gunler(30).reduce((a, d) => a + (byDay[d] || 0), 0), bugun = byDay[gunAnahtar(new Date())] || 0;
+    const ustSayfa = zv && zv.sayfa, ustSehir = zv && zv.konum;
     const modVeri = {};
     (IX || []).forEach(x => { if (!x.modul) return; const m = modVeri[x.modul] = modVeri[x.modul] || { unite: 0, ders: 0, video: 0, set: 0 };
       if (x.tur === 'unite') { m.unite++; m.ders += x.ders || 0; } else if (x.tur === 'video') m.video++; else if (x.tur === 'set') m.set++; });
@@ -890,32 +922,32 @@ async function togglePremium(userId, currentPlan) {
       statKart('kullanici', 'mavi', top, 'Toplam kullanıcı', degisim(null, yeniKul ? '+' + yeniKul + ' yeni' : ''), egri(kulEgri, 70, 26, '#3b82f6'), "ypGit('users')") +
       statKart('tac', 'altin', prem, 'Premium üye', '', egri(premEgri, 70, 26, '#d4a43c'), "ypGit('users')") +
       statKart('kullanicilar', 'mavi', adm, 'Yönetici', '', '', "ypGit('users')") +
-      statKart('ziyaret', 'kirmizi', zToplam.toLocaleString('tr-TR'), 'Son ' + aralik + ' gün ziyaret', degisim(zDeg, ''), egri(g.map(d => byDay[d] || 0), 70, 26, '#16a34a'), "ypGit('visits')") +
+      statKart('ziyaret', 'kirmizi', zv ? zToplam.toLocaleString('tr-TR') : '…', 'Son ' + aralik + ' gün ziyaret', zv ? degisim(zDeg, '') : '', zv ? egri(g.map(d => byDay[d] || 0), 70, 26, '#16a34a') : '', "ypGit('visits')") +
       '</div>' +
       '<div class="yp-izgara2">' +
-      '<section class="yp-kart"><div class="yp-kart-bas"><h3>Son ' + aralik + ' Gün Ziyaret</h3><span class="yp-kart-not">' + zToplam.toLocaleString('tr-TR') + ' sayfa görüntüleme</span></div><div class="yp-grafik-k">' + cubukGrafik(g, byDay) + '</div></section>' +
+      '<section class="yp-kart"><div class="yp-kart-bas"><h3>Son ' + aralik + ' Gün Ziyaret</h3><span class="yp-kart-not">' + (zv ? zToplam.toLocaleString('tr-TR') + ' sayfa görüntüleme' : '') + '</span></div><div class="yp-grafik-k">' + (zv ? cubukGrafik(g, byDay) : yuk) + '</div></section>' +
       '<section class="yp-kart"><div class="yp-kart-bas"><h3>Kullanıcı Dağılımı</h3></div><div class="yp-dagilim">' +
       halka([{ n: top - prem - adm, renk: '#3b82f6' }, { n: prem, renk: '#e0a93a' }, { n: adm, renk: '#e879b9' }], top) +
       '<ul>' + [['Ücretsiz', top - prem - adm, '#3b82f6'], ['Premium', prem, '#e0a93a'], ['Yönetici', adm, '#e879b9']].map(x => '<li><i style="background:' + x[2] + '"></i><span>' + x[0] + '</span><b>' + x[1] + '</b><small>(%' + (top ? Math.round(x[1] / top * 100) : 0) + ')</small></li>').join('') + '</ul></div></section>' +
       '</div>' +
-      '<section class="yp-kart"><div class="yp-kart-bas"><h3>' + ic('liste', 18) + 'Son Eklenen İçerikler</h3><button type="button" class="yp-link" onclick="ypGit(\'icerikler\')">Tümünü gör' + ic('okSag', 15) + '</button></div><div id="yp-son"></div></section>' +
+      '<section class="yp-kart"><div class="yp-kart-bas"><h3>' + ic('liste', 18) + 'Son Eklenen İçerikler</h3><button type="button" class="yp-link" onclick="ypGit(\'icerikler\')">Tümünü gör' + ic('okSag', 15) + '</button></div><div id="yp-son">' + (IX ? '' : yuk) + '</div></section>' +
       '<div class="yp-izgara2 esit">' +
-      '<section class="yp-kart"><div class="yp-kart-bas"><h3>Modül Bazlı İçerik</h3><div class="yp-lejant">' + seriler.map(s => '<span><i style="background:' + s.renk + '"></i>' + s.ad + '</span>').join('') + '</div></div><div class="yp-grafik-k">' + gruplanmisGrafik(modVeri, seriler) + '</div></section>' +
-      '<section class="yp-kart"><div class="yp-kart-bas"><h3>Site Performansı</h3><span class="yp-kart-not">son 30 gün</span></div><div class="yp-perf">' +
+      '<section class="yp-kart"><div class="yp-kart-bas"><h3>Modül Bazlı İçerik</h3><div class="yp-lejant">' + seriler.map(s => '<span><i style="background:' + s.renk + '"></i>' + s.ad + '</span>').join('') + '</div></div><div class="yp-grafik-k">' + (IX ? gruplanmisGrafik(modVeri, seriler) : yuk) + '</div></section>' +
+      '<section class="yp-kart"><div class="yp-kart-bas"><h3>Site Performansı</h3><span class="yp-kart-not">son 30 gün</span></div>' + (!zv ? yuk : '<div class="yp-perf">') + (!zv ? '' :
       '<div class="yp-perf-k"><span class="yp-stat-ic r-mavi">' + ic('kullanicilar', 20) + '</span><div><b>' + z30.toLocaleString('tr-TR') + '</b><small>Sayfa görüntüleme</small></div>' + egri(gunler(30).map(d => byDay[d] || 0), 64, 24, '#3b82f6') + '</div>' +
       '<div class="yp-perf-k"><span class="yp-stat-ic r-yesil">' + ic('grafik', 20) + '</span><div><b>' + bugun + '</b><small>Bugün</small></div></div>' +
       '<div class="yp-perf-k"><span class="yp-stat-ic r-altin">' + ic('liste', 20) + '</span><div><b class="kucuk">' + esc(ustSayfa ? (sayfaAd[ustSayfa[0]] || ustSayfa[0]) : '—') + '</b><small>En çok bakılan sayfa' + (ustSayfa ? ' · ' + ustSayfa[1] : '') + '</small></div></div>' +
       '<div class="yp-perf-k"><span class="yp-stat-ic r-mor">' + ic('dunya', 20) + '</span><div><b class="kucuk">' + esc(ustSehir ? ustSehir[0] : '—') + '</b><small>En çok gelen konum' + (ustSehir ? ' · ' + ustSehir[1] : '') + '</small></div></div>' +
-      '</div></section></div>' +
+      '</div>') + '</section></div>' +
       '</div>' +
       '<aside class="yp-pano-yan">' +
       '<section class="yp-kart"><div class="yp-kart-bas"><h3>Hızlı İşlemler</h3></div><div class="yp-hizli">' + hizli.map(h => '<button type="button" onclick="' + (h[0] === 'bildirim' ? "ypGit('notify')" : "ypYeni('" + h[0] + "')") + '">' + ic(h[2], 22) + '<span>' + h[1] + '</span></button>').join('') + '</div></section>' +
       '<section class="yp-kart"><div class="yp-kart-bas"><h3>Bekleyen İşlemler</h3><button type="button" class="yp-link" onclick="ypGit(\'support\')">Destek</button></div><div id="yp-bek-l"></div></section>' +
-      '<section class="yp-kart"><div class="yp-kart-bas"><h3>Son Aktiviteler</h3></div><div class="yp-akt">' + ((aktiviteler || []).length ? aktiviteler.map(a =>
+      '<section class="yp-kart"><div class="yp-kart-bas"><h3>Son Aktiviteler</h3></div><div class="yp-akt">' + (!aksiyonlar && !IX ? yuk : (aktiviteler || []).length ? aktiviteler.map(a =>
         '<button type="button" class="yp-akt-s" onclick="' + a.git + '"><span class="yp-akt-n r-' + a.renk + '">' + ic(a.ic, 15) + '</span><div><b>' + esc(a.baslik) + '</b><span>' + esc(a.alt) + '</span><small>' + onceKadar(a.zaman) + '</small></div></button>').join('') : '<div class="yp-bos kucuk"><span>Henüz aktivite yok.</span></div>') + '</div></section>' +
       '</aside></div>';
     sonCiz();
-    bekleyenCiz($('yp-bek-l'), false);
+    const bl = $('yp-bek-l'); if (bl) { if (bekleyen) bekleyenCiz(bl, false); else bl.innerHTML = yuk; }
     ipucuBagla(k);
   }
   function ipucuBagla(k) {
@@ -933,8 +965,7 @@ async function togglePremium(userId, currentPlan) {
   }
   window.ypRaporIndir = async function () {
     await Promise.all([icerikYukle(), ziyaretAl()]);
-    const kul = gl('_adminUsers') || [], byDay = {};
-    (ziyaretler || []).forEach(r => { const d = (r.created_at || '').slice(0, 10); byDay[d] = (byDay[d] || 0) + 1; });
+    const kul = gl('_adminUsers') || [], byDay = (ziyaretler && ziyaretler.byDay) || {};
     const satir = [['Bölüm', 'Ölçüt', 'Değer'], ['Kullanıcılar', 'Toplam', kul.length], ['Kullanıcılar', 'Premium', kul.filter(u => u.plan === 'premium' && !u.is_admin).length], ['Kullanıcılar', 'Yönetici', kul.filter(u => u.is_admin).length]];
     TUR_SIRA.forEach(t => satir.push(['İçerik', TUR[t].ad, t === 'kelime' ? (kelimeSay == null ? '' : kelimeSay) : IX.filter(x => x.tur === t).length]));
     gunler(30).forEach(d => satir.push(['Ziyaret', d, byDay[d] || 0]));
@@ -1131,6 +1162,11 @@ async function togglePremium(userId, currentPlan) {
     });
   });
 
+  // Gözcü yalnızca yönetim paneli açıkken çalışır (sitenin geri kalanında boşuna iş yapmasın)
+  let gozcuAcik = false;
+  function gozcuBasla() { if (!gozcuAcik) { gozcu.observe(document.body, { childList: true, subtree: true, characterData: true }); gozcuAcik = true; } }
+  function gozcuDur() { if (gozcuAcik) { gozcu.disconnect(); gozcuAcik = false; } }
+
   /* ---------- Mevcut fonksiyonlara bağlan ---------- */
   function sar(ad, sonra, once) {
     const eski = window[ad]; if (typeof eski !== 'function') return;
@@ -1143,11 +1179,11 @@ async function togglePremium(userId, currentPlan) {
       const izinli = c && c.style.display !== 'none';
       document.body.classList.toggle('yp-aktif', !!izinli);
       if (!izinli) return;
-      kabukKur(); hesapDoldur();
+      kabukKur(); hesapDoldur(); gozcuBasla();
       agacIsle($('page-admin'));
       bekleyenAl(); icerikYukle();
     });
-    const hazirla = function () { const c = $('admin-content'); if (!kuruldu && c && c.style.display !== 'none') { document.body.classList.add('yp-aktif'); kabukKur(); } };
+    const hazirla = function () { const c = $('admin-content'); if (!kuruldu && c && c.style.display !== 'none') { document.body.classList.add('yp-aktif'); kabukKur(); gozcuBasla(); } };
     sar('adminNav', function (v) { if (!kuruldu) return; aktifIsaretle(v); }, hazirla);
     sar('icTab', null, function (t) { setTimeout(() => { if (aktifGor === 'icerik') aktifIsaretle('icerik'); }, 0); });
     sar('_applyRoleUI', function () {
@@ -1161,11 +1197,10 @@ async function togglePremium(userId, currentPlan) {
     // İçerik kaydedilince dizini tazele
     ['ekAdmSave', 'gwAdmSave', 'ekAdmToggle', 'ekAdmDelete', 'ozSave', 'ozToggle', 'ozDelete', 'adminVidSave', 'adminVidHide', 'adminVidRestore', 'adminPqSave', 'adminPqHide', 'adminPqRestore', 'adminRcSave', 'adminRcHide', 'adminRcRestore', 'adminWordSave']
       .forEach(ad => sar(ad, () => { IX = null; }));
-    gozcu.observe(document.body, { childList: true, subtree: true, characterData: true });
   }
   // admin.js diğer dosyalardan önce yüklenir; bağlama, tüm dosyalar yüklendikten sonra (DOMContentLoaded) yapılır
   if (document.readyState === 'complete') baglan(); else document.addEventListener('DOMContentLoaded', baglan);
-  const _sp = setInterval(() => { if (typeof window.showPage === 'function') { clearInterval(_sp); sar('showPage', function (id) { if (id !== 'admin') { document.body.classList.remove('yp-aktif', 'yp-menu-acik'); } }); } }, 50);
+  const _sp = setInterval(() => { if (typeof window.showPage === 'function') { clearInterval(_sp); sar('showPage', function (id) { if (id !== 'admin') { document.body.classList.remove('yp-aktif', 'yp-menu-acik'); gozcuDur(); } }); } }, 50);
   setInterval(() => { if (document.body.classList.contains('yp-aktif') && !document.hidden) bekleyenAl(); }, 120000);
 
   Object.assign(window, { ypGit, ypGrup, ypMenuAc, ypMenuKapat, ypSiteye, ypKapatHepsi, ypHesap, ypZil, ypYeni, ypYeniAc, ypDuzenle });
