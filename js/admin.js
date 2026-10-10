@@ -337,15 +337,14 @@ async function togglePremium(userId, currentPlan) {
   const MENU = [
     { g: null, items: [['overview', 'Genel Bakış', 'ev']] },
     { g: 'Kullanıcı Yönetimi', k: 'kul', items: [['users', 'Kullanıcılar', 'kullanicilar'], ['assign', 'Öğretmen Atama', 'ogretmen'], ['kurumlar', 'Kurumlar', 'kurum']] },
-    { g: 'İçerik Yönetimi', k: 'ic', items: [['icerikler', 'İçerik Listesi', 'liste'], ['icerik', 'Müfredat ve Konular', 'agac', 'konular'], ['icerik', 'E-Kitap Üniteleri', 'kitap', 'unite'],
-      ['icerik', 'Çalışma Setleri', 'set', 'set'], ['icerik', 'Notlar ve Kartlar', 'not', 'ozet'], ['videos', 'Videolar', 'video'],
-      ['content', 'Kelimeler', 'kelime'], ['questions', 'Soru Havuzu', 'soru'], ['pquest', 'Paragraf Soruları', 'paragraf'], ['recs', 'Bloglar ve Makaleler', 'blog']] },
+    { g: 'İçerik Yönetimi', k: 'ic', items: [['icerik', 'İçerik Merkezi', 'kitap'], ['videos', 'Videolar', 'video'], ['content', 'Kelimeler', 'kelime'], ['recs', 'Bloglar ve Makaleler', 'blog']] },
     { g: 'İletişim ve Destek', k: 'il', items: [['notify', 'Bildirim Gönder', 'bildirim'], ['support', 'Destek Talepleri', 'destek'], ['mail', 'Mail Kutusu', 'mail']] },
     { g: 'Site Yönetimi', k: 'site', items: [['visits', 'Ziyaret ve SEO', 'ziyaret'], ['settings', 'Site Ayarları', 'ayar'], ['backup', 'Yedekleme', 'yedek'], ['stafflog', 'İşlem Kayıtları', 'log'], ['errors', 'Hata Kayıtları', 'hata']] }
   ];
   const BASLIK = {   // sayfa başlıkları (görünümdeki h2/p yerine)
     overview: ['Genel Bakış', 'Platformun güncel durumu ve hızlı erişim.'],
     icerikler: ['İçerik Listesi', 'Tüm içerikler tek yerde: ara, filtrele, düzenle ya da yenisini ekle.'],
+    icerik: ['İçerik Merkezi', 'Müfredat, e-kitap, çalışmalar, sorular, notlar ve kartlar tek yerden yönetilir.'],
     recs: ['Bloglar ve Makaleler', 'Kendi blog yazılarını oluştur ya da güvenilir kaynaklardan makaleleri ekle.']
   };
   const ICTAB_AD = { konular: 'Müfredat ve Konular', unite: 'E-Kitap Üniteleri', set: 'Çalışma Setleri', ozet: 'Notlar ve Kartlar', kartlar: 'Notlar ve Kartlar' };
@@ -450,8 +449,11 @@ async function togglePremium(userId, currentPlan) {
   let aktifGor = 'overview';
   function ypGit(v, alt) {
     ypMenuKapat(); ypKapatHepsi();
-    if (v === 'icerik' && alt) { try { const icS = gl('IC'); if (icS && typeof icS === 'object' && 'tab' in icS) icS.tab = alt; } catch (e) {} }
     if (v === 'makaleler') { v = 'recs'; window.__ysBlSekme = 'makale'; }
+    // İçerik Merkezi'ne taşınan eski sayfalar
+    const ICM_YON = { icerikler: 'genel', questions: 'sorular:soru', pquest: 'sorular:pq' };
+    if (ICM_YON[v]) { const h = ICM_YON[v].split(':'); window.__icmSoru = h[1] || null; alt = h[0]; v = 'icerik'; }
+    if (v === 'icerik' && alt) { try { const icS = gl('IC'); if (icS && typeof icS === 'object' && 'tab' in icS) icS.tab = alt; } catch (e) {} }
     if (typeof adminNav === 'function') adminNav(v);
     window.scrollTo({ top: 0 });
   }
@@ -472,7 +474,7 @@ async function togglePremium(userId, currentPlan) {
       if (h2) { if (!BASLIK[v]) baslik = h2.textContent.trim(); h2.classList.add('yp-gizle'); }
       if (p) { if (!BASLIK[v]) alt2 = p.textContent.trim(); p.classList.add('yp-gizle'); }
     }
-    if (v === 'icerik' && alt) { baslik = ICTAB_AD[alt] || baslik; alt2 = ICTAB_ALT[alt] || alt2; ikon = ICTAB_IC[alt] || 'agac'; }
+    if (v === 'icerik') ikon = 'kitap';
     $('yp-bas-h').textContent = baslik.replace(/^İçerik Yönetimi — /, '');
     $('yp-bas-p').textContent = alt2;
     $('yp-bas-ic').innerHTML = ic(ikon, 24);
@@ -593,8 +595,8 @@ async function togglePremium(userId, currentPlan) {
   }
   async function ypYeni(t) {
     ypKapatHepsi();
-    if (t === 'unite' || t === 'set') { ekListeSifirla(t); ypGit('icerik', t); await ekListeHazir(); if (typeof ekAdmNew === 'function') ekAdmNew(); odakla('ek-src'); return; }
-    if (t === 'ozet') { ypGit('icerik', 'ozet'); await bekleKadar(() => $('oz-baslik') && $('ic-ozet').style.display !== 'none', 4000); if (typeof ozClear === 'function') ozClear(); odakla('oz-baslik'); return; }
+    if (t === 'unite' || t === 'set') { const e = gl('EKA'); if (e && typeof e === 'object') e.mode = t === 'set' ? 'set' : 'unit'; if ((aktifGor !== 'icerik')) ypGit('icerik', t); if (typeof ekAdmNew === 'function') ekAdmNew(); return; }
+    if (t === 'ozet') { ypGit('icerik', 'ozet'); await bekleKadar(() => $('oz-baslik') && $('ic-ozet').style.display !== 'none' && $('ic-ozet').offsetParent, 4000); if (typeof ozClear === 'function') ozClear(); odakla('oz-baslik'); return; }
     if (t === 'video') { ypGit('videos'); if (typeof adminVidFormClear === 'function') adminVidFormClear(); odakla('cv-title'); return; }
     if (t === 'pq') { ypGit('pquest'); if (typeof adminPqFormClear === 'function') adminPqFormClear(); odakla('cpq-para'); return; }
     if (t === 'soru') { ypGit('questions'); if (typeof pqFormClear === 'function') pqFormClear(); odakla('pq-q'); return; }
@@ -603,7 +605,7 @@ async function togglePremium(userId, currentPlan) {
   }
   async function ypDuzenle(t, id) {
     const has = (ad) => { const a = gl(ad); return Array.isArray(a) && a.some(r => String(r.id) === String(id)); };
-    if (t === 'unite' || t === 'set') { ekListeSifirla(t); ypGit('icerik', t); await ekListeHazir(); if (typeof ekAdmEdit === 'function') ekAdmEdit(id); return; }
+    if (t === 'unite' || t === 'set') { const e = gl('EKA'); if (e && typeof e === 'object') e.mode = t === 'set' ? 'set' : 'unit'; if ((aktifGor !== 'icerik')) ypGit('icerik', t); if (typeof ekAdmEdit === 'function') ekAdmEdit(id); return; }
     if (t === 'ozet') { ypGit('icerik', 'ozet'); await bekleKadar(() => { const o = gl('OZ'); return o && Array.isArray(o.rows) && o.rows.some(r => String(r.id) === String(id)); }); if (typeof ozEdit === 'function') ozEdit(id); return; }
     if (t === 'video') { ypGit('videos'); await bekleKadar(() => has('_cvRows')); if (typeof adminVidEdit === 'function') adminVidEdit(id); return; }
     if (t === 'pq') { ypGit('pquest'); await bekleKadar(() => has('_cpqRows')); if (typeof adminPqEdit === 'function') adminPqEdit(id); return; }
@@ -635,6 +637,7 @@ async function togglePremium(userId, currentPlan) {
   };
   async function ilCiz() {
     const k = $('yp-il'); if (!k) return;
+    setTimeout(async () => { const el = $('yp-mk-say'); if (!el) return; try { const { count } = await sb.from('content_articles').select('id', { count: 'exact', head: true }); el.textContent = count == null ? '0' : count; } catch (e) { el.textContent = '0'; } }, 50);
     if (!IX) { k.innerHTML = '<div class="yp-kart"><div class="admin-loading">İçerikler yükleniyor...</div></div>'; await icerikYukle(); }
     const say = {}; TUR_SIRA.forEach(t => say[t] = IX.filter(x => x.tur === t).length);
     if (kelimeSay != null) say.kelime = kelimeSay;
@@ -642,7 +645,7 @@ async function togglePremium(userId, currentPlan) {
     const sec = (k2, ops) => '<select class="yp-sel" onchange="ypIlAyarla(\'' + k2 + '\', this.value)">' + ops.map(o => '<option value="' + o[0] + '"' + (IL[k2] === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select>';
     k.innerHTML =
       '<div class="yp-ozet-satir">' + TUR_SIRA.map(t => '<button type="button" class="yp-ozet-k' + (IL.tur === t ? ' aktif' : '') + '" onclick="ypIlAyarla(\'tur\', \'' + (IL.tur === t ? 'hepsi' : t) + '\')"><span class="yp-tur-ic r-' + TUR[t].renk + '">' + ic(TUR[t].ic, 18) + '</span><div><b>' + (say[t] == null ? '—' : say[t].toLocaleString('tr-TR')) + '</b><small>' + TUR[t].kisa + '</small></div></button>').join('') +
-      '<button type="button" class="yp-ozet-k" onclick="ypGit(\'makaleler\')" title="Makale bölümü yakında"><span class="yp-tur-ic r-mor">' + ic('makale', 18) + '</span><div><b>0</b><small>Makale</small></div></button></div>' +
+      '<button type="button" class="yp-ozet-k" onclick="ypGit(\'makaleler\')" title="Bloglar ve Makaleler → Makaleler"><span class="yp-tur-ic r-mor">' + ic('makale', 18) + '</span><div><b id="yp-mk-say">—</b><small>Makale</small></div></button></div>' +
       '<div class="yp-kart yp-il-kart">' +
       '<div class="yp-sekmeler">' + sekme('hepsi', 'Tümü', IX.length) + TUR_SIRA.filter(t => t !== 'kelime').map(t => sekme(t, TUR[t].kisa, say[t])).join('') + sekme('kelime', 'Kelimeler', say.kelime) + '</div>' +
       '<div class="yp-filtre"><div class="yp-ara2">' + ic('ara', 16) + '<input type="search" id="yp-il-ara" placeholder="' + (IL.tur === 'kelime' ? 'Rusça ya da Türkçe kelime yaz…' : 'Başlık, konu ya da müfredatta ara…') + '" value="' + esc(IL.ara) + '" oninput="ypIlAra(this.value)" autocomplete="off"></div>' +
@@ -1212,7 +1215,7 @@ async function togglePremium(userId, currentPlan) {
   const _sp = setInterval(() => { if (typeof window.showPage === 'function') { clearInterval(_sp); sar('showPage', function (id) { if (id !== 'admin') { document.body.classList.remove('yp-aktif', 'yp-menu-acik'); gozcuDur(); } }); } }, 50);
   setInterval(() => { if (document.body.classList.contains('yp-aktif') && !document.hidden) bekleyenAl(); }, 120000);
 
-  Object.assign(window, { ypGit, ypGrup, ypMenuAc, ypDaralt, ypMenuKapat, ypSiteye, ypKapatHepsi, ypHesap, ypZil, ypYeni, ypYeniAc, ypDuzenle });
+  Object.assign(window, { ypIlCiz: () => ilCiz(), ypGit, ypGrup, ypMenuAc, ypDaralt, ypMenuKapat, ypSiteye, ypKapatHepsi, ypHesap, ypZil, ypYeni, ypYeniAc, ypDuzenle });
 })();
 
 /* ============================================================
@@ -2863,6 +2866,1087 @@ async function togglePremium(userId, currentPlan) {
   };
   window.YS_AKS.recs = () => '<button type="button" class="yp-btn" onclick="ysBlYeni(\'makale\')">' + ic('link', 16) + 'Makale ekle</button><button type="button" class="yp-btn ana" onclick="ysBlYeni(\'blog\')">' + ic('arti', 16) + 'Blog yazısı ekle</button>';
 
+  /* ============================================================
+     İÇERİK MERKEZİ (v176)
+     Sekmeler: Genel Liste · Müfredat Ağacı · E-Kitap · Konular · Çalışma Setleri · Sorular · Notlar ve Kartlar · Bağlantısız İçerikler
+     Eski bölümlerin DOM'u (konular, özet notları, kartlar, soru havuzu, paragraf soruları) sekmelerin içine taşınır;
+     kayıt/okuma işlevleri aynen çalışır.
+     ============================================================ */
+  const ICM_SEKME = [['genel', 'Genel Liste', 'liste'], ['agac', 'Müfredat Ağacı', 'agac'], ['unite', 'E-Kitap', 'kitap'], ['konular', 'Konular', 'etiket'],
+    ['set', 'Çalışma Setleri', 'set'], ['sorular', 'Sorular', 'soru'], ['ozet', 'Notlar ve Kartlar', 'not'], ['baglantisiz', 'Bağlantısız İçerikler', 'link']];
+  const ICM = { kuruldu: false, soru: 'pq', not: 'ozet' };
+  const icS = () => gl('IC') || { tab: 'agac' };
+  function icmKur() {
+    if (ICM.kuruldu) return true;
+    const v = $('av-icerik'); if (!v) return false;
+    ICM.kuruldu = true;
+    const eski = $('ic-tabs'); if (eski) eski.style.display = 'none';
+    const cubuk = document.createElement('div'); cubuk.className = 'yp-kart ys-sekme-kart icm-sekmeler'; cubuk.id = 'icm-sekmeler';
+    v.insertBefore(cubuk, eski ? eski.nextSibling : v.firstChild);
+    const pano = id => { const d = document.createElement('div'); d.id = 'icm-' + id; d.className = 'icm-pano'; d.style.display = 'none'; v.appendChild(d); return d; };
+    // Genel liste: İçerik Listesi görünümünün kutusu buraya taşınır
+    const g = pano('genel'); const il = $('yp-il'); if (il) g.appendChild(il);
+    pano('agac').innerHTML = '<div class="admin-loading">Yükleniyor...</div>';
+    const ek = pano('unite'); ek.innerHTML = '<div id="icm-ek-liste"></div><div id="icm-ed" style="display:none"></div>';
+    const icEk = $('ic-ekitap'); if (icEk) { icEk.style.display = 'none'; ek.appendChild(icEk); }
+    const kn = pano('konular'); const icK = $('ic-konular'); if (icK) { kn.appendChild(icK); icK.style.display = ''; }
+    pano('set').innerHTML = '<div id="icm-set-liste"></div>';
+    // Sorular: Soru havuzu (seviye sınavı) + paragraf soruları
+    const sr = pano('sorular');
+    sr.innerHTML = '<div class="ys-mini-sekme icm-alt" id="icm-soru-sec"></div><div id="icm-soru-pq" class="icm-alt-pano"></div><div id="icm-soru-soru" class="icm-alt-pano"></div>';
+    [['pquest', 'icm-soru-pq'], ['questions', 'icm-soru-soru']].forEach(([gor, hedef]) => {
+      const kaynak = $('av-' + gor), h = $(hedef); if (!kaynak || !h) return;
+      [...kaynak.children].forEach(c => { if (!c.matches('h2.profile-h2, p.profile-sub')) h.appendChild(c); });
+    });
+    const nt = pano('ozet');
+    nt.innerHTML = '<div class="ys-mini-sekme icm-alt" id="icm-not-sec"></div>';
+    ['ic-ozet', 'ic-kartlar'].forEach(id => { const el = $(id); if (el) { nt.appendChild(el); const t = el.querySelector('.yp-nk'); if (t) t.remove(); } });
+    pano('baglantisiz');
+    return true;
+  }
+  function icmSekmeCiz() {
+    const c = $('icm-sekmeler'); if (!c) return;
+    const t = icS().tab === 'kartlar' ? 'ozet' : icS().tab;
+    c.innerHTML = '<div class="ys-sekme-cubuk">' + ICM_SEKME.map(s => '<button type="button" class="' + (t === s[0] ? 'aktif' : '') + '" onclick="icTab(\'' + s[0] + '\')">' + ic(s[2], 16) + s[1] + '</button>').join('') + '</div>';
+  }
+  async function icmSekme(t) {
+    if (!icmKur()) return;
+    if (t === 'kartlar') { ICM.not = 'kartlar'; t = 'ozet'; } else if (t === 'ozet' && !ICM._notSabit) ICM.not = ICM.not || 'ozet';
+    const IC_ = icS(); IC_.tab = t;
+    icmSekmeCiz();
+    ICM_SEKME.forEach(s => { const p = $('icm-' + s[0]); if (p) p.style.display = s[0] === t ? '' : 'none'; });
+    menuKapat();
+    try {
+      if (t === 'genel') { if (typeof window.ypIlCiz === 'function') await window.ypIlCiz(); }
+      else if (t === 'agac') await agacYukle();
+      else if (t === 'unite' || t === 'set') await ekSekme(t);
+      else if (t === 'konular') { if (typeof ekTopicsInit === 'function') await ekTopicsInit(); konularDuzen(); }
+      else if (t === 'sorular') soruSekme(window.__icmSoru || ICM.soru);
+      else if (t === 'ozet') notSekme(ICM.not);
+      else if (t === 'baglantisiz') await baglantisizYukle();
+    } catch (e) { console.error(e); }
+    delete window.__icmSoru;
+  }
+  // Konular sekmesi: eski "Müfredat ağacı" kartı Müfredat Ağacı sekmesinde yeniden yapıldı, burada gizlenir
+  function konularDuzen() {
+    const t = $('mf-tree'); const k = t && t.closest('.admin-notif-card'); if (k) k.style.display = 'none';
+    document.querySelectorAll('#ic-konular .admin-notif-card').forEach(c => c.classList.add('yp-kart', 'ys-eski-kart'));
+  }
+  function soruSekme(s) {
+    ICM.soru = s === 'soru' ? 'soru' : 'pq';
+    const sec = $('icm-soru-sec');
+    if (sec) sec.innerHTML = '<button type="button" class="' + (ICM.soru === 'pq' ? 'aktif' : '') + '" onclick="icmSoru(\'pq\')">Paragraf soruları</button><button type="button" class="' + (ICM.soru === 'soru' ? 'aktif' : '') + '" onclick="icmSoru(\'soru\')">Seviye sınavı soruları</button>';
+    const a = $('icm-soru-pq'), b = $('icm-soru-soru'); if (a) a.style.display = ICM.soru === 'pq' ? '' : 'none'; if (b) b.style.display = ICM.soru === 'soru' ? '' : 'none';
+    document.querySelectorAll('#icm-sorular .admin-notif-card').forEach(c => c.classList.add('yp-kart', 'ys-eski-kart'));
+    if (ICM.soru === 'pq') { if (typeof adminPquestInit === 'function') adminPquestInit(); }
+    else { if (typeof adminQuestionStats === 'function') adminQuestionStats(); if (typeof adminPqlReload === 'function') adminPqlReload(); if (typeof plcCfgInit === 'function') plcCfgInit(); }
+  }
+  window.icmSoru = s => soruSekme(s);
+  function notSekme(n) {
+    ICM.not = n === 'kartlar' ? 'kartlar' : 'ozet';
+    const sec = $('icm-not-sec');
+    if (sec) sec.innerHTML = '<button type="button" class="' + (ICM.not === 'ozet' ? 'aktif' : '') + '" onclick="icmNot(\'ozet\')">' + ic('not', 14) + ' Özet notları</button><button type="button" class="' + (ICM.not === 'kartlar' ? 'aktif' : '') + '" onclick="icmNot(\'kartlar\')">' + ic('kart', 14) + ' Çalışma kartları</button>';
+    const a = $('ic-ozet'), b = $('ic-kartlar'); if (a) a.style.display = ICM.not === 'ozet' ? '' : 'none'; if (b) b.style.display = ICM.not === 'kartlar' ? '' : 'none';
+    document.querySelectorAll('#icm-ozet .admin-notif-card').forEach(c => c.classList.add('yp-kart', 'ys-eski-kart'));
+    if (ICM.not === 'kartlar') { if (typeof icKartInit === 'function') icKartInit(); }
+    else (async () => { if (typeof ekTopicsFetch === 'function') await ekTopicsFetch(); if (typeof ozInit === 'function') ozInit(); })();
+  }
+  window.icmNot = n => notSekme(n);
+
+  // Başlık düğmeleri: PDF'den içe aktar + Yeni içerik menüsü
+  window.YS_AKS.icerik = () => '<button type="button" class="yp-btn" onclick="icmPdfAc()">' + ic('yukle', 16) + 'PDF\'den içe aktar</button>' +
+    '<button type="button" class="yp-btn ana" onclick="ysMenuAc(event, \'icmyeni\', \'x\')">' + ic('arti', 16) + 'Yeni içerik' + ic('asagi', 14) + '</button>';
+  MENULER.icmyeni = () => [{ baslik: 'Müfredat' }, { ic: 'kitap', ad: 'E-kitap ünitesi', fn: "icmYeni('unite')" }, { ic: 'agac', ad: 'Modül', fn: "icmYeni('modul')" }, { ic: 'etiket', ad: 'Konu', fn: "icmYeni('konu')" },
+    { baslik: 'Çalışma' }, { ic: 'set', ad: 'Çalışma seti', fn: "icmYeni('set')" }, { ic: 'paragraf', ad: 'Paragraf sorusu', fn: "icmYeni('pq')" }, { ic: 'soru', ad: 'Seviye sınavı sorusu', fn: "icmYeni('soru')" },
+    { baslik: 'Notlar' }, { ic: 'not', ad: 'Özet notu', fn: "icmYeni('ozet')" }, { ic: 'kart', ad: 'Çalışma kartı', fn: "icmYeni('kart')" },
+    { baslik: 'Diğer' }, { ic: 'video', ad: 'Video', fn: "icmYeni('video')" }, { ic: 'kelime', ad: 'Kelime', fn: "icmYeni('kelime')" }];
+  window.icmYeni = async t => {
+    if (t === 'modul') { await icmSekme('agac'); if (typeof mfYeniModul === 'function') await mfYeniModul(); return agacCiz(); }
+    if (t === 'konu') { await icmSekme('konular'); if (typeof ekTopicYeni === 'function') ekTopicYeni(); const i = $('tp-kod'); if (i) { i.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => i.focus(), 300); } return; }
+    if (t === 'kart') { ICM.not = 'kartlar'; return icmSekme('ozet'); }
+    if (t === 'video') { ypGit('videos'); return setTimeout(() => window.ysVdYeni && window.ysVdYeni(), 400); }
+    if (t === 'kelime') { ypGit('content'); return setTimeout(() => window.ysKelYeni && window.ysKelYeni(), 600); }
+    if (typeof ypYeni === 'function') return ypYeni(t);
+  };
+
+  /* ---------- Bağlantısız içerikler ---------- */
+  async function baglantisizYukle() {
+    const k = $('icm-baglantisiz'); if (!k) return;
+    k.innerHTML = '<div class="yp-kart"><div class="admin-loading">Yükleniyor...</div></div>';
+    const al = q => q.then(r => (r && r.data) || [], () => []);
+    if (typeof ekTopicsFetch === 'function') await ekTopicsFetch();
+    if (typeof mfYukle === 'function') await mfYukle();
+    const [vid, oz, sets, pq] = await Promise.all([al(sb.from('content_videos').select('id, title, mf_ref, level, active').eq('active', true)),
+      al(sb.from('ozet_notlar').select('id, baslik, konu')), al(sb.from('gw_sets').select('id, baslik, konular, seviye, yayinda')),
+      al(sb.from('content_pquestions').select('id, soru, paragraf, konu, level, active').eq('active', true))]);
+    const MFx = gl('MF') || { rows: [] }, T = (gl('EKA') || {}).topics || [];
+    const atanan = typeof mfAtananlar === 'function' ? mfAtananlar() : new Set();
+    const cocuk = {}; T.forEach(t => { if (t.ust_kod) (cocuk[t.ust_kod] = cocuk[t.ust_kod] || []).push(t.kod); });
+    const bagli = kod => atanan.has(kod) || (cocuk[kod] || []).some(bagli);
+    const tAd = kod => { const t = T.find(x => x.kod === kod); return t ? t.ad : kod; };
+    const konusuzDers = []; MFx.rows.forEach(u => (u.p ? u.p.sections : []).forEach((s, si) => { if (s.tur === 'ders' && !s.konular.length) konusuzDers.push({ u, s, si }); }));
+    const gruplar = [
+      ['Konusu olmayan dersler', 'kitap', konusuzDers, x => 'Modül ' + x.u.modul_no + ' · Ünite ' + x.u.unite_no + ' · Ders ' + x.s.no + ' — ' + x.s.ad, x => ({ ad: 'Ağaçta aç', fn: "icmAgacSec('b', " + x.u.id + ", " + x.si + ")" }), 'Bu derslere konu atanmadığı için notlar, sorular ve setler onlara bağlanamaz.'],
+      ['Hiçbir derse bağlı olmayan konular', 'etiket', T.filter(t => !bagli(t.kod)), x => x.ad + ' (' + x.kod + ')', () => ({ ad: 'Ağaçta ata', fn: "icTab('agac')" }), 'Konuyu bir derse atamak için Müfredat Ağacı\'nda dersi seçip "Konu ekle"yi kullan.'],
+      ['Müfredata bağlı olmayan videolar', 'video', vid.filter(v => !v.mf_ref), x => x.title + (x.level ? ' · ' + x.level : ''), x => ({ ad: 'Düzenle', fn: "ypGit('videos'); setTimeout(() => ysVdDuzenle('" + x.id + "'), 700)" }), ''],
+      ['Konusu olmayan özet notları', 'not', oz.filter(n => !n.konu || !T.some(t => t.kod === n.konu)), x => x.baslik + (x.konu ? ' · bilinmeyen konu: ' + x.konu : ''), x => ({ ad: 'Düzenle', fn: "ypDuzenle('ozet', '" + x.id + "')" }), ''],
+      ['Konusu olmayan çalışma setleri', 'set', sets.filter(s => !(s.konular || []).length), x => x.baslik + (x.seviye ? ' · ' + x.seviye : ''), x => ({ ad: 'Düzenle', fn: "ypDuzenle('set', " + x.id + ")" }), ''],
+      ['Konusu olmayan paragraf soruları', 'paragraf', pq.filter(q => !q.konu), x => String(x.soru || x.paragraf || '').slice(0, 90) + (x.level ? ' · ' + x.level : ''), x => ({ ad: 'Düzenle', fn: "ypDuzenle('pq', '" + x.id + "')" }), '']
+    ];
+    const toplam = gruplar.reduce((a, g) => a + g[2].length, 0);
+    let h = '<div class="ys-kpiler d3">' + kpi('link', toplam ? 'turuncu' : 'yesil', 'Bağlantısız içerik', toplam, '<small>müfredata ya da konuya bağlanmamış</small>') +
+      kpi('etiket', 'mavi', 'Konu', T.length, '<small>' + T.filter(t => bagli(t.kod)).length + ' tanesi bir derse bağlı</small>') +
+      kpi('kitap', 'altin', 'Ders', MFx.rows.reduce((a, u) => a + (u.p ? u.p.sections.filter(s => s.tur === 'ders').length : 0), 0), '<small>' + konusuzDers.length + ' derste konu yok</small>') + '</div>';
+    if (!toplam) h += '<div class="yp-kart"><div class="yp-bos">' + ic('onay', 30) + '<b>Her şey bağlı.</b><span>Müfredata ya da bir konuya bağlanmamış içerik bulunmadı.</span></div></div>';
+    gruplar.forEach(g => {
+      if (!g[2].length) return;
+      h += '<section class="yp-kart ys-liste"><div class="yp-kart-bas ys-ic-bas"><div><h3>' + ic(g[1], 18) + esc(g[0]) + ' <span class="ys-rozet kucuk">' + g[2].length + '</span></h3>' + (g[5] ? '<p class="ys-kart-alt">' + esc(g[5]) + '</p>' : '') + '</div></div><div class="icm-bl-liste">' +
+        g[2].slice(0, 200).map(x => { const b = g[4](x); return '<div class="icm-bl-s"><span>' + esc(g[3](x)) + '</span><button type="button" class="yp-btn kucuk" onclick="' + esc(b.fn) + '">' + esc(b.ad) + '</button></div>'; }).join('') + '</div></section>';
+    });
+    k.innerHTML = h;
+  }
+
+  /* ---------- Müfredat ağacı (3 bölmeli) ---------- */
+  const AG = { sec: null, ara: '', filtre: 'hepsi', kapali: new Set(), sagSekme: 'duzen', veri: null, blok: null };
+  const MOD_RENK = ['mavi', 'altin', 'mor', 'yesil', 'turuncu', 'camgobegi', 'kirmizi'];
+  const BOLUM_AD = { ders: 'Ders', ozet: 'Ünite özeti', okuma: 'Okuma', test: 'Ünite testi', giris: 'Giriş' };
+  async function agacYukle() {
+    const k = $('icm-agac'); if (!k) return;
+    if (!AG.veri) k.innerHTML = '<div class="yp-kart"><div class="admin-loading">Yükleniyor...</div></div>';
+    const al = q => q.then(r => (r && r.data) || [], () => []);
+    const [_, __, vid, sets, oz, pq] = await Promise.all([typeof ekTopicsFetch === 'function' ? ekTopicsFetch() : null, typeof mfYukle === 'function' ? mfYukle() : null,
+      al(sb.from('content_videos').select('id, title, mf_ref, level, premium, source, duration_sec, active, num').eq('active', true).order('num')),
+      al(sb.from('gw_sets').select('id, baslik, seviye, konular, kitap_ref, yayinda, act_say')),
+      al(sb.from('ozet_notlar').select('id, baslik, konu, aktif, govde')),
+      al(sb.from('content_pquestions').select('id, soru, paragraf, konu, level, active').eq('active', true))]);
+    AG.veri = { vid, sets, oz, pq };
+    agacCiz();
+  }
+  const agU = id => (gl('MF') || { rows: [] }).rows.find(r => String(r.id) === String(id));
+  function agSecim() {
+    const s = AG.sec; if (!s) return null;
+    if (s.t === 'm') { const units = (gl('MF') || { rows: [] }).rows.filter(r => r.modul_no === s.m); return units.length ? { t: 'm', m: s.m, units } : null; }
+    const u = agU(s.u); if (!u) return null;
+    if (s.t === 'u') return { t: 'u', u };
+    const sec = u.p && u.p.sections[s.si]; return sec ? { t: 'b', u, si: s.si, sec } : null;
+  }
+  // Seçili düğüme bağlı içerikler
+  function agBagli(x) {
+    const V = AG.veri || { vid: [], sets: [], oz: [], pq: [] }, out = [];
+    let units = [], secs = [];
+    if (x.t === 'm') units = x.units; else units = [x.u];
+    units.forEach(u => (u.p ? u.p.sections : []).forEach((s, si) => { if (x.t !== 'b' || si === x.si) secs.push({ u, s, si }); }));
+    const konular = new Set(); secs.forEach(o => { o.s.konular.forEach(k => konular.add(k)); o.s.blocks.forEach(b => { if (b.t === 'act') (b.konu || []).forEach(k => konular.add(k)); }); });
+    secs.forEach(o => { if (!BOLUM_AD[o.s.tur]) return;
+      const act = o.s.blocks.filter(b => b.t === 'act').length, sayfa = 1 + o.s.blocks.filter(b => b.t === 'pagebreak').length;
+      out.push({ tur: 'ekitap', ad: (o.s.tur === 'ders' ? 'Ders ' + o.s.no + ' — ' : (BOLUM_AD[o.s.tur] + ' — ')) + o.s.ad, alt: o.s.blocks.length + ' blok · ' + act + ' etkinlik', durum: o.u.yayinda ? 'yayinda' : 'taslak', u: o.u.id, si: o.si });
+    });
+    const refs = new Set(); secs.forEach(o => { if (o.s.tur === 'ders') refs.add(o.u.modul_no + '.' + o.u.unite_no + '.' + o.s.no); });
+    units.forEach(u => { if (x.t !== 'b') refs.add(u.modul_no + '.' + u.unite_no); });
+    V.vid.filter(v => v.mf_ref && (refs.has(v.mf_ref) || (x.t !== 'b' && units.some(u => String(v.mf_ref).startsWith(u.modul_no + '.' + u.unite_no + '.'))))).forEach(v =>
+      out.push({ tur: 'video', ad: v.title, alt: [v.duration_sec ? sureYaz(v.duration_sec) : '', v.source === 'stream' ? 'CF Stream' : 'YouTube', v.premium ? 'Premium' : ''].filter(Boolean).join(' · '), durum: 'yayinda', id: v.id }));
+    secs.forEach(o => o.s.blocks.forEach((b, bi) => { if (b.t === 'act') out.push({ tur: 'etkinlik', ad: (b.alanlar['yönerge'] || b.alanlar['görev'] || 'Etkinlik').slice(0, 80), alt: ((gl('EK_TIPLER') || {})[b.tip] || b.tip) + ' · ' + (b.items.length || 1) + ' madde' + (b.kontrol ? ' · kontrol edilecek' : ''), durum: b.kontrol ? 'kontrol' : (o.u.yayinda ? 'yayinda' : 'taslak'), u: o.u.id, si: o.si, bi }); }));
+    const unitRef = new Set(units.map(u => u.modul_no + '.' + u.unite_no));
+    V.sets.filter(s => (s.konular || []).some(k => konular.has(k)) || (x.t !== 'b' && s.kitap_ref && unitRef.has(s.kitap_ref))).forEach(s =>
+      out.push({ tur: 'calisma', ad: s.baslik, alt: (s.act_say || 0) + ' etkinlik' + (s.seviye ? ' · ' + s.seviye : ''), durum: s.yayinda ? 'yayinda' : 'taslak', id: s.id }));
+    V.pq.filter(q => q.konu && konular.has(q.konu)).forEach(q => out.push({ tur: 'soru', ad: String(q.soru || '').slice(0, 90) || 'Paragraf sorusu', alt: 'Paragraf sorusu' + (q.level ? ' · ' + q.level : ''), durum: 'yayinda', id: q.id }));
+    V.oz.filter(n => n.konu && konular.has(n.konu)).forEach(n => out.push({ tur: 'not', ad: n.baslik, alt: 'Özet notu', durum: n.aktif === false ? 'gizli' : 'yayinda', id: n.id }));
+    secs.forEach(o => o.s.blocks.forEach((b, bi) => { if (b.t === 'kartlar') b.cards.forEach((c, ci) => out.push({ tur: 'kart', ad: String(c.on || '').replace(/\{\{|\}\}/g, '').slice(0, 80) || 'Kart', alt: 'Çalışma kartı', durum: o.u.yayinda ? 'yayinda' : 'taslak', u: o.u.id, si: o.si, bi })); }));
+    // Kelimeler: bölümlerde geçen Rusça sözcükler (kelime paneliyle aynı yöntem) ve kelime bloklarındakiler
+    const kel = new Map();
+    secs.forEach(o => {
+      o.s.blocks.forEach(b => { if (b.t === 'kelimeler') b.kel.forEach(k => { const ru = String(k.ru || '').replace(/[{}]/g, '').trim(); if (ru) kel.set(ru.toLowerCase(), { ru, tr: k.tr }); }); });
+      if (x.t === 'b') Object.values(blokOnizEl(o.s, 'icm6')).forEach(el => el.querySelectorAll('[data-w]').forEach(n => { const w = n.dataset.w; if (w && w.replace(/[^а-яё]/gi, '').length > 2 && !kel.has(w.toLowerCase())) kel.set(w.toLowerCase(), { ru: w, tr: '' }); }));
+    });
+    [...kel.values()].forEach(w => { const f = gl('ekFindWord'); const s = typeof f === 'function' ? f(w.ru) : null; out.push({ tur: 'kelime', ad: w.ru, alt: s ? (s.tr || '') + ' · sözlükte var' : (w.tr ? w.tr + ' · ' : '') + 'sözlükte yok', durum: s ? 'yayinda' : 'eksik', ru: w.ru }); });
+    return { out, konular: [...konular] };
+  }
+  const BG_TUR = { ekitap: ['E-Kitap', 'kitap', 'mavi'], video: ['Video', 'video', 'kirmizi'], calisma: ['Çalışma', 'set', 'mor'], etkinlik: ['Etkinlik', 'onay', 'camgobegi'], soru: ['Soru', 'soru', 'yesil'], not: ['Not', 'not', 'gri'], kart: ['Kart', 'kart', 'turuncu'], kelime: ['Kelime', 'kelime', 'altin'] };
+  const BG_DURUM = { yayinda: ['Yayında', 'd-yesil'], taslak: ['Taslak', 'd-sari'], kontrol: ['Kontrol', 'd-turuncu'], gizli: ['Gizli', 'd-gri'], eksik: ['Sözlükte yok', 'd-gri'] };
+  function agacCiz() {
+    const k = $('icm-agac'); if (!k || k.style.display === 'none') return;
+    const MFx = gl('MF') || { rows: [] };
+    const mods = typeof mfModuller === 'function' ? mfModuller() : [];
+    if (!AG.sec && mods.length) { const u0 = mods[0].units[0]; const d = u0 && u0.p ? u0.p.sections.findIndex(s => s.tur === 'ders') : -1; AG.sec = d > -1 ? { t: 'b', u: u0.id, si: d } : { t: 'm', m: mods[0].no }; }
+    const q = AG.ara.trim().toLocaleLowerCase('tr'), uyar = t => !q || String(t || '').toLocaleLowerCase('tr').includes(q);
+    const ss = AG.sec || {};
+    let agac = '';
+    mods.forEach((m, mi) => {
+      const mk = 'm' + m.no, dSay = m.units.reduce((a, u) => a + (u.p ? u.p.sections.filter(s => s.tur === 'ders').length : 0), 0);
+      const uSatir = m.units.map(u => {
+        const secs = (u.p ? u.p.sections : []).map((s, si) => ({ s, si })).filter(o => BOLUM_AD[o.s.tur] && o.s.ln);
+        const eslesen = secs.filter(o => uyar(o.s.ad) || uyar(m.ad) || uyar(u.unite_ad));
+        if (q && !eslesen.length && !uyar(u.unite_ad) && !uyar(m.ad)) return '';
+        const uk = 'u' + u.id, uKapali = AG.kapali.has(uk) && !q;
+        return '<div class="icm-dugum"><div class="icm-satir u' + (ss.t === 'u' && String(ss.u) === String(u.id) ? ' secili' : '') + '"><button type="button" class="icm-ok" onclick="icmAgacAc(\'' + uk + '\')" aria-label="Aç/kapat">' + ic(uKapali ? 'sag' : 'asagi', 14) + '</button>' +
+          '<button type="button" class="icm-ad" onclick="icmAgacSec(\'u\', ' + u.id + ')"><span class="icm-ic r-' + MOD_RENK[mi % MOD_RENK.length] + '">' + ic('kitap', 16) + '</span><span><b>Ünite ' + u.unite_no + '</b> ' + esc(u.unite_ad || '') + '<small>' + secs.filter(o => o.s.tur === 'ders').length + ' ders · ' + (u.yayinda ? 'yayında' : 'taslak') + '</small></span></button>' + menuB('agu', String(u.id)) + '</div>' +
+          (uKapali ? '' : '<div class="icm-cocuk">' + (secs.length ? (q ? eslesen : secs).map(o => '<div class="icm-satir b' + (ss.t === 'b' && String(ss.u) === String(u.id) && ss.si === o.si ? ' secili' : '') + '"><button type="button" class="icm-ad" onclick="icmAgacSec(\'b\', ' + u.id + ', ' + o.si + ')">' +
+            '<span class="icm-ic-k">' + ic(o.s.tur === 'ders' ? 'kitap' : o.s.tur === 'test' ? 'soru' : o.s.tur === 'okuma' ? 'paragraf' : 'not', 15) + '</span><span>' + (o.s.tur === 'ders' ? '<b>Ders ' + o.s.no + '</b> ' : '') + esc(o.s.tur === 'ders' ? o.s.ad : BOLUM_AD[o.s.tur] + (o.s.ad && o.s.tur !== 'ozet' ? ' — ' + o.s.ad : '')) + '</span></button>' + menuB('agb', u.id + ':' + o.si) + '</div>').join('') : '<div class="icm-bos-s">Ders yok</div>') + '</div>') + '</div>';
+      }).join('');
+      if (q && !uSatir && !uyar(m.ad)) return;
+      const mKapali = AG.kapali.has(mk) && !q;
+      agac += '<div class="icm-dugum"><div class="icm-satir m' + (ss.t === 'm' && ss.m === m.no ? ' secili' : '') + '"><button type="button" class="icm-ok" onclick="icmAgacAc(\'' + mk + '\')" aria-label="Aç/kapat">' + ic(mKapali ? 'sag' : 'asagi', 14) + '</button>' +
+        '<button type="button" class="icm-ad" onclick="icmAgacSec(\'m\', ' + m.no + ')"><span class="icm-ic buyuk r-' + MOD_RENK[mi % MOD_RENK.length] + '">' + ic('kitap', 18) + '</span><span><b>Modül ' + m.no + '</b> ' + esc(m.ad || '') + '<small>' + m.units.length + ' ünite · ' + dSay + ' ders</small></span></button>' + menuB('agm', String(m.no)) + '</div>' +
+        (mKapali ? '' : '<div class="icm-cocuk">' + uSatir + '</div>') + '</div>';
+    });
+    if (!mods.length) agac = '<div class="yp-bos">' + ic('agac', 28) + '<b>Henüz modül yok.</b><span>"+" ile ilk modülü ve ünitesini oluştur.</span></div>';
+    else if (!agac) agac = '<div class="yp-bos kucuk"><span>Aramaya uyan düğüm yok.</span></div>';
+    const x = agSecim();
+    k.innerHTML = '<div class="icm-uclu"><section class="yp-kart icm-sol"><div class="icm-bas"><h3>Müfredat ağacı</h3><button type="button" class="yp-ikon-b" title="Toplu müfredat düzenle" aria-label="Toplu müfredat" onclick="icTab(\'konular\'); setTimeout(() => { const d = document.querySelector(\'.mf-toplu\'); if (d) { d.open = true; d.scrollIntoView({ block: \'start\', behavior: \'smooth\' }); } }, 300)">' + ic('kalem', 16) + '</button></div>' +
+      '<div class="icm-arac">' + aramaKutusu('icm-ag-ara', AG.ara, 'Modül, ünite, ders ara…', 'icmAgacAra(this.value)') + '<button type="button" class="ys-uc-nokta" title="Tümünü aç / kapat" aria-label="Tümünü aç ya da kapat" onclick="icmAgacTumu()">' + ic('liste', 16) + '</button><button type="button" class="yp-btn ana kare" title="Yeni modül" aria-label="Yeni modül" onclick="icmYeni(\'modul\')">' + ic('arti', 17) + '</button></div>' +
+      '<div class="icm-agac-l">' + agac + '</div></section>' +
+      '<section class="yp-kart icm-orta" id="icm-orta">' + agOrta(x) + '</section><section class="yp-kart icm-sag" id="icm-sag">' + agSag(x) + '</section></div>';
+    if (x && x.t === 'b' && AG.sagSekme === 'duzen') blokListeBagla('icm-sag-bloklar', agBaglam(x));
+  }
+  function agOrta(x) {
+    if (!x) return '<div class="yp-bos">' + ic('agac', 28) + '<b>Soldan bir modül, ünite ya da ders seç.</b></div>';
+    const b = agBagli(x), say = t => b.out.filter(o => t === 'hepsi' || o.tur === t).length;
+    let bas, yol = '', etiket = '';
+    if (x.t === 'm') { bas = 'Modül ' + x.m + ' — ' + esc(x.units[0].modul_ad || ''); etiket = '<span class="yp-durum d-gri">' + x.units.length + ' ünite</span>'; }
+    else if (x.t === 'u') { bas = 'Ünite ' + x.u.unite_no + ' — ' + esc(x.u.unite_ad || ''); yol = 'Modül ' + x.u.modul_no; etiket = '<span class="yp-durum r-altin">' + esc(x.u.seviye || '—') + '</span><span class="yp-durum ' + (x.u.yayinda ? 'd-yesil' : 'd-sari') + '">' + (x.u.yayinda ? 'Yayında' : 'Taslak') + '</span>'; }
+    else { bas = (x.sec.tur === 'ders' ? 'Ders ' + x.sec.no + ' — ' : BOLUM_AD[x.sec.tur] + ' — ') + esc(x.sec.ad); yol = 'Modül ' + x.u.modul_no + ' ' + ic('sag', 12) + ' Ünite ' + x.u.unite_no; etiket = '<span class="yp-durum r-altin">' + esc(x.u.seviye || '—') + '</span><span class="yp-durum ' + (x.u.yayinda ? 'd-yesil' : 'd-sari') + '">' + (x.u.yayinda ? 'Yayında' : 'Taslak') + '</span>'; }
+    const anahtar = x.t === 'm' ? 'agm' : x.t === 'u' ? 'agu' : 'agb', kim = x.t === 'm' ? String(x.m) : x.t === 'u' ? String(x.u.id) : x.u.id + ':' + x.si;
+    let h = '<div class="icm-orta-bas"><div><h3>' + bas + '</h3>' + (yol ? '<div class="icm-yol">' + yol + '</div>' : '') + '<div class="ys-etler">' + etiket + '</div></div>' + menuB(anahtar, kim) + '</div>';
+    if (x.t === 'b') {
+      const T = (gl('EKA') || {}).topics || [], tAd = kod => { const t = T.find(z => z.kod === kod); return t ? t.ad : kod; };
+      h += '<div class="icm-konular"><span class="icm-konular-b">Konular</span>' + (x.sec.konular.length ? x.sec.konular.map(kd => '<span class="icm-konu" title="' + esc(kd) + '">' + esc(tAd(kd)) + '<button type="button" aria-label="Konuyu çıkar" onclick="icmKonuCikar(' + x.u.id + ', ' + x.si + ', \'' + jsq(kd) + '\')">' + ic('kapat', 12) + '</button></span>').join('') : '<span class="ys-soluk">Konu atanmadı</span>') +
+        '<button type="button" class="yp-link" onclick="icmKonuEkle(' + x.u.id + ', ' + x.si + ')">+ Konu ekle</button></div>';
+    }
+    h += '<div class="ys-cipler icm-filtre">' + [['hepsi', 'Tümü']].concat(Object.keys(BG_TUR).map(t => [t, BG_TUR[t][0]])).map(f => '<button type="button" class="ys-cip' + (AG.filtre === f[0] ? ' aktif' : '') + '" onclick="icmAgacFiltre(\'' + f[0] + '\')">' + f[1] + ' <small>' + say(f[0]) + '</small></button>').join('') + '</div>';
+    const L = b.out.filter(o => AG.filtre === 'hepsi' || o.tur === AG.filtre);
+    h += '<div class="icm-icerikler">' + (L.length ? L.slice(0, 300).map((o, i) => {
+      const T = BG_TUR[o.tur], D = BG_DURUM[o.durum] || BG_DURUM.yayinda;
+      return '<button type="button" class="icm-icerik" onclick="icmIcerikAc(' + b.out.indexOf(o) + ')"><span class="icm-tur r-' + T[2] + '">' + ic(T[1], 15) + T[0] + '</span><span class="icm-icerik-y"><b>' + esc(o.ad) + '</b><small>' + esc(o.alt || '') + '</small></span><span class="yp-durum ' + D[1] + '">' + D[0] + '</span></button>';
+    }).join('') : '<div class="yp-bos kucuk"><span>' + (AG.filtre === 'hepsi' ? 'Bu düğüme bağlı içerik yok.' : 'Bu türde içerik yok.') + '</span></div>') + '</div>';
+    AG._bagli = b.out;
+    return h;
+  }
+  function agSag(x) {
+    if (!x || x.t !== 'b') {
+      if (x && x.t === 'u') return '<div class="icm-sag-bas"><h3>Ünite</h3></div><div class="icm-ozet-k">' + [['Modül', x.u.modul_no + ' — ' + (x.u.modul_ad || '')], ['Ünite', x.u.unite_no + ' — ' + (x.u.unite_ad || '')], ['Seviye', x.u.seviye || '—'], ['Durum', x.u.yayinda ? 'Yayında' : 'Taslak'], ['Bölüm', (x.u.p ? x.u.p.sections.length : 0) + ''], ['Son güncelleme', x.u.updated_at ? new Date(x.u.updated_at).toLocaleString('tr-TR') : '—']].map(r => '<div><small>' + r[0] + '</small><b>' + esc(r[1]) + '</b></div>').join('') + '</div>' +
+        '<div class="ys-form-alt"><button type="button" class="yp-btn ana" onclick="icmEdAc(' + x.u.id + ')">' + ic('kalem', 16) + 'E-kitap düzenleyicisinde aç</button><button type="button" class="yp-btn" onclick="icmOnizle(' + x.u.id + ')">' + ic('goz', 16) + 'Öğrenci önizleme</button></div>';
+      return '<div class="yp-bos">' + ic('kitap', 28) + '<b>Ders seç</b><span>Bir dersin içerik bloklarını düzenlemek için soldan bir ders seç.</span></div>';
+    }
+    const sek = [['duzen', 'Düzenle'], ['sayfa', 'Sayfa görünümü'], ['onizle', 'Öğrenci önizleme']];
+    let h = '<div class="icm-sag-sekme">' + sek.map(s => '<button type="button" class="' + (AG.sagSekme === s[0] ? 'aktif' : '') + '" onclick="icmAgacSag(\'' + s[0] + '\')">' + s[1] + '</button>').join('') + '<button type="button" class="yp-ikon-b" title="Tam ekran düzenleyicide aç" aria-label="Tam ekran düzenleyicide aç" onclick="icmEdAc(' + x.u.id + ', ' + x.si + ')">' + ic('okSag', 16) + '</button></div>';
+    if (AG.sagSekme === 'duzen') h += '<div class="icm-sag-bas"><div><h3>E-kitap içeriği</h3><p class="ys-kart-alt">Değişiklikler anında kaydedilir.</p></div><span class="yp-durum ' + (x.u.yayinda ? 'd-yesil' : 'd-sari') + '">' + (x.u.yayinda ? 'Yayında' : 'Taslak') + '</span></div><div id="icm-sag-bloklar"></div>';
+    else {
+      h += '<div class="ek-adm-preview icm-onizleme' + (AG.sagSekme === 'sayfa' ? ' sayfa' : '') + '" id="icm-sag-on"></div>';
+      setTimeout(() => onizlemeCiz($('icm-sag-on'), x.u.p, x.si, AG.sagSekme === 'sayfa'), 0);
+    }
+    return h;
+  }
+  function agBaglam(x) {
+    return { kok: 'icm-sag-bloklar', si: x.si, kapsam: 'icm2', kompakt: true, set: false,
+      src: () => (agU(x.u.id) || x.u).kaynak, p: () => (agU(x.u.id) || x.u).p,
+      yaz: async yeni => { const u = agU(x.u.id); if (!u) return false; const ok = await mfYaz(u, yeni); if (ok) { surumKaydet(u.id, yeni, u.yayinda, 'Müfredat ağacından düzenleme'); } return ok; },
+      sonra: () => agacCiz() };
+  }
+  window.icmAgacSec = async (t, a, b) => {
+    if (t === 'b' && icS().tab !== 'agac') { await icmSekme('agac'); }
+    AG.sec = t === 'm' ? { t, m: a } : t === 'u' ? { t, u: a } : { t, u: a, si: b };
+    if (t !== 'm') { const u = agU(a); if (u) { AG.kapali.delete('m' + u.modul_no); AG.kapali.delete('u' + u.id); } }
+    AG.filtre = 'hepsi'; agacCiz();
+  };
+  window.icmAgacAc = k => { AG.kapali.has(k) ? AG.kapali.delete(k) : AG.kapali.add(k); agacCiz(); };
+  window.icmAgacTumu = () => { const MFx = gl('MF') || { rows: [] }; if (AG.kapali.size) AG.kapali.clear(); else MFx.rows.forEach(r => AG.kapali.add('u' + r.id)); agacCiz(); };
+  window.icmAgacAra = v => { AG.ara = v; agacCiz(); const i = $('icm-ag-ara'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch (e) {} } };
+  window.icmAgacFiltre = f => { AG.filtre = f; const o = $('icm-orta'); if (o) o.innerHTML = agOrta(agSecim()); };
+  window.icmAgacSag = s => { AG.sagSekme = s; const x = agSecim(), k = $('icm-sag'); if (!k) return; k.innerHTML = agSag(x); if (x && x.t === 'b' && s === 'duzen') blokListeBagla('icm-sag-bloklar', agBaglam(x)); };
+  window.icmIcerikAc = i => {
+    const o = (AG._bagli || [])[i]; if (!o) return;
+    if (o.tur === 'ekitap') return icmAgacSec('b', o.u, o.si);
+    if (o.tur === 'etkinlik' || o.tur === 'kart') { AG.sagSekme = 'duzen'; AG.sec = { t: 'b', u: o.u, si: o.si }; agacCiz(); setTimeout(() => blokDuzenAc('icm-sag-bloklar', o.bi), 50); return; }
+    if (o.tur === 'video') { ypGit('videos'); return setTimeout(() => window.ysVdDuzenle && window.ysVdDuzenle(o.id), 700); }
+    if (o.tur === 'calisma') return ypDuzenle('set', o.id);
+    if (o.tur === 'not') return ypDuzenle('ozet', o.id);
+    if (o.tur === 'soru') return ypDuzenle('pq', o.id);
+    if (o.tur === 'kelime') { ypGit('content'); return setTimeout(() => { const cw = gl('cwState'); if (cw) { cw.q = o.ru; cw.page = 1; } if (typeof renderCwList === 'function') renderCwList(); }, 900); }
+  };
+  window.icmKonuCikar = async (uid, si, kod) => {
+    const u = agU(uid); if (!u) return;
+    if (await mfYaz(u, mfKonuYaz(u.kaynak, si, u.p.sections[si].konular.filter(k => k !== kod)))) { toast('Konu dersten çıkarıldı.'); if (typeof ekKullanimYukle === 'function') ekKullanimYukle(); }
+    agacCiz();
+  };
+  window.icmKonuEkle = async (uid, si) => {
+    const u = agU(uid); if (!u) return;
+    const T = (gl('EKA') || {}).topics || [], mevcut = new Set(u.p.sections[si].konular);
+    const ov = document.createElement('div'); ov.className = 'ui-modal-overlay show ys-modal-ov'; ov.id = 'icm-konu-m';
+    SK['icm-konu-sk'] = null;
+    ov.innerHTML = '<div class="ui-modal ys-modal" role="dialog" aria-modal="true"><div class="ys-modal-bas"><span class="ys-ayar-ic">' + ic('etiket', 20) + '</span><h3>Derse konu ekle</h3><button type="button" class="yp-ikon-b" aria-label="Kapat" onclick="document.getElementById(\'icm-konu-m\').remove()">' + ic('kapat', 17) + '</button></div>' +
+      '<label class="ys-alan"><span>Var olan konu</span>' + secimKutusu('icm-konu-sk', 'Konu adı ya da kodu ara…', T.filter(t => !mevcut.has(t.kod)).map(t => ({ id: t.kod, ad: t.ad, alt: t.kod + (t.seviye ? ' · ' + t.seviye : '') }))) + '</label>' +
+      '<label class="ys-alan"><span>ya da yeni konu oluştur</span><input id="icm-konu-yeni" class="ys-girdi" placeholder="Yeni konu adı (ör. İsimlerde çoğul)" autocomplete="off"></label>' +
+      '<div class="ys-modal-alt"><button type="button" class="yp-btn" onclick="document.getElementById(\'icm-konu-m\').remove()">Vazgeç</button><button type="button" class="yp-btn ana" onclick="icmKonuEkleKaydet(' + uid + ', ' + si + ')">' + ic('arti', 16) + 'Ekle</button></div></div>';
+    ov.addEventListener('mousedown', e => { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+  };
+  window.icmKonuEkleKaydet = async (uid, si) => {
+    const u = agU(uid); if (!u) return;
+    const yeni = ($('icm-konu-yeni').value || '').trim(); let kod = SK['icm-konu-sk'] && SK['icm-konu-sk'].secili;
+    if (yeni) kod = await mfKonuOlustur(yeni, u.seviye);
+    if (!kod) { uiAlert('Bir konu seç ya da yeni konu adı yaz.'); return; }
+    if (await mfYaz(u, mfKonuYaz(u.kaynak, si, u.p.sections[si].konular.concat(kod)))) { toast('Konu derse atandı.'); const m = $('icm-konu-m'); if (m) m.remove(); if (typeof ekKullanimYukle === 'function') ekKullanimYukle(); }
+    agacCiz();
+  };
+  // Ağaç menüleri: eski müfredat eylemleri (mfEylem) aynen kullanılır
+  const mfCagir = async (a, veri) => { const b = document.createElement('button'); b.dataset.mf = a; Object.keys(veri || {}).forEach(k => b.dataset[k] = veri[k]); if (typeof mfEylem === 'function') await mfEylem({ target: b }); agacCiz(); };
+  window.icmMf = (a, u, s, m) => mfCagir(a, Object.assign({}, u != null ? { u: String(u) } : {}, s != null ? { s: String(s) } : {}, m != null ? { m: String(m) } : {}));
+  MENULER.agm = m => [{ ic: 'kalem', ad: 'Modülün adını değiştir', fn: "icmMf('madi', null, null, " + m + ")" }, { ic: 'arti', ad: 'Ünite ekle', fn: "icmMf('uyeni', null, null, " + m + ")" }];
+  MENULER.agu = id => {
+    const u = agU(id); if (!u) return [];
+    return [{ ic: 'kalem', ad: 'E-kitap düzenleyicisinde aç', fn: "icmEdAc(" + id + ")" }, { ic: 'goz', ad: 'Öğrenci önizleme', fn: "icmOnizle(" + id + ")" }, { ayrac: 1 },
+      { ic: 'kalem', ad: 'Ünitenin adını değiştir', fn: "icmMf('uadi', " + id + ")" }, { ic: 'grafik', ad: 'Seviyeyi değiştir', fn: "icmMf('sev', " + id + ")" }, { ic: 'arti', ad: 'Ders ekle', fn: "icmMf('dyeni', " + id + ")" },
+      { ayrac: 1 }, { ic: u.yayinda ? 'kilit' : 'onay', ad: u.yayinda ? 'Yayından kaldır' : 'Yayınla', fn: "icmUniteYayin(" + id + ", " + !u.yayinda + ")" }];
+  };
+  MENULER.agb = k => {
+    const [id, si] = k.split(':'), u = agU(id); if (!u) return []; const s = u.p.sections[+si]; if (!s) return [];
+    const L = [{ ic: 'kalem', ad: 'Tam ekran düzenleyicide aç', fn: "icmEdAc(" + id + ", " + si + ")" }, { ic: 'kalem', ad: 'Adını değiştir', fn: "icmMf('dadi', " + id + ", " + si + ")" }, { ic: 'etiket', ad: 'Konu ekle', fn: "icmKonuEkle(" + id + ", " + si + ")" }];
+    if (!s.blocks.length) L.push({ ayrac: 1 }, { ic: 'cop', ad: 'Dersi sil', fn: "icmMf('dsil', " + id + ", " + si + ")", tehlike: 1 });
+    return L;
+  };
+  window.icmUniteYayin = async (id, yayinda) => {
+    try { const { error } = await sb.from('ek_units').update({ yayinda }).eq('id', id); if (error) throw error; const u = agU(id); if (u) u.yayinda = yayinda; toast(yayinda ? 'Ünite yayınlandı.' : 'Ünite yayından kaldırıldı.'); const E = gl('EK'); if (E) E.loaded = false; }
+    catch (e) { uiAlert('Güncellenemedi.'); }
+    if (icS().tab === 'agac') agacCiz(); else ekListeCiz();
+  };
+
+  /* ---------- Blok düzenleyici (e-kitap metnini bloklara ayırıp düzenler) ---------- */
+  const BL_CTX = {}, BL_ACIK = {};
+  const BLOK_AD = { h2: ['Başlık', 'paragraf'], h3: ['Alt başlık', 'paragraf'], p: ['Metin', 'not'], ul: ['Madde listesi', 'liste'], ol: ['Numaralı liste', 'liste'], table: ['Tablo', 'grafik'], img: ['Görsel', 'resim'],
+    kutular: ['Cinsiyet kutuları', 'kart'], kelimeler: ['Kelime listesi', 'kelime'], ornek: ['Örnek kutusu', 'ses'], act: ['Etkinlik', 'onay'], kartlar: ['Çalışma kartları', 'kart'], pagebreak: ['Sayfa sonu', 'surgu'] };
+  const KUTU_AD = { 'altın': 'Kural kutusu (altın kural)', dikkat: 'Dikkat kutusu', istisna: 'İstisna kutusu', ipucu: 'İpucu kutusu', bilgi: 'Bilgi kutusu', sonraki: 'Sonraki ders kutusu', 'bu-derste': '"Bu derste" kutusu' };
+  const blokAd = b => b.t === 'kutu' ? (KUTU_AD[b.tur] || 'Kutu') : b.t === 'act' ? 'Etkinlik · ' + ((gl('EK_TIPLER') || {})[b.tip] || b.tip) : (BLOK_AD[b.t] || [b.t])[0];
+  const blokIkon = b => b.t === 'kutu' ? 'yildiz' : (BLOK_AD[b.t] || [0, 'nokta'])[1];
+  function blokSablon(t, konu) {
+    const K = konu ? 'konu: ' + konu + '\n' : 'konu: \n';
+    const S = {
+      h2: '## 1.1 Yeni başlık', h3: '### Alt başlık', p: 'Yeni paragraf. Rusça sözcükler kelime paneline kendiliğinden bağlanır; çekimli bir sözcüğü sözlük biçimine bağlamak için {=дом:дома} yaz.',
+      ul: '- Birinci madde\n- İkinci madde', ol: '1. Birinci madde\n2. İkinci madde', table: '| Eril | Dişil | Nötr |\n|---|---|---|\n| {м:дом} | {ж:книга} | {с:окно} |',
+      'altın': ':::altın Altın kural\nKuralı buraya yaz.\n:::', dikkat: ':::dikkat Dikkat\nDikkat edilmesi gereken noktayı yaz.\n:::', istisna: ':::istisna İstisna\nİstisnayı yaz.\n:::',
+      ipucu: ':::ipucu İpucu\nİpucunu yaz.\n:::', bilgi: ':::bilgi Bilgi\nBilgiyi yaz.\n:::', 'bu-derste': ':::bu-derste Bu derste\n- Öğrenilecek ilk konu\n- İkinci konu\n:::', sonraki: ':::sonraki Bir sonraki derste\nSonraki dersin konusu.\n:::',
+      ornek: ':::örnek\nЭто мой дом. = Bu benim evim.\nЭто книга. = Bu bir kitap.\n:::', kelimeler: ':::kelimeler\n | дом | ev\n | книга | kitap\n:::',
+      kutular: ':::kutular\n[м] Eril | ünsüzle biter | дом:ev\n[ж] Dişil | -а, -я ile biter | книга:kitap\n[с] Nötr | -о, -е ile biter | окно:pencere\n:::',
+      kartlar: ':::kartlar\nön: Rusça ifade ya da soru\narka: Cevap\n---\nön: İkinci kart\narka: Cevap\n:::', pagebreak: '---sayfa---',
+      bosluk: ':::etkinlik bosluk\nyönerge: Boşlukları doldurun.\n' + K + '---\n1. Это {{мой}} дом.\n2. Это {{моя}} книга.\n:::',
+      coktan: ':::etkinlik coktan\nyönerge: Doğru seçeneği işaretleyin.\n' + K + '---\n1. «стол» kelimesinin cinsiyeti nedir?\n[x] Eril\n[ ] Dişil\n[ ] Nötr\n:::',
+      'dogru-yanlis': ':::etkinlik dogru-yanlis\nyönerge: Cümleler doğru mu, yanlış mı?\n' + K + '---\n1. «книга» dişildir. => D\n2. «окно» erildir. => Y\n:::',
+      ceviri: ':::etkinlik ceviri\nyönerge: Cümleleri Rusçaya çevirin.\n' + K + '---\n1. Bu benim evim. => Это мой дом.\n:::',
+      serbest: ':::etkinlik serbest\nyönerge: Soruyu cevaplayın.\n' + K + '---\n1. Soru metni\nörnek-cevap: Örnek cevap\n:::'
+    };
+    if (S[t]) return S[t];
+    return ':::etkinlik ' + t + '\nyönerge: Yönergeyi yaz.\n' + K + '---\n1. Birinci madde => cevap\n:::';
+  }
+  function blokAraliklari(p, si, L) {
+    const sec = p.sections[si]; if (!sec) return { st: 0, en: 0, list: [] };
+    const st = sec.ln || 0; let en = L.length;
+    for (let k = si + 1; k < p.sections.length; k++) if (p.sections[k].ln) { en = p.sections[k].ln - 1; break; }
+    const bl = sec.blocks.map((b, bi) => ({ b, bi })).filter(x => x.b.ln);
+    const list = bl.map((x, k) => {
+      let e = k + 1 < bl.length ? bl[k + 1].b.ln - 1 : en;
+      while (e > x.b.ln && (!L[e - 1].trim() || /^@/.test(L[e - 1].trim()))) e--;
+      return { b: x.b, bi: x.bi, st: x.b.ln, en: e };
+    });
+    // Bölümün içeriğe ekleme noktası: başlık ve hemen ardından gelen @ satırlarından sonra (1 tabanlı satır no)
+    let bas = st, j = st;
+    while (j < en && L[j] !== undefined && (!L[j].trim() || /^@/.test(L[j].trim()))) { if (/^@/.test(L[j].trim())) bas = j + 1; j++; }
+    return { st, en, bas, list };
+  }
+  const ekKapsam = k => { const S = gl('EK_SCOPE'); if (S && !S[k]) S[k] = []; return k; };
+  function blokOnizEl(sec, kapsam) {
+    const out = {}; try {
+      const secs = ekBuildSections({ sections: [sec] }, ekKapsam(kapsam));
+      (secs[0] ? secs[0].els : []).forEach(x => { if (x.el && x.el.dataset.bid) { const bi = +x.el.dataset.bid.split('-')[1]; if (!isNaN(bi)) out[bi] = x.el; } });
+    } catch (e) { console.error(e); }
+    return out;
+  }
+  function blokOzet(b) {
+    if (b.t === 'pagebreak') return '<div class="icm-bk-ozet sayfa">— elle sayfa sonu —</div>';
+    if (b.t === 'kartlar') return '<div class="icm-bk-kartlar">' + b.cards.map(c => '<div><b>' + esc(String(c.on || '').replace(/\{\{|\}\}/g, '')) + '</b><span>' + esc(String(c.arka || '').replace(/\{\{|\}\}/g, '')) + '</span></div>').join('') + '</div>';
+    return '<div class="icm-bk-ozet">(önizleme yok)</div>';
+  }
+  function blokListeBagla(kokId, ctx) { BL_CTX[kokId] = ctx; blokCiz(kokId); }
+  function blokCiz(kokId) {
+    const k = $(kokId), ctx = BL_CTX[kokId]; if (!k || !ctx) return;
+    const p = ctx.p(), src = ctx.src() || '', L = src.replace(/\r/g, '').split('\n');
+    const sec = p && p.sections[ctx.si];
+    if (!sec) { k.innerHTML = '<div class="yp-bos kucuk"><span>Bölüm bulunamadı.</span></div>'; return; }
+    const R = blokAraliklari(p, ctx.si, L), on = blokOnizEl(sec, ctx.kapsam), acik = BL_ACIK[kokId];
+    let h = '<div class="icm-bloklar' + (ctx.kompakt ? ' kompakt' : '') + '">';
+    if (!R.list.length) h += '<div class="yp-bos kucuk"><span>Bu bölümde henüz blok yok.</span></div>';
+    R.list.forEach((x, n) => {
+      const ac = acik && acik.bi === x.bi;
+      h += '<div class="icm-blok' + (ac ? ' acik' : '') + (x.b.t === 'act' && x.b.kontrol ? ' kontrol' : '') + '" data-bi="' + x.bi + '"><div class="icm-blok-bas"><span class="icm-blok-no">' + (n + 1) + '</span><span class="icm-blok-tur">' + ic(blokIkon(x.b), 15) + esc(blokAd(x.b)) + '</span>' +
+        '<span class="icm-blok-k">' + (x.b.t === 'act' && x.b.kontrol ? '<span class="yp-durum d-turuncu">Kontrol edilecek</span>' : '') + '<small class="ys-soluk">satır ' + x.st + (x.en > x.st ? '–' + x.en : '') + '</small></span>' +
+        '<button type="button" class="yp-ikon-b" title="Düzenle" aria-label="Düzenle" onclick="icmBlok(\'' + kokId + '\', \'duzen\', ' + x.bi + ')">' + ic('kalem', 15) + '</button>' + menuB('blok', kokId + '|' + x.bi) + '</div>';
+      if (ac) {
+        const metin = L.slice(x.st - 1, x.en).join('\n');
+        h += '<div class="icm-blok-duz"><textarea id="' + kokId + '-ta" class="ys-girdi alan kod" rows="' + Math.min(18, Math.max(3, metin.split('\n').length + 1)) + '" spellcheck="false" oninput="icmBlokCanli(\'' + kokId + '\')">' + esc(metin) + '</textarea>' +
+          '<div class="icm-blok-ipucu">' + blokIpucu(x.b) + '</div><div class="ek-adm-preview icm-blok-canli" id="' + kokId + '-canli"></div>' +
+          '<div class="ys-form-alt"><button type="button" class="yp-btn ana kucuk" onclick="icmBlok(\'' + kokId + '\', \'uygula\', ' + x.bi + ')">' + ic('onay', 15) + 'Uygula</button><button type="button" class="yp-btn kucuk" onclick="icmBlok(\'' + kokId + '\', \'kapat\')">Vazgeç</button></div></div>';
+      } else {
+        h += on[x.bi] ? '<div class="icm-blok-on ek-adm-preview" data-bi="' + x.bi + '"></div>' : '<div class="icm-blok-on ek-adm-preview">' + blokOzet(x.b) + '</div>';
+      }
+      h += '</div>';
+      h += '<div class="icm-araya"><button type="button" onclick="ysMenuAc(event, \'blokekle\', \'' + kokId + '|' + x.bi + '\')" aria-label="Buraya blok ekle" title="Buraya blok ekle">' + ic('arti', 13) + '</button></div>';
+    });
+    h += '<button type="button" class="icm-blok-ekle" onclick="ysMenuAc(event, \'blokekle\', \'' + kokId + '|son\')">' + ic('arti', 16) + 'Blok ekle</button>' +
+      '<input type="file" id="' + kokId + '-gorsel" accept="image/*" style="display:none" onchange="icmBlokGorsel(\'' + kokId + '\', this)"></div>';
+    k.innerHTML = h;
+    k.querySelectorAll('.icm-blok-on[data-bi]').forEach(d => { const el = on[+d.dataset.bi]; if (el) d.appendChild(el); });
+    if (acik) { icmBlokCanli(kokId); const ta = $(kokId + '-ta'); if (ta && acik.odak) { ta.focus(); acik.odak = false; ta.closest('.icm-blok').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } }
+  }
+  function blokIpucu(b) {
+    const ip = {
+      h2: '<b>## 1.1 Başlık</b> — numara isteğe bağlı; "kural: 1.1" ile etkinlikler bu başlığa bağlanır.', h3: '<b>### Alt başlık</b>', p: 'Düz metin. <b>**kalın**</b>, <b>*eğik*</b>, <b>==vurgu==</b>, cinsiyet rengi <b>{м:дом}</b>, sözlük biçimine bağlama <b>{=дом:дома}</b>.',
+      table: 'Satırlar <b>| hücre | hücre |</b> biçiminde; ikinci satırdaki <b>|---|</b> başlık ayırıcıdır.', img: '<b>![açıklama](dosya-adı)</b>', ornek: 'Her satır: <b>Rusça = Türkçe</b>', kelimeler: 'Her satır: <b>simge | Rusça | Türkçe</b> (simge boş olabilir)',
+      kutular: 'Her satır: <b>[м|ж|с|мн] Başlık | açıklama | örnek:anlam</b>', kartlar: 'Her kart: <b>ön:</b> ve <b>arka:</b> satırları; kartları <b>---</b> ile ayır. İsteğe bağlı <b>konu:</b>',
+      pagebreak: 'Bu satır sayfayı burada böler.', act: 'Başlık alanları (<b>yönerge:</b>, <b>konu:</b>, <b>kural:</b>, <b>kontrol-et: evet</b>), sonra <b>---</b> ve numaralı maddeler. Cevap: <b>{{boşluk}}</b>, <b>=> cevap</b>, seçenekler <b>[x]</b> / <b>[ ]</b>, doğru-yanlış <b>=> D / Y</b>.',
+      kutu: 'İlk satır <b>:::tür Başlık</b>, son satır <b>:::</b>'
+    };
+    return ip[b.t] || '';
+  }
+  window.icmBlokCanli = kokId => {
+    const ta = $(kokId + '-ta'), c = $(kokId + '-canli'); if (!ta || !c) return;
+    const p = ekParse('@modül 1 | x\n@ünite 1 | x\n# Ders 1 | x\n' + ta.value);
+    const sec = p.sections.find(s => s.tur === 'ders') || p.sections[0];
+    c.innerHTML = '';
+    const hata = p.errors.filter(e => e.ln > 3);
+    if (sec) { const on = blokOnizEl(sec, 'icm3'); sec.blocks.forEach((b, bi) => { if (on[bi]) c.appendChild(on[bi]); else c.insertAdjacentHTML('beforeend', blokOzet(b)); }); }
+    if (hata.length) c.insertAdjacentHTML('afterbegin', '<div class="icm-blok-hata">' + hata.map(e => esc(e.msg)).join('<br>') + '</div>');
+  };
+  async function blokYaz(kokId, yeni, mesaj) {
+    const ctx = BL_CTX[kokId]; if (!ctx) return false;
+    const eski = ekParse(ctx.src() || '', { set: !!ctx.set }), p2 = ekParse(yeni, { set: !!ctx.set });
+    if (p2.errors.length > eski.errors.length && !ctx.kompakt) {
+      if (!(await uiConfirm('Bu değişiklik metinde yeni bir hata oluşturuyor:\n' + p2.errors.slice(0, 3).map(e => 'Satır ' + e.ln + ': ' + e.msg).join('\n') + '\n\nYine de uygulansın mı?', 'Metin hatası', { confirmText: 'Uygula' }))) return false;
+    }
+    const ok = await ctx.yaz(yeni); if (ok === false) return false;
+    if (mesaj) toast(mesaj);
+    if (ctx.sonra) ctx.sonra(); else blokCiz(kokId);
+    return true;
+  }
+  window.icmBlok = async (kokId, is, bi, ek) => {
+    const ctx = BL_CTX[kokId]; if (!ctx) return;
+    const src = ctx.src() || '', L = src.replace(/\r/g, '').split('\n'), p = ctx.p(), R = blokAraliklari(p, ctx.si, L);
+    const k = R.list.findIndex(x => x.bi === bi), x = R.list[k];
+    if (is === 'duzen') { BL_ACIK[kokId] = { bi, odak: true }; return blokCiz(kokId); }
+    if (is === 'kapat') { delete BL_ACIK[kokId]; return blokCiz(kokId); }
+    if (!x && is !== 'ekle') return;
+    if (is === 'uygula') {
+      const ta = $(kokId + '-ta'); if (!ta) return;
+      const yeni = L.slice(0, x.st - 1).concat(ta.value.replace(/\r/g, '').replace(/\n+$/, '').split('\n'), L.slice(x.en)).join('\n');
+      if (await blokYaz(kokId, yeni, 'Blok güncellendi.')) delete BL_ACIK[kokId];
+      return;
+    }
+    if (is === 'yukari' || is === 'asagi') {
+      const y = R.list[k + (is === 'yukari' ? -1 : 1)]; if (!y) return;
+      const [a, b] = is === 'yukari' ? [y, x] : [x, y];
+      const ta = L.slice(a.st - 1, a.en), tb = L.slice(b.st - 1, b.en), ara = L.slice(a.en, b.st - 1);
+      const yeni = L.slice(0, a.st - 1).concat(tb, ara, ta, L.slice(b.en)).join('\n');
+      delete BL_ACIK[kokId]; return blokYaz(kokId, yeni);
+    }
+    if (is === 'kopyala') { const t = L.slice(x.st - 1, x.en); const yeni = L.slice(0, x.en).concat([''], t, L.slice(x.en)).join('\n'); return blokYaz(kokId, yeni, 'Blok kopyalandı.'); }
+    if (is === 'sil') {
+      if (!(await uiConfirm('"' + blokAd(x.b) + '" bloğu silinsin mi?', 'Bloğu sil', { danger: true }))) return;
+      const L2 = L.slice(); L2.splice(x.st - 1, x.en - x.st + 1);
+      if (L2[x.st - 2] !== undefined && !L2[x.st - 2].trim() && (L2[x.st - 1] === undefined || !L2[x.st - 1].trim())) L2.splice(x.st - 2, 1);
+      delete BL_ACIK[kokId]; return blokYaz(kokId, L2.join('\n'), 'Blok silindi.');
+    }
+    if (is === 'ekle') {
+      const metin = ek; if (!metin) return;
+      const yer = bi === 'son' ? (R.list.length ? R.list[R.list.length - 1].en : R.bas) : (x ? x.en : R.bas);
+      const satirlar = metin.split('\n'), L2 = L.slice();
+      const once = yer > 0 && L2[yer - 1] !== undefined && L2[yer - 1].trim() ? [''] : [];
+      const sonra = L2[yer] !== undefined && L2[yer].trim() ? [''] : [];
+      L2.splice(yer, 0, ...once, ...satirlar, ...sonra);
+      const yeni = L2.join('\n');
+      const ok = await blokYaz(kokId, yeni, 'Blok eklendi.');
+      if (ok) {   // yeni bloğu düzenlemeye aç
+        const p2 = ctx.p(), R2 = blokAraliklari(p2, ctx.si, (ctx.src() || '').split('\n'));
+        const hedef = R2.list.find(z => z.st === yer + once.length + 1);
+        if (hedef) { BL_ACIK[kokId] = { bi: hedef.bi, odak: true }; blokCiz(kokId); }
+      }
+    }
+  };
+  MENULER.blok = anahtar => {
+    const [kok, bi] = anahtar.split('|');
+    return [{ ic: 'kalem', ad: 'Düzenle', fn: "icmBlok('" + kok + "', 'duzen', " + bi + ")" }, { ic: 'yukari', ad: 'Yukarı taşı', fn: "icmBlok('" + kok + "', 'yukari', " + bi + ")" }, { ic: 'asagi', ad: 'Aşağı taşı', fn: "icmBlok('" + kok + "', 'asagi', " + bi + ")" },
+      { ic: 'kopya', ad: 'Kopyala', fn: "icmBlok('" + kok + "', 'kopyala', " + bi + ")" }, { ic: 'arti', ad: 'Altına blok ekle…', fn: "setTimeout(() => icmBlokEkleMenu('" + kok + "', " + bi + "), 10)" }, { ayrac: 1 }, { ic: 'cop', ad: 'Sil', fn: "icmBlok('" + kok + "', 'sil', " + bi + ")", tehlike: 1 }];
+  };
+  window.icmBlokEkleMenu = (kok, bi) => { const b = document.querySelector('#' + kok + ' .icm-blok[data-bi="' + bi + '"] .ys-uc-nokta'); if (b) ysMenuAc({ currentTarget: b, stopPropagation() {}, preventDefault() {} }, 'blokekle', kok + '|' + bi); };
+  MENULER.blokekle = anahtar => {
+    const [kok, bi] = anahtar.split('|'), e = (t, ad, ikon) => ({ ic: ikon, ad, fn: "icmBlokEkle('" + kok + "', '" + bi + "', '" + t + "')" });
+    return [{ baslik: 'Metin' }, e('h2', 'Başlık', 'paragraf'), e('h3', 'Alt başlık', 'paragraf'), e('p', 'Paragraf', 'not'), e('ul', 'Madde listesi', 'liste'), e('ol', 'Numaralı liste', 'liste'), e('table', 'Tablo', 'grafik'), e('img', 'Görsel', 'resim'),
+      { baslik: 'Kutular' }, e('altın', 'Kural kutusu', 'yildiz'), e('dikkat', 'Dikkat', 'hata'), e('istisna', 'İstisna', 'bilgi'), e('ipucu', 'İpucu', 'ampul'), e('bilgi', 'Bilgi', 'bilgi'), e('bu-derste', 'Bu derste', 'hedef'), e('sonraki', 'Sonraki ders', 'okSag'),
+      e('ornek', 'Örnek kutusu', 'ses'), e('kelimeler', 'Kelime listesi', 'kelime'), e('kutular', 'Cinsiyet kutuları', 'kart'),
+      { baslik: 'Etkinlik' }, e('bosluk', 'Boşluk doldurma', 'onay'), e('coktan', 'Çoktan seçmeli', 'onay'), e('dogru-yanlis', 'Doğru / yanlış', 'onay'), e('ceviri', 'Çeviri', 'onay'), e('serbest', 'Serbest cevap', 'onay'), e('diger', 'Diğer etkinlik türü…', 'nokta3'),
+      { baslik: 'Diğer' }, e('kartlar', 'Çalışma kartları', 'kart'), e('pagebreak', 'Sayfa sonu', 'surgu')];
+  };
+  window.icmBlokEkle = async (kok, bi, t) => {
+    const ctx = BL_CTX[kok]; if (!ctx) return;
+    const pos = bi === 'son' ? 'son' : +bi;
+    if (t === 'img') { BL_CTX[kok]._gorselYer = pos; const f = $(kok + '-gorsel'); if (f) f.click(); return; }
+    let tip = t;
+    if (t === 'diger') {
+      const T = gl('EK_TIPLER') || {};
+      const secilen = await new Promise(coz => {
+        const ov = document.createElement('div'); ov.className = 'ui-modal-overlay show ys-modal-ov'; ov.id = 'icm-tip-m';
+        ov.innerHTML = '<div class="ui-modal ys-modal" role="dialog" aria-modal="true"><div class="ys-modal-bas"><span class="ys-ayar-ic">' + ic('onay', 20) + '</span><h3>Etkinlik türü</h3></div><select id="icm-tip-sec" class="ys-girdi">' + Object.keys(T).map(k2 => '<option value="' + k2 + '">' + esc(T[k2]) + '</option>').join('') + '</select>' +
+          '<div class="ys-modal-alt"><button type="button" class="yp-btn" id="icm-tip-v">Vazgeç</button><button type="button" class="yp-btn ana" id="icm-tip-e">Ekle</button></div></div>';
+        document.body.appendChild(ov);
+        ov.querySelector('#icm-tip-v').onclick = () => { ov.remove(); coz(null); }; ov.querySelector('#icm-tip-e').onclick = () => { const v = ov.querySelector('#icm-tip-sec').value; ov.remove(); coz(v); };
+      });
+      if (!secilen) return; tip = secilen;
+    }
+    const sec = ctx.p() && ctx.p().sections[ctx.si];
+    icmBlok(kok, 'ekle', pos, blokSablon(tip, sec && sec.konular[0]));
+  };
+  window.icmBlokGorsel = async (kok, inp) => {
+    const f = inp.files && inp.files[0]; inp.value = ''; if (!f) return;
+    if (f.size > 3 * 1024 * 1024) { uiAlert('Görsel en fazla 3 MB olabilir.'); return; }
+    const ext = (f.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, ''), ad = Date.now() + '_' + Math.random().toString(36).slice(2, 7) + '.' + ext;
+    try { const { error } = await sb.storage.from('docs').upload('ekitap/' + ad, f, { cacheControl: '31536000', upsert: false }); if (error) throw error; }
+    catch (e) { uiAlert('Görsel yüklenemedi: ' + ((e && e.message) || e)); return; }
+    const aciklama = String(await uiPrompt('Görsel açıklaması (isteğe bağlı):', { title: 'Görsel' }) || '').replace(/[\[\]]/g, '');
+    icmBlok(kok, 'ekle', BL_CTX[kok]._gorselYer, '![' + aciklama + '](' + ad + ')');
+  };
+
+  // Ders / ünite önizleme (öğrencinin göreceği biçim)
+  function onizlemeCiz(kutu, p, si, sayfaMi) {
+    if (!kutu || !p) return;
+    kutu.innerHTML = '';
+    const secler = si == null ? p.sections : [p.sections[si]].filter(Boolean);
+    const S = ekBuildSections({ sections: secler }, ekKapsam('icm4'));
+    const sar = document.createElement('div'); sar.className = 'ek-wrap icm-kitap' + (sayfaMi ? ' sayfali' : '');
+    S.forEach(s => { if (s.sec.tur === 'anahtar' && si != null) return; s.els.forEach(x => { if (x.pb) sar.appendChild(ekEl('<div class="icm-sayfa-sonu"><span>sayfa sonu</span></div>')); else sar.appendChild(x.el); }); });
+    kutu.appendChild(sar);
+  }
+  window.icmOnizle = async id => {
+    let row = agU(id);
+    if (!row || !row.kaynak) { try { const { data } = await sb.from('ek_units').select('id, modul_no, unite_no, unite_ad, kaynak').eq('id', id).single(); row = data; } catch (e) {} }
+    if (!row) return uiAlert('Ünite yüklenemedi.');
+    const p = ekParse(row.kaynak || '');
+    const ov = document.createElement('div'); ov.className = 'ui-modal-overlay show ys-modal-ov'; ov.id = 'icm-on-m';
+    ov.innerHTML = '<div class="ui-modal ys-modal icm-on-modal" role="dialog" aria-modal="true"><div class="ys-modal-bas"><span class="ys-ayar-ic">' + ic('goz', 20) + '</span><h3>Öğrenci önizleme · Modül ' + row.modul_no + ' · Ünite ' + row.unite_no + '</h3>' +
+      '<div class="ys-mini-sekme" id="icm-on-gen">' + [['100%', 'Masaüstü'], ['760px', 'Tablet'], ['390px', 'Telefon']].map((g, i) => '<button type="button" class="' + (i ? '' : 'aktif') + '" onclick="this.parentNode.querySelectorAll(\'button\').forEach(b => b.classList.remove(\'aktif\')); this.classList.add(\'aktif\'); document.getElementById(\'icm-on-g\').style.maxWidth=\'' + g[0] + '\'">' + g[1] + '</button>').join('') + '</div>' +
+      '<button type="button" class="yp-ikon-b" aria-label="Kapat" onclick="document.getElementById(\'icm-on-m\').remove()">' + ic('kapat', 17) + '</button></div><div class="icm-on-cerceve"><div id="icm-on-g" class="ek-adm-preview icm-on-g"></div></div></div>';
+    ov.addEventListener('mousedown', e => { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+    onizlemeCiz($('icm-on-g'), p, null, false);
+  };
+
+  // Sürüm kaydı (tablo kurulu değilse sessizce atlanır)
+  async function surumKaydet(unitId, kaynak, yayinda, not) {
+    if (!unitId || !kaynak) return;
+    try { await sb.from('ek_unit_surumler').insert({ unit_id: unitId, kaynak, yayinda: yayinda == null ? null : !!yayinda, not_metni: not || null }); } catch (e) {}
+  }
+
+  /* ---------- E-Kitap ve çalışma seti listeleri ---------- */
+  const EKL = { ara: '', durum: 'hepsi', rows: [], setler: [] };
+  async function ekSekme(t) {
+    const E = gl('EKA'); if (E) E.mode = t === 'set' ? 'set' : 'unit';
+    if (typeof ekTopicsFetch === 'function') await ekTopicsFetch();
+    const ed = $('icm-ed'), pano = $('icm-' + (t === 'set' ? 'set' : 'unite'));
+    if (ed && pano && ed.parentNode !== pano) pano.appendChild(ed);
+    if (ED.acik && ED.mod === (t === 'set' ? 'set' : 'unit')) { edGoster(true); return; }
+    edGoster(false);
+    return t === 'set' ? setListeCiz() : ekListeCiz();
+  }
+  async function ekListeCiz() {
+    const k = $('icm-ek-liste'); if (!k) return;
+    if (!EKL.rows.length) k.innerHTML = '<div class="yp-kart"><div class="admin-loading">Yükleniyor...</div></div>';
+    try { const { data } = await sb.from('ek_units').select('id, modul_no, modul_ad, unite_no, unite_ad, seviye, yayinda, kontrol_say, updated_at, toc').order('modul_no').order('unite_no'); EKL.rows = data || []; } catch (e) { EKL.rows = []; }
+    const R = EKL.rows, q = EKL.ara.trim().toLocaleLowerCase('tr');
+    const L = R.filter(r => (EKL.durum === 'hepsi' || (EKL.durum === 'yayinda') === !!r.yayinda) && (!q || [r.modul_ad, r.unite_ad, 'modül ' + r.modul_no, 'ünite ' + r.unite_no].join(' ').toLocaleLowerCase('tr').includes(q)));
+    let h = '<div class="ys-kpiler d4">' + kpi('kitap', 'mavi', 'E-kitap ünitesi', R.length, '') + kpi('onay', 'yesil', 'Yayında', R.filter(r => r.yayinda).length, '') + kpi('saat', 'turuncu', 'Taslak', R.filter(r => !r.yayinda).length, '') +
+      kpi('hata', 'kirmizi', 'Kontrol bekleyen etkinlik', R.reduce((a, r) => a + (r.kontrol_say || 0), 0), '') + '</div>';
+    h += '<section class="yp-kart ys-liste"><div class="ys-arac">' + aramaKutusu('icm-ek-ara', EKL.ara, 'Modül ya da ünite ara…', 'icmEkAra(this.value)') + secim('Durum', EKL.durum, [['hepsi', 'Tümü'], ['yayinda', 'Yayında'], ['taslak', 'Taslak']], 'icmEkDurum(this.value)') +
+      '<button type="button" class="yp-btn" onclick="icmPdfAc()">' + ic('yukle', 16) + 'PDF\'den içe aktar</button><button type="button" class="yp-btn ana" onclick="icmEdYeni()">' + ic('arti', 16) + 'Yeni ünite</button></div>';
+    if (!L.length) h += '<div class="yp-bos">' + ic('kitap', 30) + '<b>' + (R.length ? 'Aramaya uyan ünite yok.' : 'Henüz e-kitap ünitesi yok.') + '</b><span>Yeni ünite oluştur ya da bir PDF\'i içe aktar.</span></div>';
+    else h += '<div class="yp-tablo-k"><table class="yp-tablo ys-tablo ys-orta"><thead><tr><th>Ünite</th><th>Seviye</th><th>Ders</th><th>Durum</th><th>Son güncelleme</th><th class="ys-sag">İşlemler</th></tr></thead><tbody>' + L.map(r => {
+      const ders = (r.toc || []).filter(t => t.tur === 'ders').length;
+      return '<tr><td><button type="button" class="icm-un" onclick="icmEdAc(' + r.id + ')"><span class="icm-ic r-mavi">' + ic('kitap', 16) + '</span><span><b>Modül ' + r.modul_no + ' · Ünite ' + r.unite_no + '</b><small>' + esc(r.unite_ad || '') + (r.modul_ad ? ' · ' + esc(r.modul_ad) : '') + '</small></span></button></td>' +
+        '<td><span class="yp-durum r-altin">' + esc(r.seviye || '—') + '</span></td><td>' + ders + '</td><td><span class="yp-durum ' + (r.yayinda ? 'd-yesil' : 'd-sari') + '">' + (r.yayinda ? 'Yayında' : 'Taslak') + '</span>' + (r.kontrol_say ? ' <span class="yp-durum d-turuncu">' + r.kontrol_say + ' kontrol</span>' : '') + '</td>' +
+        '<td class="ys-tar">' + tarih(r.updated_at) + '<small>' + saat(r.updated_at).slice(0, 5) + '</small></td><td class="ys-sag"><div class="ys-satir-b"><button type="button" class="ys-uc-nokta" title="Düzenle" aria-label="Düzenle" onclick="icmEdAc(' + r.id + ')">' + ic('kalem', 15) + '</button>' + menuB('eku', String(r.id)) + '</div></td></tr>';
+    }).join('') + '</tbody></table></div>';
+    k.innerHTML = h + '</section>';
+  }
+  window.icmEkAra = v => { EKL.ara = v; ekListeCiz().then(() => { const i = $('icm-ek-ara'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch (e) {} } }); };
+  window.icmEkDurum = v => { EKL.durum = v; ekListeCiz(); };
+  MENULER.eku = id => {
+    const r = EKL.rows.find(x => String(x.id) === String(id)); if (!r) return [];
+    return [{ ic: 'kalem', ad: 'Düzenle', fn: 'icmEdAc(' + id + ')' }, { ic: 'goz', ad: 'Öğrenci önizleme', fn: 'icmOnizle(' + id + ')' }, { ic: 'saat', ad: 'Sürüm geçmişi', fn: 'icmSurumler(' + id + ')' }, { ic: 'agac', ad: 'Müfredat ağacında göster', fn: "icmAgacSec('u', " + id + ")" },
+      { ayrac: 1 }, { ic: r.yayinda ? 'kilit' : 'onay', ad: r.yayinda ? 'Yayından kaldır' : 'Yayınla', fn: 'icmUniteYayin(' + id + ', ' + !r.yayinda + ')' }, { ic: 'cop', ad: 'Üniteyi sil', fn: "EKA.mode='unit'; ekAdmDelete(" + id + ")", tehlike: 1 }];
+  };
+  async function setListeCiz() {
+    const k = $('icm-set-liste'); if (!k) return;
+    if (!EKL.setler.length) k.innerHTML = '<div class="yp-kart"><div class="admin-loading">Yükleniyor...</div></div>';
+    try { const { data } = await sb.from('gw_sets').select('id, baslik, seviye, konular, act_say, kontrol_say, yayinda, updated_at, sort, kitap_ref').order('sort').order('id'); EKL.setler = data || []; } catch (e) { EKL.setler = []; }
+    const E = gl('EKA'); if (E) E.setRows = EKL.setler;
+    const R = EKL.setler, T = (gl('EKA') || {}).topics || [], tAd = kod => { const t = T.find(z => z.kod === kod); return t ? t.ad : kod; };
+    let h = '<div class="ys-kpiler d4">' + kpi('set', 'mor', 'Çalışma seti', R.length, '') + kpi('onay', 'yesil', 'Yayında', R.filter(r => r.yayinda).length, '') + kpi('onay', 'mavi', 'Toplam etkinlik', R.reduce((a, r) => a + (r.act_say || 0), 0), '') +
+      kpi('hata', 'kirmizi', 'Kontrol bekleyen', R.reduce((a, r) => a + (r.kontrol_say || 0), 0), '') + '</div>';
+    h += '<section class="yp-kart ys-liste"><div class="ys-arac"><p class="ys-kart-alt icm-arac-not">Setler Eğitim → Çalışmalar → Gramer Çalışmaları sayfasında bu sırayla görünür.</p><button type="button" class="yp-btn ana" onclick="icmSetYeni()">' + ic('arti', 16) + 'Yeni çalışma seti</button></div>';
+    if (!R.length) h += '<div class="yp-bos">' + ic('set', 30) + '<b>Henüz çalışma seti yok.</b></div>';
+    else h += '<div class="yp-tablo-k"><table class="yp-tablo ys-tablo ys-orta"><thead><tr><th>Sıra</th><th>Set</th><th>Konular</th><th>Etkinlik</th><th>Durum</th><th class="ys-sag">İşlemler</th></tr></thead><tbody>' + R.map((r, i) =>
+      '<tr><td><div class="ys-satir-b"><button type="button" class="yp-ikon-b" aria-label="Yukarı" title="Yukarı" ' + (i ? '' : 'disabled') + ' onclick="icmSetTasi(' + r.id + ', -1)">' + ic('yukari', 14) + '</button><button type="button" class="yp-ikon-b" aria-label="Aşağı" title="Aşağı" ' + (i < R.length - 1 ? '' : 'disabled') + ' onclick="icmSetTasi(' + r.id + ', 1)">' + ic('asagi', 14) + '</button></div></td>' +
+      '<td><button type="button" class="icm-un" onclick="icmSetAc(' + r.id + ')"><span class="icm-ic r-mor">' + ic('set', 16) + '</span><span><b>' + esc(r.baslik) + '</b><small>' + esc(r.seviye || '') + (r.kitap_ref ? ' · kitap ' + esc(r.kitap_ref) : '') + '</small></span></button></td>' +
+      '<td><div class="ys-etler">' + ((r.konular || []).map(kd => '<span class="yp-durum d-gri">' + esc(tAd(kd)) + '</span>').join('') || '<span class="ys-soluk">—</span>') + '</div></td><td>' + (r.act_say || 0) + (r.kontrol_say ? ' <span class="yp-durum d-turuncu">' + r.kontrol_say + ' kontrol</span>' : '') + '</td>' +
+      '<td><span class="yp-durum ' + (r.yayinda ? 'd-yesil' : 'd-sari') + '">' + (r.yayinda ? 'Yayında' : 'Taslak') + '</span></td><td class="ys-sag"><div class="ys-satir-b"><button type="button" class="ys-uc-nokta" title="Düzenle" aria-label="Düzenle" onclick="icmSetAc(' + r.id + ')">' + ic('kalem', 15) + '</button>' + menuB('gws', String(r.id)) + '</div></td></tr>').join('') + '</tbody></table></div>';
+    k.innerHTML = h + '</section>';
+  }
+  MENULER.gws = id => { const r = EKL.setler.find(x => String(x.id) === String(id)); if (!r) return [];
+    return [{ ic: 'kalem', ad: 'Düzenle', fn: 'icmSetAc(' + id + ')' }, { ic: r.yayinda ? 'kilit' : 'onay', ad: r.yayinda ? 'Yayından kaldır' : 'Yayınla', fn: "EKA.mode='set'; ekAdmToggle(" + id + ", " + !r.yayinda + ")" }, { ayrac: 1 }, { ic: 'cop', ad: 'Seti sil', fn: "EKA.mode='set'; ekAdmDelete(" + id + ")", tehlike: 1 }]; };
+  window.icmSetTasi = async (id, y) => { const E = gl('EKA'); if (E) { E.mode = 'set'; E.setRows = EKL.setler; } if (typeof gwAdmMove === 'function') await gwAdmMove(id, y); };
+  window.icmSetAc = id => { const E = gl('EKA'); if (E) E.mode = 'set'; if (typeof ekAdmEdit === 'function') ekAdmEdit(id); };
+  window.icmSetYeni = () => { const E = gl('EKA'); if (E) E.mode = 'set'; if (typeof ekAdmNew === 'function') ekAdmNew(); };
+
+  /* ---------- Tam ekran e-kitap düzenleyicisi ---------- */
+  const ED = { acik: false, mod: 'unit', si: 0, gorunum: 'bloklar', yan: 'bolum', kirli: false, p: null, pdfUrl: null, pdfDosya: null, pdfDoc: null, pdfSayfa: 1, notlar: null, cihaz: '100%', yayinda: null };
+  const GORUNUM = [['bloklar', 'Bloklar', 'liste'], ['akis', 'Akış', 'paragraf'], ['sayfa', 'Sayfa düzeni', 'kitap'], ['ogrenci', 'Öğrenci önizleme', 'goz'], ['pdf', 'PDF karşılaştır', 'resim'], ['metin', 'Metin', 'kod']];
+  const YAN = [['bolum', 'Bölüm'], ['etkinlik', 'Etkinlikler'], ['kelime', 'Kelimeler'], ['not', 'Notlar ve kartlar'], ['rapor', 'Rapor']];
+  const edSrc = () => (($('ek-src') || {}).value || '');
+  function edKabuk() {
+    let ed = $('icm-ed'); if (!ed) return null;
+    if (ed.dataset.kuruldu) return ed;
+    ed.dataset.kuruldu = '1';
+    ed.innerHTML = '<div class="yp-kart icm-ed-ust"><button type="button" class="yp-btn kucuk" onclick="icmEdKapat()">' + ic('siteye', 15) + 'Listeye dön</button><div class="icm-ed-baslik"><h3 id="icm-ed-b"></h3><small id="icm-ed-alt"></small></div><span id="icm-ed-durum"></span>' +
+      '<div class="icm-ed-acts"><button type="button" class="yp-btn kucuk" onclick="icmSurumler()" id="icm-ed-surum">' + ic('saat', 15) + 'Sürüm geçmişi</button><button type="button" class="yp-btn kucuk" onclick="icmPdfIndir()">' + ic('indir', 15) + 'PDF</button>' +
+      '<button type="button" class="yp-btn ana" onclick="icmKaydet()">' + ic('kaydet', 16) + 'Kaydet</button><button type="button" class="yp-btn ana kare" aria-label="Kaydetme seçenekleri" onclick="ysMenuAc(event, \'edkaydet\', \'x\')">' + ic('asagi', 15) + '</button></div></div>' +
+      '<div class="icm-ed-govde"><aside class="yp-kart icm-ed-sol"><div class="icm-bas"><h3>Bölümler</h3><button type="button" class="yp-ikon-b" title="Bölüm ekle" aria-label="Bölüm ekle" onclick="ysMenuAc(event, \'edbolum\', \'x\')">' + ic('arti', 16) + '</button></div><div id="icm-ed-bolumler"></div></aside>' +
+      '<section class="yp-kart icm-ed-orta"><div class="icm-ed-gor" id="icm-ed-gor"></div><div id="icm-ed-v-bloklar" class="icm-ed-v"><div class="icm-ed-bolum-bas" id="icm-ed-bolum-bas"></div><div id="icm-ed-bloklar"></div></div>' +
+      '<div id="icm-ed-v-onizle" class="icm-ed-v"></div><div id="icm-ed-v-ogrenci" class="icm-ed-v"><div class="icm-cihaz" id="icm-ed-cihaz"></div><div class="icm-on-cerceve"><div id="icm-ed-ogr" class="ek-adm-preview icm-on-g"></div></div></div>' +
+      '<div id="icm-ed-v-pdf" class="icm-ed-v"></div><div id="icm-ed-v-metin" class="icm-ed-v"><div class="icm-metin-arac"><button type="button" class="yp-btn kucuk" onclick="ekAdmInsert(\'\\n---sayfa---\\n\')">Sayfa sonu ekle</button><label class="yp-btn kucuk">Görsel yükle<input type="file" accept="image/*" style="display:none" onchange="ekAdmImage(event)"></label>' +
+      '<button type="button" class="yp-btn kucuk" onclick="ekAdmCopyFormat()">Konu listesini kopyala</button><button type="button" class="yp-btn kucuk" onclick="icmEdYenile(true)">' + ic('onay', 14) + 'Kontrol et</button><span class="ys-soluk">Metin, tüm bloklarıyla e-kitabın kaynağıdır.</span></div></div></section>' +
+      '<aside class="yp-kart icm-ed-sag"><div class="icm-sag-sekme" id="icm-ed-yan-s"></div><div id="icm-ed-yan"></div><div id="icm-ed-rapor-k" style="display:none"></div></aside></div>';
+    // Eski düzenleyicinin öğeleri (kimlikleriyle) yeni kabuğa taşınır
+    const src = $('ek-src'); if (src) { $('icm-ed-v-metin').appendChild(src); src.classList.add('icm-src'); src.addEventListener('input', () => { ED.kirli = true; edDurum(); clearTimeout(ED._t); ED._t = setTimeout(() => icmEdYenile(false, true), 500); }); }
+    const on = $('ek-adm-preview'); if (on) $('icm-ed-v-onizle').appendChild(on);
+    const rp = $('ek-adm-report'); if (rp) { $('icm-ed-rapor-k').appendChild(rp); rp.addEventListener('click', e => { const b = e.target.closest('.ek-rep-row b'); const m = b && b.textContent.match(/Satır\s+(\d+)/); if (m) { icmEdGor('metin'); setTimeout(() => ekPdGoster(+m[1]), 50); } }); }
+    return ed;
+  }
+  function edGoster(acik) {
+    const ed = $('icm-ed'), liste = $(ED.mod === 'set' ? 'icm-set-liste' : 'icm-ek-liste');
+    if (ed) ed.style.display = acik ? '' : 'none';
+    ['icm-ek-liste', 'icm-set-liste'].forEach(id => { const el = $(id); if (el) el.style.display = acik ? 'none' : ''; });
+    if (!acik && liste) liste.style.display = '';
+  }
+  // Eski "editörü aç" çağrısı yeni düzenleyiciyi açar
+  async function edAc(src, id) {
+    const E = gl('EKA') || {};
+    ED.mod = E.mode === 'set' ? 'set' : 'unit';
+    const hedefSekme = ED.mod === 'set' ? 'set' : 'unite';
+    if (icS().tab !== hedefSekme || !$('icm-' + hedefSekme) || $('icm-' + hedefSekme).style.display === 'none') { const IC_ = icS(); IC_.tab = hedefSekme; icmSekmeCiz(); ICM_SEKME.forEach(s => { const p = $('icm-' + s[0]); if (p) p.style.display = s[0] === hedefSekme ? '' : 'none'; }); }
+    const ed = $('icm-ed'), pano = $('icm-' + hedefSekme); if (ed && pano && ed.parentNode !== pano) pano.appendChild(ed);
+    edKabuk();
+    if (!src && ED.mod === 'unit' && !id) {
+      if (!EKL.rows.length) { try { const { data } = await sb.from('ek_units').select('id, modul_no, modul_ad, unite_no, unite_ad, seviye, yayinda, kontrol_say, updated_at, toc').order('modul_no').order('unite_no'); EKL.rows = data || []; } catch (e) {} }
+      const R = EKL.rows.length ? EKL.rows : ((gl('MF') || {}).rows || []);
+      const mNo = R.reduce((a, r) => Math.max(a, r.modul_no || 0), 0) || 1, uNo = R.filter(r => r.modul_no === mNo).reduce((a, r) => Math.max(a, r.unite_no || 0), 0) + 1;
+      const son = R.filter(r => r.modul_no === mNo).slice(-1)[0];
+      $('ek-src').value = '@modül ' + mNo + ' | ' + ((son && son.modul_ad) || 'Modül adı') + '\n@ünite ' + uNo + ' | Yeni ünite\n@seviye ' + ((son && son.seviye) || 'A1') + '\n\n# Ders 1 | Yeni ders\n\nİlk paragraf.\n';
+    }
+    ED.acik = true; ED.kirli = false; ED.si = 0; ED.yan = 'bolum'; ED.notlar = null; ED.pdfUrl = null; ED.pdfDoc = ED._pdfBekleyen ? ED._pdfBekleyen.doc : null; ED.pdfDosya = ED._pdfBekleyen ? ED._pdfBekleyen.dosya : null; ED.pdfSayfa = 1; ED.yayinda = null;
+    if (ED._pdfBekleyen) { ED.gorunum = 'pdf'; ED.kirli = true; delete ED._pdfBekleyen; } else if (!['bloklar', 'akis', 'sayfa', 'ogrenci', 'metin', 'pdf'].includes(ED.gorunum) || (ED.gorunum === 'pdf' && ED.mod === 'set')) ED.gorunum = 'bloklar';
+    if (ED._acSi != null) { ED.si = ED._acSi; delete ED._acSi; }
+    edGoster(true);
+    if (id && ED.mod === 'unit') {
+      try { const { data } = await sb.from('ek_units').select('yayinda, pdf_url').eq('id', id).single(); if (data) { ED.yayinda = !!data.yayinda; ED.pdfUrl = data.pdf_url || null; } }
+      catch (e) { try { const { data } = await sb.from('ek_units').select('yayinda').eq('id', id).single(); if (data) ED.yayinda = !!data.yayinda; } catch (x) {} }
+    } else if (id && ED.mod === 'set') { const r = EKL.setler.find(x => String(x.id) === String(id)); ED.yayinda = r ? !!r.yayinda : null; }
+    icmEdYenile(true);
+    window.scrollTo({ top: 0 });
+  }
+  function edDurum() {
+    const d = $('icm-ed-durum'); if (!d) return;
+    d.innerHTML = (ED.yayinda == null ? '<span class="yp-durum d-gri">Kaydedilmedi</span>' : '<span class="yp-durum ' + (ED.yayinda ? 'd-yesil' : 'd-sari') + '">' + (ED.yayinda ? 'Yayında' : 'Taslak') + '</span>') + (ED.kirli ? ' <span class="yp-durum d-turuncu">Kaydedilmemiş değişiklik</span>' : '');
+  }
+  window.icmEdYenile = (rapor, metindenMi) => {
+    const E = gl('EKA') || {};
+    const p = ekParse(edSrc(), { set: ED.mod === 'set' }); ED.p = p; E.lastParse = p;
+    if (ED.si >= p.sections.length) ED.si = Math.max(0, p.sections.length - 1);
+    const m = p.meta;
+    $('icm-ed-b').textContent = ED.mod === 'set' ? (m.baslik || 'Yeni çalışma seti') : ('Modül ' + (m.modul_no || '?') + ' · Ünite ' + (m.unite_no || '?') + ' — ' + (m.unite_ad || ''));
+    $('icm-ed-alt').textContent = (ED.mod === 'set' ? 'Çalışma seti' : (m.modul_ad || '')) + (m.seviye ? ' · ' + m.seviye : '') + ' · ' + p.actSay + ' etkinlik · ' + p.errors.length + ' hata';
+    const sb2 = $('icm-ed-surum'); if (sb2) sb2.style.display = ED.mod === 'set' ? 'none' : '';
+    edDurum();
+    // Bölümler
+    const bl = $('icm-ed-bolumler');
+    if (bl) bl.innerHTML = p.sections.length ? p.sections.map((s, si) => '<button type="button" class="icm-ed-bolum' + (si === ED.si ? ' secili' : '') + '" onclick="icmEdBolum(' + si + ')"><span class="icm-ic-k">' + ic(s.tur === 'ders' ? 'kitap' : s.tur === 'set' ? 'set' : s.tur === 'test' ? 'soru' : 'not', 15) + '</span><span><b>' + esc(s.tur === 'ders' ? 'Ders ' + s.no : (BOLUM_AD[s.tur] || 'Bölüm')) + '</b><small>' + esc(s.ad || '') + '</small></span><em>' + s.blocks.filter(b => b.t === 'act').length + '</em></button>').join('') : '<div class="yp-bos kucuk"><span>Bölüm yok.</span></div>';
+    // Görünüm sekmeleri
+    const g = $('icm-ed-gor'); if (g) g.innerHTML = GORUNUM.filter(x => !(x[0] === 'pdf' && ED.mod === 'set')).map(x => '<button type="button" class="' + (ED.gorunum === x[0] ? 'aktif' : '') + '" onclick="icmEdGor(\'' + x[0] + '\')">' + ic(x[2], 15) + x[1] + '</button>').join('');
+    GORUNUM.forEach(x => { const v = $('icm-ed-v-' + (x[0] === 'akis' || x[0] === 'sayfa' ? 'onizle' : x[0])); if (v) v.style.display = 'none'; });
+    const gv = $('icm-ed-v-' + (ED.gorunum === 'akis' || ED.gorunum === 'sayfa' ? 'onizle' : ED.gorunum)); if (gv) gv.style.display = '';
+    if (ED.gorunum === 'bloklar') edBloklar();
+    else if (ED.gorunum === 'akis' || ED.gorunum === 'sayfa') { E.gorunum = ED.gorunum; const on = $('ek-adm-preview'); if (on && on.parentNode !== $('icm-ed-v-onizle')) $('icm-ed-v-onizle').appendChild(on); if (typeof ekAdmCheck === 'function') ekAdmCheck(); }
+    else if (ED.gorunum === 'ogrenci') edOgrenci();
+    else if (ED.gorunum === 'pdf') edPdfCiz();
+    else if (ED.gorunum === 'metin' && rapor && !metindenMi && typeof ekAdmCheck === 'function') { E.gorunum = 'akis'; ekAdmCheck(); }
+    if (rapor && ED.gorunum !== 'akis' && ED.gorunum !== 'sayfa' && typeof ekAdmCheck === 'function') { const gor = E.gorunum; E.gorunum = 'akis'; ekAdmCheck(); E.gorunum = gor; }
+    edYan();
+  };
+  function edBaglam() {
+    return { kok: 'icm-ed-bloklar', si: ED.si, kapsam: 'icm', set: ED.mod === 'set', src: edSrc, p: () => ED.p,
+      yaz: yeni => { $('ek-src').value = yeni; ED.kirli = true; ED.p = ekParse(yeni, { set: ED.mod === 'set' }); return true; }, sonra: () => icmEdYenile(false) };
+  }
+  function edBloklar() {
+    const s = ED.p && ED.p.sections[ED.si], b = $('icm-ed-bolum-bas');
+    if (b) b.innerHTML = s ? '<div><span class="icm-tur r-mavi">' + ic(s.tur === 'ders' ? 'kitap' : 'not', 14) + esc(s.tur === 'ders' ? 'Ders ' + s.no : (BOLUM_AD[s.tur] || 'Bölüm')) + '</span><h3>' + esc(s.ad || '') + '</h3></div><div class="ys-etler">' + (s.konular || []).map(k => '<span class="yp-durum d-gri">' + esc(k) + '</span>').join('') + '</div>' : '';
+    blokListeBagla('icm-ed-bloklar', edBaglam());
+  }
+  function edOgrenci() {
+    const c = $('icm-ed-cihaz'); if (c) c.innerHTML = '<div class="ys-mini-sekme">' + [['100%', 'Masaüstü'], ['760px', 'Tablet'], ['390px', 'Telefon']].map(g => '<button type="button" class="' + (ED.cihaz === g[0] ? 'aktif' : '') + '" onclick="icmEdCihaz(\'' + g[0] + '\')">' + g[1] + '</button>').join('') + '</div><label class="ys-anahtar kucuk"><input type="checkbox" ' + (ED.tumu ? 'checked' : '') + ' onchange="ED_TUMU(this.checked)"><i></i><span>Tüm bölümler</span></label>';
+    const g = $('icm-ed-ogr'); if (g) { g.style.maxWidth = ED.cihaz; onizlemeCiz(g, ED.p, ED.tumu ? null : ED.si, false); }
+  }
+  window.ED_TUMU = v => { ED.tumu = v; edOgrenci(); };
+  window.icmEdCihaz = c => { ED.cihaz = c; edOgrenci(); };
+  window.icmEdGor = g => { ED.gorunum = g; icmEdYenile(false); };
+  window.icmEdBolum = si => { ED.si = si; delete BL_ACIK['icm-ed-bloklar']; if (ED.gorunum !== 'bloklar' && ED.gorunum !== 'ogrenci') ED.gorunum = 'bloklar'; icmEdYenile(false); };
+  function edYan() {
+    const s = $('icm-ed-yan-s'); if (s) s.innerHTML = YAN.map(y => '<button type="button" class="' + (ED.yan === y[0] ? 'aktif' : '') + '" onclick="icmEdYan(\'' + y[0] + '\')">' + y[1] + (y[0] === 'rapor' && ED.p && ED.p.errors.length ? ' <em class="hata">' + ED.p.errors.length + '</em>' : '') + '</button>').join('');
+    const k = $('icm-ed-yan'), rk = $('icm-ed-rapor-k'); if (!k) return;
+    if (rk) rk.style.display = ED.yan === 'rapor' ? '' : 'none';
+    k.style.display = ED.yan === 'rapor' ? 'none' : '';
+    const p = ED.p, sec = p && p.sections[ED.si];
+    if (ED.yan === 'bolum') {
+      const m = p ? p.meta : {}, alan = (id, ad, deger, ph, tip) => '<label class="ys-alan"><span>' + ad + '</span><input id="' + id + '" class="ys-girdi" value="' + esc(deger == null ? '' : deger) + '" placeholder="' + esc(ph || '') + '"' + (tip ? ' type="' + tip + '"' : '') + ' onchange="icmEdMeta()"></label>';
+      let h = '<div class="icm-yan-bl"><h4>' + (ED.mod === 'set' ? 'Set bilgileri' : 'Ünite bilgileri') + '</h4>';
+      if (ED.mod === 'set') h += alan('ed-set', 'Başlık', m.baslik, 'Set başlığı') + '<div class="ys-iki">' + alan('ed-sev', 'Seviye', m.seviye, 'A1') + alan('ed-kitap', 'Kitap bağlantısı', m.kitap ? m.kitap.m + '.' + m.kitap.u : '', 'ör. 1.2') + '</div>' + alan('ed-acik', 'Açıklama', m.aciklama, 'Liste kartında görünür');
+      else h += '<div class="ys-iki">' + alan('ed-mno', 'Modül no', m.modul_no, '1', 'number') + alan('ed-uno', 'Ünite no', m.unite_no, '1', 'number') + '</div>' + alan('ed-mad', 'Modül adı', m.modul_ad, '') + alan('ed-uad', 'Ünite adı', m.unite_ad, '') + alan('ed-sev', 'Seviye', m.seviye, 'A1');
+      h += '</div>';
+      if (sec) {
+        const T = (gl('EKA') || {}).topics || [], tAd = kod => { const t = T.find(z => z.kod === kod); return t ? t.ad : kod; };
+        h += '<div class="icm-yan-bl"><h4>Seçili bölüm</h4>' + (sec.ln ? '<label class="ys-alan"><span>' + (sec.tur === 'ders' ? 'Ders ' + sec.no + ' adı' : 'Bölüm adı') + '</span><input id="ed-bad" class="ys-girdi" value="' + esc(sec.ad || '') + '" onchange="icmEdBolumAd()"></label>' : '') +
+          '<div class="ys-alan"><span>Konular</span><div class="icm-konular dikey">' + (sec.konular.length ? sec.konular.map(kd => '<span class="icm-konu" title="' + esc(kd) + '">' + esc(tAd(kd)) + '<button type="button" aria-label="Konuyu çıkar" onclick="icmEdKonu(\'cikar\', \'' + jsq(kd) + '\')">' + ic('kapat', 12) + '</button></span>').join('') : '<span class="ys-soluk">Konu atanmadı</span>') + '</div>' +
+          (ED.mod === 'set' ? '<small class="ys-soluk">Set konuları etkinliklerin "konu:" alanlarından gelir.</small>' : secimKutusu('ed-konu-sk', 'Konu ekle…', T.filter(t => !sec.konular.includes(t.kod)).map(t => ({ id: t.kod, ad: t.ad, alt: t.kod })))) + '</div>' +
+          (sec.ln && ED.mod === 'unit' ? '<button type="button" class="yp-btn kucuk kirmizi" onclick="icmEdBolumSil()">' + ic('cop', 14) + 'Bölümü sil</button>' : '') + '</div>';
+      }
+      k.innerHTML = h;
+      if (SK['ed-konu-sk']) SK['ed-konu-sk'].degisti = v => { if (v) icmEdKonu('ekle', v); };
+    } else if (ED.yan === 'etkinlik') {
+      const acts = sec ? sec.blocks.map((b, bi) => ({ b, bi })).filter(x => x.b.t === 'act') : [];
+      k.innerHTML = '<div class="icm-yan-bl"><h4>Bu bölümdeki etkinlikler <span class="ys-rozet kucuk">' + acts.length + '</span></h4>' + (acts.length ? acts.map((x, n) => '<button type="button" class="icm-yan-oge" onclick="icmEdBlokAc(' + x.bi + ')"><span class="icm-blok-no">' + (n + 1) + '</span><span><b>' + esc((gl('EK_TIPLER') || {})[x.b.tip] || x.b.tip) + '</b><small>' + esc(x.b.alanlar['yönerge'] || x.b.alanlar['görev'] || '') + '</small><small>' + (x.b.items.length || 1) + ' madde' + ((x.b.konu || []).length ? ' · ' + esc(x.b.konu.join(', ')) : '') + '</small></span>' + (x.b.kontrol ? '<span class="yp-durum d-turuncu">Kontrol</span>' : '') + '</button>').join('') : '<div class="yp-bos kucuk"><span>Etkinlik yok.</span></div>') +
+        '<button type="button" class="yp-btn kucuk" onclick="icmEdGor(\'bloklar\'); setTimeout(() => icmBlokEkle(\'icm-ed-bloklar\', \'son\', \'bosluk\'), 60)">' + ic('arti', 14) + 'Etkinlik ekle</button></div>';
+    } else if (ED.yan === 'kelime') {
+      const kel = new Map(), f = gl('ekFindWord');
+      if (sec) { const on = blokOnizEl(sec, 'icm5'); Object.values(on).forEach(el => el.querySelectorAll('[data-w]').forEach(n => { const w = n.dataset.w; if (w && /[а-яё]/i.test(w) && w.replace(/[^а-яё]/gi, '').length > 2 && !kel.has(w.toLowerCase())) kel.set(w.toLowerCase(), w); }));
+        sec.blocks.forEach(b => { if (b.t === 'kelimeler') b.kel.forEach(x => { const w = String(x.ru || '').replace(/[{}]/g, '').trim(); if (w && !kel.has(w.toLowerCase())) kel.set(w.toLowerCase(), w); }); }); }
+      const L = [...kel.values()].map(w => ({ w, s: typeof f === 'function' ? f(w) : null }));
+      k.innerHTML = '<div class="icm-yan-bl"><h4>Kelime eşleme <span class="ys-rozet kucuk">' + L.length + '</span></h4><p class="ys-kart-alt">Bölümdeki Rusça sözcükler kelime bankasıyla eşleştirilir; öğrenci bir sözcüğe tıkladığında eşleşen kayıt açılır. Çekimli bir sözcüğü sözlük biçimine bağlamak için metinde {=дом:дома} yaz.</p>' +
+        (L.length ? L.sort((a, b) => (b.s ? 1 : 0) - (a.s ? 1 : 0)).slice(0, 150).map(x => '<div class="icm-yan-oge sabit"><span><b>' + esc(x.w) + '</b><small>' + (x.s ? esc(x.s.ru !== x.w ? x.s.ru + ' · ' : '') + esc(x.s.tr || '') : 'Kelime bankasında yok') + '</small></span>' + (x.s ? '<span class="yp-durum d-yesil">Eşleşti</span>' : '<button type="button" class="yp-btn kucuk" onclick="icmKelimeEkle(\'' + jsq(x.w) + '\')">Bankaya ekle</button>') + '</div>').join('') : '<div class="yp-bos kucuk"><span>Bu bölümde işaretli sözcük yok.</span></div>') + '</div>';
+    } else if (ED.yan === 'not') {
+      const kartlar = sec ? sec.blocks.map((b, bi) => ({ b, bi })).filter(x => x.b.t === 'kartlar') : [];
+      let h = '<div class="icm-yan-bl"><h4>Çalışma kartları <span class="ys-rozet kucuk">' + kartlar.reduce((a, x) => a + x.b.cards.length, 0) + '</span></h4>' + (kartlar.length ? kartlar.map(x => '<button type="button" class="icm-yan-oge" onclick="icmEdBlokAc(' + x.bi + ')"><span><b>' + x.b.cards.length + ' kart</b><small>' + esc(x.b.cards.map(c => String(c.on || '').replace(/\{\{|\}\}/g, '')).slice(0, 3).join(' · ')) + '</small></span></button>').join('') : '<div class="yp-bos kucuk"><span>Bu bölümde kart yok.</span></div>') +
+        '<button type="button" class="yp-btn kucuk" onclick="icmEdGor(\'bloklar\'); setTimeout(() => icmBlokEkle(\'icm-ed-bloklar\', \'son\', \'kartlar\'), 60)">' + ic('arti', 14) + 'Kart bloğu ekle</button></div><div class="icm-yan-bl"><h4>Bağlı özet notları</h4><div id="icm-ed-notlar"><div class="admin-loading">Yükleniyor...</div></div></div>';
+      k.innerHTML = h; edNotlar(sec);
+    }
+  }
+  async function edNotlar(sec) {
+    const k = $('icm-ed-notlar'); if (!k) return;
+    if (!ED.notlar) { try { const { data } = await sb.from('ozet_notlar').select('id, baslik, konu, aktif'); ED.notlar = data || []; } catch (e) { ED.notlar = []; } }
+    const kon = new Set(sec ? sec.konular : []), L = ED.notlar.filter(n => n.konu && kon.has(n.konu));
+    k.innerHTML = (L.length ? L.map(n => '<button type="button" class="icm-yan-oge" onclick="icmNotAc(\'' + n.id + '\')"><span><b>' + esc(n.baslik) + '</b><small>' + esc(n.konu) + (n.aktif === false ? ' · gizli' : '') + '</small></span></button>').join('') : '<div class="yp-bos kucuk"><span>' + (kon.size ? 'Bu bölümün konularına bağlı not yok.' : 'Not bağlamak için önce bölüme konu ekle.') + '</span></div>') +
+      (kon.size ? '<button type="button" class="yp-btn kucuk" onclick="icmNotYeni(\'' + jsq([...kon][0]) + '\')">' + ic('arti', 14) + 'Bu konuya not ekle</button>' : '');
+  }
+  async function cikmadanOnce() { if (!ED.acik || !ED.kirli) return true; return uiConfirm('Düzenleyicide kaydedilmemiş değişiklikler var. Kaydetmeden çıkılsın mı?', 'Kaydedilmemiş değişiklik', { danger: true, confirmText: 'Kaydetmeden çık' }); }
+  window.icmNotAc = async id => { if (!(await cikmadanOnce())) return; ED.acik = false; ED.kirli = false; ypDuzenle('ozet', id); };
+  window.icmNotYeni = async kod => { if (!(await cikmadanOnce())) return; ED.acik = false; ED.kirli = false; await ypYeni('ozet'); setTimeout(() => { const s = $('oz-konu'); if (s) s.value = kod; }, 500); };
+  window.icmKelimeEkle = async w => { if (!(await cikmadanOnce())) return; ED.acik = false; ED.kirli = false; ypGit('content'); setTimeout(() => { if (window.ysKelYeni) window.ysKelYeni(); const i = $('cw-ru'); if (i) i.value = w; }, 900); };
+  window.icmEdYan = y => { ED.yan = y; edYan(); };
+  window.icmEdBlokAc = bi => { ED.gorunum = 'bloklar'; BL_ACIK['icm-ed-bloklar'] = { bi, odak: true }; icmEdYenile(false); };
+  window.icmEdMeta = () => {
+    let src = edSrc(); const v = id => (($(id) || {}).value || '').trim(), sat = (re, yeni) => { src = mfBaslikYaz(src, re, yeni); };
+    if (ED.mod === 'set') {
+      if (v('ed-set')) sat(/^@set\s/i, '@set ' + mfAdTemiz(v('ed-set')));
+      if (v('ed-sev')) sat(/^@seviye\s/i, '@seviye ' + v('ed-sev').toUpperCase());
+      const kt = v('ed-kitap'); if (/^\d+\.\d+$/.test(kt)) sat(/^@kitap\s/i, '@kitap ' + kt); else if (!kt) src = src.split('\n').filter(l => !/^@kitap\s/i.test(l.trim())).join('\n');
+      if (v('ed-acik')) sat(/^@a[çc][ıi]klama\s/i, '@açıklama ' + v('ed-acik').replace(/[\r\n]+/g, ' '));
+    } else {
+      const mno = parseInt(v('ed-mno'), 10), uno = parseInt(v('ed-uno'), 10);
+      if (mno) sat(/^@mod[üu]l\s/i, '@modül ' + mno + ' | ' + mfAdTemiz(v('ed-mad') || ''));
+      if (uno) sat(/^@[üu]nite\s/i, '@ünite ' + uno + ' | ' + mfAdTemiz(v('ed-uad') || ''));
+      if (v('ed-sev')) src = mfSeviyeYaz(src, v('ed-sev').toUpperCase());
+    }
+    $('ek-src').value = src; ED.kirli = true; icmEdYenile(false);
+  };
+  window.icmEdBolumAd = () => { const ad = mfAdTemiz(($('ed-bad') || {}).value || ''); if (!ad) return; $('ek-src').value = mfDersAdYaz(edSrc(), ED.si, ad); ED.kirli = true; icmEdYenile(false); };
+  window.icmEdKonu = async (is, kod) => {
+    const s = ED.p && ED.p.sections[ED.si]; if (!s || ED.mod === 'set') return;
+    let liste = s.konular.slice();
+    if (is === 'cikar') liste = liste.filter(k => k !== kod); else if (!liste.includes(kod)) liste.push(kod);
+    $('ek-src').value = mfKonuYaz(edSrc(), ED.si, liste); ED.kirli = true; icmEdYenile(false);
+  };
+  window.icmEdBolumSil = async () => {
+    const p = ED.p, s = p && p.sections[ED.si]; if (!s || !s.ln) return;
+    if (!(await uiConfirm('"' + (s.tur === 'ders' ? 'Ders ' + s.no + ' — ' : '') + s.ad + '" bölümü ve içindeki ' + s.blocks.length + ' blok silinsin mi? Kaydedene kadar geri alabilirsin (sürüm geçmişi).', 'Bölümü sil', { danger: true }))) return;
+    const L = edSrc().replace(/\r/g, '').split('\n'), R = blokAraliklari(p, ED.si, L);
+    L.splice(R.st - 1, R.en - R.st + 1); $('ek-src').value = L.join('\n'); ED.si = Math.max(0, ED.si - 1); ED.kirli = true; icmEdYenile(false);
+  };
+  MENULER.edbolum = () => ED.mod === 'set' ? [] : [{ ic: 'kitap', ad: 'Ders ekle', fn: "icmEdBolumEkle('ders')" }, { ic: 'not', ad: 'Ünite özeti ekle', fn: "icmEdBolumEkle('ozet')" }, { ic: 'paragraf', ad: 'Okuma bölümü ekle', fn: "icmEdBolumEkle('okuma')" }, { ic: 'soru', ad: 'Ünite testi ekle', fn: "icmEdBolumEkle('test')" }];
+  window.icmEdBolumEkle = async t => {
+    const ad = mfAdTemiz(await uiPrompt(t === 'ders' ? 'Yeni dersin adı:' : 'Bölümün adı:', { title: 'Bölüm ekle', value: t === 'ozet' ? 'Ünite özeti' : t === 'test' ? 'Ünite testi' : '' })); if (!ad) return;
+    let src = edSrc();
+    if (t === 'ders') src = mfDersEkleYaz(src, ad).src;
+    else src = src.replace(/\s+$/, '') + '\n\n# ' + ({ ozet: 'Özet', okuma: 'Okuma', test: 'Test' })[t] + ' | ' + ad + '\n';
+    $('ek-src').value = src; ED.kirli = true;
+    const p = ekParse(src); ED.si = t === 'ders' ? p.sections.map((s, i) => ({ s, i })).filter(x => x.s.tur === 'ders').slice(-1)[0].i : p.sections.length - 1;
+    ED.gorunum = 'bloklar'; icmEdYenile(false);
+  };
+  MENULER.edkaydet = () => ED.mod === 'set' ? [{ ic: 'kaydet', ad: 'Taslak olarak kaydet', fn: "icmKaydet(false)" }, { ic: 'onay', ad: 'Kaydet ve yayınla', fn: "icmKaydet(true)" }]
+    : [{ ic: 'kaydet', ad: 'Kaydet (durum değişmez)', fn: "icmKaydet()" }, { ic: 'saat', ad: 'Taslak olarak kaydet', fn: "icmKaydet(false)" }, { ic: 'onay', ad: 'Kaydet ve yayınla', fn: "icmKaydet(true)" }];
+  window.icmKaydet = async yayinla => {
+    const E = gl('EKA') || {};
+    const p = ekParse(edSrc(), { set: ED.mod === 'set' });
+    if (p.errors.length) { ED.yan = 'rapor'; icmEdYenile(true); uiAlert('Kaydetmeden önce ' + p.errors.length + ' hatayı düzeltmelisin. Sağdaki Rapor sekmesinde satır numaralarıyla listelendi.'); return; }
+    if (ED.mod === 'set') { await ekAdmSave(yayinla === undefined ? undefined : yayinla); ED.kirli = false; if (yayinla !== undefined) ED.yayinda = !!yayinla; else if (ED.yayinda == null) ED.yayinda = false; edDurum(); return; }
+    const src = edSrc(), toc = p.sections.map(s => ({ tur: s.tur, no: s.no, ad: s.ad }));
+    if (p.actSay) toc.push({ tur: 'anahtar', no: null, ad: 'Cevap anahtarı' });
+    const row = { modul_no: p.meta.modul_no, modul_ad: p.meta.modul_ad || null, unite_no: p.meta.unite_no, unite_ad: p.meta.unite_ad || null, seviye: p.meta.seviye || null, kaynak: src, toc, konular: [...p.konular], kontrol_say: p.kontrolSay, updated_at: new Date().toISOString() };
+    if (yayinla !== undefined) row.yayinda = !!yayinla; else if (!E.editId) row.yayinda = false;
+    // Yeni kayıtta aynı modül/ünite numarası varsa üzerine yazmadan önce sor
+    try {
+      const { data: ayni } = await sb.from('ek_units').select('id, unite_ad').eq('modul_no', row.modul_no).eq('unite_no', row.unite_no).limit(1);
+      const cak = (ayni || []).find(x => String(x.id) !== String(E.editId));
+      if (cak && E.editId) { uiAlert('Modül ' + row.modul_no + ' · Ünite ' + row.unite_no + ' numarası başka bir üniteye ait ("' + (cak.unite_ad || '') + '"). Bölüm sekmesinden farklı bir ünite numarası seç.'); return; }
+      if (cak && !(await uiConfirm('Modül ' + row.modul_no + ' · Ünite ' + row.unite_no + ' numarasıyla zaten bir ünite var ("' + (cak.unite_ad || '') + '"). Kaydedersen o ünitenin içeriği bu metinle değiştirilir. Devam edilsin mi?', 'Ünite numarası çakışıyor', { danger: true, confirmText: 'Üzerine yaz' }))) return;
+    } catch (e) {}
+    try {
+      const res = E.editId ? await sb.from('ek_units').update(row).eq('id', E.editId).select('id, yayinda').single() : await sb.from('ek_units').upsert(row, { onConflict: 'modul_no,unite_no' }).select('id, yayinda').single();
+      if (res.error) throw res.error;
+      E.editId = res.data.id; ED.yayinda = !!res.data.yayinda; ED.kirli = false;
+      const EKg = gl('EK'); if (EKg) { EKg.loaded = false; if (EKg.unit && EKg.unit.id === E.editId) { EKg.unit = null; EKg.pages = []; } }
+      surumKaydet(E.editId, src, ED.yayinda, yayinla === true ? 'Yayınlandı' : yayinla === false ? 'Taslak' : null);
+      if (ED.pdfDosya) {
+        try {
+          const yol = 'ekitap-pdf/' + E.editId + '_' + Date.now() + '.pdf';
+          const { error } = await sb.storage.from('docs').upload(yol, ED.pdfDosya, { cacheControl: '3600', upsert: false, contentType: 'application/pdf' }); if (error) throw error;
+          const url = sb.storage.from('docs').getPublicUrl(yol).data.publicUrl;
+          const u2 = await sb.from('ek_units').update({ pdf_url: url }).eq('id', E.editId); if (u2.error) throw u2.error;
+          ED.pdfUrl = url; ED.pdfDosya = null;
+        } catch (e) { toast('PDF üniteye bağlanamadı (ekitap_surum_pdf.sql çalıştırıldı mı?).'); }
+      }
+      toast(yayinla === true ? 'Ünite kaydedildi ve yayınlandı.' : 'Ünite kaydedildi.');
+      edDurum(); EKL.rows = [];
+    } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
+  };
+  window.icmEdKapat = async () => { if (!(await cikmadanOnce())) return; ED.acik = false; ED.kirli = false; edGoster(false); if (ED.mod === 'set') setListeCiz(); else ekListeCiz(); };
+  window.icmEdAc = async (id, si) => {
+    if (ED.acik && ED.kirli && !(await cikmadanOnce())) return;
+    const E = gl('EKA'); if (E) E.mode = 'unit';
+    if (si != null) ED._acSi = si;
+    if (icS().tab !== 'unite') { const IC_ = icS(); IC_.tab = 'unite'; icmSekmeCiz(); ICM_SEKME.forEach(s => { const p = $('icm-' + s[0]); if (p) p.style.display = s[0] === 'unite' ? '' : 'none'; }); }
+    if (typeof ekAdmEdit === 'function') ekAdmEdit(id);
+  };
+  window.icmEdYeni = async () => { if (ED.acik && ED.kirli && !(await cikmadanOnce())) return; const E = gl('EKA'); if (E) E.mode = 'unit'; if (typeof ekAdmNew === 'function') ekAdmNew(); };
+
+  /* ---------- Sürüm geçmişi ---------- */
+  window.icmSurumler = async id => {
+    const E = gl('EKA') || {}; id = id || E.editId;
+    if (!id) { uiAlert('Sürüm geçmişi ünite ilk kez kaydedildikten sonra oluşur.'); return; }
+    let rows = null, hata = false;
+    try { const { data, error } = await sb.from('ek_unit_surumler').select('id, created_at, not_metni, yayinda, kaynak').eq('unit_id', id).order('created_at', { ascending: false }).limit(60); if (error) throw error; rows = data || []; } catch (e) { hata = true; }
+    const ov = document.createElement('div'); ov.className = 'ui-modal-overlay show ys-modal-ov'; ov.id = 'icm-surum-m';
+    const simdi = ED.acik ? edSrc() : null;
+    ov.innerHTML = '<div class="ui-modal ys-modal genis" role="dialog" aria-modal="true"><div class="ys-modal-bas"><span class="ys-ayar-ic">' + ic('saat', 20) + '</span><h3>Sürüm geçmişi</h3><button type="button" class="yp-ikon-b" aria-label="Kapat" onclick="document.getElementById(\'icm-surum-m\').remove()">' + ic('kapat', 17) + '</button></div>' +
+      (hata ? '<div class="ys-uyari">' + ic('bilgi', 18) + '<span>Sürüm tablosu bulunamadı. ekitap_surum_pdf.sql dosyasını Supabase\'de çalıştırdıktan sonra her kayıtta bir sürüm saklanır.</span></div>'
+        : !rows.length ? '<div class="yp-bos kucuk"><span>Henüz kayıtlı sürüm yok. Bundan sonraki her kayıtta bir sürüm saklanır.</span></div>'
+        : '<div class="icm-surumler">' + rows.map((r, i) => { const n = r.kaynak.split('\n').length, f = simdi != null ? satirFarki(simdi, r.kaynak) : null;
+          return '<div class="icm-surum"><span class="icm-ic r-' + (i ? 'gri' : 'yesil') + '">' + ic(i ? 'saat' : 'onay', 15) + '</span><span><b>' + new Date(r.created_at).toLocaleString('tr-TR') + (i ? '' : ' · en son') + '</b><small>' + n + ' satır' + (r.not_metni ? ' · ' + esc(r.not_metni) : '') + (r.yayinda ? ' · yayında' : '') + (f ? ' · şimdikine göre +' + f[0] + ' / −' + f[1] + ' satır' : '') + '</small></span>' +
+            '<button type="button" class="yp-btn kucuk" onclick="icmSurumYukle(' + r.id + ', ' + id + ')">Bu sürümü aç</button></div>'; }).join('') + '</div>') +
+      '<div class="ys-modal-alt"><button type="button" class="yp-btn" onclick="document.getElementById(\'icm-surum-m\').remove()">Kapat</button></div></div>';
+    ov.addEventListener('mousedown', e => { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+    ED._surumler = rows || [];
+  };
+  function satirFarki(a, b) { const A = new Map(), B = new Map(); a.split('\n').forEach(l => A.set(l, (A.get(l) || 0) + 1)); b.split('\n').forEach(l => B.set(l, (B.get(l) || 0) + 1)); let ek = 0, cik = 0; B.forEach((n, l) => { const m = A.get(l) || 0; if (n > m) ek += n - m; }); A.forEach((n, l) => { const m = B.get(l) || 0; if (n > m) cik += n - m; }); return [ek, cik]; }
+  window.icmSurumYukle = async (sid, unitId) => {
+    const r = (ED._surumler || []).find(x => x.id === sid); if (!r) return;
+    const E = gl('EKA') || {};
+    if (!ED.acik || String(E.editId) !== String(unitId)) { const m = $('icm-surum-m'); if (m) m.remove(); await icmEdAc(unitId); await new Promise(c => setTimeout(c, 700)); }
+    if (!(await uiConfirm(new Date(r.created_at).toLocaleString('tr-TR') + ' tarihli sürüm düzenleyiciye yüklensin mi? Kaydet\'e basana kadar yayındaki ünite değişmez.', 'Sürümü aç', { confirmText: 'Yükle' }))) return;
+    $('ek-src').value = r.kaynak; ED.kirli = true; const m = $('icm-surum-m'); if (m) m.remove(); icmEdYenile(true); toast('Sürüm yüklendi. Kalıcı olması için kaydet.');
+  };
+
+  /* ---------- PDF olarak dışa aktar (yazdır → PDF) ---------- */
+  window.icmPdfIndir = () => {
+    const p = ED.p || ekParse(edSrc(), { set: ED.mod === 'set' });
+    const kap = document.createElement('div'); onizlemeCiz(kap, p, null, false);
+    kap.querySelectorAll('input.ek-blank').forEach(i => { const s = document.createElement('span'); s.className = 'pdf-bosluk'; i.replaceWith(s); });
+    kap.querySelectorAll('button').forEach(b => { if (!b.closest('.ek-opts')) b.remove(); });
+    const baslik = ED.mod === 'set' ? (p.meta.baslik || 'Çalışma seti') : ('Modül ' + (p.meta.modul_no || '') + ' · Ünite ' + (p.meta.unite_no || '') + ' — ' + (p.meta.unite_ad || ''));
+    const w = window.open('', '_blank'); if (!w) { uiAlert('Açılır pencere engellendi; tarayıcıda bu site için açılır pencerelere izin ver.'); return; }
+    const kok = location.origin + location.pathname.replace(/[^/]*$/, '');
+    w.document.write('<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>' + esc(baslik) + '</title><link rel="stylesheet" href="' + kok + 'css/style.css"><link rel="stylesheet" href="' + kok + 'css/ekitap.css">' +
+      '<style>body{background:#fff;margin:0;padding:24px 32px;font-family:Inter,sans-serif;color:#1f2a37}.pdf-bas{border-bottom:2px solid #c9a84c;margin-bottom:18px;padding-bottom:8px}.pdf-bas h1{font:700 1.5rem "PT Serif",serif;color:#0d1b2a;margin:0}.pdf-bas small{color:#8a8270}.icm-sayfa-sonu{break-after:page;page-break-after:always;height:0;border:0}.icm-sayfa-sonu span{display:none}.pdf-bosluk{display:inline-block;min-width:70px;border-bottom:1px solid #333;margin:0 3px}.ek-act,.ek-box,.ek-tbl-wrap,.ek-ornek,.ek-kutular{break-inside:avoid}.ek-lesson-head{break-before:auto}@page{margin:16mm}</style></head><body>' +
+      '<div class="pdf-bas"><h1>' + esc(baslik) + '</h1><small>YDT-YDS Rusça · ' + new Date().toLocaleDateString('tr-TR') + '</small></div>' + kap.innerHTML + '</body></html>');
+    w.document.close();
+    setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 900);
+  };
+
+  /* ---------- PDF: içe aktarma motoru + karşılaştırma ---------- */
+  const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  let pdfjsSoz = null;
+  function pdfjsYukle() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (pdfjsSoz) return pdfjsSoz;
+    pdfjsSoz = new Promise((coz, red) => {
+      const s = document.createElement('script'); s.src = PDFJS_URL; s.async = true;
+      s.onload = () => { try { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER; coz(window.pdfjsLib); } catch (e) { red(e); } };
+      s.onerror = () => { pdfjsSoz = null; red(new Error('PDF okuyucu yüklenemedi (internet bağlantısını kontrol et).')); };
+      document.head.appendChild(s);
+    });
+    return pdfjsSoz;
+  }
+  async function pdfAc(kaynak) { const lib = await pdfjsYukle(); return lib.getDocument(kaynak instanceof ArrayBuffer ? { data: kaynak } : { url: kaynak }).promise; }
+  async function pdfSayfaCiz(doc, no, kanvas, genislik) {
+    const sf = await doc.getPage(no), v1 = sf.getViewport({ scale: 1 }), olcek = genislik / v1.width, oran = window.devicePixelRatio || 1;
+    const v = sf.getViewport({ scale: olcek * oran });
+    kanvas.width = v.width; kanvas.height = v.height; kanvas.style.width = genislik + 'px'; kanvas.style.height = (v.height / oran) + 'px';
+    await sf.render({ canvasContext: kanvas.getContext('2d'), viewport: v }).promise;
+  }
+  // Motor: PDF'in metin katmanını satırlara, satırları başlık / liste / paragraf bloklarına dönüştürür (yapay zekâ kullanılmaz)
+  async function pdfMotor(doc, bas, son, sec, ilerleme) {
+    const sayfalar = [];
+    for (let n = bas; n <= son; n++) {
+      const sf = await doc.getPage(n), tc = await sf.getTextContent(), vh = sf.getViewport({ scale: 1 }).height;
+      const parca = tc.items.filter(it => it.str && it.str.trim()).map(it => ({ s: it.str, x: it.transform[4], y: it.transform[5], h: Math.abs(it.transform[3]) || it.height || 10, w: it.width || 0 }));
+      parca.sort((a, b) => b.y - a.y || a.x - b.x);
+      const satirlar = [];
+      parca.forEach(p => {
+        const son2 = satirlar[satirlar.length - 1];
+        if (son2 && Math.abs(son2.y - p.y) < Math.max(son2.h, p.h) * 0.55) {
+          const bosluk = p.x - (son2.xs + son2.ws);
+          son2.t += (bosluk > p.h * 0.18 && !/\s$/.test(son2.t) && !/^\s/.test(p.s) ? ' ' : '') + p.s; son2.h = Math.max(son2.h, p.h); son2.xs = p.x; son2.ws = p.w;
+        } else satirlar.push({ t: p.s, y: p.y, h: p.h, x: p.x, xs: p.x, ws: p.w });
+      });
+      satirlar.forEach(l => { l.t = l.t.replace(/\s+/g, ' ').trim(); l.ust = l.y > vh * 0.93; l.alt = l.y < vh * 0.07; });
+      sayfalar.push(satirlar.filter(l => l.t));
+      if (ilerleme) ilerleme(n - bas + 1, son - bas + 1);
+    }
+    // Her sayfada tekrar eden üst / alt bilgi ve sayfa numaraları atılır
+    const say = {}; sayfalar.forEach(L => new Set(L.filter(l => l.ust || l.alt).map(l => l.t.replace(/\d+/g, '#'))).forEach(k => say[k] = (say[k] || 0) + 1));
+    const tekrar = new Set(Object.keys(say).filter(k => sayfalar.length >= 2 && say[k] >= Math.max(2, sayfalar.length * 0.5)));
+    const boylar = []; sayfalar.forEach(L => L.forEach(l => { for (let i = 0; i < Math.min(l.t.length, 80); i++) boylar.push(Math.round(l.h * 2) / 2); }));
+    boylar.sort((a, b) => a - b); const govde = boylar.length ? boylar[Math.floor(boylar.length / 2)] : 11;
+    const kac = s => /^(#|@|:::|---)/.test(s) ? '‌' + s : s;
+    const out = []; let dersVar = false, para = [];
+    const paraBitir = () => { if (para.length) { out.push(kac(para.join(' ').replace(/(\S)- (\p{Ll})/gu, '$1$2'))); out.push(''); para = []; } };
+    sayfalar.forEach((L, si) => {
+      let oncekiY = null, oncekiH = govde;
+      L.forEach(l => {
+        if ((l.ust || l.alt) && l.h <= govde * 1.1 && (tekrar.has(l.t.replace(/\d+/g, '#')) || /^\d{1,4}$/.test(l.t))) return;
+        if (/^\d{1,4}$/.test(l.t) && (l.ust || l.alt)) return;
+        const bosluk = oncekiY == null ? 0 : (oncekiY - l.y);
+        let m;
+        if (sec.ders && (m = l.t.match(/^(?:Ders|Урок|Lesson)\s*(\d+)\s*[.:\-–—]?\s*(.*)$/i))) { paraBitir(); out.push('# Ders ' + m[1] + ' | ' + (m[2] || 'Ders ' + m[1]).replace(/\|/g, '/')); out.push(''); dersVar = true; }
+        else if (sec.baslik && l.t.length < 120 && (l.h >= govde * 1.45 || (l.h >= govde * 1.18 && /^\d+(?:\.\d+)+\.?\s/.test(l.t)))) { paraBitir(); m = l.t.match(/^(\d+(?:\.\d+)+)\.?\s+(.+)$/); out.push(m ? '## ' + m[1] + ' ' + m[2] : '## ' + l.t); out.push(''); }
+        else if (sec.baslik && l.h >= govde * 1.18 && l.t.length < 120) { paraBitir(); out.push('### ' + l.t); out.push(''); }
+        else if ((m = l.t.match(/^[•●▪◦■□➢►–-]\s*(.+)$/))) { paraBitir(); out.push('- ' + m[1]); }
+        else if ((m = l.t.match(/^(\d{1,2})[.)]\s+(.+)$/))) { paraBitir(); out.push(m[1] + '. ' + m[2]); }
+        else {
+          if (para.length && (bosluk > oncekiH * 1.9 || /[.!?:»"]$/.test(para[para.length - 1]) && bosluk > oncekiH * 1.45)) paraBitir();
+          else if (!para.length && out.length && /^(- |\d+\. )/.test(out[out.length - 1])) out.push('');
+          para.push(l.t);
+        }
+        oncekiY = l.y; oncekiH = l.h;
+      });
+      paraBitir();
+      if (sec.sayfa && si < sayfalar.length - 1) { if (out.length && out[out.length - 1] !== '') out.push(''); out.push('---sayfa---'); out.push(''); }
+    });
+    return { metin: out.join('\n').replace(/\n{3,}/g, '\n\n').trim(), dersVar, satir: sayfalar.reduce((a, L) => a + L.length, 0) };
+  }
+  const PI = { dosya: null, doc: null, hedef: 'yeni' };
+  window.icmPdfAc = async () => {
+    if (ED.acik && ED.kirli && !(await cikmadanOnce())) return;
+    PI.dosya = null; PI.doc = null;
+    const R = EKL.rows.length ? EKL.rows : ((gl('MF') || {}).rows || []);
+    const mNo = R.reduce((a, r) => Math.max(a, r.modul_no || 0), 0) || 1, uNo = R.filter(r => r.modul_no === mNo).reduce((a, r) => Math.max(a, r.unite_no || 0), 0) + 1;
+    const ov = document.createElement('div'); ov.className = 'ui-modal-overlay show ys-modal-ov'; ov.id = 'icm-pdf-m';
+    ov.innerHTML = '<div class="ui-modal ys-modal genis icm-pdf-m" role="dialog" aria-modal="true"><div class="ys-modal-bas"><span class="ys-ayar-ic">' + ic('yukle', 20) + '</span><h3>PDF\'den e-kitap ünitesi oluştur</h3><button type="button" class="yp-ikon-b" aria-label="Kapat" onclick="document.getElementById(\'icm-pdf-m\').remove()">' + ic('kapat', 17) + '</button></div>' +
+      '<label class="icm-pdf-birak" id="icm-pdf-birak"><input type="file" accept="application/pdf,.pdf" onchange="icmPdfSec(this.files[0])"><span class="ys-ayar-ic">' + ic('yukle', 22) + '</span><span><b>PDF dosyasını seç ya da buraya bırak</b><small>En fazla 40 MB. Metin katmanı olan (taranmış görüntü olmayan) PDF\'ler en iyi sonucu verir.</small></span></label>' +
+      '<div id="icm-pdf-bilgi"></div>' +
+      '<div class="ys-iki"><label class="ys-alan"><span>Hedef</span><select id="icm-pdf-hedef" class="ys-girdi" onchange="document.getElementById(\'icm-pdf-yeni\').style.display = this.value === \'yeni\' ? \'\' : \'none\'"><option value="yeni">Yeni ünite oluştur</option>' + R.map(r => '<option value="' + r.id + '">Mevcut: Modül ' + r.modul_no + ' · Ünite ' + r.unite_no + ' — ' + esc(r.unite_ad || '') + ' (metni değiştirilir)</option>').join('') + '</select></label>' +
+      '<div class="ys-iki"><label class="ys-alan"><span>İlk sayfa</span><input id="icm-pdf-bas" class="ys-girdi" type="number" min="1" value="1"></label><label class="ys-alan"><span>Son sayfa</span><input id="icm-pdf-son" class="ys-girdi" type="number" min="1" value="1"></label></div></div>' +
+      '<div id="icm-pdf-yeni"><div class="ys-uclu"><label class="ys-alan"><span>Modül no</span><input id="icm-pdf-mno" class="ys-girdi" type="number" min="1" value="' + mNo + '"></label><label class="ys-alan"><span>Ünite no</span><input id="icm-pdf-uno" class="ys-girdi" type="number" min="1" value="' + uNo + '"></label>' +
+      '<label class="ys-alan"><span>Seviye</span><select id="icm-pdf-sev" class="ys-girdi"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select></label></div>' +
+      '<div class="ys-iki"><label class="ys-alan"><span>Modül adı</span><input id="icm-pdf-mad" class="ys-girdi" value="' + esc((R.find(r => r.modul_no === mNo) || {}).modul_ad || '') + '"></label><label class="ys-alan"><span>Ünite adı</span><input id="icm-pdf-uad" class="ys-girdi" placeholder="ör. İsimler: Cinsiyet ve Çokluk"></label></div></div>' +
+      '<div class="icm-pdf-sec"><label class="ys-anahtar kucuk"><input type="checkbox" id="icm-pdf-o-ders" checked><i></i><span>"Ders 1 / Урок 1" satırlarını ders başlığı yap</span></label>' +
+      '<label class="ys-anahtar kucuk"><input type="checkbox" id="icm-pdf-o-baslik" checked><i></i><span>Büyük yazıları başlık yap</span></label><label class="ys-anahtar kucuk"><input type="checkbox" id="icm-pdf-o-sayfa" checked><i></i><span>PDF sayfalarını sayfa sonuyla ayır</span></label></div>' +
+      '<div class="ys-not">' + ic('bilgi', 18) + '<div><span>Dönüştürme motoru PDF\'in metnini, yazı boyutlarını ve satır aralıklarını okuyarak başlık, liste ve paragraf blokları üretir; yapay zekâ kullanmaz. Etkinlikler, kutular ve tablolar otomatik tanınmaz: sonucu düzenleyicide PDF ile yan yana görüp bloklara dönüştürebilirsin. Ünite sen kaydedene kadar oluşturulmaz.</span></div></div>' +
+      '<div id="icm-pdf-ilerleme"></div><div class="ys-modal-alt"><button type="button" class="yp-btn" onclick="document.getElementById(\'icm-pdf-m\').remove()">Vazgeç</button><button type="button" class="yp-btn ana" id="icm-pdf-don" disabled onclick="icmPdfDonustur()">' + ic('sihir', 16) + 'Dönüştür ve düzenleyicide aç</button></div></div>';
+    ov.addEventListener('mousedown', e => { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+    const b = $('icm-pdf-birak');
+    ['dragover', 'dragenter'].forEach(t => b.addEventListener(t, e => { e.preventDefault(); b.classList.add('ust'); }));
+    ['dragleave', 'drop'].forEach(t => b.addEventListener(t, e => { e.preventDefault(); b.classList.remove('ust'); }));
+    b.addEventListener('drop', e => { const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) icmPdfSec(f); });
+  };
+  window.icmPdfSec = async f => {
+    const bilgi = $('icm-pdf-bilgi'); if (!f || !bilgi) return;
+    if (!/pdf$/i.test(f.type) && !/\.pdf$/i.test(f.name)) { uiAlert('Lütfen bir PDF dosyası seç.'); return; }
+    if (f.size > 40 * 1024 * 1024) { uiAlert('PDF en fazla 40 MB olabilir.'); return; }
+    bilgi.innerHTML = '<div class="admin-loading">PDF okunuyor...</div>';
+    try {
+      PI.dosya = f; PI.doc = await pdfAc(await f.arrayBuffer());
+      const n = PI.doc.numPages; $('icm-pdf-son').value = n; $('icm-pdf-son').max = n; $('icm-pdf-bas').max = n;
+      const uad = $('icm-pdf-uad'); if (uad && !uad.value) uad.value = f.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').slice(0, 80);
+      bilgi.innerHTML = '<div class="icm-pdf-ozet"><b>' + esc(f.name) + '</b><small>' + n + ' sayfa · ' + (f.size / 1048576).toFixed(1) + ' MB</small></div><div class="icm-pdf-kucuk" id="icm-pdf-kucuk"></div>';
+      const k = $('icm-pdf-kucuk');
+      for (let i = 1; i <= Math.min(n, 8); i++) { const c = document.createElement('canvas'); k.appendChild(c); await pdfSayfaCiz(PI.doc, i, c, 90); }
+      if (n > 8) k.insertAdjacentHTML('beforeend', '<span class="ys-soluk">+' + (n - 8) + ' sayfa</span>');
+      $('icm-pdf-don').disabled = false;
+    } catch (e) { bilgi.innerHTML = '<div class="ys-uyari">' + ic('hata', 18) + '<span>PDF açılamadı: ' + esc((e && e.message) || e) + '</span></div>'; PI.doc = null; }
+  };
+  window.icmPdfDonustur = async () => {
+    if (!PI.doc) return;
+    const n = PI.doc.numPages, bas = Math.max(1, Math.min(n, parseInt($('icm-pdf-bas').value, 10) || 1)), son = Math.max(bas, Math.min(n, parseInt($('icm-pdf-son').value, 10) || n));
+    const ilr = $('icm-pdf-ilerleme'), dugme = $('icm-pdf-don'); dugme.disabled = true;
+    try {
+      const r = await pdfMotor(PI.doc, bas, son, { ders: $('icm-pdf-o-ders').checked, baslik: $('icm-pdf-o-baslik').checked, sayfa: $('icm-pdf-o-sayfa').checked }, (i, t) => { ilr.innerHTML = '<div class="icm-ilerleme"><i style="width:' + Math.round(i / t * 100) + '%"></i></div><small class="ys-soluk">Sayfa ' + i + ' / ' + t + ' okunuyor…</small>'; });
+      if (!r.satir) { ilr.innerHTML = '<div class="ys-uyari">' + ic('hata', 18) + '<span>Bu PDF\'te okunabilir metin bulunamadı (büyük olasılıkla taranmış görüntü). Metni elle girmen gerekecek; PDF yine de karşılaştırma için düzenleyicide açılır.</span></div>'; }
+      const hedef = $('icm-pdf-hedef').value, E = gl('EKA') || {};
+      let src;
+      if (hedef === 'yeni') {
+        const mno = parseInt($('icm-pdf-mno').value, 10) || 1, uno = parseInt($('icm-pdf-uno').value, 10) || 1;
+        src = '@modül ' + mno + ' | ' + mfAdTemiz($('icm-pdf-mad').value || 'Modül') + '\n@ünite ' + uno + ' | ' + mfAdTemiz($('icm-pdf-uad').value || 'Yeni ünite') + '\n@seviye ' + $('icm-pdf-sev').value + '\n\n' + (r.dersVar ? '' : '# Ders 1 | ' + mfAdTemiz($('icm-pdf-uad').value || 'Ders 1') + '\n\n') + r.metin + '\n';
+        if (EKL.rows.some(x => x.modul_no === mno && x.unite_no === uno) && !(await uiConfirm('Modül ' + mno + ' · Ünite ' + uno + ' zaten var. Kaydedersen o ünitenin metni bununla değiştirilir. Devam edilsin mi?', 'Ünite zaten var', { confirmText: 'Devam' }))) { dugme.disabled = false; return; }
+      } else {
+        const u = EKL.rows.find(x => String(x.id) === hedef) || {};
+        let eski = ''; try { const { data } = await sb.from('ek_units').select('kaynak').eq('id', hedef).single(); eski = (data && data.kaynak) || ''; } catch (e) {}
+        const meta = eski.split('\n').filter(l => /^@(mod[üu]l|[üu]nite|seviye)\s/i.test(l.trim())).join('\n') || ('@modül ' + u.modul_no + ' | ' + (u.modul_ad || '') + '\n@ünite ' + u.unite_no + ' | ' + (u.unite_ad || ''));
+        src = meta + '\n\n' + (r.dersVar ? '' : '# Ders 1 | ' + (u.unite_ad || 'Ders 1') + '\n\n') + r.metin + '\n';
+      }
+      ED._pdfBekleyen = { doc: PI.doc, dosya: PI.dosya };
+      const m = $('icm-pdf-m'); if (m) m.remove();
+      E.mode = 'unit';
+      if (typeof ekAdmOpenEditor === 'function') ekAdmOpenEditor(src, hedef === 'yeni' ? null : +hedef);
+      toast('PDF dönüştürüldü. Sonucu PDF ile karşılaştırıp düzenle, sonra kaydet.');
+    } catch (e) { ilr.innerHTML = '<div class="ys-uyari">' + ic('hata', 18) + '<span>Dönüştürülemedi: ' + esc((e && e.message) || e) + '</span></div>'; dugme.disabled = false; }
+  };
+  async function edPdfCiz() {
+    const k = $('icm-ed-v-pdf'); if (!k) return;
+    if (!ED.pdfDoc && ED.pdfUrl) { k.innerHTML = '<div class="admin-loading">PDF yükleniyor...</div>'; try { ED.pdfDoc = await pdfAc(ED.pdfUrl); } catch (e) { k.innerHTML = '<div class="ys-uyari">' + ic('hata', 18) + '<span>Üniteye bağlı PDF açılamadı.</span></div>'; return; } }
+    if (!ED.pdfDoc) {
+      k.innerHTML = '<div class="yp-bos">' + ic('resim', 30) + '<b>Bu üniteye bağlı PDF yok.</b><span>Özgün PDF\'i yükle; web sürümüyle yan yana karşılaştırabilirsin. PDF, üniteyi kaydettiğinde bağlanır.</span><label class="yp-btn ana">' + ic('yukle', 16) + 'PDF yükle<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="icmEdPdfYukle(this.files[0])"></label></div>';
+      return;
+    }
+    const n = ED.pdfDoc.numPages; if (ED.pdfSayfa > n) ED.pdfSayfa = n;
+    k.innerHTML = '<div class="icm-pdf-bar"><button type="button" class="yp-ikon-b" aria-label="Önceki sayfa" onclick="icmEdPdfSayfa(-1)">' + ic('siteye', 16) + '</button><b>Sayfa ' + ED.pdfSayfa + ' / ' + n + '</b><button type="button" class="yp-ikon-b" aria-label="Sonraki sayfa" onclick="icmEdPdfSayfa(1)">' + ic('sag', 16) + '</button>' +
+      '<span class="ys-soluk">Sağda web sürümünün aynı sıradaki sayfası gösterilir; otomatik sayfa sonları ekrana göre değiştiği için sayfalar birebir örtüşmeyebilir.</span><label class="yp-btn kucuk">Başka PDF<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="icmEdPdfYukle(this.files[0])"></label></div>' +
+      '<div class="icm-pdf-iki"><div class="icm-pdf-sol"><canvas id="icm-pdf-kanvas"></canvas></div><div class="icm-pdf-sag" id="icm-pdf-web"></div></div>';
+    const sol = k.querySelector('.icm-pdf-sol');
+    try { await pdfSayfaCiz(ED.pdfDoc, ED.pdfSayfa, $('icm-pdf-kanvas'), Math.max(260, sol.clientWidth - 20)); } catch (e) {}
+    const on = $('ek-adm-preview'), web = $('icm-pdf-web'); if (!on || !web) return;
+    web.appendChild(on); const E = gl('EKA') || {}; E.gorunum = 'sayfa'; if (typeof ekAdmCheck === 'function') ekAdmCheck();
+    const pg = on.querySelectorAll('.ek-pd-pg')[ED.pdfSayfa - 1]; if (pg) web.scrollTop = pg.offsetTop - 10;
+  }
+  window.icmEdPdfSayfa = d => { ED.pdfSayfa = Math.max(1, ED.pdfSayfa + d); edPdfCiz(); };
+  window.icmEdPdfYukle = async f => {
+    if (!f) return; if (f.size > 40 * 1024 * 1024) { uiAlert('PDF en fazla 40 MB olabilir.'); return; }
+    try { ED.pdfDoc = await pdfAc(await f.arrayBuffer()); ED.pdfDosya = f; ED.pdfSayfa = 1; ED.kirli = true; edDurum(); edPdfCiz(); toast('PDF yüklendi; ünite kaydedildiğinde bağlanacak.'); }
+    catch (e) { uiAlert('PDF açılamadı: ' + ((e && e.message) || e)); }
+  };
+
   /* ---------- Bağlantılar: eski yükleyiciler yeni sayfaları çizsin ---------- */
   function degistir(ad, fn) { window[ad] = fn; try { (0, eval)(ad + ' = window.' + ad); } catch (e) {} }
   function bagla() {
@@ -2895,6 +3979,14 @@ async function togglePremium(userId, currentPlan) {
     if (typeof eskiRc === 'function') degistir('adminRcReload', async function () { const r = await eskiRc.apply(this, arguments); if ($('ys-blog')) { if (BL.sekme === 'blog') blogCiz(); } return r; });
     degistir('renderRcList', function () {});
     degistir('adminRecsInit', function () { return blogYukle(); });
+    // İçerik Merkezi
+    degistir('icTab', function (t) { return icmSekme(t); });
+    const eskiAc = window.ekAdmOpenEditor;
+    if (typeof eskiAc === 'function') degistir('ekAdmOpenEditor', function (src, id) { eskiAc.apply(this, arguments); edAc(src, id); });
+    degistir('ekAdmList', function () { ED.acik = false; ED.kirli = false; edGoster(false); const E = gl('EKA') || {}; return E.mode === 'set' ? setListeCiz() : ekListeCiz(); });
+    const eskiMf = window.mfRender;
+    if (typeof eskiMf === 'function') degistir('mfRender', function () { const r = eskiMf.apply(this, arguments); const a = $('icm-agac'); if (a && a.style.display !== 'none') agacCiz(); return r; });
+    window.addEventListener('beforeunload', e => { if (ED.acik && ED.kirli) { e.preventDefault(); e.returnValue = ''; } });
     degistir('adminRcFormClear', function () { if ($('ys-bl-form-ic') && BL.sekme === 'blog') { BL.duzen = null; $('ys-bl-form-ic').innerHTML = blogForm(); } });
     ['adminKurumSetAdmin', 'adminKurumRemoveMember'].forEach(ad => {
       const eski = window[ad]; if (typeof eski !== 'function') return;
