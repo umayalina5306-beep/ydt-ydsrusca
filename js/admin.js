@@ -1385,6 +1385,7 @@ async function togglePremium(userId, currentPlan) {
      ============================================================ */
   const IS = { rows: [], kurum: {}, tur: 'hepsi', rol: 'hepsi', zaman: 'hepsi', ara: '', sayfa: 1, boy: 10 };
   const ISLEM = {
+    kullanici_ekle: ['Kullanıcı ekleme', 'Yönetim panelinden yeni hesap açıldı.', 'arti', 'yesil'],
     kullanici_sil: ['Kullanıcı silme', 'Kullanıcı hesabı silindi.', 'cop', 'kirmizi'],
     ogrenci_atama_kaldir: ['Atama kaldırma', 'Öğretmen ataması kaldırıldı.', 'carpi', 'kirmizi'],
     ogrenci_ata: ['Öğrenci atama', 'Öğrenci ataması yapıldı.', 'ogretmen', 'altin'],
@@ -1846,7 +1847,54 @@ async function togglePremium(userId, currentPlan) {
       L.map(u => [kisiAd(u), u.email || '', ROLLER[rolKod(u)][0], premiumMu(u) ? 'Premium' : 'Ücretsiz', u.premium_until ? tarih(u.premium_until) : '', (u.kurum_id && UK.kurum[u.kurum_id]) || '',
         { aktif: 'Aktif', pasif: 'Pasif' }[durumKod(u)] || '', u.level || '', tarih(u.created_at), UK.son && UK.son[u.id] ? new Date(UK.son[u.id]).toLocaleString('tr-TR') : '']));
   };
-  window.YS_AKS.users = () => '<button type="button" class="yp-btn" onclick="ysUkDisa()">' + ic('indir', 16) + 'Dışa aktar</button>';
+  // Yeni kullanıcı ekle (yalnız yönetici) — hesap "kullanici-ekle" sunucu fonksiyonunda açılır
+  window.ysUkYeni = async () => {
+    if (!superMi()) { uiAlert('Bu işlem için yönetici yetkisi gerekli.'); return; }
+    let kurumlar = Object.entries(UK.kurum || {});
+    if (!kurumlar.length) { try { const { data } = await sb.from('kurumlar').select('id, name'); kurumlar = (data || []).map(k => [k.id, k.name]); } catch (e) {} }
+    const ov = document.createElement('div'); ov.className = 'ui-modal-overlay show ys-modal-ov'; ov.id = 'ys-uk-modal';
+    ov.innerHTML = '<div class="ui-modal ys-modal genis" role="dialog" aria-modal="true"><div class="ys-modal-bas"><span class="ys-ayar-ic">' + ic('kullanici', 20) + '</span><h3>Yeni kullanıcı ekle</h3><button type="button" class="yp-ikon-b" aria-label="Kapat" onclick="document.getElementById(\'ys-uk-modal\').remove()">' + ic('kapat', 17) + '</button></div>' +
+      '<div class="ys-iki"><label class="ys-alan"><span>Ad soyad</span><input id="ys-uk-ad" class="ys-girdi" maxlength="80" placeholder="Örn. Elif Güven" autocomplete="off"></label>' +
+      '<label class="ys-alan"><span>E-posta</span><input id="ys-uk-email" class="ys-girdi" type="email" maxlength="254" placeholder="ornek@gmail.com" autocomplete="off"></label></div>' +
+      '<div class="ys-alan"><span>Şifre</span><div class="ys-secenek">' +
+      '<label><input type="radio" name="ys-uk-sifre" value="link" checked onchange="ysUkSifreTur()"><span><b>Kullanıcı kendisi belirlesin</b><small>Hesap açılınca e-posta adresine şifre belirleme bağlantısı gönderilir.</small></span></label>' +
+      '<label><input type="radio" name="ys-uk-sifre" value="elle" onchange="ysUkSifreTur()"><span><b>Şifreyi ben belirleyeyim</b><small>Şifreyi kullanıcıya kendin iletirsin.</small></span></label></div>' +
+      '<input id="ys-uk-sifre" class="ys-girdi" type="text" minlength="6" maxlength="72" placeholder="En az 6 karakter" autocomplete="off" style="display:none"></div>' +
+      '<div class="ys-iki"><label class="ys-alan"><span>Rol</span><select id="ys-uk-rol" class="ys-girdi"><option value="user">Öğrenci</option><option value="ogretmen">Öğretmen</option><option value="destek">Destek</option><option value="kurum">Kurum yöneticisi</option></select></label>' +
+      '<label class="ys-alan"><span>Kurum (isteğe bağlı)</span><select id="ys-uk-kurum" class="ys-girdi"><option value="">Kurum yok</option>' + kurumlar.map(k => '<option value="' + esc(k[0]) + '">' + esc(k[1]) + '</option>').join('') + '</select></label></div>' +
+      '<div class="ys-iki"><label class="ys-alan"><span>Plan</span><select id="ys-uk-plan" class="ys-girdi" onchange="document.getElementById(\'ys-uk-ay-k\').style.visibility = this.value === \'premium\' ? \'visible\' : \'hidden\'"><option value="free">Ücretsiz</option><option value="premium">Premium</option></select></label>' +
+      '<label class="ys-alan" id="ys-uk-ay-k" style="visibility:hidden"><span>Premium süresi</span><select id="ys-uk-ay" class="ys-girdi"><option value="1">1 ay</option><option value="3">3 ay</option><option value="6" selected>6 ay</option><option value="12">12 ay</option></select></label></div>' +
+      '<div class="ys-not">' + ic('bilgi', 18) + '<div><span>Hesap e-postası onaylanmış olarak açılır; kayıt onay kodu ve e-posta uzantısı kısıtı panelden eklenen hesaplara uygulanmaz.</span></div></div>' +
+      '<div class="ys-modal-alt"><button type="button" class="yp-btn" onclick="document.getElementById(\'ys-uk-modal\').remove()">Vazgeç</button><button type="button" class="yp-btn ana" id="ys-uk-kaydet" onclick="ysUkEkle()">' + ic('arti', 16) + 'Kullanıcıyı ekle</button></div></div>';
+    ov.addEventListener('mousedown', e => { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov); setTimeout(() => { const i = $('ys-uk-ad'); if (i) i.focus(); }, 30);
+  };
+  window.ysUkSifreTur = () => {
+    const elle = (document.querySelector('input[name="ys-uk-sifre"]:checked') || {}).value === 'elle', i = $('ys-uk-sifre');
+    if (i) { i.style.display = elle ? '' : 'none'; if (elle) i.focus(); }
+  };
+  window.ysUkEkle = async () => {
+    const ad = ($('ys-uk-ad').value || '').trim(), email = ($('ys-uk-email').value || '').trim().toLowerCase();
+    const elle = (document.querySelector('input[name="ys-uk-sifre"]:checked') || {}).value === 'elle', sifre = elle ? $('ys-uk-sifre').value : '';
+    if (!ad) { uiAlert('Ad soyad zorunlu.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { uiAlert('Geçerli bir e-posta adresi yaz.'); return; }
+    if (elle && sifre.length < 6) { uiAlert('Şifre en az 6 karakter olmalı.'); return; }
+    const b = $('ys-uk-kaydet'); if (b) { b.disabled = true; b.textContent = 'Ekleniyor…'; }
+    const govde = { email, ad, sifre: sifre || undefined, rol: $('ys-uk-rol').value, plan: $('ys-uk-plan').value, premium_ay: +$('ys-uk-ay').value, kurum_id: $('ys-uk-kurum').value || undefined };
+    let r;
+    try {
+      const { data, error } = await sb.functions.invoke('kullanici-ekle', { body: govde });
+      if (error) { let m = ''; try { const j = error.context && await error.context.json(); m = j && j.hata; } catch (e) {} r = { ok: false, hata: m || 'Sunucu fonksiyonuna ulaşılamadı. kullanici-ekle fonksiyonu kuruldu mu?' }; }
+      else r = data || { ok: false, hata: 'Beklenmeyen bir yanıt alındı.' };
+    } catch (e) { r = { ok: false, hata: 'Sunucu fonksiyonuna ulaşılamadı.' }; }
+    if (!r.ok) { if (b) { b.disabled = false; b.innerHTML = ic('arti', 16) + 'Kullanıcıyı ekle'; } uiAlert(r.hata || 'Kullanıcı eklenemedi.'); return; }
+    const m = $('ys-uk-modal'); if (m) m.remove();
+    toast('Kullanıcı eklendi: ' + ad);
+    UK.ara = email; UK.sayfa = 1;
+    await kullaniciYukle();
+    if (!elle && typeof adminUserResetPw === 'function') adminUserResetPw(email);
+  };
+  window.YS_AKS.users = () => '<button type="button" class="yp-btn" onclick="ysUkDisa()">' + ic('indir', 16) + 'Dışa aktar</button>' + (superMi() ? '<button type="button" class="yp-btn ana" onclick="ysUkYeni()">' + ic('arti', 16) + 'Yeni kullanıcı ekle</button>' : '');
 
   /* ============================================================
      ÖĞRETMEN ATAMA
