@@ -49,9 +49,9 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=171">
-<link rel="stylesheet" href="css/ekitap.css?v=171">
-<link rel="stylesheet" href="css/video.css?v=171">
+<link rel="stylesheet" href="css/style.css?v=172">
+<link rel="stylesheet" href="css/ekitap.css?v=172">
+<link rel="stylesheet" href="css/video.css?v=172">
 <script>try{if(localStorage.getItem('ydt_prof_ui'))document.documentElement.classList.add('oturum-var');}catch(e){}</script>
 <style>html.oturum-var #nav-auth-buttons{display:none!important}</style>
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
@@ -76,7 +76,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=171" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=172" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -1427,9 +1427,8 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
 
         <div id="av-users" class="admin-view" style="display:none;">
           <h2 class="profile-h2">Kullanıcılar</h2>
-          <p class="profile-sub">Üyeleri görüntüle, planlarını yönet.</p>
-          <input id="admin-search" class="admin-search" placeholder="🔍 İsim veya e-posta ara..." oninput="filterAdminUsers(this.value)" autocomplete="off" data-lpignore="true" data-form-type="other">
-          <div id="admin-users" class="admin-users"></div>
+          <p class="profile-sub">Üyeleri görüntüle, planlarını yönet, yetkilendir ve işlemlerini düzenle.</p>
+          <div id="ys-kul"></div>
         </div>
 
         <div id="av-content" class="admin-view" style="display:none;">
@@ -1790,20 +1789,8 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
 
         <div id="av-assign" class="admin-view" style="display:none;">
           <h2 class="profile-h2">Öğretmen Atama</h2>
-          <p class="profile-sub">Öğrenciyi öğretmene bağla. Öğretmen, kendi öğrencilerinin ilerlemesini görebilir. Tüm atamalar loglanır.</p>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">➕ Yeni Eşleştirme</h3>
-            <div class="pq-row2">
-              <select id="asg-teacher" class="pq-input"></select>
-              <select id="asg-student" class="pq-input"></select>
-              <button class="set-btn" onclick="adminAssignAdd()">Eşleştir</button>
-            </div>
-            <p class="pq-hint">Öğretmen listesi boşsa: Kullanıcılar sekmesinden bir kullanıcıya "Rol: Öğretmen" ver.</p>
-          </div>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">📋 Mevcut Eşleştirmeler</h3>
-            <div id="asg-list"><div class="profile-empty">Yükleniyor...</div></div>
-          </div>
+          <p class="profile-sub">Öğrenciyi öğretmene bağla. Öğretmen, kendi öğrencilerinin ilerlemesini görebilir.</p>
+          <div id="ys-atama"></div>
         </div>
 
         <div id="av-stafflog" class="admin-view" style="display:none;">
@@ -1944,24 +1931,8 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
 
         <div id="av-kurumlar" class="admin-view" style="display:none;">
           <h2 class="profile-h2">Kurumlar</h2>
-          <p class="profile-sub">Kurum hesapları oluştur, kurum yöneticisi ata.</p>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">➕ Yeni Kurum Oluştur</h3>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-              <input id="new-kurum-name" class="pq-input" placeholder="Kurum adı" style="max-width:260px;">
-              <select id="new-kurum-plan" class="pq-input" style="max-width:160px;">
-                <option value="basic">Basic (100 öğrenci)</option>
-                <option value="premium">Premium (500 öğrenci)</option>
-                <option value="enterprise">Enterprise (sınırsız)</option>
-              </select>
-              <input id="new-kurum-notes" class="pq-input" placeholder="Not (opsiyonel)" style="max-width:220px;">
-            </div>
-            <button class="set-btn" onclick="adminKurumCreate()">Oluştur</button>
-          </div>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">📋 Mevcut Kurumlar</h3>
-            <div id="admin-kurum-list"><div class="profile-empty">Yükleniyor...</div></div>
-          </div>
+          <p class="profile-sub">Kurum hesapları oluştur, kurum yöneticisi ata ve üyeleri yönet.</p>
+          <div id="ys-kurum"></div>
         </div>
 
         <div id="av-visits" class="admin-view" style="display:none;">
@@ -2233,15 +2204,15 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=171"></script>
-<script defer src="js/auth.js?v=171"></script>
-<script defer src="js/admin.js?v=171"></script>
-<script defer src="js/profile.js?v=171"></script>
-<script defer src="js/extras.js?v=171"></script>
-<script defer src="js/app.js?v=171"></script>
-<script defer src="js/ekitap.js?v=171"></script>
-<script defer src="js/video.js?v=171"></script>
-<script defer src="js/arayuz.js?v=171"></script>
+<script defer src="js/supabase-config.js?v=172"></script>
+<script defer src="js/auth.js?v=172"></script>
+<script defer src="js/admin.js?v=172"></script>
+<script defer src="js/profile.js?v=172"></script>
+<script defer src="js/extras.js?v=172"></script>
+<script defer src="js/app.js?v=172"></script>
+<script defer src="js/ekitap.js?v=172"></script>
+<script defer src="js/video.js?v=172"></script>
+<script defer src="js/arayuz.js?v=172"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
