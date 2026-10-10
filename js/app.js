@@ -2825,6 +2825,7 @@ function showPage(id){
   if(id==='teacher' && typeof loadTeacherPanel==='function') loadTeacherPanel();
   if(id==='kurum'   && typeof loadKurumPanel==='function') loadKurumPanel();
   if(id==='review'  && typeof sdInit==='function') setTimeout(sdInit, 300);
+  if(id==='makaleler' && typeof makalelerYukle==='function') makalelerYukle();
   if (typeof trackPageView === 'function') trackPageView(id);
   if(id==='profile' && typeof openProfile==='function') openProfile();
 }
@@ -7673,6 +7674,56 @@ function recTrailer(i) {
   document.body.appendChild(ov);
 }
 setTimeout(function () { try { if (typeof sb !== 'undefined' && sb) loadRecs(); } catch (e) {} }, 1200);
+
+/* ============================================================
+   MAKALELER — dış kaynaklı Rusça makaleler (site sayfası)
+   Yönetim → Bloglar ve Makaleler → Makaleler sekmesinden eklenir (content_articles).
+   ============================================================ */
+let _mkListe = null, _mkSeviye = 'all';
+async function makalelerYukle(zorla) {
+  const kutu = document.getElementById('mk-sayfa'); if (!kutu) return;
+  if (_mkListe && !zorla) { makalelerCiz(); return; }
+  try {
+    const { data, error } = await sb.from('content_articles').select('id, baslik, ozet, kaynak_ad, kaynak_url, yazar, kapak, kategori, seviye, created_at').eq('durum', 'yayinda').order('created_at', { ascending: false }).limit(300);
+    if (error) throw error;
+    _mkListe = data || [];
+  } catch (e) { _mkListe = []; }
+  makalelerCiz();
+}
+function makalelerCiz() {
+  const kutu = document.getElementById('mk-sayfa'), yakinda = document.getElementById('mk-yakinda'); if (!kutu) return;
+  const L = (_mkListe || []).filter(m => _mkSeviye === 'all' || m.seviye === _mkSeviye);
+  if (!(_mkListe || []).length) { kutu.style.display = 'none'; if (yakinda) yakinda.style.display = ''; return; }
+  kutu.style.display = ''; if (yakinda) yakinda.style.display = 'none';
+  const sev = [...new Set(_mkListe.map(m => m.seviye).filter(Boolean))].sort();
+  const filtre = sev.length ? '<div class="recs-filters">' + ['all'].concat(sev).map(v => `<button class="rec-chip ${_mkSeviye === v ? 'active' : ''}" onclick="_mkSeviye='${v}'; makalelerCiz()">${v === 'all' ? 'Tümü' : v}</button>`).join('') + '</div>' : '';
+  kutu.innerHTML = `<div class="words-header"><div><h2>Rusça <span>Makaleler</span></h2><p>Güvenilir kaynaklardan seçilmiş, seviyene uygun Rusça makaleler.</p></div></div>${filtre}
+    <div class="mk-izgara">${L.length ? L.map(m => `<article class="mk-kart" tabindex="0" onclick="makaleAc('${m.id}')" onkeydown="if(event.key==='Enter')makaleAc('${m.id}')">
+      <div class="mk-kapak" ${m.kapak ? `style="background-image:url('${_escAttr(m.kapak)}')"` : ''}>${m.kapak ? '' : '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12l4 4v12H4z"/><polyline points="16 4 16 8 20 8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>'}</div>
+      <div class="mk-govde"><div class="mk-etiket">${m.seviye ? `<span class="kv-lvl">${_escHtml(m.seviye)}</span>` : ''}${m.kategori ? `<span class="cw-cat">${_escHtml(m.kategori)}</span>` : ''}</div>
+      <h3>${_escHtml(m.baslik)}</h3>${m.ozet ? `<p>${_escHtml(m.ozet)}</p>` : ''}<small>${_escHtml(m.kaynak_ad || '')}${m.kaynak_ad ? ' · ' : ''}${new Date(m.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}</small></div></article>`).join('') : '<div class="profile-empty">Bu seviyede makale yok.</div>'}</div>`;
+}
+async function makaleAc(id) {
+  const ov = document.createElement('div');
+  ov.className = 'ui-modal-overlay show'; ov.style.zIndex = '9000';
+  ov.innerHTML = '<div class="ui-modal mk-okuma"><div class="profile-empty">Yükleniyor...</div></div>';
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+  let m = null;
+  try { const { data } = await sb.from('content_articles').select('*').eq('id', id).maybeSingle(); m = data; } catch (e) {}
+  const kutu = ov.querySelector('.mk-okuma');
+  if (!m) { kutu.innerHTML = '<div class="profile-empty">Makale bulunamadı.</div>'; return; }
+  try { sb.rpc('makale_okundu', { mid: id }).then(() => {}, () => {}); } catch (e) {}
+  const guvenliUrl = m.kaynak_url && /^https?:\/\//i.test(m.kaynak_url) ? m.kaynak_url : '';
+  kutu.innerHTML = `<button class="mk-kapat" aria-label="Kapat" onclick="this.closest('.ui-modal-overlay').remove()">×</button>
+    ${m.kapak ? `<div class="mk-okuma-kapak" style="background-image:url('${_escAttr(m.kapak)}')"></div>` : ''}
+    <div class="mk-etiket">${m.seviye ? `<span class="kv-lvl">${_escHtml(m.seviye)}</span>` : ''}${m.kategori ? `<span class="cw-cat">${_escHtml(m.kategori)}</span>` : ''}</div>
+    <h2>${_escHtml(m.baslik)}</h2>
+    <div class="mk-kunye">${[m.yazar, m.kaynak_ad, new Date(m.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })].filter(Boolean).map(_escHtml).join(' · ')}</div>
+    ${m.ozet ? `<p class="mk-ozet">${_escHtml(m.ozet)}</p>` : ''}
+    ${m.govde ? `<div class="mk-metin">${_sanitizeRich(m.govde)}</div>` : ''}
+    ${guvenliUrl ? `<a class="btn-signup mk-kaynak-b" href="${_escAttr(guvenliUrl)}" target="_blank" rel="noopener nofollow">Makalenin aslını kaynağında oku</a>` : ''}`;
+}
 
 /* ---- Panel: öneri CRUD ---- */
 let _rcRows = [];
