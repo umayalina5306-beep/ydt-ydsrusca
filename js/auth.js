@@ -458,6 +458,28 @@ if (document.readyState === "loading") {
 
 
 /* ===== E-posta doğrulama (Y5) ===== */
+/* Doğrulanmamış hesaplar: eğitim alanlarının çoğu kapalı (videolar, e-kitap/gramer, çalışmalar, testler, kelime kasası).
+   Sunucuda da aynı kural var (eposta_dogrulama.sql): doğrulanmamış hesap bu alanlara kayıt yazamaz. */
+const DOGRULAMA_GEREKEN = ['grammar', 'works', 'grammarworks', 'quiz', 'video'];
+async function dogrulamaIste() {
+  if (typeof currentUser === 'undefined' || !currentUser || emailVerified()) return false;
+  const ok = await uiConfirm('Videolar, e-kitap, çalışmalar, testler ve kelime kasası e-posta adresini doğruladıktan sonra açılır. ' +
+    (currentUser.email || 'E-posta') + ' adresine doğrulama maili gönderelim mi? Maildeki bağlantıya tıklaman yeterli.', 'E-posta doğrulaması gerekli',
+    { confirmText: 'Doğrulama maili gönder', cancelText: 'Vazgeç' });
+  if (ok && typeof resendVerifyMail === 'function') resendVerifyMail();
+  return true;
+}
+document.addEventListener('DOMContentLoaded', function () {
+  const kapi = (ad, kosul) => {
+    const eski = window[ad]; if (typeof eski !== 'function') return;
+    window[ad] = function () {
+      if ((!kosul || kosul.apply(this, arguments)) && typeof currentUser !== 'undefined' && currentUser && !emailVerified()) { dogrulamaIste(); return; }
+      return eski.apply(this, arguments);
+    };
+  };
+  kapi('learnNav', sub => DOGRULAMA_GEREKEN.includes(sub));
+  kapi('openWatch'); kapi('playVideo'); kapi('showBank');
+});
 function emailVerified() {
   return !!(currentUser && (currentUser.email_confirmed_at || currentUser.confirmed_at));
 }
@@ -569,6 +591,10 @@ async function sifirlaTamamla() {
   const bekle = setInterval(async () => {
     if (typeof sb === 'undefined' || !sb || typeof uiModal !== 'function') return;
     clearInterval(bekle);
+    // Kod yalnızca kişi düğmeye basınca üretilir; bazı mail servislerinin bağlantıları
+    // otomatik açıp taraması kodu harcamasın.
+    const iste = await uiConfirm('Şifre yenileme kodunu görmek için aşağıdaki düğmeye bas.', 'Şifre yenileme', { confirmText: 'Kodu göster', cancelText: 'Vazgeç' });
+    if (!iste) return;
     const r = await sifirlaFonksiyon({ islem: 'kodu_goster', anahtar });
     if (!r.ok) {
       const tekrar = await uiConfirm(r.hata || 'Bağlantı geçersiz.', 'Şifre yenileme', { confirmText: 'Yeniden başlat', cancelText: 'Kapat' });
