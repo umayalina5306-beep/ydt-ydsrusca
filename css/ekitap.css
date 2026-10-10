@@ -884,3 +884,9 @@ input[readonly]#tp-kod { background: #f3f4f6; color: #6b7280; }
 .ek-book.ek-tool-hl .ek-kose, .ek-book.ek-tool-ul .ek-kose, .ek-book.ek-tool-pen .ek-kose,
 .ek-book.ek-tool-note .ek-kose, .ek-book.ek-tool-erase .ek-kose { display: none; }
 @media (hover: none) { .ek-kose::before { width: 16px; height: 16px; } }
+
+/* Görsel düzenleyici biçimleri (v177) */
+.ek-zemin { padding: 0 2px; border-radius: 3px; color: inherit; }
+.ek-boy-kucuk { font-size: .84em; }
+.ek-boy-buyuk { font-size: 1.2em; }
+.ek-boy-cokbuyuk { font-size: 1.45em; line-height: 1.3; }
