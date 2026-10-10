@@ -1,4 +1,5 @@
-var YDT_SURUM = 'v156';
+/* Sürüm, index.html'deki ?v= numarasından okunur; elle güncellemeye gerek kalmaz */
+var YDT_SURUM = (function () { try { var m = (document.currentScript && document.currentScript.src || '').match(/[?&]v=(\d+)/); return m ? 'v' + m[1] : 'v?'; } catch (e) { return 'v?'; } })();
 try { console.info('%cYDT-YDS Rusça · kod sürümü: ' + YDT_SURUM, 'color:#d4a418;font-weight:bold'); } catch (e) {}
 // DATA
 let words = [];
