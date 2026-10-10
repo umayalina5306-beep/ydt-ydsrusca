@@ -375,7 +375,7 @@ async function togglePremium(userId, currentPlan) {
       });
       if (g.g) h += '</div></div>';
     });
-    h += '</div><button type="button" class="yp-siteye" onclick="ypSiteye()">' + ic('siteye', 16) + '<span>Ana sayfaya dön</span></button>';
+    h += '</div>';
     yan.innerHTML = h;
 
     // Üst bar
@@ -389,7 +389,6 @@ async function togglePremium(userId, currentPlan) {
       '  <div class="yp-zil-k"><button type="button" class="yp-zil" id="yp-zil" onclick="ypZil(event)" aria-label="Bildirimler" title="Bildirimler">' + ic('bildirim', 20) + '<i id="yp-zil-say"></i></button><div id="yp-zil-p" class="yp-acilir yp-zil-p"></div></div>' +
       '  <div class="yp-hesap-k"><button type="button" class="yp-hesap" onclick="ypHesap(event)"><span class="yp-hesap-av" id="yp-av"></span><span class="yp-hesap-ad"><b id="yp-ad"></b><small id="yp-rol"></small></span>' + ic('asagi', 15) + '</button>' +
       '    <div id="yp-hesap-p" class="yp-acilir yp-hesap-p">' +
-      '      <button type="button" onclick="ypSiteye()">' + ic('ev', 17) + 'Ana sayfaya dön</button>' +
       '      <button type="button" onclick="ypKapatHepsi(); showPage(\'profile\')">' + ic('kullanici', 17) + 'Profilim</button>' +
       '      <div class="yp-ayrac"></div><button type="button" class="kirmizi" onclick="ypKapatHepsi(); authLogout()">' + ic('cikis', 17) + 'Çıkış</button>' +
       '    </div></div>' +
