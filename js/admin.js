@@ -2119,6 +2119,381 @@ async function togglePremium(userId, currentPlan) {
   };
   window.YS_AKS.kurumlar = () => '<button type="button" class="yp-btn" onclick="ysKrDisa()">' + ic('indir', 16) + 'Dışa aktar</button><button type="button" class="yp-btn ana" onclick="ysKrYeni()">' + ic('arti', 16) + 'Yeni kurum oluştur</button>';
 
+  /* ============================================================
+     BİLDİRİM GÖNDER (v174)
+     ============================================================ */
+  const BG = { hedef: 'tum', secili: new Set(), seviye: '', ara: '', kisiler: [], aktifBugun: null, sonlar: null, baslik: '', mesaj: '' };
+  const SEVIYELER = ['A1', 'A2', 'B1', 'B2', 'C1'];
+  async function bildirimYukle() {
+    const k = $('ys-bildirim'); if (!k) return;
+    if (!BG.kisiler.length) k.innerHTML = '<div class="yp-kart"><div class="admin-loading">Yükleniyor...</div></div>';
+    const gece = new Date(); gece.setHours(0, 0, 0, 0);
+    const [p, a, n] = await Promise.all([
+      sb.from('profiles').select('id, email, display_name, plan, premium_until, level, role, is_admin').then(r => r, () => ({ data: [] })),
+      sb.from('access_log').select('user_id').gte('created_at', gece.toISOString()).limit(5000).then(r => r, () => ({ error: 1 })),
+      sb.from('notifications').select('id, title, body, created_at, is_read').eq('type', 'admin').order('created_at', { ascending: false }).limit(5000).then(r => r, () => ({ error: 1 }))
+    ]);
+    BG.kisiler = ((p && p.data) || []).sort((x, y) => kisiAd(x).localeCompare(kisiAd(y), 'tr'));
+    if (!kullanicilar().length) KUL = BG.kisiler;
+    BG.aktifBugun = a && !a.error && a.data ? new Set(a.data.map(x => x.user_id).filter(Boolean)).size : null;
+    if (n && !n.error && n.data) {
+      const gr = {};
+      n.data.forEach(r => { const anahtar = r.title + '\u0001' + (r.body || '') + '\u0001' + String(r.created_at).slice(0, 16); const g = gr[anahtar] || (gr[anahtar] = { title: r.title, body: r.body, t: r.created_at, n: 0, okundu: 0, ids: [] }); g.n++; if (r.is_read) g.okundu++; g.ids.push(r.id); });
+      BG.sonlar = Object.values(gr).sort((x, y) => new Date(y.t) - new Date(x.t)).slice(0, 30);
+    } else BG.sonlar = null;
+    bildirimCiz();
+  }
+  function hedefKisiler() {
+    const L = BG.kisiler;
+    if (BG.hedef === 'secili') return L.filter(u => BG.secili.has(u.id));
+    if (BG.hedef === 'seviye') return L.filter(u => BG.seviye && String(u.level || '').toUpperCase() === BG.seviye);
+    if (BG.hedef === 'premium') return L.filter(premiumMu);
+    return L;
+  }
+  const HEDEF_AD = { tum: 'Tüm kullanıcılar', secili: 'Seçili kullanıcılar', seviye: 'Seviye bazlı', premium: 'Premium üyeler' };
+  function hedefEtiket() { return BG.hedef === 'seviye' ? (BG.seviye ? BG.seviye + ' seviyesi' : 'Seviye seçilmedi') : HEDEF_AD[BG.hedef]; }
+  function bildirimCiz() {
+    const k = $('ys-bildirim'); if (!k) return;
+    const L = BG.kisiler, hedefN = hedefKisiler().length;
+    let h = '<div class="ys-kpiler d5">' +
+      kpi('kullanicilar', 'mavi', 'Toplam kullanıcı', L.length.toLocaleString('tr-TR'), '') +
+      kpi('tac', 'altin', 'Premium üye', L.filter(premiumMu).length.toLocaleString('tr-TR'), '') +
+      kpi('ogretmen', 'mavi', 'Öğretmen', L.filter(u => u.role === 'ogretmen').length, '') +
+      kpi('onay', 'yesil', 'Bugün aktif', BG.aktifBugun == null ? '—' : BG.aktifBugun.toLocaleString('tr-TR'), '<small>bugün giriş yapan</small>') +
+      '<div class="ys-kpi"><span class="ys-kpi-ic r-altin">' + ic('hedef', 22) + '</span><div class="ys-kpi-y"><small>Seçili hedef kitle</small><b id="ys-bg-n">' + hedefN.toLocaleString('tr-TR') + '</b><div class="ys-kpi-s"><small id="ys-bg-ad">' + esc(hedefEtiket()) + '</small></div></div></div></div>';
+    const hedefB = (v, ikon) => '<button type="button" class="ys-hedef' + (BG.hedef === v ? ' aktif' : '') + '" onclick="ysBg(\'hedef\', \'' + v + '\')">' + ic(ikon, 16) + HEDEF_AD[v] + '</button>';
+    let alt = '';
+    if (BG.hedef === 'secili') {
+      const q = BG.ara.trim().toLocaleLowerCase('tr');
+      const S = L.filter(u => !q || (kisiAd(u) + ' ' + (u.email || '')).toLocaleLowerCase('tr').includes(q)).slice(0, 200);
+      alt = '<div class="ys-hedef-alt"><div class="ys-arac ic">' + aramaKutusu('ys-bg-ara', BG.ara, 'İsim veya e-posta ara…', 'ysBg(\'ara\', this.value)') + '<span class="ys-soluk">' + BG.secili.size + ' kişi seçili</span>' + (BG.secili.size ? '<button type="button" class="yp-link" onclick="ysBg(\'temizle\')">Seçimi kaldır</button>' : '') + '</div>' +
+        '<div class="ys-secim-liste kisa">' + (S.length ? S.map(u => '<label class="' + (BG.secili.has(u.id) ? 'secili' : '') + '"><input type="checkbox" ' + (BG.secili.has(u.id) ? 'checked' : '') + ' onchange="ysBg(\'sec\', \'' + u.id + '\')">' + harfAv(kisiAd(u)) + '<span><b>' + esc(kisiAd(u)) + '</b><small>' + esc(u.email || '') + '</small></span></label>').join('') : '<div class="yp-bos kucuk"><span>Kullanıcı bulunamadı.</span></div>') + '</div></div>';
+    } else if (BG.hedef === 'seviye') {
+      alt = '<div class="ys-hedef-alt"><div class="ys-mini-sekme">' + SEVIYELER.map(s => '<button type="button" class="' + (BG.seviye === s ? 'aktif' : '') + '" onclick="ysBg(\'seviye\', \'' + s + '\')">' + s + ' <small>(' + L.filter(u => String(u.level || '').toUpperCase() === s).length + ')</small></button>').join('') + '</div></div>';
+    }
+    h += '<div class="ys-bg-izgara"><section class="yp-kart"><div class="yp-kart-bas"><h3>' + ic('not', 18) + 'Bildirim içeriği</h3></div>' +
+      '<label class="ys-alan"><span>Bildirim başlığı <em>*</em></span><div class="ys-sayacli"><input id="an-title" class="ys-girdi" maxlength="100" placeholder="Örn. Yeni dersler eklendi!" value="' + esc(BG.baslik) + '" oninput="ysBgYaz()" autocomplete="off"><small><span id="ys-bg-bs">' + BG.baslik.length + '</span>/100</small></div></label>' +
+      '<label class="ys-alan"><span>Bildirim mesajı</span><div class="ys-sayacli"><textarea id="an-body" class="ys-girdi alan" rows="4" maxlength="500" placeholder="Kullanıcılara göndermek istediğin mesajı buraya yaz…" oninput="ysBgYaz()">' + esc(BG.mesaj) + '</textarea><small><span id="ys-bg-ms">' + BG.mesaj.length + '</span>/500</small></div></label>' +
+      '<div class="ys-alan"><span>Hedef kitle</span><div class="ys-hedefler">' + hedefB('tum', 'kullanicilar') + hedefB('secili', 'kullanici') + hedefB('seviye', 'grafik') + hedefB('premium', 'tac') + '</div>' + alt + '</div>' +
+      '<div class="ys-bg-alt"><button type="button" class="yp-btn ana" onclick="ysBgGonder()">' + ic('okSag', 16) + 'Bildirimi gönder</button><span class="ys-soluk" id="ys-bg-ozet">' + hedefN.toLocaleString('tr-TR') + ' kişiye gidecek</span></div></section>' +
+      '<div class="ys-bg-sag"><section class="yp-kart"><div class="yp-kart-bas"><h3>' + ic('goz', 18) + 'Önizleme</h3></div><div class="ys-telefon"><div class="ys-tel-ust"><span>' + new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) + '</span><i></i></div>' +
+      '<div class="ys-tel-bil"><span class="ys-tel-logo">' + ic('kitap', 20) + '</span><div><div class="ys-tel-bas"><b>YDT-YDS Rusça</b><small>şimdi</small></div><b id="ys-on-b">' + esc(BG.baslik || 'Bildirim başlığı') + '</b><p id="ys-on-m">' + esc(BG.mesaj || 'Mesaj burada görünecek.') + '</p></div></div></div></section>' +
+      '<section class="yp-kart ys-liste"><div class="yp-kart-bas ys-ic-bas"><h3>' + ic('saat', 18) + 'Son bildirimler</h3></div>' + sonBildirimler() + '</section></div></div>';
+    k.innerHTML = h;
+  }
+  function sonBildirimler() {
+    if (BG.sonlar == null) return '<div class="yp-bos kucuk"><span>Gönderilen bildirimler okunamadı.</span></div>';
+    if (!BG.sonlar.length) return '<div class="yp-bos kucuk"><span>Henüz panelden bildirim gönderilmedi.</span></div>';
+    return '<div class="yp-tablo-k"><table class="yp-tablo ys-tablo ys-orta"><thead><tr><th>Başlık</th><th>Alıcı</th><th>Gönderim</th><th>Okunma</th><th class="ys-sag"></th></tr></thead><tbody>' +
+      BG.sonlar.slice(0, 8).map((g, i) => '<tr><td class="ys-mesaj"><b>' + esc(g.title) + '</b>' + (g.body ? '<small>' + esc(String(g.body).slice(0, 70)) + '</small>' : '') + '</td><td>' + g.n.toLocaleString('tr-TR') + ' kişi</td>' +
+        '<td class="ys-tar">' + tarih(g.t) + '<small>' + saat(g.t).slice(0, 5) + '</small></td><td><span class="yp-durum d-yesil">%' + Math.round(g.okundu / g.n * 100) + '</span></td><td class="ys-sag">' + menuB('bil', String(i)) + '</td></tr>').join('') + '</tbody></table></div>';
+  }
+  MENULER.bil = i => {
+    const g = BG.sonlar && BG.sonlar[+i]; if (!g) return [];
+    return [{ ic: 'kopya', ad: 'Formu bununla doldur', fn: "ysBgKullan(" + i + ")" }, { ayrac: 1 }, { ic: 'cop', ad: 'Geri çek (' + g.n + ' kişiden sil)', fn: "ysBgGeriCek(" + i + ")", tehlike: 1 }];
+  };
+  window.ysBgYaz = () => {
+    BG.baslik = $('an-title').value; BG.mesaj = $('an-body').value;
+    $('ys-bg-bs').textContent = BG.baslik.length; $('ys-bg-ms').textContent = BG.mesaj.length;
+    $('ys-on-b').textContent = BG.baslik || 'Bildirim başlığı'; $('ys-on-m').textContent = BG.mesaj || 'Mesaj burada görünecek.';
+  };
+  window.ysBg = (a, v) => {
+    if (a === 'hedef') BG.hedef = v; else if (a === 'seviye') BG.seviye = v; else if (a === 'ara') BG.ara = v;
+    else if (a === 'sec') BG.secili.has(v) ? BG.secili.delete(v) : BG.secili.add(v); else if (a === 'temizle') BG.secili.clear();
+    const y = window.scrollY; bildirimCiz(); window.scrollTo(0, y);
+    if (a === 'ara') { const i = $('ys-bg-ara'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch (e) {} } }
+  };
+  window.ysBgKullan = i => { const g = BG.sonlar[i]; BG.baslik = g.title || ''; BG.mesaj = g.body || ''; bildirimCiz(); window.scrollTo(0, 0); };
+  window.ysBgGeriCek = async i => {
+    const g = BG.sonlar[i]; if (!g) return;
+    if (!(await uiConfirm('"' + g.title + '" bildirimi ' + g.n + ' kişinin bildirim listesinden silinsin mi?', 'Bildirimi geri çek', { danger: true, confirmText: 'Geri çek' }))) return;
+    try { for (let j = 0; j < g.ids.length; j += 500) { const { error } = await sb.from('notifications').delete().in('id', g.ids.slice(j, j + 500)); if (error) throw error; } toast('Bildirim geri çekildi.'); }
+    catch (e) { uiAlert('Silinemedi.'); }
+    bildirimYukle();
+  };
+  window.ysBgGonder = async () => {
+    const t = (BG.baslik || '').trim(), b = (BG.mesaj || '').trim();
+    if (!t) { uiAlert('Lütfen bir başlık yaz.'); return; }
+    const H = hedefKisiler();
+    if (!H.length) { uiAlert(BG.hedef === 'secili' ? 'En az bir kullanıcı seç.' : 'Bu hedef kitlede kullanıcı yok.'); return; }
+    if (!(await uiConfirm('"' + t + '" bildirimi ' + H.length + ' kişiye (' + hedefEtiket() + ') gönderilecek.', 'Bildirimi gönder', { confirmText: 'Gönder' }))) return;
+    try {
+      const rows = H.map(u => ({ user_id: u.id, title: t, body: b || null, type: 'admin' }));
+      for (let j = 0; j < rows.length; j += 500) { const { error } = await sb.from('notifications').insert(rows.slice(j, j + 500)); if (error) throw error; }
+      try { staffLog('bildirim', null, { baslik: t, kime: hedefEtiket(), kisi: H.length }); } catch (e) {}
+      toast(H.length + ' kişiye bildirim gönderildi.');
+      BG.baslik = ''; BG.mesaj = ''; BG.secili.clear();
+      if (typeof loadNotifications === 'function') loadNotifications();
+      bildirimYukle();
+    } catch (e) { uiAlert('Gönderilemedi. Lütfen tekrar dene.'); }
+  };
+
+  /* ============================================================
+     DESTEK TALEPLERİ (v174)
+     ============================================================ */
+  const DT = { rows: [], kisi: {}, sekme: 'hepsi', ara: '', atanan: 'hepsi', secili: null, sayfa: 1, boy: 12, mesajlar: [], profil: null, sonGiris: '', yukDetay: false };
+  const TALEP_DURUM = { open: ['Açık', 'turuncu'], pending: ['Beklemede', 'sari'], answered: ['Yanıtlandı', 'yesil'], closed: ['Kapalı', 'gri'] };
+  const benimId = () => (gl('currentUser') || {}).id;
+  async function destekYukle() {
+    const k = $('ys-destek'); if (!k) return;
+    if (!DT.rows.length) k.innerHTML = '<div class="yp-kart"><div class="admin-loading">Yükleniyor...</div></div>';
+    try {
+      const { data, error } = await sb.from('support_tickets').select('*').order('updated_at', { ascending: false }).limit(500);
+      if (error) throw error;
+      DT.rows = data || [];
+      const ids = [...new Set(DT.rows.map(t => t.user_id).concat(DT.rows.map(t => t.assigned_to)).filter(Boolean))].filter(id => !kisiBul(id) && !DT.kisi[id]);
+      if (ids.length) { try { const { data: ps } = await sb.from('profiles').select('id, display_name, email, plan, premium_until, level, created_at').in('id', ids); (ps || []).forEach(p => DT.kisi[p.id] = p); } catch (e) {} }
+    } catch (e) { k.innerHTML = '<div class="yp-kart"><div class="yp-bos">' + ic('destek', 28) + '<b>Talepler alınamadı.</b><span>Yönetici ya da destek yetkisi gerekli.</span></div></div>'; return; }
+    if (typeof loadTicketTemplates === 'function' && gl('_tkTpls') === null) { try { await loadTicketTemplates(); } catch (e) {} }
+    if (DT.secili && !DT.rows.some(t => t.id === DT.secili)) DT.secili = null;
+    destekCiz();
+    if (DT.secili) talepAc(DT.secili, true);
+  }
+  const dtKisi = id => kisiBul(id) || DT.kisi[id];
+  function talepFiltre() {
+    const q = DT.ara.trim().toLocaleLowerCase('tr'), ben = benimId();
+    return DT.rows.filter(t => (DT.sekme === 'hepsi' || t.status === DT.sekme) &&
+      (DT.atanan === 'hepsi' || (DT.atanan === 'ben' ? t.assigned_to === ben : !t.assigned_to)) &&
+      (!q || [t.subject, String(t.id), kisiAd(dtKisi(t.user_id)), (dtKisi(t.user_id) || {}).email].filter(Boolean).join(' ').toLocaleLowerCase('tr').includes(q)));
+  }
+  function destekCiz() {
+    const k = $('ys-destek'); if (!k) return;
+    const say = s => DT.rows.filter(t => s === 'hepsi' || t.status === s).length;
+    const L = talepFiltre(), n = Math.max(1, Math.ceil(L.length / DT.boy)); if (DT.sayfa > n) DT.sayfa = n;
+    const dilim = L.slice((DT.sayfa - 1) * DT.boy, DT.sayfa * DT.boy);
+    let h = '<div class="yp-kart ys-sekme-kart"><div class="ys-sekme-cubuk">' + [['hepsi', 'Tümü', 'liste'], ['open', 'Açık', 'bildirim'], ['pending', 'Beklemede', 'saat'], ['answered', 'Yanıtlandı', 'onay'], ['closed', 'Kapalı', 'kilit']]
+      .map(s => '<button type="button" class="' + (DT.sekme === s[0] ? 'aktif' : '') + '" onclick="ysDt(\'sekme\', \'' + s[0] + '\')">' + ic(s[2], 16) + s[1] + '<i>' + say(s[0]) + '</i></button>').join('') + '</div></div>';
+    h += '<div class="ys-iki-panel' + (DT.secili ? ' detayli' : '') + '"><section class="yp-kart ys-liste ys-sol-panel"><div class="ys-arac">' + aramaKutusu('ys-dt-ara', DT.ara, 'Konu, kullanıcı ya da talep no ara…', 'ysDt(\'ara\', this.value)') +
+      secim('Atanan', DT.atanan, [['hepsi', 'Herkes'], ['ben', 'Bana atananlar'], ['yok', 'Atanmamış']], 'ysDt(\'atanan\', this.value)') + '</div>';
+    if (!L.length) h += '<div class="yp-bos">' + ic('destek', 30) + '<b>' + (DT.rows.length ? 'Filtreye uyan talep yok.' : 'Henüz talep yok.') + '</b></div>';
+    else {
+      h += '<div class="ys-talepler">' + dilim.map(t => {
+        const u = dtKisi(t.user_id), D = TALEP_DURUM[t.status] || TALEP_DURUM.open, ad = u ? kisiAd(u) : 'Kullanıcı';
+        return '<button type="button" class="ys-talep' + (DT.secili === t.id ? ' secili' : '') + (t.status === 'open' ? ' yeni' : '') + '" onclick="ysDtAc(\'' + t.id + '\')">' + harfAv(ad) +
+          '<span class="ys-talep-y"><span class="ys-talep-ust"><b>' + esc(ad) + '</b><span class="yp-durum r-' + D[1] + '">' + D[0] + '</span></span><span class="ys-talep-konu">' + esc(t.subject || '(konu yok)') + '</span>' +
+          '<small>' + (t.assigned_to ? ic('kullanici', 12) + (t.assigned_to === benimId() ? 'Bende' : esc(kisiAd(dtKisi(t.assigned_to)) || 'Atanmış')) + ' · ' : '') + esc(onceKadar(t.updated_at || t.created_at)) + '</small></span></button>';
+      }).join('') + '</div>' + sayfalama(L.length, DT.sayfa, DT.boy, 'ysDtSayfa', 'talep');
+    }
+    h += '</section><section class="yp-kart ys-sag-panel" id="ys-dt-detay">' + (DT.secili ? '<div class="admin-loading">Yükleniyor...</div>' : '<div class="yp-bos">' + ic('destek', 30) + '<b>Bir talep seç</b><span>Mesajları ve kullanıcı bilgilerini görmek için soldaki listeden bir talep aç.</span></div>') + '</section></div>';
+    k.innerHTML = h;
+  }
+  async function talepAc(id, sessiz) {
+    DT.secili = id;
+    const kutu = $('ys-dt-detay'); if (!kutu) return;
+    if (!sessiz) kutu.innerHTML = '<div class="admin-loading">Yükleniyor...</div>';
+    const t = DT.rows.find(x => x.id === id); if (!t) return;
+    try {
+      const [m, p, a] = await Promise.all([
+        sb.from('ticket_messages').select('*').eq('ticket_id', id).order('created_at', { ascending: true }),
+        sb.from('profiles').select('id, display_name, email, plan, premium_until, level, created_at').eq('id', t.user_id).maybeSingle().then(r => r, () => ({})),
+        sb.from('access_log').select('created_at').eq('user_id', t.user_id).order('created_at', { ascending: false }).limit(1).then(r => r, () => ({}))
+      ]);
+      DT.mesajlar = (m && m.data) || []; DT.profil = (p && p.data) || dtKisi(t.user_id) || null;
+      DT.sonGiris = a && a.data && a.data[0] ? a.data[0].created_at : '';
+    } catch (e) { kutu.innerHTML = '<div class="yp-bos"><b>Talep yüklenemedi.</b></div>'; return; }
+    globalAta('_tkUserEmail', (DT.profil && DT.profil.email) || '');
+    talepCiz();
+  }
+  function talepCiz() {
+    const kutu = $('ys-dt-detay'), t = DT.rows.find(x => x.id === DT.secili); if (!kutu || !t) return;
+    const u = DT.profil, ad = u ? kisiAd(u) : 'Kullanıcı', ben = benimId(), prem = u && premiumMu(u);
+    const sablonlar = typeof tkTplList === 'function' ? tkTplList() : [];
+    let h = '<div class="ys-dt-bas"><button type="button" class="yp-ikon-b ys-geri" onclick="ysDtKapat()" aria-label="Listeye dön">' + ic('siteye', 18) + '</button><div class="ys-dt-bas-y"><h3>' + esc(t.subject || '(konu yok)') + '</h3>' +
+      '<div class="ys-dt-alt"><span class="ys-soluk">#' + esc(String(t.id).slice(0, 8)) + '</span><span>' + esc(ad) + '</span>' + (u && u.email ? '<span class="ys-soluk">' + esc(u.email) + '</span>' : '') + '<span class="ys-soluk">' + esc(onceKadar(t.created_at)) + '</span></div></div>' +
+      '<label class="ys-durum-sec"><select onchange="ysDtDurum(this.value)" aria-label="Talep durumu">' + Object.keys(TALEP_DURUM).map(s => '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + TALEP_DURUM[s][0] + '</option>').join('') + '</select></label>' + menuB('talep', t.id) + '</div>';
+    h += '<div class="ys-dt-etiket">' + (t.assigned_to ? '<span class="yp-durum d-gri">' + ic('kullanici', 13) + ' ' + (t.assigned_to === ben ? 'Bende' : esc(kisiAd(dtKisi(t.assigned_to)) || 'Atanmış')) + '</span>' : '<button type="button" class="yp-btn kucuk" onclick="ysDtUstlen()">' + ic('el', 15) + 'Üstlen</button>') +
+      (u ? '<span class="yp-durum ' + (prem ? 'r-altin' : 'r-mavi') + '">' + (prem ? 'Premium' : 'Ücretsiz') + '</span><span class="yp-durum d-gri">' + esc(u.level || 'seviye yok') + '</span><span class="ys-soluk">Kayıt ' + tarih(u.created_at) + (DT.sonGiris ? ' · son giriş ' + esc(onceKadar(DT.sonGiris)) : '') + '</span>' : '') + '</div>';
+    h += '<div class="ys-mesajlar">' + (DT.mesajlar.length ? DT.mesajlar.map(m => {
+      const yon = m.sender === 'admin', kimAd = yon ? (m.user_id === ben ? 'Sen' : (kisiAd(dtKisi(m.user_id)) || 'Destek ekibi')) : ad;
+      return '<div class="ys-mesaj-s' + (yon ? ' biz' : '') + '">' + (yon ? '<span class="ys-av renkli" style="background:#0d1b2a">' + ic('destek', 15) + '</span>' : harfAv(ad)) + '<div class="ys-balon"><div class="ys-balon-bas"><b>' + esc(kimAd) + '</b><small>' + (m.created_at ? new Date(m.created_at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'şimdi') + '</small></div><div class="ys-balon-m">' + esc(m.body) + '</div></div></div>';
+    }).join('') : '<div class="yp-bos kucuk"><span>Mesaj yok.</span></div>') + '</div>';
+    h += '<div class="ys-yanit"><textarea id="adm-reply" class="ys-girdi alan" rows="4" placeholder="Yanıtını yaz…"></textarea><div class="ys-yanit-alt"><div class="ys-yanit-sol">' +
+      '<select class="ys-girdi kucuk mail-tpl" onchange="ysDtSablon(this.value); this.selectedIndex = 0" aria-label="Hazır şablon"><option value="">Hazır şablon ekle…</option>' + sablonlar.map((s, i) => '<option value="' + i + '">' + esc(String(s.t || '').replace(/^\S*[\u{1F300}-\u{1FAFF}☀-➿]️?\s*/u, '')) + '</option>').join('') + '</select>' +
+      '<button type="button" class="yp-ikon-b" title="Şablon ekle" aria-label="Şablon ekle" onclick="tkTplAdd()">' + ic('arti', 16) + '</button></div><div class="ys-yanit-sag">' +
+      '<button type="button" class="yp-btn" onclick="adminTicketMail(\'' + t.id + '\')" title="Yanıtı destek@ adresinden e-posta olarak gönderir">' + ic('mail', 16) + 'E-postayla gönder</button>' +
+      '<button type="button" class="yp-btn ana" onclick="ysDtYanit()">' + ic('okSag', 16) + 'Yanıt gönder</button></div></div></div>';
+    kutu.innerHTML = h;
+    const ms = kutu.querySelector('.ys-mesajlar'); if (ms) ms.scrollTop = ms.scrollHeight;
+  }
+  MENULER.talep = id => {
+    const t = DT.rows.find(x => x.id === id); if (!t) return [];
+    const u = DT.profil, L = [];
+    if (u) L.push({ ic: 'kullanici', ad: 'Kullanıcıyı aç', fn: "ysKisiyeGit('" + t.user_id + "')" });
+    if (u && u.email) { L.push({ ic: 'anahtar', ad: 'Şifre yenileme maili', fn: "adminUserResetPw('" + jsq(u.email) + "')" }); L.push({ ic: 'mail', ad: 'Doğrulama mailini tekrar gönder', fn: "tkResendVerify('" + jsq(u.email) + "')" }); }
+    if (u && !premiumMu(u)) L.push({ ic: 'hediye', ad: '1 hafta deneme premium', fn: "tkTrial('" + t.user_id + "')" });
+    if (t.status !== 'closed') L.push({ ic: 'kilit', ad: 'Talebi kapat', fn: "ysDtDurum('closed')" });
+    L.push({ ayrac: 1 }); L.push({ ic: 'cop', ad: 'Talebi sil', fn: "ysDtSil('" + id + "')", tehlike: 1 });
+    return L;
+  };
+  window.ysDt = (a, v) => { DT[a] = v; DT.sayfa = 1; destekCiz(); if (DT.secili) talepCiz(); if (a === 'ara') { const i = $('ys-dt-ara'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch (e) {} } } };
+  window.ysDtSayfa = (s, boy) => { if (boy) DT.boy = boy; DT.sayfa = s; destekCiz(); if (DT.secili) talepCiz(); };
+  window.ysDtAc = id => { DT.secili = id; destekCiz(); talepAc(id); };
+  window.ysDtKapat = () => { DT.secili = null; destekCiz(); };
+  window.ysDtSablon = i => { if (i === '') return; const s = (typeof tkTplList === 'function' ? tkTplList() : [])[+i]; const ta = $('adm-reply'); if (!s || !ta) return; const m = s.m || s.body || ''; ta.value = ta.value ? ta.value + '\n\n' + m : m; ta.focus(); };
+  async function talepGuncelle(alan, kayit, bildirim) {
+    const t = DT.rows.find(x => x.id === DT.secili); if (!t) return false;
+    try { const { error } = await sb.from('support_tickets').update(Object.assign({ updated_at: new Date().toISOString() }, alan)).eq('id', t.id); if (error) throw error; }
+    catch (e) { uiAlert('Talep güncellenemedi.'); return false; }
+    Object.assign(t, alan, { updated_at: new Date().toISOString() });
+    if (kayit) try { staffLog(kayit[0], null, kayit[1]); } catch (e) {}
+    if (bildirim) toast(bildirim);
+    return true;
+  }
+  window.ysDtDurum = async s => { if (await talepGuncelle({ status: s }, ['talep_durum', { ticket: DT.secili, durum: s }], 'Durum: ' + TALEP_DURUM[s][0])) { destekCiz(); talepCiz(); } };
+  window.ysDtUstlen = async () => { if (await talepGuncelle({ assigned_to: benimId() }, ['talep_ustlen', { ticket: DT.secili }], 'Talep üstlenildi.')) { destekCiz(); talepCiz(); } };
+  window.ysDtYanit = async () => {
+    const ta = $('adm-reply'), body = ((ta && ta.value) || '').trim(), t = DT.rows.find(x => x.id === DT.secili);
+    if (!body || !t) { if (!body) uiAlert('Yanıt boş olamaz.'); return; }
+    try {
+      const { error } = await sb.from('ticket_messages').insert({ ticket_id: t.id, user_id: benimId(), sender: 'admin', body });
+      if (error) throw error;
+      await talepGuncelle({ status: 'answered' });
+      if (typeof notifyUser === 'function') notifyUser(t.user_id, 'Destek talebine yanıt geldi', 'Talebine destek ekibi yanıt verdi.', 'info');
+      toast('Yanıt gönderildi.');
+      destekCiz(); talepAc(t.id);
+    } catch (e) { uiAlert('Gönderilemedi. Lütfen tekrar dene.'); }
+  };
+  window.ysDtSil = async id => {
+    if (!(await uiConfirm('Bu destek talebi ve tüm mesajları silinsin mi?', 'Talebi sil', { danger: true }))) return;
+    try { const { error } = await sb.from('support_tickets').delete().eq('id', id); if (error) throw error; toast('Talep silindi.'); } catch (e) { uiAlert('Silinemedi.'); }
+    DT.secili = null; destekYukle();
+  };
+  window.YS_AKS.support = () => '<button type="button" class="yp-btn" onclick="adminClearClosedTickets()">' + ic('cop', 16) + 'Kapalıları temizle</button><button type="button" class="yp-btn" onclick="adminLoadTickets()">' + ic('yenile', 16) + 'Yenile</button>';
+
+  /* ============================================================
+     MAIL KUTUSU (v174)
+     ============================================================ */
+  const MK = { sekme: 'inbox', rows: [], uye: {}, ara: '', secili: null, isaret: new Set(), say: {}, yanitAcik: false, sayfa: 1, boy: 20 };
+  const MAIL_SEKME = [['inbox', 'Gelen', 'mail'], ['spam', 'Spam', 'hata'], ['trash', 'Çöp', 'cop'], ['sent', 'Gönderilen', 'okSag']];
+  async function mailYukle() {
+    const k = $('ys-mail'); if (!k) return;
+    k.innerHTML = MK.rows.length ? k.innerHTML : '<div class="yp-kart"><div class="admin-loading">Yükleniyor...</div></div>';
+    try {
+      const sayac = q => q.then(r => r.count || 0, () => 0);
+      const [ci, cs, ct, co] = await Promise.all([
+        sayac(sb.from('inbox_mail').select('id', { count: 'exact', head: true }).eq('is_deleted', false).eq('is_spam', false).eq('is_read', false)),
+        sayac(sb.from('inbox_mail').select('id', { count: 'exact', head: true }).eq('is_deleted', false).eq('is_spam', true)),
+        sayac(sb.from('inbox_mail').select('id', { count: 'exact', head: true }).eq('is_deleted', true)),
+        sayac(sb.from('outbox_mail').select('id', { count: 'exact', head: true }))
+      ]);
+      MK.say = { inbox: ci, spam: cs, trash: ct, sent: co };
+      let data;
+      if (MK.sekme === 'sent') { const r = await sb.from('outbox_mail').select('*').order('created_at', { ascending: false }).limit(300); if (r.error) throw r.error; data = r.data; }
+      else {
+        let q = sb.from('inbox_mail').select('*').order('created_at', { ascending: false }).limit(300);
+        q = MK.sekme === 'inbox' ? q.eq('is_deleted', false).eq('is_spam', false) : MK.sekme === 'spam' ? q.eq('is_deleted', false).eq('is_spam', true) : q.eq('is_deleted', true);
+        const r = await q; if (r.error) throw r.error; data = r.data;
+      }
+      MK.rows = data || [];
+      MK.uye = {};
+      const adresler = [...new Set(MK.rows.map(m => String((MK.sekme === 'sent' ? m.to_email : m.from_email) || '').toLowerCase()).filter(Boolean))];
+      if (adresler.length) { try { const { data: ps } = await sb.from('profiles').select('id, email').in('email', adresler); (ps || []).forEach(p => MK.uye[String(p.email || '').toLowerCase()] = p.id); } catch (e) {} }
+      globalAta('_mailMembers', MK.uye);
+      const c = {}; MK.rows.forEach(m => c[m.id] = m); globalAta('_mailCache', c);
+    } catch (e) { k.innerHTML = '<div class="yp-kart"><div class="yp-bos">' + ic('mail', 28) + '<b>Mail kutusu okunamadı.</b><span>inbox_mail_v2.sql çalıştırıldı mı?</span></div></div>'; return; }
+    if (MK.secili && !MK.rows.some(m => String(m.id) === String(MK.secili))) MK.secili = null;
+    MK.isaret.clear();
+    mailCiz();
+  }
+  function mailFiltre() {
+    const q = MK.ara.trim().toLocaleLowerCase('tr');
+    return MK.rows.filter(m => !q || [m.from_name, m.from_email, m.to_email, m.subject, m.body].filter(Boolean).join(' ').toLocaleLowerCase('tr').includes(q));
+  }
+  function mailCiz() {
+    const k = $('ys-mail'); if (!k) return;
+    const L = mailFiltre(), n = Math.max(1, Math.ceil(L.length / MK.boy)); if (MK.sayfa > n) MK.sayfa = n;
+    const dilim = L.slice((MK.sayfa - 1) * MK.boy, MK.sayfa * MK.boy), gonderilen = MK.sekme === 'sent';
+    let h = '<div class="yp-kart ys-sekme-kart"><div class="ys-sekme-cubuk">' + MAIL_SEKME.map(s => '<button type="button" class="' + (MK.sekme === s[0] ? 'aktif' : '') + '" onclick="ysMk(\'sekme\', \'' + s[0] + '\')">' + ic(s[2], 16) + s[1] +
+      (MK.say[s[0]] ? '<i' + (s[0] === 'inbox' ? ' class="koyu" title="okunmamış"' : '') + '>' + MK.say[s[0]] + '</i>' : '') + '</button>').join('') + '</div></div>';
+    h += '<div class="ys-iki-panel' + (MK.secili ? ' detayli' : '') + '"><section class="yp-kart ys-liste ys-sol-panel"><div class="ys-arac">' + aramaKutusu('ys-mk-ara', MK.ara, 'Mail ara (gönderen / konu / içerik)…', 'ysMk(\'ara\', this.value)') + '</div>';
+    if (MK.isaret.size) h += '<div class="ys-secbar"><b>' + MK.isaret.size + ' seçili</b><button type="button" class="yp-btn kucuk kirmizi" onclick="ysMkToplu()">' + ic('cop', 15) + (MK.sekme === 'trash' || gonderilen ? 'Kalıcı sil' : 'Çöpe taşı') + '</button><button type="button" class="yp-link" onclick="ysMkSec(\'temizle\')">Seçimi kaldır</button></div>';
+    if (!L.length) h += '<div class="yp-bos">' + ic('mail', 30) + '<b>' + (MK.rows.length ? 'Aramaya uyan mail yok.' : { inbox: 'Gelen kutusu boş.', spam: 'Spam yok.', trash: 'Çöp kutusu boş.', sent: 'Gönderilen mail yok.' }[MK.sekme]) + '</b>' + (MK.sekme === 'inbox' && !MK.rows.length ? '<span>info@, destek@ ve support@ adreslerine gelenler buraya düşer.</span>' : '') + '</div>';
+    else {
+      h += '<div class="ys-mailler">' + dilim.map(m => {
+        const kim = gonderilen ? (m.to_email || '') : (m.from_name || m.from_email || '?'), adr = String((gonderilen ? m.to_email : m.from_email) || '').toLowerCase();
+        return '<div class="ys-mailo' + (String(MK.secili) === String(m.id) ? ' secili' : '') + (!gonderilen && !m.is_read ? ' okunmadi' : '') + '"><input type="checkbox" ' + (MK.isaret.has(String(m.id)) ? 'checked' : '') + ' onchange="ysMkSec(\'' + m.id + '\', this.checked)" aria-label="Seç">' +
+          '<button type="button" onclick="ysMkAc(\'' + m.id + '\')">' + harfAv(kim) + '<span class="ys-talep-y"><span class="ys-talep-ust"><b>' + esc(gonderilen ? 'Kime: ' + kim : kim) + '</b><small>' + esc(kisaZaman(m.created_at)) + '</small></span><span class="ys-talep-konu">' + esc(m.subject || '(konu yok)') + '</span>' +
+          '<small class="ys-onizleme">' + esc(String(m.body || '').replace(/\s+/g, ' ').slice(0, 90)) + '</small>' + (MK.uye[adr] ? '<span class="yp-durum r-yesil">Üye</span>' : '') + '</span></button></div>';
+      }).join('') + '</div>' + sayfalama(L.length, MK.sayfa, MK.boy, 'ysMkSayfa', 'mail');
+    }
+    h += '</section><section class="yp-kart ys-sag-panel" id="ys-mk-detay">' + mailDetay() + '</section></div>';
+    k.innerHTML = h;
+  }
+  function kisaZaman(t) {
+    if (!t) return ''; const d = new Date(t), b = new Date();
+    if (d.toDateString() === b.toDateString()) return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    const dun = new Date(Date.now() - GUN); if (d.toDateString() === dun.toDateString()) return 'Dün';
+    return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+  }
+  function mailDetay() {
+    const m = MK.rows.find(x => String(x.id) === String(MK.secili));
+    if (!m) return '<div class="yp-bos">' + ic('mail', 30) + '<b>Bir mail seç</b><span>Okumak ve yanıtlamak için soldaki listeden bir mail aç.</span></div>';
+    const gonderilen = MK.sekme === 'sent', cop = MK.sekme === 'trash', uye = MK.uye[String(m.from_email || '').toLowerCase()];
+    const ikon = (ad, isim, fn, tehlike) => '<button type="button" class="yp-ikon-b' + (tehlike ? ' sil' : '') + '" title="' + ad + '" aria-label="' + ad + '" onclick="' + fn + '">' + ic(isim, 17) + '</button>';
+    let araclar = '<button type="button" class="yp-ikon-b ys-geri" onclick="ysMkKapat()" aria-label="Listeye dön">' + ic('siteye', 18) + '</button>';
+    if (gonderilen) araclar += ikon('Kaydı sil', 'cop', "ysMkIs('sentsil')", 1);
+    else if (cop) araclar += ikon('Geri al', 'geri', "ysMkIs('geri')") + ikon('Kalıcı sil', 'cop', "ysMkIs('kalici')", 1);
+    else araclar += ikon('Yanıtla', 'geri', "ysMkIs('yanit')") + (uye ? ikon('Destek talebine dönüştür', 'destek', "admMailToTicket('" + m.id + "')") : '') + ikon(m.is_spam ? 'Spam değil' : 'Spam olarak işaretle', m.is_spam ? 'onay' : 'hata', "ysMkIs('spam')") + ikon('Çöpe taşı', 'cop', "ysMkIs('cop')", 1);
+    const ST = { sent: ['Gönderildi', 'd-gri'], delivered: ['Ulaştı', 'd-yesil'], bounced: ['Geri döndü', 'd-kirmizi'], complained: ['Şikâyet', 'd-kirmizi'], failed: ['İletilemedi', 'd-kirmizi'] };
+    const kim = gonderilen ? m.to_email : (m.from_name || m.from_email);
+    let h = '<div class="ys-mk-arac">' + araclar + '</div><div class="ys-mk-bas">' + harfAv(kim || '?') + '<div><b>' + esc(gonderilen ? 'Kime: ' + (m.to_email || '') : (m.from_name || m.from_email || '')) + '</b>' +
+      '<small>' + esc(gonderilen ? '' : (m.from_email || '')) + (m.to_email && !gonderilen ? ' → ' + esc(m.to_email) : '') + '</small></div><small class="ys-mk-t">' + new Date(m.created_at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + '</small></div>' +
+      '<h3 class="ys-mk-konu">' + esc(m.subject || '(konu yok)') + '</h3><div class="ys-mk-etiket">' + (gonderilen ? '<span class="yp-durum ' + (ST[m.status] || ST.sent)[1] + '">' + (ST[m.status] || ST.sent)[0] + '</span>' : (uye ? '<span class="yp-durum r-yesil">Üye</span>' : '<span class="yp-durum d-gri">Üye değil</span>') + (m.is_spam ? '<span class="yp-durum d-kirmizi">Spam</span>' : '')) + '</div>' +
+      '<div class="ys-mk-govde">' + esc(m.body || '') + '</div>';
+    if (!gonderilen && !cop) {
+      const T = gl('MAIL_TEMPLATES') || [];
+      h += MK.yanitAcik ? '<div class="ys-yanit"><textarea id="ys-mk-yanit" class="ys-girdi alan" rows="5" placeholder="Yanıtını yaz…"></textarea><div class="ys-mail-imza">Yanıtın sonuna "YDT-YDS Rusça Ekibi" imzası otomatik eklenir. Gönderen: ' + esc((m.to_email || 'destek@ydt-ydsrusca.com').toLowerCase()) + '</div><div class="ys-yanit-alt"><div class="ys-yanit-sol">' +
+        '<select class="ys-girdi kucuk" onchange="ysMkSablon(this.value); this.selectedIndex = 0" aria-label="Hazır şablon"><option value="">Hazır şablon ekle…</option>' + T.map((s, i) => '<option value="' + i + '">' + esc(String(s.t || '').replace(/^\S*[\u{1F300}-\u{1FAFF}☀-➿]️?\s*/u, '')) + '</option>').join('') + '</select>' +
+        '<a class="yp-link" href="mailto:' + encodeURIComponent(m.from_email || '') + '?subject=' + encodeURIComponent('RE: ' + (m.subject || '')) + '">Mail uygulamasında aç</a></div><div class="ys-yanit-sag"><button type="button" class="yp-btn" onclick="ysMkIs(\'yanit\')">Vazgeç</button><button type="button" class="yp-btn ana" onclick="ysMkGonder()">' + ic('okSag', 16) + 'Gönder</button></div></div></div>'
+        : '<div class="ys-mk-alt"><button type="button" class="yp-btn ana" onclick="ysMkIs(\'yanit\')">' + ic('geri', 16) + 'Yanıtla</button>' + (uye ? '<button type="button" class="yp-btn" onclick="admMailToTicket(\'' + m.id + '\')">' + ic('destek', 16) + 'Destek talebine dönüştür</button>' : '') + '</div>';
+    }
+    return h;
+  }
+  window.ysMk = (a, v) => { MK[a] = v; MK.sayfa = 1; if (a === 'sekme') { MK.secili = null; MK.ara = ''; MK.yanitAcik = false; return mailYukle(); } mailCiz(); if (a === 'ara') { const i = $('ys-mk-ara'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch (e) {} } } };
+  window.ysMkSayfa = (s, boy) => { if (boy) MK.boy = boy; MK.sayfa = s; mailCiz(); };
+  window.ysMkKapat = () => { MK.secili = null; MK.yanitAcik = false; mailCiz(); };
+  window.ysMkAc = async id => {
+    MK.secili = id; MK.yanitAcik = false;
+    const m = MK.rows.find(x => String(x.id) === String(id));
+    if (m && MK.sekme !== 'sent' && !m.is_read) { m.is_read = true; if (MK.sekme === 'inbox' && MK.say.inbox) MK.say.inbox--; try { sb.from('inbox_mail').update({ is_read: true }).eq('id', id).then(() => {}, () => {}); } catch (e) {} }
+    mailCiz();
+  };
+  window.ysMkSec = (id, acik) => { if (id === 'temizle') MK.isaret.clear(); else acik ? MK.isaret.add(String(id)) : MK.isaret.delete(String(id)); mailCiz(); };
+  window.ysMkSablon = i => { if (i === '') return; const s = (gl('MAIL_TEMPLATES') || [])[+i], ta = $('ys-mk-yanit'); if (!s || !ta) return; ta.value = ta.value ? ta.value + '\n\n' + s.body : s.body; ta.focus(); };
+  window.ysMkIs = async is => {
+    const m = MK.rows.find(x => String(x.id) === String(MK.secili)); if (!m) return;
+    try {
+      if (is === 'yanit') { MK.yanitAcik = !MK.yanitAcik; const d = $('ys-mk-detay'); if (d) d.innerHTML = mailDetay(); const ta = $('ys-mk-yanit'); if (ta) ta.focus(); return; }
+      if (is === 'spam') { await sb.from('inbox_mail').update({ is_spam: !m.is_spam }).eq('id', m.id); toast(m.is_spam ? 'Gelen kutusuna taşındı.' : 'Spam olarak işaretlendi.'); }
+      else if (is === 'cop') { await sb.from('inbox_mail').update({ is_deleted: true }).eq('id', m.id); toast('Çöpe taşındı.'); }
+      else if (is === 'geri') { await sb.from('inbox_mail').update({ is_deleted: false }).eq('id', m.id); toast('Geri alındı.'); }
+      else if (is === 'kalici') { if (!(await uiConfirm('Bu mail kalıcı olarak silinsin mi?', 'Kalıcı sil', { danger: true }))) return; await sb.from('inbox_mail').delete().eq('id', m.id); }
+      else if (is === 'sentsil') { if (!(await uiConfirm('Bu gönderilmiş mail kaydı silinsin mi?', 'Kaydı sil', { danger: true }))) return; await sb.from('outbox_mail').delete().eq('id', m.id); }
+    } catch (e) { uiAlert('İşlem yapılamadı.'); }
+    MK.secili = null; mailYukle();
+  };
+  window.ysMkToplu = async () => {
+    const ids = [...MK.isaret]; if (!ids.length) return;
+    const kalici = MK.sekme === 'trash' || MK.sekme === 'sent';
+    if (!(await uiConfirm(ids.length + (kalici ? ' kayıt kalıcı olarak silinsin mi?' : ' mail çöpe taşınsın mı?'), kalici ? 'Kalıcı sil' : 'Çöpe taşı', { danger: true }))) return;
+    try {
+      if (MK.sekme === 'sent') await sb.from('outbox_mail').delete().in('id', ids);
+      else if (kalici) await sb.from('inbox_mail').delete().in('id', ids);
+      else await sb.from('inbox_mail').update({ is_deleted: true }).in('id', ids);
+    } catch (e) { uiAlert('İşlem yapılamadı.'); }
+    mailYukle();
+  };
+  window.ysMkGonder = async () => {
+    const m = MK.rows.find(x => String(x.id) === String(MK.secili)), ta = $('ys-mk-yanit'); if (!m || !ta) return;
+    const body = (ta.value || '').trim(); if (!body) { uiAlert('Yanıt boş olamaz.'); return; }
+    try {
+      const { data, error } = await sb.functions.invoke('send-mail', { body: { to: m.from_email, subject: 'RE: ' + (m.subject || ''), body, from: (m.to_email || '').toLowerCase(), in_reply_to: m.message_id || null } });
+      if (error || (data && data.error)) throw new Error((data && data.error) || 'hata');
+      toast('Yanıt gönderildi.'); MK.yanitAcik = false; const d = $('ys-mk-detay'); if (d) d.innerHTML = mailDetay();
+    } catch (e) { uiAlert('Gönderilemedi. Resend kurulumu (domain doğrulama, RESEND_API_KEY, send-mail) tamam mı? Resend panelindeki Emails sayfasından durumu kontrol edebilirsin.'); }
+  };
+  window.YS_AKS.mail = () => (MK.sekme === 'trash' ? '<button type="button" class="yp-btn kirmizi" onclick="adminEmptyTrash()">' + ic('cop', 16) + 'Çöpü boşalt</button>' : '') + '<button type="button" class="yp-btn" onclick="adminLoadMail()">' + ic('yenile', 16) + 'Yenile</button>';
+
   /* ---------- Bağlantılar: eski yükleyiciler yeni sayfaları çizsin ---------- */
   function degistir(ad, fn) { window[ad] = fn; try { (0, eval)(ad + ' = window.' + ad); } catch (e) {} }
   function bagla() {
@@ -2133,6 +2508,9 @@ async function togglePremium(userId, currentPlan) {
     degistir('filterAdminUsers', function (q) { UK.ara = q || ''; UK.sayfa = 1; kullaniciCiz(); });
     degistir('adminAssignInit', function () { return atamaYukle(); });
     degistir('adminKurumLoad', function () { return kurumYukle(); });
+    degistir('anTargetChange', function () { return bildirimYukle(); });
+    degistir('adminLoadTickets', function () { return destekYukle(); });
+    degistir('adminLoadMail', function () { return mailYukle(); });
     ['adminKurumSetAdmin', 'adminKurumRemoveMember'].forEach(ad => {
       const eski = window[ad]; if (typeof eski !== 'function') return;
       degistir(ad, async function () { const r = await eski.apply(this, arguments); if ($('ys-kurum') && $('av-kurumlar').style.display !== 'none') kurumYukle(); return r; });
