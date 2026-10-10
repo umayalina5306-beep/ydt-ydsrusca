@@ -227,28 +227,121 @@ function authMsg(text, ok) {
   el.style.display = text ? "block" : "none";
 }
 
+/* ===== Kayıt: e-posta onay kodu zorunlu =====
+   1) Bilgiler + robot doğrulaması → sunucu 6 haneli kodu e-postaya gönderir (gönderilemezse kayıt yok)
+   2) Kod doğru girilirse hesap sunucuda açılır ve kullanıcı otomatik giriş yapar. */
+const KAYIT = { ad: '', email: '', sifre: '', sayac: null, uzantilar: null };
+const KAYIT_VARSAYILAN = ['gmail.com', 'googlemail.com', 'hotmail.com', 'hotmail.com.tr', 'outlook.com', 'outlook.com.tr', 'live.com', 'msn.com', 'icloud.com', 'me.com',
+  'yahoo.com', 'yahoo.com.tr', 'yandex.com', 'yandex.com.tr', 'yandex.ru', 'mail.ru', 'proton.me', 'protonmail.com', 'edu.tr'];
+async function kayitUzantilar() {
+  if (KAYIT.uzantilar) return KAYIT.uzantilar;
+  try {
+    const { data } = await sb.from('site_settings').select('value').eq('key', 'izinli_mail_uzantilari').maybeSingle();
+    const l = String((data && data.value) || '').split(/[\s,;]+/).map(x => x.trim().toLowerCase().replace(/^@/, '')).filter(Boolean);
+    KAYIT.uzantilar = l.length ? l : KAYIT_VARSAYILAN;
+  } catch (e) { KAYIT.uzantilar = KAYIT_VARSAYILAN; }
+  return KAYIT.uzantilar;
+}
+function kayitAdim(adim) {
+  const f = document.getElementById('auth-form-register'), k = document.getElementById('auth-form-kod');
+  if (f) f.style.display = adim === 'form' ? 'block' : 'none';
+  if (k) k.style.display = adim === 'kod' ? 'block' : 'none';
+}
+async function kayitFonksiyon(govde) {
+  const { data, error } = await sb.functions.invoke('kayit-kodu', { body: govde });
+  if (error) {
+    let m = '';
+    try { const j = error.context && await error.context.json(); m = j && j.hata; } catch (e) {}
+    return { ok: false, hata: m || 'Sunucuya ulaşılamadı. İnternet bağlantını kontrol edip tekrar dene.' };
+  }
+  return data || { ok: false, hata: 'Beklenmeyen bir yanıt alındı.' };
+}
+function kayitSayac(sn) {
+  const b = document.getElementById('kod-tekrar'); if (!b) return;
+  clearInterval(KAYIT.sayac);
+  let kalan = sn;
+  const yaz = () => { b.disabled = kalan > 0; b.textContent = kalan > 0 ? 'Kodu tekrar gönder (' + kalan + ' sn)' : 'Kodu tekrar gönder'; };
+  yaz();
+  KAYIT.sayac = setInterval(() => { kalan--; yaz(); if (kalan <= 0) clearInterval(KAYIT.sayac); }, 1000);
+}
+async function kayitKodGonder(tekrar) {
+  let tk = turnstileToken();
+  if (TURNSTILE_SITE_KEY && !tk && typeof captchaPrompt === 'function') tk = await captchaPrompt();
+  if (TURNSTILE_SITE_KEY && !tk) { authMsg('Devam etmek için robot doğrulamasını tamamla.'); return false; }
+  authMsg(tekrar ? 'Yeni kod gönderiliyor...' : 'Onay kodu gönderiliyor...', true);
+  const r = await kayitFonksiyon({ islem: 'gonder', email: KAYIT.email, ad: KAYIT.ad, turnstile: tk || undefined });
+  turnstileReset();
+  if (!r.ok) {
+    authMsg(r.hata || 'Onay kodu gönderilemedi.');
+    if (r.kod === 'bekle' && r.kalan_sn) kayitSayac(r.kalan_sn);
+    return false;
+  }
+  authMsg('');
+  kayitSayac(r.tekrar_sn || 60);
+  return true;
+}
 async function authRegister() {
   if (!sb) { authMsg("Sistem henüz hazır değil (bağlantı bilgileri eksik)."); return; }
   const name = (document.getElementById("reg-name").value || "").trim();
-  const email = (document.getElementById("reg-email").value || "").trim();
+  const email = (document.getElementById("reg-email").value || "").trim().toLowerCase();
   const pass = document.getElementById("reg-pass").value || "";
-  if (!email || pass.length < 6) { authMsg("Geçerli e-posta ve en az 6 karakter şifre gir."); return; }
-  authMsg("Hesap oluşturuluyor...", true);
-  const _ct2 = turnstileToken();
-  if (TURNSTILE_SITE_KEY && !_ct2) { authMsg("Lütfen robot olmadığını doğrula (kutucuğu işaretle)."); return; }
-  const _opts = { data: { display_name: name } };
-  if (_ct2) _opts.captchaToken = _ct2;
-  const { data, error } = await sb.auth.signUp({ email, password: pass, options: _opts });
-  turnstileReset();
-  if (error) { authHata(error); return; }       // DEĞİŞTİ: orijinal hatayı da göster
-  if (data.user && !data.session) {
-    authMsg("Kayıt başarılı! E-postanı kontrol edip hesabını onayla, sonra giriş yap.", true);
-    switchTab("login");
-  } else {
-    authMsg("");
-    closeAuth();
+  if (!name) { authMsg("Adını ve soyadını yaz."); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { authMsg("Geçerli bir e-posta adresi yaz."); return; }
+  if (pass.length < 6) { authMsg("Şifre en az 6 karakter olmalı."); return; }
+  const alan = email.split('@')[1], liste = await kayitUzantilar();
+  if (!liste.some(u => alan === u || alan.endsWith('.' + u))) {
+    authMsg("Bu e-posta uzantısıyla kayıt olunamıyor. Gmail, Outlook, Hotmail, Yandex, iCloud gibi yaygın bir adres ya da üniversite (edu.tr) adresi kullan.");
+    return;
   }
+  const btn = document.getElementById('reg-btn'); if (btn) btn.disabled = true;
+  Object.assign(KAYIT, { ad: name, email, sifre: pass });
+  const ok = await kayitKodGonder(false);
+  if (btn) btn.disabled = false;
+  if (!ok) return;
+  const e = document.getElementById('kod-email'); if (e) e.textContent = email;
+  const k = document.getElementById('kod-in'); if (k) { k.value = ''; setTimeout(() => k.focus(), 50); }
+  kayitAdim('kod');
 }
+async function kayitKodDogrula() {
+  const kod = ((document.getElementById('kod-in') || {}).value || '').replace(/\D/g, '');
+  if (kod.length !== 6) { authMsg('E-postana gelen 6 haneli kodu yaz.'); return; }
+  const btn = document.getElementById('kod-btn'); if (btn) btn.disabled = true;
+  authMsg('Kod doğrulanıyor...', true);
+  const r = await kayitFonksiyon({ islem: 'dogrula', email: KAYIT.email, kod, sifre: KAYIT.sifre, ad: KAYIT.ad });
+  if (btn) btn.disabled = false;
+  if (!r.ok) { authMsg(r.hata || 'Kod doğrulanamadı.'); return; }
+  clearInterval(KAYIT.sayac);
+  authMsg('Hesabın oluşturuldu, giriş yapılıyor...', true);
+  let girdi = false;
+  if (r.token_hash) {
+    for (const type of ['magiclink', 'email']) {
+      try { const { error } = await sb.auth.verifyOtp({ token_hash: r.token_hash, type }); if (!error) { girdi = true; break; } } catch (e) {}
+    }
+  }
+  const email = KAYIT.email;
+  KAYIT.sifre = '';
+  ['reg-name', 'reg-email', 'reg-pass', 'kod-in'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  kayitAdim('form');
+  if (girdi) { authMsg(''); closeAuth(); if (typeof toast === 'function') toast('Hoş geldin! Hesabın oluşturuldu.'); return; }
+  switchTab('login');
+  const le = document.getElementById('login-email'); if (le) le.value = email;
+  authMsg('Hesabın oluşturuldu. Şifrenle giriş yapabilirsin.', true);
+}
+function kayitKodTekrar() { kayitKodGonder(true); }
+function kayitGeri() { clearInterval(KAYIT.sayac); kayitAdim('form'); authMsg(''); }
+// Google ile girişte uzantı izinli değilse sunucu kaydı reddeder; dönüşte anlaşılır mesaj göster
+(function () {
+  try {
+    const q = new URLSearchParams((location.hash || '').replace(/^#/, '') + '&' + (location.search || '').replace(/^\?/, ''));
+    const d = q.get('error_description');
+    if (!d) return;
+    history.replaceState(null, '', location.pathname);
+    const m = /database error saving new user/i.test(d)
+      ? 'Bu e-posta adresiyle kayıt olunamıyor. Lütfen izin verilen uzantılardan biriyle (Gmail, Outlook, Hotmail, Yandex, iCloud, edu.tr vb.) kayıt ol.'
+      : 'Giriş tamamlanamadı: ' + d;
+    setTimeout(() => { if (typeof uiAlert === 'function') uiAlert(m, 'Giriş'); }, 800);
+  } catch (e) {}
+})();
 
 async function authLogin() {
   if (!sb) { authMsg("Sistem henüz hazır değil (bağlantı bilgileri eksik)."); return; }
@@ -338,7 +431,7 @@ function cevirHata(msg) {
   if (m.includes("invalid login")) return "E-posta veya şifre hatalı.";
   if (m.includes("already registered") || m.includes("already exists") || m.includes("user already")) return "Bu e-posta zaten kayıtlı.";
   if (m.includes("email not confirmed")) return "Önce e-postanı onaylaman gerekiyor.";
-  if (m.includes("database error")) return "Veritabanı hatası: profil oluşturma trigger'ı takıldı.";
+  if (m.includes("database error")) return "Bu e-posta adresiyle kayıt olunamıyor. İzin verilen uzantılardan biriyle kayıt ol.";
   if (m.includes("password")) return "Şifre en az 6 karakter olmalı.";
   if (m.includes("captcha")) return "Robot doğrulaması geçersiz — kutucuğu yeniden işaretleyip tekrar dene.";
   if (m.includes("rate limit") || m.includes("too many")) return "Çok fazla deneme yapıldı. Birkaç dakika bekleyip tekrar dene.";
