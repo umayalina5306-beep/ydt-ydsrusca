@@ -49,9 +49,9 @@
   <meta name="twitter:image" content="https://ydt-ydsrusca.com/img/og-kapak.png">
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=174">
-<link rel="stylesheet" href="css/ekitap.css?v=174">
-<link rel="stylesheet" href="css/video.css?v=174">
+<link rel="stylesheet" href="css/style.css?v=175">
+<link rel="stylesheet" href="css/ekitap.css?v=175">
+<link rel="stylesheet" href="css/video.css?v=175">
 <script>try{if(localStorage.getItem('ydt_prof_ui'))document.documentElement.classList.add('oturum-var');}catch(e){}</script>
 <style>html.oturum-var #nav-auth-buttons{display:none!important}</style>
 <!-- Sidebar kesin düzeltme: eski/önbellekli style.css'i ezer, üst üste binmeyi önler -->
@@ -76,7 +76,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=174" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
+  <div class="nav-logo" onclick="showPage('home')"><img src="img/site-logo.png?v=175" alt="YDT-YDS Rusça Platformu" class="nav-logo-img" onerror="this.outerHTML='YDT-YDS <span>Rusça</span>'"></div>
   <ul class="nav-links">
     <li><button onclick="showPage('home')" id="nav-home" class="active">Ana Sayfa</button></li>
     <li><button onclick="showPage('learn')" id="nav-learn">Eğitim</button></li>
@@ -1017,7 +1017,8 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
 </div>
 
 <div id="page-makaleler" class="page">
-  <section class="mk-yakinda">
+  <section id="mk-sayfa" class="words-section mk-sayfa" style="display:none;"></section>
+  <section class="mk-yakinda" id="mk-yakinda">
     <div class="mk-ic"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12l4 4v12H4z"/><polyline points="16 4 16 8 20 8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg></div>
     <h2>Rusça <span>Makaleler</span></h2>
     <p>Farklı alanlardan özgün Rusça makaleler burada olacak. Bu bölüm hazırlanıyor.</p>
@@ -1432,47 +1433,38 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
         </div>
 
         <div id="av-content" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">İçerik Yönetimi — Kelimeler</h2>
-          <p class="profile-sub">Kelimeleri tek tek düzenle veya toplu yükle. Değişiklikler anında yayına girer.</p>
-          <div class="pq-stats" id="cw-stats">Yükleniyor...</div>
-
-          <div class="admin-notif-card">
-            <h3 class="an-h3">✏️ Kelime Ekle / Düzenle</h3>
-            <div class="pq-row2">
-              <input id="cw-ru" class="pq-input" placeholder="Rusça kelime *" autocomplete="off" data-lpignore="true" data-form-type="other">
-              <input id="cw-tr" class="pq-input" placeholder="Türkçe anlam *" autocomplete="off" data-lpignore="true" data-form-type="other">
-            </div>
-            <div class="pq-row2">
-              <select id="cw-cat" class="pq-input" onchange="cwCatChanged()"><option>isim</option><option>fiil</option><option>sıfat</option><option>zarf</option><option>zamir</option><option>edat</option><option>bağlaç</option></select>
-              <select id="cw-lvl" class="pq-input pq-level"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
-              <select id="cw-gram" class="pq-input"></select>
-            </div>
-            <div id="cw-padej" class="pq-correct" style="display:none;">Padej:
-              <label><input type="checkbox" value="Р.п.">Р.п. (Gen.)</label>
-              <label><input type="checkbox" value="Д.п.">Д.п. (Dat.)</label>
-              <label><input type="checkbox" value="В.п.">В.п. (Acc.)</label>
-              <label><input type="checkbox" value="Т.п.">Т.п. (Instr.)</label>
-              <label><input type="checkbox" value="П.п.">П.п. (Prep.)</label>
-            </div>
-              <div id="cw-cekim-row" style="display:none; margin-top:8px;">
-                <p class="pq-hint" style="margin-bottom:6px;">🧩 Çekim tablosu (otomatik üretilir — yanlışsa düzelt, boş bırakırsan kural kullanılır):</p>
-                <div class="cw-cekim-grid">
-                  <input id="ck-rp" class="pq-input" placeholder="Р.п." autocomplete="off" data-lpignore="true" data-form-type="other">
-                  <input id="ck-dp" class="pq-input" placeholder="Д.п." autocomplete="off" data-lpignore="true" data-form-type="other">
-                  <input id="ck-vp" class="pq-input" placeholder="В.п." autocomplete="off" data-lpignore="true" data-form-type="other">
-                  <input id="ck-tp" class="pq-input" placeholder="Т.п." autocomplete="off" data-lpignore="true" data-form-type="other">
-                  <input id="ck-pp" class="pq-input" placeholder="П.п." autocomplete="off" data-lpignore="true" data-form-type="other">
+          <h2 class="profile-h2">Kelimeler</h2>
+          <p class="profile-sub">Kelime bankasını yönet, toplu içe aktar ve çekim bilgilerini düzenle.</p>
+          <div id="cw-stats" class="ys-kpiler d5"></div>
+          <div class="ys-yan-yana">
+            <section class="yp-kart ys-liste"><div class="yp-kart-bas ys-ic-bas"><div><h3>Kelime listesi</h3><p class="ys-kart-alt">Ara, süz ve düzenlemek için bir kelime seç.</p></div><div id="cw-sira-k"></div></div><div id="cw-list"><div class="admin-loading">Yükleniyor...</div></div></section>
+            <section class="yp-kart ys-form-kart" id="ys-kel-form"><div class="yp-kart-bas"><div><h3 id="ys-kel-form-b">Kelime ekle / düzenle</h3><p class="ys-kart-alt">Tek kelime ekle ya da listeden seçtiğin kelimeyi düzenle.</p></div></div>
+              <div class="ys-iki"><label class="ys-alan"><span>Rusça kelime <em>*</em></span><input id="cw-ru" class="ys-girdi" placeholder="Örn. дом" autocomplete="off" data-lpignore="true" data-form-type="other"></label>
+              <label class="ys-alan"><span>Türkçe anlam <em>*</em></span><input id="cw-tr" class="ys-girdi" placeholder="Örn. ev" autocomplete="off" data-lpignore="true" data-form-type="other"></label></div>
+              <div class="ys-uclu"><label class="ys-alan"><span>Tür <em>*</em></span><select id="cw-cat" class="ys-girdi" onchange="cwCatChanged()"><option>isim</option><option>fiil</option><option>sıfat</option><option>zarf</option><option>zamir</option><option>edat</option><option>bağlaç</option></select></label>
+              <label class="ys-alan"><span>Seviye <em>*</em></span><select id="cw-lvl" class="ys-girdi"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select></label>
+              <label class="ys-alan"><span id="cw-gram-lbl">Cinsiyet / görünüş</span><select id="cw-gram" class="ys-girdi"></select></label></div>
+              <div id="cw-padej" class="ys-padej" style="display:none;"><span>Padej</span>
+                <label><input type="checkbox" value="Р.п.">Р.п.</label><label><input type="checkbox" value="Д.п.">Д.п.</label><label><input type="checkbox" value="В.п.">В.п.</label><label><input type="checkbox" value="Т.п.">Т.п.</label><label><input type="checkbox" value="П.п.">П.п.</label>
+              </div>
+              <div id="cw-cekim-row" class="ys-cekim" style="display:none;">
+                <div class="ys-cekim-bas">Çekim bilgisi <small>(otomatik üretilir; yanlışsa düzelt)</small></div>
+                <div class="ys-cekim-izgara">
+                  <label><span>Genitif</span><input id="ck-rp" class="ys-girdi" placeholder="Р.п." autocomplete="off" data-lpignore="true" data-form-type="other"></label>
+                  <label><span>Datif</span><input id="ck-dp" class="ys-girdi" placeholder="Д.п." autocomplete="off" data-lpignore="true" data-form-type="other"></label>
+                  <label><span>Akuzatif</span><input id="ck-vp" class="ys-girdi" placeholder="В.п." autocomplete="off" data-lpignore="true" data-form-type="other"></label>
+                  <label><span>İnstrumental</span><input id="ck-tp" class="ys-girdi" placeholder="Т.п." autocomplete="off" data-lpignore="true" data-form-type="other"></label>
+                  <label><span>Prepozisyonel</span><input id="ck-pp" class="ys-girdi" placeholder="П.п." autocomplete="off" data-lpignore="true" data-form-type="other"></label>
                 </div>
               </div>
-            <input id="cw-ornek" class="pq-input" placeholder="Örnek cümle (Rusça, opsiyonel)" autocomplete="off" data-lpignore="true" data-form-type="other">
-            <input id="cw-ornektr" class="pq-input" placeholder="Örnek cümle (Türkçe, opsiyonel)" autocomplete="off" data-lpignore="true" data-form-type="other">
-            <label class="cw-check"><input type="checkbox" id="cw-premium"> Premium içerik (yalnız premium üyeler görür — ileride)</label>
-            <div><button class="set-btn" id="cw-save-btn" onclick="adminWordSave()">Kelime Ekle</button>
-            <button class="set-btn ghost" onclick="adminWordFormClear()" style="margin-left:8px;">Temizle</button></div>
+              <div class="ys-iki"><label class="ys-alan"><span>Örnek cümle (Rusça)</span><input id="cw-ornek" class="ys-girdi" placeholder="Örn. Это мой дом." autocomplete="off" data-lpignore="true" data-form-type="other"></label>
+              <label class="ys-alan"><span>Örnek cümle (Türkçe)</span><input id="cw-ornektr" class="ys-girdi" placeholder="Örn. Bu benim evim." autocomplete="off" data-lpignore="true" data-form-type="other"></label></div>
+              <label class="ys-anahtar"><input type="checkbox" id="cw-premium"><i></i><span>Premium kelime <small class="ys-soluk">(yalnız premium üyeler görür)</small></span></label>
+              <div class="ys-form-alt"><button class="yp-btn ana" id="cw-save-btn" onclick="adminWordSave()">Kelime ekle</button><button class="yp-btn" onclick="adminWordFormClear()">Temizle</button></div>
+            </section>
           </div>
-
-          <div class="admin-notif-card">
-            <h3 class="an-h3">⚡ Toplu Kelime Ekle</h3>
+          <div class="ys-yan-yana esit">
+            <section class="yp-kart"><div class="yp-kart-bas"><div><h3>Toplu kelime ekle</h3><p class="ys-kart-alt">Satırları oluştur, her satırın özelliklerini sağdaki panelden düzenle ve hepsini tek seferde kaydet.</p></div></div><div class="ys-eski-ic">
             <p class="pq-hint">Satırlara kelimeleri yaz. Bir satıra tıklayınca sağdaki <b>Kelime Özellikleri</b> paneli o satırı düzenler; yazdıkların satır değiştirsen bile hafızada tutulur. En sonda tek tuşla hepsi veritabanına kaydedilir.</p>
             <div class="pq-row2" style="margin-bottom:10px;">
               <input id="cwb-count" class="pq-input pq-level" type="number" min="1" max="100" value="10">
@@ -1513,10 +1505,8 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
               </div>
             </div>
             <button class="set-btn" id="cwb-save" style="display:none; margin-top:12px;" onclick="cwBulkSave()">💾 Hepsini Kaydet</button>
-          </div>
-
-          <div class="admin-notif-card">
-            <h3 class="an-h3">📦 Toplu Yükleme (dosya / JSON)</h3>
+          </div></section>
+            <section class="yp-kart"><div class="yp-kart-bas"><div><h3>Dosya / JSON içe aktar</h3><p class="ys-kart-alt">.json, .csv ya da .xlsx dosyası yükle veya JSON verisini doğrudan yapıştır.</p></div></div><div class="ys-eski-ic">
             <p class="pq-hint">Dosya (.json / .csv / .xlsx) yükle veya JSON'u doğrudan yapıştır. Sütun/alan adları: ru, tr, level, cat (opsiyonel: cinsiyet, padej, tip, cv, ncv, ornek, ornek_tr, premium). Tekrarlı kayıtlar otomatik ayıklanır. Aynı "ru" varsa üzerine yazılır.</p>
             <div class="pq-row2">
               <input type="file" id="cw-file" class="pq-input" accept=".json,.csv,.xlsx,.xls">
@@ -1524,29 +1514,7 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
             </div>
             <textarea id="cw-json" class="an-textarea" placeholder='[ { "ru": "дом", "tr": "ev", "level": "A1", "cat": "isim" } ]'></textarea>
             <button class="set-btn" onclick="adminWordsImportJson()">JSON'u İçe Aktar</button>
-          </div>
-
-          <div class="admin-notif-card">
-            <h3 class="an-h3">📋 Kelime Listesi (DB)</h3>
-            <div class="pq-row2">
-              <input class="pq-input" placeholder="🔍 Rusça veya Türkçe ara..." oninput="cwSet('q', this.value)" autocomplete="off" data-lpignore="true" data-form-type="other">
-              <select class="pq-input pq-level" onchange="cwSet('level', this.value)"><option value="all">Tümü</option><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
-              <select class="pq-input" style="max-width:130px;" onchange="cwState.cat=this.value;cwState.page=1;renderCwList();">
-                <option value="all">Tür: Hepsi</option><option value="isim">İsim</option><option value="fiil">Fiil</option>
-                <option value="sıfat">Sıfat</option><option value="edat">Edat</option><option value="zarf">Zarf</option><option value="zamir">Zamir</option>
-              </select>
-              <select class="pq-input" style="max-width:160px;" onchange="cwState.tag=this.value;cwState.page=1;renderCwList();">
-                <option value="all">Etiket: Hepsi</option><option value="НСВ">НСВ</option><option value="СВ">СВ</option>
-                <option value="м">м (eril)</option><option value="ж">ж (dişil)</option><option value="с">с (nötr)</option>
-                <option value="padejli">Padejli</option><option value="eksik">⚠️ Etiketi Eksik</option>
-              </select>
-            </div>
-            <div class="cw-tabs">
-              <button id="cw-tab-active" class="rec-chip active" onclick="cwTrashMode(false)">Aktif Kelimeler</button>
-              <button id="cw-tab-trash" class="rec-chip" onclick="cwTrashMode(true)">🗑️ Çöp Kutusu (<span id="cw-trash-count">0</span>)</button>
-              <button id="cw-purge-all" class="mail-act red" style="display:none; margin-left:auto;" onclick="adminWordPurgeAll()">🧹 Çöpü Tamamen Boşalt</button>
-            </div>
-            <div id="cw-list"><div class="profile-empty">Yükleniyor...</div></div>
+          </div></section>
           </div>
         </div>
 
@@ -1682,93 +1650,40 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
 
         <div id="av-videos" class="admin-view" style="display:none;">
           <h2 class="profile-h2">Video Yönetimi</h2>
-          <p class="profile-sub">Ücretsizler YouTube'da, ücretliler Cloudflare Stream'de barınır. Buradan liste, kapak ve premium durumu yönetilir.</p>
-          <div class="pq-stats" id="cv-stats">Yükleniyor...</div>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">✏️ Video Ekle / Düzenle</h3>
-            <input type="hidden" id="cv-id">
-            <div class="pq-row2">
-              <input id="cv-num" class="pq-input pq-level" type="number" min="1" placeholder="Sıra (boş=sona)" autocomplete="off" data-lpignore="true" data-form-type="other">
-              <select id="cv-lvl" class="pq-input pq-level"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
-              <input id="cv-title" class="pq-input" placeholder="Video başlığı *" autocomplete="off" data-lpignore="true" data-form-type="other">
-            </div>
-            <input id="cv-desc" class="pq-input" placeholder="Kısa açıklama" autocomplete="off" data-lpignore="true" data-form-type="other">
-            <select id="cv-mf" class="pq-input" title="Videonun bağlı olduğu modül / ünite / ders"><option value="">— Müfredata bağlama (genel video) —</option></select>
-            <div class="pq-hint" style="margin:-2px 0 6px">Video Dersler sayfasında bu modül, ünite ve ders altında listelenir. Ağaç İçerik Merkezi → Müfredat ve konular sekmesinden yönetilir.</div>
-            <div class="pq-row2">
-              <select id="cv-source" class="pq-input" onchange="adminVidSourceChanged()"><option value="youtube">YouTube (ücretsiz)</option><option value="stream">Cloudflare Stream (ücretli)</option></select>
-              <input id="cv-vid" class="pq-input" placeholder="Video ID (YouTube ID veya Stream UID)" autocomplete="off" data-lpignore="true" data-form-type="other">
-            </div>
-            <div id="cv-upload-row" style="display:none;background:rgba(212,164,24,.06);border:1px dashed rgba(212,164,24,.4);border-radius:10px;padding:12px;margin:8px 0;">
+          <p class="profile-sub">Rusça öğrenim videolarını ekle, düzenle ve yönet. Ücretsizler YouTube'da, ücretliler Cloudflare Stream'de barınır.</p>
+          <div id="cv-stats" class="ys-kpiler d5"></div>
+          <div class="ys-yan-yana">
+            <section class="yp-kart ys-liste"><div class="yp-kart-bas ys-ic-bas"><div><h3>Video listesi</h3><p class="ys-kart-alt">Videoları gör, sırala, düzenle ve yönet.</p></div><div id="cv-sira-k"></div></div><div id="cv-list"><div class="admin-loading">Yükleniyor...</div></div></section>
+            <section class="yp-kart ys-form-kart" id="ys-vid-form"><div class="yp-kart-bas"><div><h3 id="ys-vid-form-b">Video ekle / düzenle</h3><p class="ys-kart-alt">Yeni bir video ekle ya da listeden seçtiğin videoyu düzenle.</p></div></div>
+              <input type="hidden" id="cv-id">
+              <label class="ys-alan"><span>Başlık <em>*</em></span><input id="cv-title" class="ys-girdi" placeholder="Video başlığını yaz…" autocomplete="off" data-lpignore="true" data-form-type="other"></label>
+              <label class="ys-alan"><span>Kısa açıklama</span><div class="ys-sayacli"><textarea id="cv-desc" class="ys-girdi alan" rows="3" maxlength="500" placeholder="Videonun kısa açıklamasını yaz…" oninput="document.getElementById('cv-desc-say').textContent=this.value.length"></textarea><small><span id="cv-desc-say">0</span>/500</small></div></label>
+              <div class="ys-iki"><label class="ys-alan"><span>Seviye <em>*</em></span><select id="cv-lvl" class="ys-girdi"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select></label>
+              <label class="ys-alan"><span>Sıra no</span><input id="cv-num" class="ys-girdi" type="number" min="1" placeholder="Boş bırakılırsa sona" autocomplete="off" data-lpignore="true" data-form-type="other"></label></div>
+              <div class="ys-alan"><span>Kaynak türü <em>*</em></span><select id="cv-source" class="ys-gizli-sec" onchange="adminVidSourceChanged(); ysVidKaynakCiz()"><option value="youtube">YouTube (ücretsiz)</option><option value="stream">Cloudflare Stream (ücretli)</option></select>
+                <div class="ys-hedefler" id="ys-vid-kaynak"><button type="button" class="ys-hedef aktif" data-k="youtube" onclick="ysVidKaynak('youtube')"><span class="ys-marka" style="background:#ff0000">&#9654;</span>YouTube</button><button type="button" class="ys-hedef" data-k="stream" onclick="ysVidKaynak('stream')"><span class="ys-marka" style="background:#f38020">CF</span>Cloudflare Stream</button></div></div>
+              <label class="ys-alan"><span id="cv-vid-lbl">YouTube video ID <em>*</em></span><input id="cv-vid" class="ys-girdi" placeholder="Örn. dQw4w9WgXcQ (bağlantının tamamı da yapıştırılabilir)" autocomplete="off" data-lpignore="true" data-form-type="other"></label>
+              <div id="cv-upload-row" class="ys-yukle-kutu" style="display:none;">
               <div style="font-size:.85rem;margin-bottom:8px;">🎬 <b>Doğrudan Yükleme</b> — Video dosyasını buraya bırak, otomatik Stream'e yüklensin ve UID gelsin:</div>
               <input type="file" id="cv-file" accept="video/*" class="pq-input" style="width:100%;">
               <button class="set-btn" style="margin-top:8px;" onclick="adminStreamUpload()">⬆️ Stream'e Yükle</button>
               <div id="cv-upload-status" style="margin-top:8px;font-size:.85rem;"></div>
             </div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <input id="cv-thumb" class="pq-input" style="flex:1;" placeholder="Kapak görseli URL (boşsa otomatik/varsayılan)" autocomplete="off" data-lpignore="true" data-form-type="other">
-              <input type="file" id="cv-thumb-file" accept="image/*" style="display:none;" onchange="adminThumbUpload(event)">
-              <button type="button" class="mail-act" onclick="document.getElementById('cv-thumb-file').click()">🖼️ Yükle</button>
-            </div>
-            <div id="cv-thumb-status" style="font-size:.8rem;color:#9ca3af;margin-top:4px;"></div>
-            <label class="cw-check"><input type="checkbox" id="cv-premium"> 👑 Premium video (yalnız premium üyeler izler)</label>
-            <div><button class="set-btn" id="cv-save-btn" onclick="adminVidSave()">Video Ekle</button>
-            <button class="set-btn ghost" onclick="adminVidFormClear()" style="margin-left:8px;">Temizle</button></div>
-          </div>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">📋 Video Listesi</h3>
-            <div id="cv-list"><div class="profile-empty">Yükleniyor...</div></div>
+            
+              <div class="ys-alan"><span>Kapak görseli</span><div class="ys-dosya-sec"><span class="ys-ayar-ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/></svg></span><input id="cv-thumb" class="ys-girdi" placeholder="Görsel adresi (boşsa otomatik)" autocomplete="off" data-lpignore="true" data-form-type="other">
+                <input type="file" id="cv-thumb-file" accept="image/*" style="display:none;" onchange="adminThumbUpload(event)"><button type="button" class="yp-btn kucuk" onclick="document.getElementById('cv-thumb-file').click()">Dosya seç</button></div><div id="cv-thumb-status" class="ys-durum-yazi"></div></div>
+              <label class="ys-satir-anahtar"><span class="ys-ayar-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4 4 5-7 5 7 4-4-2 11H5z"/></svg></span><span><b>Premium video</b><small>Bu video yalnızca premium kullanıcılara açık olsun.</small></span><span class="ys-anahtar"><input type="checkbox" id="cv-premium"><i></i></span></label>
+              <div class="ys-satir-anahtar"><span class="ys-ayar-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg></span><span><b>Müfredata bağla</b><small>Video, Video Dersler sayfasında bu modül, ünite ve ders altında listelenir.</small></span></div>
+              <select id="cv-mf" class="ys-girdi" title="Videonun bağlı olduğu modül / ünite / ders"><option value="">— Müfredata bağlama (genel video) —</option></select>
+              <div class="ys-form-alt"><button class="yp-btn ana genis" id="cv-save-btn" onclick="adminVidSave()">Video ekle</button><button class="yp-btn" onclick="adminVidFormClear()">Temizle</button></div>
+            </section>
           </div>
         </div>
 
         <div id="av-recs" class="admin-view" style="display:none;">
-          <h2 class="profile-h2">Öneri Yönetimi</h2>
-          <p class="profile-sub">Film, dizi, anime ve kitap önerileri. Değişiklikler anında yayına girer.</p>
-          <div class="pq-stats" id="rc-stats">Yükleniyor...</div>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">✏️ Blog Yazısı Ekle / Düzenle</h3>
-            <input type="hidden" id="rc-id">
-            <div class="pq-row2">
-              <select id="rc-type" class="pq-input"><option value="film">🎬 Film</option><option value="dizi">📺 Dizi</option><option value="anime">🌸 Anime</option><option value="kitap">📚 Kitap</option></select>
-              <input id="rc-title" class="pq-input" placeholder="Başlık *" autocomplete="off" data-lpignore="true" data-form-type="other">
-              <select id="rc-level" class="pq-input pq-level"><option>A1</option><option selected>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
-            </div>
-            <div class="rte-bar">
-              <button type="button" class="rte-btn" onclick="rte('bold')" title="Kalın"><b>K</b></button>
-              <button type="button" class="rte-btn" onclick="rte('italic')" title="İtalik"><i>İ</i></button>
-              <button type="button" class="rte-btn" onclick="rte('underline')" title="Altı çizili"><u>A</u></button>
-              <button type="button" class="rte-btn" onclick="rte('strikeThrough')" title="Üstü çizili"><s>S</s></button>
-              <span class="rte-sep"></span>
-              <label class="rte-color" title="Yazı rengi">🅰️<input type="color" onchange="rte('foreColor', this.value)"></label>
-              <label class="rte-color" title="Arka plan rengi">🖍️<input type="color" onchange="rte('hiliteColor', this.value)"></label>
-              <span class="rte-sep"></span>
-              <button type="button" class="rte-btn" onclick="rte('justifyLeft')" title="Sola yasla">⬅</button>
-              <button type="button" class="rte-btn" onclick="rte('justifyCenter')" title="Ortala">↔</button>
-              <button type="button" class="rte-btn" onclick="rte('justifyRight')" title="Sağa yasla">➡</button>
-              <button type="button" class="rte-btn" onclick="rte('justifyFull')" title="İki yana yasla">☰</button>
-              <span class="rte-sep"></span>
-              <button type="button" class="rte-btn" onclick="rte('insertUnorderedList')" title="Madde listesi">• —</button>
-              <button type="button" class="rte-btn" onclick="rte('insertOrderedList')" title="Numaralı liste">1. —</button>
-              <span class="rte-sep"></span>
-              <select class="rte-size" onchange="if(this.value){rte('fontSize', this.value); this.selectedIndex=0;}" title="Yazı boyutu">
-                <option value="">Boyut</option><option value="2">Küçük</option><option value="3">Normal</option><option value="4">Büyük</option><option value="5">Çok büyük</option>
-              </select>
-              <button type="button" class="rte-btn" onclick="rte('removeFormat')" title="Biçimi temizle">🧹</button>
-            </div>
-            <div id="rc-desc" class="rte-area" contenteditable="true" data-ph="Neden izlenmeli/okunmalı? (2-3 cümle)"></div>
-            <textarea id="rc-desc-ru" class="an-textarea" placeholder="Açıklama (Rusça — RU modunda gösterilir, opsiyonel)"></textarea>
-            <div class="pq-row2">
-              <input id="rc-thumb" class="pq-input" placeholder="Afiş/kapak görseli URL (opsiyonel)" autocomplete="off" data-lpignore="true" data-form-type="other">
-              <input id="rc-trailer" class="pq-input" placeholder="YouTube fragman ID (opsiyonel)" autocomplete="off" data-lpignore="true" data-form-type="other">
-            </div>
-            <input id="rc-link" class="pq-input" placeholder="Nerede izlenir/alınır linki (opsiyonel)" autocomplete="off" data-lpignore="true" data-form-type="other">
-            <div><button class="set-btn" id="rc-save-btn" onclick="adminRcSave()">Yazıyı Ekle</button>
-            <button class="set-btn ghost" onclick="adminRcFormClear()" style="margin-left:8px;">Temizle</button></div>
-          </div>
-          <div class="admin-notif-card">
-            <h3 class="an-h3">📋 Blog Yazıları</h3>
-            <div id="rc-list"><div class="profile-empty">Yükleniyor...</div></div>
-          </div>
+          <h2 class="profile-h2">Bloglar ve Makaleler</h2>
+          <p class="profile-sub">Kendi blog yazılarını oluştur ya da güvenilir kaynaklardan makaleleri ekle.</p>
+          <div id="ys-blog"></div>
         </div>
 
         <div id="av-assign" class="admin-view" style="display:none;">
@@ -2188,15 +2103,15 @@ var _nb=document.getElementById('notif-bell');if(_nb)_nb.style.display='inline-f
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/supabase-config.js?v=174"></script>
-<script defer src="js/auth.js?v=174"></script>
-<script defer src="js/admin.js?v=174"></script>
-<script defer src="js/profile.js?v=174"></script>
-<script defer src="js/extras.js?v=174"></script>
-<script defer src="js/app.js?v=174"></script>
-<script defer src="js/ekitap.js?v=174"></script>
-<script defer src="js/video.js?v=174"></script>
-<script defer src="js/arayuz.js?v=174"></script>
+<script defer src="js/supabase-config.js?v=175"></script>
+<script defer src="js/auth.js?v=175"></script>
+<script defer src="js/admin.js?v=175"></script>
+<script defer src="js/profile.js?v=175"></script>
+<script defer src="js/extras.js?v=175"></script>
+<script defer src="js/app.js?v=175"></script>
+<script defer src="js/ekitap.js?v=175"></script>
+<script defer src="js/video.js?v=175"></script>
+<script defer src="js/arayuz.js?v=175"></script>
 <script>
   if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
