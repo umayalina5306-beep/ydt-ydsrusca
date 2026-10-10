@@ -367,12 +367,13 @@ async function togglePremium(userId, currentPlan) {
     // Sol menü
     const yan = document.createElement('aside');
     yan.id = 'yp-yan';
-    let h = '<div class="yp-logo" onclick="ypGit(\'overview\')" role="button" tabindex="0"><span class="yp-logo-ic">' + ic('kitap', 24) + '</span><div><b>YDT-YDS <em>Rusça</em></b><small>Yönetim Paneli</small></div></div><div class="yp-menu" role="navigation" aria-label="Yönetim menüsü">';
+    let h = '<div class="yp-logo-k"><div class="yp-logo" onclick="ypGit(\'overview\')" role="button" tabindex="0"><span class="yp-logo-ic">' + ic('kitap', 24) + '</span><div><b>YDT-YDS <em>Rusça</em></b><small>Yönetim Paneli</small></div></div>' +
+      '<button type="button" class="yp-daralt" onclick="ypDaralt()" aria-label="Menüyü gizle" title="Menüyü gizle / göster">' + ic('menu', 19) + '</button></div><div class="yp-menu" role="navigation" aria-label="Yönetim menüsü">';
     MENU.forEach(g => {
       if (g.g) h += '<div class="yp-grup' + (katli[g.k] ? ' katli' : '') + '" data-k="' + g.k + '"><button type="button" class="yp-grup-b" onclick="ypGrup(\'' + g.k + '\')">' + esc(g.g) + ic('asagi', 14) + '</button><div class="yp-grup-ic">';
       g.items.forEach(([v, ad, ikon, alt]) => {
         h += '<button type="button" class="psb-item yp-it"' + (alt ? '' : ' id="asb-' + v + '"') + ' data-v="' + v + '"' + (alt ? ' data-alt="' + alt + '"' : '') +
-          ' onclick="ypGit(\'' + v + '\'' + (alt ? ', \'' + alt + '\'' : '') + ')">' + ic(ikon) + '<span>' + esc(ad) + '</span><i class="yp-rozet" data-r="' + v + (alt ? '-' + alt : '') + '"></i></button>';
+          ' title="' + esc(ad) + '" onclick="ypGit(\'' + v + '\'' + (alt ? ', \'' + alt + '\'' : '') + ')">' + ic(ikon) + '<span>' + esc(ad) + '</span><i class="yp-rozet" data-r="' + v + (alt ? '-' + alt : '') + '"></i></button>';
       });
       if (g.g) h += '</div></div>';
     });
@@ -490,6 +491,13 @@ async function togglePremium(userId, currentPlan) {
     g.classList.toggle('katli'); katli[k] = g.classList.contains('katli'); lsYaz('yp_katli', katli);
   }
   function ypMenuAc() { document.body.classList.add('yp-menu-acik'); }
+  // Sol menüyü daralt: menü gizlenir, yerinde yalnızca simgelerin durduğu lacivert bir sütun kalır (tercih hatırlanır)
+  function ypDaralt() {
+    const dar = !document.body.classList.contains('yp-dar');
+    document.body.classList.toggle('yp-dar', dar); lsYaz('yp_dar', dar);
+    const b = document.querySelector('.yp-daralt'); if (b) b.setAttribute('aria-label', dar ? 'Menüyü göster' : 'Menüyü gizle');
+  }
+  if (lsOku('yp_dar', false)) document.body.classList.add('yp-dar');
   function ypMenuKapat() { document.body.classList.remove('yp-menu-acik'); }
   function ypSiteye() { ypKapatHepsi(); if (typeof showPage === 'function') showPage('home'); }
   function ypKapatHepsi() { document.querySelectorAll('#page-admin .yp-acilir.acik').forEach(x => x.classList.remove('acik')); }
@@ -1204,7 +1212,7 @@ async function togglePremium(userId, currentPlan) {
   const _sp = setInterval(() => { if (typeof window.showPage === 'function') { clearInterval(_sp); sar('showPage', function (id) { if (id !== 'admin') { document.body.classList.remove('yp-aktif', 'yp-menu-acik'); gozcuDur(); } }); } }, 50);
   setInterval(() => { if (document.body.classList.contains('yp-aktif') && !document.hidden) bekleyenAl(); }, 120000);
 
-  Object.assign(window, { ypGit, ypGrup, ypMenuAc, ypMenuKapat, ypSiteye, ypKapatHepsi, ypHesap, ypZil, ypYeni, ypYeniAc, ypDuzenle });
+  Object.assign(window, { ypGit, ypGrup, ypMenuAc, ypDaralt, ypMenuKapat, ypSiteye, ypKapatHepsi, ypHesap, ypZil, ypYeni, ypYeniAc, ypDuzenle });
 })();
 
 /* ============================================================
@@ -1434,7 +1442,7 @@ async function togglePremium(userId, currentPlan) {
     const n = Math.max(1, Math.ceil(L.length / IS.boy)); if (IS.sayfa > n) IS.sayfa = n;
     const dilim = L.slice((IS.sayfa - 1) * IS.boy, IS.sayfa * IS.boy);
     let h = '<div class="yp-kart ys-liste"><div class="ys-arac">' +
-      '<button type="button" class="yp-btn altin" onclick="ysIsYenile()">' + ic('yenile', 17) + 'Yenile</button>' +
+      '<button type="button" class="yp-btn ana" onclick="ysIsYenile()">' + ic('yenile', 17) + 'Yenile</button>' +
       secim('İşlem türü', IS.tur, [['hepsi', 'Tümü']].concat(turler.map(t => [t, (ISLEM[t] || [t])[0]])), 'ysIs(\'tur\', this.value)') +
       secim('Rol', IS.rol, [['hepsi', 'Tümü']].concat(roller.map(r => [r, (ROL_AD[r] || [r])[0]])), 'ysIs(\'rol\', this.value)') +
       secim('Tarih aralığı', IS.zaman, zamanSecenek, 'ysIs(\'zaman\', this.value)') +
@@ -1635,6 +1643,434 @@ async function togglePremium(userId, currentPlan) {
     box.innerHTML = '<ul class="ys-seo-l">' + c.map(x => '<li class="' + (x[0] ? 'ok' : 'yok') + '">' + ic(x[0] ? 'onay' : 'carpi', 19) + '<div><b>' + esc(x[1]) + '</b><small>' + esc(x[2]) + '</small></div></li>').join('') + '</ul>';
   }
 
+  /* ============================================================
+     ORTAK: ⋮ menüsü, aramalı seçim kutusu, dışa aktarma (v172)
+     ============================================================ */
+  const MENULER = {};
+  let acikMenu = null;
+  function menuKapat() { if (acikMenu) { acikMenu.remove(); acikMenu = null; } }
+  window.ysMenuAc = (e, tur, id) => {
+    if (e) { e.stopPropagation(); e.preventDefault(); }
+    const btn = e && e.currentTarget;
+    const zatenAcik = acikMenu && acikMenu.dataset.kim === tur + ':' + id;
+    menuKapat(); if (zatenAcik || !MENULER[tur]) return;
+    const ogeler = MENULER[tur](id); if (!ogeler || !ogeler.length) return;
+    const m = document.createElement('div'); m.className = 'ys-menu'; m.dataset.kim = tur + ':' + id; m.setAttribute('role', 'menu');
+    m.innerHTML = ogeler.map(o => o.ayrac ? '<div class="ys-menu-ayrac"></div>' : o.baslik ? '<div class="ys-menu-bas">' + esc(o.baslik) + '</div>' :
+      '<button type="button" role="menuitem" class="' + (o.tehlike ? 'tehlike' : '') + (o.secili ? ' secili' : '') + '" data-fn="' + esc(o.fn) + '">' + ic(o.secili ? 'onay' : o.ic, 16) + '<span>' + esc(o.ad) + '</span></button>').join('');
+    document.body.appendChild(m); acikMenu = m;
+    const r = btn ? btn.getBoundingClientRect() : { right: e.clientX, bottom: e.clientY, top: e.clientY };
+    const h = m.offsetHeight, w = m.offsetWidth;
+    let top = r.bottom + 6; if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+    m.style.top = top + 'px'; m.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + 'px';
+    m.addEventListener('click', ev => { const b = ev.target.closest('button[data-fn]'); if (!b) return; const fn = b.dataset.fn; menuKapat(); try { (0, eval)(fn); } catch (x) { console.error(x); } });
+  };
+  document.addEventListener('mousedown', e => { if (acikMenu && !acikMenu.contains(e.target)) menuKapat(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') menuKapat(); });
+  window.addEventListener('scroll', menuKapat, true);
+  window.addEventListener('resize', menuKapat);
+  const menuB = (tur, id) => '<button type="button" class="ys-uc-nokta" aria-label="İşlemler" title="İşlemler" onclick="ysMenuAc(event, \'' + tur + '\', \'' + esc(id) + '\')">' + ic('nokta3', 17) + '</button>';
+  const jsq = s => String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+  // Aramalı seçim kutusu (öğrenci / öğretmen seçimi)
+  const SK = {};
+  function secimKutusu(id, ph, liste, secili) {
+    SK[id] = { liste: liste, secili: secili || null };
+    const s = liste.find(x => x.id === secili);
+    return '<div class="ys-sk" id="' + id + '"><div class="ys-ara">' + ic('ara', 17) + '<input type="text" placeholder="' + esc(ph) + '" value="' + esc(s ? s.ad : '') + '" autocomplete="off" ' +
+      'oninput="ysSkAra(\'' + id + '\', this.value)" onfocus="ysSkAra(\'' + id + '\', this.value, 1)"><span class="ys-sk-ok">' + ic('asagi', 15) + '</span></div><div class="ys-sk-l"></div></div>';
+  }
+  window.ysSkAra = (id, q, odak) => {
+    const d = SK[id], k = $(id); if (!d || !k) return;
+    if (!odak) { d.secili = null; if (d.degisti) d.degisti(null); }
+    const l = k.querySelector('.ys-sk-l');
+    const t = String(odak && d.secili ? '' : q || '').trim().toLocaleLowerCase('tr');
+    const L = d.liste.filter(x => !t || (x.ad + ' ' + (x.alt || '')).toLocaleLowerCase('tr').includes(t)).slice(0, 60);
+    l.innerHTML = L.length ? L.map(x => '<button type="button" onmousedown="event.preventDefault()" onclick="ysSkSec(\'' + id + '\', \'' + esc(x.id) + '\')">' + avatar(null, x.ad) + '<span><b>' + esc(x.ad) + '</b><small>' + esc(x.alt || '') + '</small></span></button>').join('') : '<div class="ys-sk-bos">Sonuç yok</div>';
+    k.classList.add('acik');
+  };
+  window.ysSkSec = (id, deger) => {
+    const d = SK[id], k = $(id); if (!d || !k) return;
+    d.secili = deger; const s = d.liste.find(x => x.id === deger);
+    k.querySelector('input').value = s ? s.ad : ''; k.classList.remove('acik');
+    if (d.degisti) d.degisti(deger);
+  };
+  document.addEventListener('mousedown', e => { document.querySelectorAll('.ys-sk.acik').forEach(k => { if (!k.contains(e.target)) k.classList.remove('acik'); }); });
+
+  function csvIndir(ad, basliklar, satirlar) {
+    const hucre = v => { v = v == null ? '' : String(v); return /[";\n,]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const metin = '﻿' + [basliklar].concat(satirlar).map(r => r.map(hucre).join(';')).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([metin], { type: 'text/csv;charset=utf-8' }));
+    a.download = ad + '-' + new Date().toISOString().slice(0, 10) + '.csv'; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+  const RENKLER = ['#2563eb', '#7c3aed', '#0e7490', '#b0862c', '#15803d', '#c2410c', '#be185d', '#475569'];
+  function harfAv(ad) {
+    const p = String(ad || '?').trim().split(/\s+/), h = ((p[0] || '?').charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toLocaleUpperCase('tr');
+    let n = 0; for (const c of String(ad || '')) n = (n * 31 + c.charCodeAt(0)) % 997;
+    return '<span class="ys-av renkli" style="background:' + RENKLER[n % RENKLER.length] + '">' + esc(h) + '</span>';
+  }
+  function globalAta(ad, deger) { window.__ysTmp = deger; try { (0, eval)(ad + ' = window.__ysTmp'); } catch (e) {} delete window.__ysTmp; }
+  const superMi = () => { const f = gl('_isSuper'); return typeof f === 'function' ? f() : false; };
+
+  /* ============================================================
+     KULLANICILAR
+     ============================================================ */
+  const UK = { ara: '', rol: 'hepsi', plan: 'hepsi', durum: 'hepsi', sayfa: 1, boy: 10, secili: new Set(), son: null, kurum: {}, acik: null, yuk: false };
+  const ROLLER = { yonetici: ['Yönetici', 'altin'], destek: ['Destek', 'turuncu'], ogretmen: ['Öğretmen', 'mavi'], kurum: ['Kurum yöneticisi', 'camgobegi'], ogrenci: ['Öğrenci', 'mor'] };
+  const rolKod = u => u.is_admin ? 'yonetici' : (u.role === 'destek' || u.role === 'ogretmen' || u.role === 'kurum') ? u.role : 'ogrenci';
+  const premiumMu = u => u.plan === 'premium' && (!u.premium_until || new Date(u.premium_until) > new Date());
+  const AKTIF_GUN = 30;
+  function durumKod(u) {
+    if (!UK.son) return 'bilinmiyor';
+    const t = UK.son[u.id] || u.created_at; if (!t) return 'pasif';
+    return (Date.now() - new Date(t).getTime()) < AKTIF_GUN * GUN ? 'aktif' : 'pasif';
+  }
+  async function kullaniciYukle() {
+    const k = $('ys-kul'); if (!k) return;
+    if (!kullanicilar().length) k.innerHTML = '<div class="yp-kart"><div class="admin-loading">Yükleniyor...</div></div>';
+    UK.yuk = true;
+    const alan = 'id, email, display_name, plan, is_admin, role, level, streak_count, created_at, premium_until';
+    try {
+      let r = await sb.from('profiles').select(alan + ', kurum_id').order('created_at', { ascending: false });
+      if (r.error) r = await sb.from('profiles').select(alan).order('created_at', { ascending: false });
+      if (r.error) throw r.error;
+      globalAta('_adminUsers', r.data || []);
+      const [ku, son] = await Promise.all([
+        sb.from('kurumlar').select('id, name').then(x => x, () => ({ data: [] })),
+        sb.from('access_log').select('user_id, created_at').order('created_at', { ascending: false }).limit(5000).then(x => x, () => ({ error: 1 }))
+      ]);
+      UK.kurum = {}; ((ku && ku.data) || []).forEach(x => UK.kurum[x.id] = x.name);
+      if (son && !son.error && son.data) { UK.son = {}; son.data.forEach(x => { if (x.user_id && !UK.son[x.user_id]) UK.son[x.user_id] = x.created_at; }); } else UK.son = null;
+    } catch (e) {
+      k.innerHTML = '<div class="yp-kart"><div class="yp-bos">' + ic('kullanicilar', 28) + '<b>Kullanıcılar yüklenemedi.</b><span>admin-rls.sql kuralları çalıştırıldı mı?</span></div></div>'; UK.yuk = false; return;
+    }
+    UK.yuk = false; UK.secili.clear();
+    kullaniciCiz();
+  }
+  function kullaniciFiltre() {
+    const q = UK.ara.trim().toLocaleLowerCase('tr');
+    return kullanicilar().filter(u => (UK.rol === 'hepsi' || rolKod(u) === UK.rol) && (UK.plan === 'hepsi' || (UK.plan === 'premium') === premiumMu(u)) &&
+      (UK.durum === 'hepsi' || durumKod(u) === UK.durum) &&
+      (!q || [u.display_name, u.email, u.kurum_id && UK.kurum[u.kurum_id], (ROLLER[rolKod(u)] || [])[0]].filter(Boolean).join(' ').toLocaleLowerCase('tr').includes(q)));
+  }
+  function kullaniciCiz() {
+    const k = $('ys-kul'); if (!k) return;
+    const T = kullanicilar(), L = kullaniciFiltre();
+    const aktif = UK.son ? T.filter(u => durumKod(u) === 'aktif').length : null;
+    const n = Math.max(1, Math.ceil(L.length / UK.boy)); if (UK.sayfa > n) UK.sayfa = n;
+    const dilim = L.slice((UK.sayfa - 1) * UK.boy, UK.sayfa * UK.boy);
+    const tumSecili = dilim.length && dilim.every(u => UK.secili.has(u.id));
+    const filtreVar = UK.ara || UK.rol !== 'hepsi' || UK.plan !== 'hepsi' || UK.durum !== 'hepsi';
+    let h = '<div class="ys-kpiler d5">' +
+      kpi('kullanicilar', 'mavi', 'Toplam kullanıcı', T.length.toLocaleString('tr-TR'), '<small>' + T.filter(premiumMu).length + ' premium</small>') +
+      kpi('onay', 'yesil', 'Aktif kullanıcı', aktif == null ? '—' : aktif.toLocaleString('tr-TR'), '<small>son ' + AKTIF_GUN + ' günde giriş</small>') +
+      kpi('saat', 'gri', 'Pasif kullanıcı', aktif == null ? '—' : (T.length - aktif).toLocaleString('tr-TR'), '<small>' + AKTIF_GUN + ' gündür girmeyen</small>') +
+      kpi('ogretmen', 'mavi', 'Öğretmen', T.filter(u => u.role === 'ogretmen').length, '') +
+      kpi('kurum', 'mor', 'Kurum kullanıcısı', T.filter(u => u.kurum_id).length, '') + '</div>';
+    h += '<div class="yp-kart ys-liste"><div class="ys-arac">' +
+      aramaKutusu('admin-search', UK.ara, 'İsim, e-posta veya kurum ara…', 'ysUk(\'ara\', this.value)') +
+      secim('Rol', UK.rol, [['hepsi', 'Tüm roller']].concat(Object.keys(ROLLER).map(r => [r, ROLLER[r][0]])), 'ysUk(\'rol\', this.value)') +
+      secim('Plan', UK.plan, [['hepsi', 'Tüm planlar'], ['premium', 'Premium'], ['ucretsiz', 'Ücretsiz']], 'ysUk(\'plan\', this.value)') +
+      secim('Durum', UK.durum, [['hepsi', 'Tüm durumlar'], ['aktif', 'Aktif'], ['pasif', 'Pasif']], 'ysUk(\'durum\', this.value)') +
+      (filtreVar ? '<button type="button" class="yp-btn" onclick="ysUkTemizle()">' + ic('kapat', 15) + 'Temizle</button>' : '') + '</div>';
+    if (UK.secili.size) h += '<div class="ys-secbar"><b>' + UK.secili.size + ' kullanıcı seçili</b><button type="button" class="yp-btn kucuk" onclick="ysUkDisa(true)">' + ic('indir', 15) + 'Seçilenleri dışa aktar</button><button type="button" class="yp-link" onclick="ysUkSec(\'temizle\')">Seçimi kaldır</button></div>';
+    if (!L.length) h += '<div class="yp-bos">' + ic('kullanicilar', 30) + '<b>' + (T.length ? 'Filtreye uyan kullanıcı yok.' : 'Henüz kullanıcı yok.') + '</b></div>';
+    else {
+      h += '<div class="yp-tablo-k"><table class="yp-tablo ys-tablo ys-orta"><thead><tr><th class="ys-cb"><input type="checkbox" ' + (tumSecili ? 'checked' : '') + ' onchange="ysUkSec(\'sayfa\', this.checked)" aria-label="Sayfadakileri seç"></th><th>Kullanıcı</th><th>E-posta</th><th>Rol</th><th>Plan</th><th>Kurum</th><th>Durum</th><th>Kayıt tarihi</th><th>Son giriş</th><th class="ys-sag">İşlemler</th></tr></thead><tbody>';
+      dilim.forEach(u => {
+        const ad = kisiAd(u), R = ROLLER[rolKod(u)], d = durumKod(u), prem = premiumMu(u);
+        h += '<tr' + (UK.acik === u.id ? ' class="acik"' : '') + '><td class="ys-cb"><input type="checkbox" ' + (UK.secili.has(u.id) ? 'checked' : '') + ' onchange="ysUkSec(\'' + u.id + '\', this.checked)" aria-label="Seç"></td>' +
+          '<td><button type="button" class="ys-kisi-b" onclick="ysUkAc(\'' + u.id + '\')">' + harfAv(ad) + '<b>' + esc(ad) + '</b></button></td>' +
+          '<td class="ys-soluk">' + esc(u.email || '—') + '</td>' +
+          '<td><span class="yp-durum r-' + R[1] + '">' + R[0] + '</span></td>' +
+          '<td><span class="yp-durum ' + (prem ? 'r-altin' : 'r-mavi') + '"' + (prem && u.premium_until ? ' title="' + esc(tarih(u.premium_until)) + ' tarihine kadar"' : '') + '>' + (prem ? 'Premium' : 'Ücretsiz') + '</span></td>' +
+          '<td class="ys-soluk">' + esc((u.kurum_id && UK.kurum[u.kurum_id]) || '—') + '</td>' +
+          '<td>' + (d === 'bilinmiyor' ? '<span class="ys-soluk">—</span>' : '<span class="yp-durum ' + (d === 'aktif' ? 'd-yesil' : 'd-kirmizi') + '">' + (d === 'aktif' ? 'Aktif' : 'Pasif') + '</span>') + '</td>' +
+          '<td class="ys-tar">' + tarih(u.created_at) + '</td>' +
+          '<td class="ys-tar">' + (UK.son && UK.son[u.id] ? tarih(UK.son[u.id]) : '<span class="ys-soluk">—</span>') + '</td>' +
+          '<td class="ys-sag">' + menuB('kul', u.id) + '</td></tr>';
+        if (UK.acik === u.id) h += '<tr class="ys-ac-satir"><td colspan="10">' + kullaniciDetay(u) + '</td></tr>';
+      });
+      h += '</tbody></table></div>' + sayfalama(L.length, UK.sayfa, UK.boy, 'ysUkSayfa', 'kullanıcı');
+    }
+    k.innerHTML = h + '</div>';
+    if (UK.acik && $('udet-' + UK.acik) && typeof adminUserDetail === 'function') adminUserDetail(UK.acik);
+  }
+  function kullaniciDetay(u) {
+    const prem = premiumMu(u);
+    const bilgi = [['E-posta', u.email || '—'], ['Seviye', u.level || 'seviye yok'], ['Seri', (u.streak_count || 0) + ' gün'], ['Kayıt', tarih(u.created_at)],
+      ['Plan', prem ? 'Premium' + (u.premium_until ? ' (' + tarih(u.premium_until) + ' tarihine kadar)' : '') : 'Ücretsiz']];
+    let h = '<div class="ys-detay-k"><div class="ys-detay-bilgi">' + bilgi.map(b => '<div><small>' + b[0] + '</small><b>' + esc(b[1]) + '</b></div>').join('') + '</div>';
+    if (superMi() && !u.is_admin) h += '<div class="ys-detay-rol"><small>Rol</small><div class="ys-mini-sekme">' + [['user', 'Öğrenci'], ['destek', 'Destek'], ['ogretmen', 'Öğretmen'], ['kurum', 'Kurum yöneticisi']]
+      .map(r => '<button type="button" class="' + ((u.role || 'user') === r[0] || (r[0] === 'user' && !['destek', 'ogretmen', 'kurum'].includes(u.role)) ? 'aktif' : '') + '" onclick="ysUkRol(\'' + u.id + '\', \'' + r[0] + '\')">' + r[1] + '</button>').join('') + '</div></div>';
+    h += '</div><div id="udet-' + u.id + '" class="udet-box ys-udet" style="display:none"></div>';
+    return h;
+  }
+  MENULER.kul = id => {
+    const u = kisiBul(id); if (!u) return [];
+    const ad = kisiAd(u), prem = premiumMu(u), L = [];
+    L.push({ ic: 'goz', ad: UK.acik === id ? 'Ayrıntıları kapat' : 'Ayrıntılar ve giriş kayıtları', fn: "ysUkAc('" + id + "')" });
+    if (!u.is_admin) {
+      L.push({ ic: 'tac', ad: 'Premium tanımla', fn: "adminGiftPremium('" + id + "')" });
+      if (prem) L.push({ ic: 'carpi', ad: 'Ücretsiz plana al', fn: "togglePremium('" + id + "', 'premium')" });
+    }
+    L.push({ ayrac: 1 });
+    L.push({ ic: 'bildirim', ad: 'Bildirim gönder', fn: "adminUserNotify('" + id + "', '" + jsq(u.display_name || '') + "')" });
+    if (u.email) {
+      L.push({ ic: 'anahtar', ad: 'Şifre yenileme maili', fn: "adminUserResetPw('" + jsq(u.email) + "')" });
+      L.push({ ic: 'mail', ad: 'Onay maili gönder', fn: "tkResendVerify('" + jsq(u.email) + "')" });
+      L.push({ ic: 'kalem', ad: 'E-posta değiştir', fn: "adminUserChangeEmail('" + id + "', '" + jsq(u.email) + "')" });
+    }
+    if (superMi() && !u.is_admin && !(gl('currentUser') && gl('currentUser').id === id)) { L.push({ ayrac: 1 }); L.push({ ic: 'cop', ad: 'Kullanıcıyı sil', fn: "adminUserDelete('" + id + "')", tehlike: 1 }); }
+    return L;
+  };
+  window.ysUk = (a, v) => { UK[a] = v; UK.sayfa = 1; kullaniciCiz(); if (a === 'ara') { const i = $('admin-search'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch (e) {} } } };
+  window.ysUkTemizle = () => { Object.assign(UK, { ara: '', rol: 'hepsi', plan: 'hepsi', durum: 'hepsi', sayfa: 1 }); kullaniciCiz(); };
+  window.ysUkSayfa = (s, boy) => { if (boy) UK.boy = boy; UK.sayfa = s; kullaniciCiz(); };
+  window.ysUkAc = id => { UK.acik = UK.acik === id ? null : id; kullaniciCiz(); };
+  window.ysUkSec = (id, acik) => {
+    if (id === 'temizle') UK.secili.clear();
+    else if (id === 'sayfa') kullaniciFiltre().slice((UK.sayfa - 1) * UK.boy, UK.sayfa * UK.boy).forEach(u => acik ? UK.secili.add(u.id) : UK.secili.delete(u.id));
+    else acik ? UK.secili.add(id) : UK.secili.delete(id);
+    kullaniciCiz();
+  };
+  window.ysUkRol = async (id, rol) => {
+    const u = kisiBul(id); if (!u || (u.role || 'user') === rol) return;
+    if (typeof adminSetRole === 'function') await adminSetRole(id, rol, u.display_name || '');
+    kullaniciCiz();
+  };
+  window.ysUkDisa = secilen => {
+    const L = secilen ? kullanicilar().filter(u => UK.secili.has(u.id)) : kullaniciFiltre();
+    csvIndir('kullanicilar', ['Ad', 'E-posta', 'Rol', 'Plan', 'Premium bitiş', 'Kurum', 'Durum', 'Seviye', 'Kayıt tarihi', 'Son giriş'],
+      L.map(u => [kisiAd(u), u.email || '', ROLLER[rolKod(u)][0], premiumMu(u) ? 'Premium' : 'Ücretsiz', u.premium_until ? tarih(u.premium_until) : '', (u.kurum_id && UK.kurum[u.kurum_id]) || '',
+        { aktif: 'Aktif', pasif: 'Pasif' }[durumKod(u)] || '', u.level || '', tarih(u.created_at), UK.son && UK.son[u.id] ? new Date(UK.son[u.id]).toLocaleString('tr-TR') : '']));
+  };
+  window.YS_AKS.users = () => '<button type="button" class="yp-btn" onclick="ysUkDisa()">' + ic('indir', 16) + 'Dışa aktar</button>';
+
+  /* ============================================================
+     ÖĞRETMEN ATAMA
+     ============================================================ */
+  const AS = { sekme: 'yeni', ogretmenler: [], ogrenciler: [], rows: [], ara: '', ogr: 'hepsi', sayfa: 1, boy: 10, toplu: new Set(), topluAra: '', topluBos: false };
+  const kisiListe = L => L.map(p => ({ id: p.id, ad: kisiAd(p), alt: p.email || '' }));
+  async function atamaYukle() {
+    const k = $('ys-atama'); if (!k) return;
+    if (!AS.rows.length && !AS.ogretmenler.length) k.innerHTML = '<div class="yp-kart"><div class="admin-loading">Yükleniyor...</div></div>';
+    try {
+      const [p, r] = await Promise.all([sb.from('profiles').select('id, display_name, email, role, is_admin, created_at'), sb.from('teacher_students').select('*').limit(5000)]);
+      if (r.error) throw r.error;
+      const all = (p.data || []).sort((a, b) => kisiAd(a).localeCompare(kisiAd(b), 'tr'));
+      if (!kullanicilar().length) KUL = all;
+      AS.ogretmenler = all.filter(x => x.role === 'ogretmen');
+      AS.ogrenciler = all.filter(x => !x.is_admin && x.role !== 'ogretmen' && x.role !== 'destek');
+      AS.rows = (r.data || []).slice().sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      AS.kisi = {}; all.forEach(x => AS.kisi[x.id] = x);
+    } catch (e) { k.innerHTML = '<div class="yp-kart"><div class="yp-bos">' + ic('ogretmen', 28) + '<b>Atamalar okunamadı.</b><span>roller_altyapi.sql çalıştırıldı mı?</span></div></div>'; return; }
+    atamaCiz();
+  }
+  const asKisi = id => (AS.kisi && AS.kisi[id]) || kisiBul(id);
+  function atamaTablo(rows, tam) {
+    if (!rows.length) return '<div class="yp-bos">' + ic('ogretmen', 30) + '<b>Henüz eşleştirme yok.</b></div>';
+    let h = '<div class="yp-tablo-k"><table class="yp-tablo ys-tablo ys-orta"><thead><tr><th>Öğrenci</th><th>Öğretmen</th><th>Tarih</th><th>Durum</th><th class="ys-sag">İşlemler</th></tr></thead><tbody>';
+    rows.forEach(r => {
+      const o = asKisi(r.student_id), t = asKisi(r.teacher_id);
+      const kisi = (p, id) => '<div class="ys-kim orta">' + harfAv(p ? kisiAd(p) : '?') + '<div><b>' + esc(p ? kisiAd(p) : String(id).slice(0, 8) + '…') + '</b>' + (tam && p && p.email ? '<small>' + esc(p.email) + '</small>' : '') + '</div></div>';
+      h += '<tr><td>' + kisi(o, r.student_id) + '</td><td>' + kisi(t, r.teacher_id) + '</td><td class="ys-tar">' + tarih(r.created_at) + '</td>' +
+        '<td>' + (t && t.role === 'ogretmen' ? '<span class="yp-durum d-yesil">Aktif</span>' : '<span class="yp-durum d-sari" title="Bu kişinin artık öğretmen rolü yok">Rolü kaldırılmış</span>') + '</td>' +
+        '<td class="ys-sag">' + menuB('asg', r.teacher_id + '|' + r.student_id) + '</td></tr>';
+    });
+    return h + '</tbody></table></div>';
+  }
+  function atamaCiz() {
+    const k = $('ys-atama'); if (!k) return;
+    const sekmeler = [['yeni', 'Yeni eşleştirme', 'arti'], ['mevcut', 'Mevcut eşleştirmeler', 'liste'], ['toplu', 'Toplu işlemler', 'kullanicilar']];
+    let h = '<div class="yp-kart ys-sekme-kart"><div class="ys-sekme-cubuk">' + sekmeler.map(s => '<button type="button" class="' + (AS.sekme === s[0] ? 'aktif' : '') + '" onclick="ysAs(\'sekme\', \'' + s[0] + '\')">' + ic(s[2], 16) + s[1] + (s[0] === 'mevcut' ? '<i>' + AS.rows.length + '</i>' : '') + '</button>').join('') + '</div></div>';
+    const ogrL = kisiListe(AS.ogrenciler), ogtL = kisiListe(AS.ogretmenler);
+    const ogretmenYok = !AS.ogretmenler.length ? '<div class="ys-uyari">' + ic('bilgi', 18) + '<span>Henüz öğretmen yok. Kullanıcılar sayfasında bir kişinin ayrıntılarını açıp rolünü <b>Öğretmen</b> yap.</span></div>' : '';
+    if (AS.sekme === 'yeni') {
+      h += '<section class="yp-kart"><div class="yp-kart-bas"><h3>' + ic('liste', 18) + 'Yeni eşleştirme</h3></div>' + ogretmenYok +
+        '<div class="ys-esle"><label class="ys-alan"><span>Öğrenci seç</span>' + secimKutusu('ys-as-ogr', 'Öğrenci adı veya e-posta ara…', ogrL) + '</label>' +
+        '<span class="ys-esle-ok">' + ic('okSag', 20) + '</span>' +
+        '<label class="ys-alan"><span>Öğretmen seç</span>' + secimKutusu('ys-as-ogt', 'Öğretmen adı veya e-posta ara…', ogtL) + '</label></div>' +
+        '<div class="ys-esle-alt"><div class="ys-not">' + ic('bilgi', 18) + '<div><span>Eşleştirmeden sonra öğretmen, kendi panelinde bu öğrencinin çalışmalarını, ilerlemesini ve raporlarını görebilir. Bir öğrenci birden fazla öğretmene bağlanabilir.</span></div></div>' +
+        '<button type="button" class="yp-btn ana" onclick="ysAsEsle()">' + ic('link', 16) + 'Eşleştir</button></div></section>' +
+        '<section class="yp-kart ys-liste"><div class="yp-kart-bas ys-ic-bas"><h3>' + ic('saat', 18) + 'Son eşleştirmeler</h3>' + (AS.rows.length > 5 ? '<button type="button" class="yp-link" onclick="ysAs(\'sekme\', \'mevcut\')">Tümünü gör (' + AS.rows.length + ')</button>' : '') + '</div>' + atamaTablo(AS.rows.slice(0, 5)) + '</section>';
+    } else if (AS.sekme === 'mevcut') {
+      const q = AS.ara.trim().toLocaleLowerCase('tr');
+      const L = AS.rows.filter(r => (AS.ogr === 'hepsi' || r.teacher_id === AS.ogr) && (!q || [asKisi(r.student_id), asKisi(r.teacher_id)].filter(Boolean).map(p => kisiAd(p) + ' ' + (p.email || '')).join(' ').toLocaleLowerCase('tr').includes(q)));
+      const n = Math.max(1, Math.ceil(L.length / AS.boy)); if (AS.sayfa > n) AS.sayfa = n;
+      h += '<section class="yp-kart ys-liste"><div class="ys-arac">' + aramaKutusu('ys-as-ara', AS.ara, 'Öğrenci veya öğretmen ara…', 'ysAs(\'ara\', this.value)') +
+        secim('Öğretmen', AS.ogr, [['hepsi', 'Tüm öğretmenler']].concat(AS.ogretmenler.map(t => [t.id, kisiAd(t) + ' (' + AS.rows.filter(r => r.teacher_id === t.id).length + ')'])), 'ysAs(\'ogr\', this.value)', true) + '</div>' +
+        atamaTablo(L.slice((AS.sayfa - 1) * AS.boy, AS.sayfa * AS.boy), true) + (L.length ? sayfalama(L.length, AS.sayfa, AS.boy, 'ysAsSayfa', 'eşleştirme') : '') + '</section>';
+    } else {
+      const q = AS.topluAra.trim().toLocaleLowerCase('tr');
+      const bagli = new Set(AS.rows.map(r => r.student_id));
+      const L = AS.ogrenciler.filter(p => (!AS.topluBos || !bagli.has(p.id)) && (!q || (kisiAd(p) + ' ' + (p.email || '')).toLocaleLowerCase('tr').includes(q)));
+      h += '<section class="yp-kart"><div class="yp-kart-bas"><h3>' + ic('kullanicilar', 18) + 'Birden çok öğrenciyi aynı öğretmene bağla</h3></div>' + ogretmenYok +
+        '<div class="ys-toplu-ust"><label class="ys-alan"><span>Öğretmen</span>' + secimKutusu('ys-as-togt', 'Öğretmen adı veya e-posta ara…', ogtL, AS.topluOgt) + '</label>' +
+        '<button type="button" class="yp-btn ana" onclick="ysAsTopluAta()"' + (AS.toplu.size ? '' : ' disabled') + '>' + ic('link', 16) + (AS.toplu.size ? AS.toplu.size + ' öğrenciyi ata' : 'Öğrenci seç') + '</button></div>' +
+        '<div class="ys-arac ic">' + aramaKutusu('ys-as-tara', AS.topluAra, 'Öğrenci ara…', 'ysAsToplu(\'ara\', this.value)') +
+        '<label class="ys-anahtar kucuk"><input type="checkbox" ' + (AS.topluBos ? 'checked' : '') + ' onchange="ysAsToplu(\'bos\', this.checked)"><i></i><span>Yalnızca öğretmeni olmayanlar</span></label>' +
+        '<button type="button" class="yp-link" onclick="ysAsToplu(\'hepsi\')">' + (L.length && L.every(p => AS.toplu.has(p.id)) ? 'Seçimi kaldır' : 'Listedekilerin hepsini seç') + '</button></div>' +
+        '<div class="ys-secim-liste">' + (L.length ? L.slice(0, 300).map(p => '<label class="' + (AS.toplu.has(p.id) ? 'secili' : '') + '"><input type="checkbox" ' + (AS.toplu.has(p.id) ? 'checked' : '') + ' onchange="ysAsToplu(\'sec\', \'' + p.id + '\')">' + harfAv(kisiAd(p)) +
+          '<span><b>' + esc(kisiAd(p)) + '</b><small>' + esc(p.email || '') + '</small></span>' + (bagli.has(p.id) ? '<em class="yp-durum d-gri">' + AS.rows.filter(r => r.student_id === p.id).length + ' öğretmen</em>' : '') + '</label>').join('') : '<div class="yp-bos kucuk"><span>Öğrenci bulunamadı.</span></div>') +
+        (L.length > 300 ? '<div class="ys-soluk ys-ince-not">İlk 300 kişi gösteriliyor; aramayı daralt.</div>' : '') + '</div></section>';
+    }
+    k.innerHTML = h;
+    if (SK['ys-as-togt']) SK['ys-as-togt'].degisti = v => { AS.topluOgt = v; };
+  }
+  async function ataYap(ogretmen, ogrenciler) {
+    const yeni = ogrenciler.filter(s => !AS.rows.some(r => r.teacher_id === ogretmen && r.student_id === s));
+    if (!yeni.length) { uiAlert('Seçilen öğrenciler zaten bu öğretmene bağlı.'); return false; }
+    try {
+      const { error } = await sb.from('teacher_students').upsert(yeni.map(s => ({ teacher_id: ogretmen, student_id: s })));
+      if (error) throw error;
+      yeni.forEach(s => { try { staffLog('ogrenci_ata', s, { ogretmen: ogretmen }); } catch (e) {} });
+      toast(yeni.length === 1 ? 'Eşleştirme kaydedildi.' : yeni.length + ' öğrenci eşleştirildi.');
+      return true;
+    } catch (e) { uiAlert('Eşleştirilemedi. roller_altyapi.sql çalıştırıldı mı?'); return false; }
+  }
+  window.ysAs = (a, v) => { AS[a] = v; if (a !== 'sekme') AS.sayfa = 1; menuKapat(); atamaCiz(); if (a === 'ara') { const i = $('ys-as-ara'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch (e) {} } } };
+  window.ysAsSayfa = (s, boy) => { if (boy) AS.boy = boy; AS.sayfa = s; atamaCiz(); };
+  window.ysAsEsle = async () => {
+    const o = SK['ys-as-ogr'] && SK['ys-as-ogr'].secili, t = SK['ys-as-ogt'] && SK['ys-as-ogt'].secili;
+    if (!o || !t) { uiAlert('Önce listeden bir öğrenci ve bir öğretmen seç.'); return; }
+    if (await ataYap(t, [o])) atamaYukle();
+  };
+  window.ysAsToplu = (a, v) => {
+    if (a === 'ara') AS.topluAra = v;
+    else if (a === 'bos') AS.topluBos = v;
+    else if (a === 'sec') AS.toplu.has(v) ? AS.toplu.delete(v) : AS.toplu.add(v);
+    else if (a === 'hepsi') {
+      const q = AS.topluAra.trim().toLocaleLowerCase('tr'), bagli = new Set(AS.rows.map(r => r.student_id));
+      const L = AS.ogrenciler.filter(p => (!AS.topluBos || !bagli.has(p.id)) && (!q || (kisiAd(p) + ' ' + (p.email || '')).toLocaleLowerCase('tr').includes(q))).slice(0, 300);
+      const hepsi = L.length && L.every(p => AS.toplu.has(p.id)); L.forEach(p => hepsi ? AS.toplu.delete(p.id) : AS.toplu.add(p.id));
+    }
+    const y = window.scrollY; atamaCiz(); window.scrollTo(0, y);
+    if (a === 'ara') { const i = $('ys-as-tara'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch (e) {} } }
+  };
+  window.ysAsTopluAta = async () => {
+    const t = AS.topluOgt || (SK['ys-as-togt'] && SK['ys-as-togt'].secili);
+    if (!t) { uiAlert('Önce bir öğretmen seç.'); return; }
+    if (!AS.toplu.size) return;
+    const ad = kisiAd(asKisi(t));
+    if (!(await uiConfirm(AS.toplu.size + ' öğrenci ' + ad + ' adlı öğretmene bağlanacak.', 'Toplu eşleştirme', { confirmText: 'Eşleştir' }))) return;
+    if (await ataYap(t, [...AS.toplu])) { AS.toplu.clear(); atamaYukle(); }
+  };
+  MENULER.asg = anahtar => {
+    const [t, s] = anahtar.split('|'); const o = asKisi(s);
+    return [{ ic: 'kullanici', ad: 'Öğrenciyi Kullanıcılar\'da aç', fn: "ysKisiyeGit('" + s + "')" },
+      { ic: 'ogretmen', ad: 'Öğretmenin tüm öğrencileri', fn: "ysAs('ogr', '" + t + "'); ysAs('sekme', 'mevcut')" },
+      { ayrac: 1 }, { ic: 'carpi', ad: 'Eşleştirmeyi kaldır', fn: "adminAssignRemove('" + t + "', '" + s + "')", tehlike: 1 }].filter(x => x.ayrac || !(x.fn.startsWith('ysKisiyeGit') && !o));
+  };
+  window.ysKisiyeGit = id => {
+    const p = asKisi(id) || kisiBul(id); if (typeof ypGit === 'function') ypGit('users');
+    setTimeout(() => { UK.ara = (p && p.email) || ''; UK.acik = id; UK.sayfa = 1; kullaniciCiz(); }, 150);
+  };
+
+  /* ============================================================
+     KURUMLAR
+     ============================================================ */
+  const KR = { rows: [], uye: {}, yon: {}, ara: '', durum: 'hepsi', plan: 'hepsi', sayfa: 1, boy: 10, secili: new Set() };
+  const PLANLAR = { basic: ['Basic', 'r-mavi', '100 öğrenci'], premium: ['Premium', 'r-altin', '500 öğrenci'], enterprise: ['Enterprise', 'r-mor', 'sınırsız'] };
+  async function kurumYukle() {
+    const k = $('ys-kurum'); if (!k) return;
+    if (!KR.rows.length) k.innerHTML = '<div class="yp-kart"><div class="admin-loading">Yükleniyor...</div></div>';
+    try {
+      const { data, error } = await sb.from('kurumlar').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      KR.rows = data || []; KR.uye = {}; KR.yon = {};
+      if (KR.rows.length) {
+        const { data: m } = await sb.from('profiles').select('id, display_name, email, kurum_id, role').in('kurum_id', KR.rows.map(x => x.id));
+        (m || []).forEach(p => {
+          const s = KR.uye[p.kurum_id] || (KR.uye[p.kurum_id] = { ogretmen: 0, ogrenci: 0, toplam: 0 });
+          s.toplam++; if (p.role === 'ogretmen') s.ogretmen++; else if (p.role === 'kurum') (KR.yon[p.kurum_id] = KR.yon[p.kurum_id] || []).push(p); else s.ogrenci++;
+        });
+      }
+    } catch (e) { k.innerHTML = '<div class="yp-kart"><div class="yp-bos">' + ic('kurum', 28) + '<b>Kurumlar okunamadı.</b><span>' + esc((e && e.message) || '') + '</span></div></div>'; return; }
+    KR.secili.clear(); kurumCiz();
+  }
+  function kurumFiltre() {
+    const q = KR.ara.trim().toLocaleLowerCase('tr');
+    return KR.rows.filter(r => (KR.durum === 'hepsi' || (KR.durum === 'aktif') === (r.active !== false)) && (KR.plan === 'hepsi' || (r.plan || 'basic') === KR.plan) &&
+      (!q || [r.name, r.notes, (KR.yon[r.id] || []).map(p => kisiAd(p) + ' ' + (p.email || '')).join(' ')].filter(Boolean).join(' ').toLocaleLowerCase('tr').includes(q)));
+  }
+  function kurumCiz() {
+    const k = $('ys-kurum'); if (!k) return;
+    const L = kurumFiltre(), n = Math.max(1, Math.ceil(L.length / KR.boy)); if (KR.sayfa > n) KR.sayfa = n;
+    const dilim = L.slice((KR.sayfa - 1) * KR.boy, KR.sayfa * KR.boy);
+    const tumSecili = dilim.length && dilim.every(r => KR.secili.has(r.id));
+    const uyeTop = Object.values(KR.uye).reduce((a, s) => a + s.toplam, 0);
+    let h = '<div class="ys-kpiler d4">' + kpi('kurum', 'mor', 'Toplam kurum', KR.rows.length, '') + kpi('onay', 'yesil', 'Aktif kurum', KR.rows.filter(r => r.active !== false).length, '') +
+      kpi('saat', 'gri', 'Dondurulmuş', KR.rows.filter(r => r.active === false).length, '') + kpi('kullanicilar', 'mavi', 'Kurum üyesi', uyeTop, '') + '</div>';
+    h += '<div class="yp-kart ys-liste"><div class="ys-arac">' + aramaKutusu('ys-kr-ara', KR.ara, 'Kurum adı, not veya yönetici ara…', 'ysKr(\'ara\', this.value)') +
+      secim('Durum', KR.durum, [['hepsi', 'Tüm durumlar'], ['aktif', 'Aktif'], ['pasif', 'Dondurulmuş']], 'ysKr(\'durum\', this.value)') +
+      secim('Plan', KR.plan, [['hepsi', 'Tüm planlar']].concat(Object.keys(PLANLAR).map(p => [p, PLANLAR[p][0]])), 'ysKr(\'plan\', this.value)') + '</div>';
+    if (KR.secili.size) h += '<div class="ys-secbar"><b>' + KR.secili.size + ' kurum seçili</b><button type="button" class="yp-btn kucuk" onclick="ysKrDisa(true)">' + ic('indir', 15) + 'Seçilenleri dışa aktar</button><button type="button" class="yp-link" onclick="ysKrSec(\'temizle\')">Seçimi kaldır</button></div>';
+    if (!L.length) h += '<div class="yp-bos">' + ic('kurum', 30) + '<b>' + (KR.rows.length ? 'Filtreye uyan kurum yok.' : 'Henüz kurum yok.') + '</b>' + (KR.rows.length ? '' : '<button type="button" class="yp-btn ana" onclick="ysKrYeni()">' + ic('arti', 16) + 'Yeni kurum oluştur</button>') + '</div>';
+    else {
+      h += '<div class="yp-tablo-k"><table class="yp-tablo ys-tablo ys-orta"><thead><tr><th class="ys-cb"><input type="checkbox" ' + (tumSecili ? 'checked' : '') + ' onchange="ysKrSec(\'sayfa\', this.checked)" aria-label="Sayfadakileri seç"></th><th>Kurum adı</th><th>Kurum yöneticisi</th><th>Plan</th><th>Üye sayısı</th><th>Durum</th><th>Kayıt tarihi</th><th class="ys-sag">İşlemler</th></tr></thead><tbody>';
+      dilim.forEach(r => {
+        const P = PLANLAR[r.plan] || PLANLAR.basic, s = KR.uye[r.id] || { ogretmen: 0, ogrenci: 0, toplam: 0 }, y = KR.yon[r.id] || [];
+        h += '<tr><td class="ys-cb"><input type="checkbox" ' + (KR.secili.has(r.id) ? 'checked' : '') + ' onchange="ysKrSec(\'' + r.id + '\', this.checked)" aria-label="Seç"></td>' +
+          '<td><div class="ys-kim orta"><span class="ys-kurum-ic">' + ic('kurum', 17) + '</span><div><b>' + esc(r.name) + '</b>' + (r.notes ? '<small>' + esc(r.notes) + '</small>' : '') + '</div></div></td>' +
+          '<td>' + (y.length ? y.map(p => '<div class="ys-yon"><b>' + esc(kisiAd(p)) + '</b><small>' + esc(p.email || '') + '</small></div>').join('') : '<button type="button" class="yp-link" onclick="adminKurumSetAdmin(\'' + r.id + '\', \'' + jsq(r.name) + '\')">Yönetici ata</button>') + '</td>' +
+          '<td><span class="yp-durum ' + P[1] + '" title="' + P[2] + '">' + P[0] + '</span></td>' +
+          '<td><b>' + s.toplam + '</b><small class="ys-soluk">' + s.ogretmen + ' öğretmen · ' + s.ogrenci + ' öğrenci</small></td>' +
+          '<td><span class="yp-durum ' + (r.active !== false ? 'd-yesil' : 'd-kirmizi') + '">' + (r.active !== false ? 'Aktif' : 'Dondurulmuş') + '</span></td>' +
+          '<td class="ys-tar">' + tarih(r.created_at) + '</td><td class="ys-sag">' + menuB('kurum', r.id) + '</td></tr>';
+      });
+      h += '</tbody></table></div>' + sayfalama(L.length, KR.sayfa, KR.boy, 'ysKrSayfa', 'kurum');
+    }
+    k.innerHTML = h + '</div>';
+  }
+  MENULER.kurum = id => {
+    const r = KR.rows.find(x => x.id === id); if (!r) return [];
+    const ad = jsq(r.name);
+    return [{ ic: 'kullanicilar', ad: 'Üyeleri gör', fn: "adminKurumMembers('" + id + "', '" + ad + "')" },
+      { ic: 'kullanici', ad: 'Kurum yöneticisi ata', fn: "adminKurumSetAdmin('" + id + "', '" + ad + "')" },
+      { ic: 'kalem', ad: 'Bilgileri düzenle', fn: "ysKrYeni('" + id + "')" },
+      { ic: r.active !== false ? 'saat' : 'onay', ad: r.active !== false ? 'Dondur' : 'Aktifleştir', fn: "adminKurumToggle('" + id + "', " + (r.active !== false) + ")" },
+      { ayrac: 1 }, { ic: 'cop', ad: 'Kurumu sil', fn: "adminKurumDelete('" + id + "', '" + ad + "')", tehlike: 1 }];
+  };
+  window.ysKr = (a, v) => { KR[a] = v; KR.sayfa = 1; kurumCiz(); if (a === 'ara') { const i = $('ys-kr-ara'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch (e) {} } } };
+  window.ysKrSayfa = (s, boy) => { if (boy) KR.boy = boy; KR.sayfa = s; kurumCiz(); };
+  window.ysKrSec = (id, acik) => {
+    if (id === 'temizle') KR.secili.clear();
+    else if (id === 'sayfa') kurumFiltre().slice((KR.sayfa - 1) * KR.boy, KR.sayfa * KR.boy).forEach(r => acik ? KR.secili.add(r.id) : KR.secili.delete(r.id));
+    else acik ? KR.secili.add(id) : KR.secili.delete(id);
+    kurumCiz();
+  };
+  window.ysKrDisa = secilen => {
+    const L = secilen ? KR.rows.filter(r => KR.secili.has(r.id)) : kurumFiltre();
+    csvIndir('kurumlar', ['Kurum', 'Plan', 'Durum', 'Yönetici', 'Öğretmen', 'Öğrenci', 'Not', 'Kayıt tarihi'],
+      L.map(r => { const s = KR.uye[r.id] || { ogretmen: 0, ogrenci: 0 }; return [r.name, (PLANLAR[r.plan] || PLANLAR.basic)[0], r.active !== false ? 'Aktif' : 'Dondurulmuş', (KR.yon[r.id] || []).map(p => kisiAd(p) + ' <' + (p.email || '') + '>').join(', '), s.ogretmen, s.ogrenci, r.notes || '', tarih(r.created_at)]; }));
+  };
+  // Yeni kurum / düzenle penceresi
+  window.ysKrYeni = id => {
+    const r = id ? KR.rows.find(x => x.id === id) : null;
+    const ov = document.createElement('div'); ov.className = 'ui-modal-overlay show ys-modal-ov'; ov.id = 'ys-kr-modal';
+    ov.innerHTML = '<div class="ui-modal ys-modal" role="dialog" aria-modal="true"><div class="ys-modal-bas"><span class="ys-ayar-ic">' + ic('kurum', 20) + '</span><h3>' + (r ? 'Kurumu düzenle' : 'Yeni kurum oluştur') + '</h3><button type="button" class="yp-ikon-b" aria-label="Kapat" onclick="document.getElementById(\'ys-kr-modal\').remove()">' + ic('kapat', 17) + '</button></div>' +
+      '<label class="ys-alan"><span>Kurum adı</span><input id="ys-kr-ad" class="ys-girdi" maxlength="120" value="' + esc(r ? r.name : '') + '" placeholder="Örn. Ankara Dil Kursu"></label>' +
+      '<label class="ys-alan"><span>Plan</span><select id="ys-kr-plan" class="ys-girdi">' + Object.keys(PLANLAR).map(p => '<option value="' + p + '"' + ((r ? r.plan : 'basic') === p ? ' selected' : '') + '>' + PLANLAR[p][0] + ' (' + PLANLAR[p][2] + ')</option>').join('') + '</select></label>' +
+      '<label class="ys-alan"><span>Not (isteğe bağlı)</span><input id="ys-kr-not" class="ys-girdi" maxlength="300" value="' + esc(r ? r.notes || '' : '') + '" placeholder="Örn. özel kurs, şube, iletişim kişisi"></label>' +
+      '<div class="ys-modal-alt"><button type="button" class="yp-btn" onclick="document.getElementById(\'ys-kr-modal\').remove()">Vazgeç</button><button type="button" class="yp-btn ana" onclick="ysKrKaydet(' + (r ? '\'' + r.id + '\'' : '') + ')">' + ic('kaydet', 16) + (r ? 'Kaydet' : 'Oluştur') + '</button></div></div>';
+    ov.addEventListener('mousedown', e => { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov); setTimeout(() => { const i = $('ys-kr-ad'); if (i) i.focus(); }, 30);
+  };
+  window.ysKrKaydet = async id => {
+    const name = ($('ys-kr-ad').value || '').trim(), plan = $('ys-kr-plan').value || 'basic', notes = ($('ys-kr-not').value || '').trim();
+    if (!name) { uiAlert('Kurum adı zorunlu.'); return; }
+    try {
+      const q = id ? sb.from('kurumlar').update({ name, plan, notes: notes || null }).eq('id', id) : sb.from('kurumlar').insert({ name, plan, notes: notes || null });
+      const { error } = await q; if (error) throw error;
+      const m = $('ys-kr-modal'); if (m) m.remove();
+      toast(id ? 'Kurum güncellendi.' : 'Kurum oluşturuldu: ' + name);
+      kurumYukle();
+    } catch (e) { uiAlert('Kaydedilemedi: ' + ((e && e.message) || e)); }
+  };
+  window.YS_AKS.kurumlar = () => '<button type="button" class="yp-btn" onclick="ysKrDisa()">' + ic('indir', 16) + 'Dışa aktar</button><button type="button" class="yp-btn ana" onclick="ysKrYeni()">' + ic('arti', 16) + 'Yeni kurum oluştur</button>';
+
   /* ---------- Bağlantılar: eski yükleyiciler yeni sayfaları çizsin ---------- */
   function degistir(ad, fn) { window[ad] = fn; try { (0, eval)(ad + ' = window.' + ad); } catch (e) {} }
   function bagla() {
@@ -1644,6 +2080,15 @@ async function togglePremium(userId, currentPlan) {
     degistir('renderVisitsFull', function () { return ziyaretYukle(); });
     degistir('renderSeoCheck', function () { seoCiz(); });
     degistir('_gscRender', gscCiz);
+    degistir('loadAdminUsers', function () { return kullaniciYukle(); });
+    degistir('renderAdminUsers', function () { kullaniciCiz(); });
+    degistir('filterAdminUsers', function (q) { UK.ara = q || ''; UK.sayfa = 1; kullaniciCiz(); });
+    degistir('adminAssignInit', function () { return atamaYukle(); });
+    degistir('adminKurumLoad', function () { return kurumYukle(); });
+    ['adminKurumSetAdmin', 'adminKurumRemoveMember'].forEach(ad => {
+      const eski = window[ad]; if (typeof eski !== 'function') return;
+      degistir(ad, async function () { const r = await eski.apply(this, arguments); if ($('ys-kurum') && $('av-kurumlar').style.display !== 'none') kurumYukle(); return r; });
+    });
     const eskiAyar = window.adminSettingsInit;
     degistir('adminSettingsInit', async function () {
       ayarlarCiz();
