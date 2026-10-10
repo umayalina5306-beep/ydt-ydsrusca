@@ -36,7 +36,7 @@ body {
 /* ===== NAV ===== */
 nav {
   background: var(--dark);
-  height: 68px;
+  height: 62px;   /* yönetim panelinin üst barıyla aynı yükseklik */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3387,7 +3387,7 @@ body.admin-acik #exam-countdown-wrap { display: none !important; }
 .works-card:active .works-arrow { box-shadow:0 0 0 8px rgba(201,168,76,.25), 0 0 28px rgba(201,168,76,.7); }
 
 /* ═══ v144: Alt bilgi her zaman sayfanın en altında ═══ */
-body > .page.active { min-height: calc(100vh - var(--ust-h, 68px) - var(--alt-h, 90px)); }
+body > .page.active { min-height: calc(100vh - var(--ust-h, 62px) - var(--alt-h, 90px)); }
 
 /* ============ Şifre alanı: göz ikonu, tarayıcının kendi düğmesi gizli ============ */
 .pw-eye { display: grid; place-items: center; color: #6b7280; opacity: 1; width: 34px; height: 34px; padding: 0; border-radius: 8px; }
